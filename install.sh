@@ -72,7 +72,7 @@ if [ -d vim/bundle/syntastic ]; then
 else
     cd ~/.vim/bundle
     git clone https://github.com/scrooloose/syntastic.git
-    cd DIR
+    cd $DIR
     echo "Syntastic installed OK"
 fi
 
@@ -82,6 +82,8 @@ if [ -d vim/bundle/nerdtree ]; then
 else
     cd ~/.vim/bundle
     git clone https://github.com/scrooloose/nerdtree.git
-    cd DIR
+    cd $DIR
     echo "Nerdtree installed OK"
 fi
+
+echo "Finished installing"
