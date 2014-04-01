@@ -1,3 +1,12 @@
 backup
 vim/autoload
 vim/bundle
+
+.vim
+.vimrc
+.bashrc
+.tmux*
+.zshrc
+
+*.swp
+.*.swp
