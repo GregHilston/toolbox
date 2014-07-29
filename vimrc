@@ -27,7 +27,7 @@ set notextmode
 set notextauto
 set hlsearch
 set incsearch
-set textwidth=70
+set textwidth=80
 
 " Show matching [] and {}
 set showmatch
@@ -89,7 +89,7 @@ set nocompatible
 
 " The default for 'backspace' is very confusing to new users, so change it to a
 " more sensible value.  Add "set backspace&" to your ~/.vimrc to reset it.
-set backspace+=indent,eol,start
+set backspace=indent,eol,start
 
 " Disable localized menus for now since only some items are translated (e.g.
 " the entire MacVim menu is set up in a nib file which currently only is
