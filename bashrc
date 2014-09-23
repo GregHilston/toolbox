@@ -56,11 +56,11 @@ if [ -n "$force_color_prompt" ]; then
     fi
 fi
 
-if [ "$color_prompt" = yes ]; then
-    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
-else
-    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
-fi
+#if [ "$color_prompt" = yes ]; then
+#    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+#else
+#fi
+PS1='${debian_chroot:+($debian_chroot)}:\w\$ '
 unset color_prompt force_color_prompt
 
 # If this is an xterm set the title to user@host:dir
@@ -88,6 +88,9 @@ fi
 alias ll='ls -l'
 alias la='ls -la'
 alias l='ls -CF'
+alias gcomm='git commit -m'
+alias gpush='git push'
+alias gpull='git pull'
 
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
@@ -112,3 +115,23 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
+
+# Setting PATH for Python 3.4
+# The orginal version is saved in .profile.pysave
+PATH="/Library/Frameworks/Python.framework/Versions/3.4/bin:${PATH}"
+export PATH
+
+export EDITOR=vim
+eval "$(rbenv init -)"
+
+# Chef config
+export DYN_CHEF_PROD='dharrigan'
+export DYN_CHEF_DATA='${HOME}/code/cookbooks/dyn_chef_data'
+export SSL_CERT_FILE='${DYN_CHEF_DATA}/config/cacert.pem'
+export CHEF_CB_DIR='${HOME}/work/cookbooks/'
+export DRIVER_PLUGIN='vagrant'
+export PROVISIONER='chef_solo'
+export VAGRANT_DEFAULT_PROVIDER='virtualbox'
+
+LANG=C
+export PATH=~/bin:/Users/dharrigan/.rbenv/shims:/Library/Frameworks/Python.framework/Versions/3.4/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:${HOME}/code/cookbooks/dyn_chef_data/bin

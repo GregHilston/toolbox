@@ -8,9 +8,10 @@ set number
 set mouse=a
 
 " Color Scheme
-let g:molokai_original=1
-colorscheme molokai
-"set background=dark
+"let g:molokai_original=1
+syntax enable
+set background=dark
+colorscheme hybrid
 
 " Set automatic indentation
 set autoindent
@@ -27,7 +28,7 @@ set notextmode
 set notextauto
 set hlsearch
 set incsearch
-set textwidth=80
+set textwidth=100
 
 " Show matching [] and {}
 set showmatch
@@ -85,6 +86,8 @@ call pathogen#infect()
 " NERDTree shortcut
 nmap <silent> <C-D> :NERDTreeToggle<CR> 
 
+let g:syntastic_python_checkers = ['pylint']
+
 set nocompatible
 
 " The default for 'backspace' is very confusing to new users, so change it to a
@@ -95,5 +98,3 @@ set backspace=indent,eol,start
 " the entire MacVim menu is set up in a nib file which currently only is
 " translated to English).
 set langmenu=none
-
-
