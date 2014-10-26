@@ -74,21 +74,30 @@ autocmd FileType *      set formatoptions=tcql nocindent comments&
 autocmd FileType c,cpp,C  set formatoptions=croql cindent comments=sr:/*,mb:*,ex:*/,://
 
 set autowrite
-ab #d #define
-ab #i #include
-ab #b /********************************************************
-ab #e ********************************************************/
-ab #l /*------------------------------------------------------*/
 
-" Pathogen
-call pathogen#infect()
+" Vundle
+set nocompatible
+filetype off
+set rtp+=~/.vim/bundle/Vundle.vim
+call vundle#begin()
+Plugin 'gmarik/Vundle.vim'
+
+" Vundle Plugins 
+Plugin 'Valloric/YouCompleteMe'     " Comepletion
+Plugin 'tpope/vim-sleuth'           " Auto indent
+Plugin 'scrooloose/nerdcommenter'   " Comment helper
+Plugin 'scrooloose/nerdtree'        " File browser
+Plugin 'scrooloose/syntastic'       " Syntax check
+Plugin 'vim-perl/vim-perl'          " Perl support
+Plugin 'vim-ruby/vim-ruby'          " Ruby support
+
+call vundle#end()         " required
+filetype plugin indent on " required
 
 " NERDTree shortcut
 nmap <silent> <C-D> :NERDTreeToggle<CR> 
 
 let g:syntastic_python_checkers = ['pylint']
-
-set nocompatible
 
 " The default for 'backspace' is very confusing to new users, so change it to a
 " more sensible value.  Add "set backspace&" to your ~/.vimrc to reset it.

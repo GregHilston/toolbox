@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR=$(pwd)
-FILES=( bashrc zshrc tmux.conf vimrc)
+FILES=(bashrc zshrc tmux.conf vimrc)
 
 echo "Creating backups..."
 
@@ -56,33 +56,19 @@ done
 ln -s $(pwd)/vim ~/.vim
 echo "Done"
 
-# Install pathogen
-if [ -d vim/autoload/pathogen.vim ]; then
-   echo "Pathogen already installed"
+# Install Vundle
+if [ -d vim/bundle/Vundle.vim ]; then
+    git pull vim/bundle/Vundle.vim
+    echo "Vundle updated"
 else
-   mkdir -p ~/.vim/autoload ~/.vim/bundle; \
-   curl -LSso ~/.vim/autoload/pathogen.vim https://tpo.pe/pathogen.vim
-   echo "Pathogen installed OK"
+    git clone https://github.com/gmarik/Vundle.vim.git vim/bundle/Vundle.vim
+    echo "Vundle installed OK"
 fi
+vim +PluginInstall +qall
+echo "Installed Vundle plugins"
 
-# Install syntastic
-if [ -d vim/bundle/syntastic ]; then
-    echo "Syntastic already installed"
-else
-    cd ~/.vim/bundle
-    git clone https://github.com/scrooloose/syntastic.git
-    cd $DIR
-    echo "Syntastic installed OK"
-fi
-
-# Install nerdtree
-if [ -d vim/bundle/nerdtree ]; then
-    echo "Nerdtree alreadt installed"
-else
-    cd ~/.vim/bundle
-    git clone https://github.com/scrooloose/nerdtree.git
-    cd $DIR
-    echo "Nerdtree installed OK"
-fi
+# Configure YouCompleteMe plugin
+git submodule update --init --recursive vim/bundle/YouCompleteMe
+./vim/bundle/YouCompleteMe/install.sh
 
 echo "Finished installing"
