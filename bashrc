@@ -60,7 +60,8 @@ fi
 #    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 #else
 #fi
-PS1='${debian_chroot:+($debian_chroot)}:\w\$ '
+PS1="\[\e[01;31m\]\u\[\e[0m\]\[\e[00;37m\] :: \[\e[0m\]\[\e[00;36m\]\h\[\e[0m\]\[\e[00;37m\] :: \[\e[0m\]\[\e[00;32m\]\w\[\e[0m\]\[\e[00;37m\]\n\[\e[0m\]\[\e[01;33m\]>\[\e[0m\]\[\e[0m\]\[\e[0m\] \[\e[0m\]"
+
 unset color_prompt force_color_prompt
 
 # If this is an xterm set the title to user@host:dir
