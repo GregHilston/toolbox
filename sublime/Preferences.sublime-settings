@@ -1,14 +1,17 @@
 {
 	"color_scheme": "Packages/User/base16-ocean.dark (SL).tmTheme",
 	"font_size": 10,
+	"draw_white_space": "all",
+	"highlight_modified_tabs": true,
 	"ignored_packages":
 	[
-		"Python Flake8 Lint",
-		"SublimeLinter"
+		"SublimeLinter",
+		"Python Flake8 Lint"
 	],
 	"pep8_ignore":
 	[
 		"E501",
+		"E221", // multiple spaces before =
 		"W191"
 	],
 	"rulers":

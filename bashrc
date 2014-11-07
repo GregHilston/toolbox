@@ -136,3 +136,6 @@ export VAGRANT_DEFAULT_PROVIDER='virtualbox'
 
 LANG=C
 export PATH=~/bin:/Users/dharrigan/.rbenv/shims:/Library/Frameworks/Python.framework/Versions/3.4/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:${HOME}/code/cookbooks/dyn_chef_data/bin
+
+alias subl="LANG=en_US.UTF-8 subl"
+
