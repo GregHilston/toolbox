@@ -1,0 +1,23 @@
+{
+	"color_scheme": "Packages/User/base16-ocean.dark (SL).tmTheme",
+	"font_size": 10,
+	"ignored_packages":
+	[
+		"Python Flake8 Lint",
+		"SublimeLinter"
+	],
+	"pep8_ignore":
+	[
+		"E501",
+		"W191"
+	],
+	"rulers":
+	[
+		120
+	],
+	"spacegray_sidebar_tree_xsmall": true,
+	"spacegray_tabs_font_small": true,
+	"tab_size": 4,
+	"theme": "Spacegray.sublime-theme",
+	"translate_tabs_to_spaces": true
+}

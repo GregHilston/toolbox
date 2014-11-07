@@ -1,0 +1,17 @@
+{
+	"installed_packages":
+	[
+		"Anaconda",
+		"LESS",
+		"Mason",
+		"ModernPerl",
+		"Python Flake8 Lint",
+		"SideBarEnhancements",
+		"SideBarGit",
+		"SublimeLinter",
+		"SublimeLinter-pep8",
+		"SublimeLinter-pyflakes",
+		"SublimeLinter-rubocop",
+		"Theme - Spacegray"
+	]
+}
