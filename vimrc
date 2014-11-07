@@ -1,3 +1,6 @@
+scriptencoding utf-8
+set encoding=utf-8
+
 " Vundle
 set nocompatible
 filetype off
@@ -31,10 +34,6 @@ set mouse=a
 set background=dark
 colorscheme hybrid
 
-" Set some nice character listings, then activate list
-set list listchars=tab:⟶\ ,trail:·,extends:>,precedes:<,nbsp:%
-set list
-
 " Highlight current line
 set cursorline
 hi CursorLine   cterm=NONE ctermbg=lightgrey
@@ -55,6 +54,11 @@ set notextauto
 set hlsearch
 set incsearch
 set textwidth=100
+
+" Set some nice character listings, then activate list
+set list listchars=tab:⟶\ ,trail:·,extends:>,precedes:<
+set list
+
 
 " Show matching [] and {}
 set showmatch
