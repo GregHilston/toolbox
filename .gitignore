@@ -1,6 +1,7 @@
 backup
 vim/autoload
 vim/bundle
+vim/.*
 
 .vim
 .vimrc
@@ -10,6 +11,9 @@ vim/bundle
 
 *.swp
 .*.swp
+
+.DS_Store
+iterm2-colors
 
 # Sublime
 sublime/Package\ Control.last-run
