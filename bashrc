@@ -125,17 +125,10 @@ export PATH
 export EDITOR=vim
 eval "$(rbenv init -)"
 
-# Chef config
-export DYN_CHEF_PROD='dharrigan'
-export DYN_CHEF_DATA='${HOME}/code/cookbooks/dyn_chef_data'
-export SSL_CERT_FILE='${DYN_CHEF_DATA}/config/cacert.pem'
-export CHEF_CB_DIR='${HOME}/work/cookbooks/'
-export DRIVER_PLUGIN='vagrant'
-export PROVISIONER='chef_solo'
-export VAGRANT_DEFAULT_PROVIDER='virtualbox'
-
 LANG=C
 export PATH=~/bin:/Users/dharrigan/.rbenv/shims:/Library/Frameworks/Python.framework/Versions/3.4/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:${HOME}/code/cookbooks/dyn_chef_data/bin
 
 alias subl="LANG=en_US.UTF-8 subl"
 
+# Launch tmux on start
+[[ $TERN != "screen" ]] && exec tmux
