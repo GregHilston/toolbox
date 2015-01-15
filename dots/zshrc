@@ -82,3 +82,5 @@ source $ZSH/oh-my-zsh.sh
 export LANG="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
 
+export POWERLINE_CONFIG_COMMAND="/usr/local/bin/powerline-config"
+

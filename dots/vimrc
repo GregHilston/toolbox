@@ -20,6 +20,8 @@ Plugin 'vim-ruby/vim-ruby'          " Ruby support
 call vundle#end()         " required
 filetype plugin indent on " required
 
+highlight LineNr ctermfg=grey
+
 " Color settings
 set term=screen-256color
 let g:rehash256=1
