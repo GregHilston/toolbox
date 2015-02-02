@@ -1,5 +1,6 @@
 let g:netrw_dirhistmax  =10
-let g:netrw_dirhist_cnt =3
+let g:netrw_dirhist_cnt =4
 let g:netrw_dirhist_1='/Users/dharrigan/Pictures'
 let g:netrw_dirhist_2='/Users/dharrigan/Code'
 let g:netrw_dirhist_3='/Users/dharrigan/.config'
+let g:netrw_dirhist_4='/Users/dharrigan/Code/django-rest-swagger/tests/auth_example'
