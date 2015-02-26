@@ -85,3 +85,9 @@ export LC_ALL="en_US.UTF-8"
 export POWERLINE_CONFIG_COMMAND="/usr/local/bin/powerline-config"
 
 alias fucking="sudo"
+alias spotify="osascript ~/Code/SpotifyControl/SpotifyControl.scpt"
+
+# Docker
+export DOCKER_TLS_VERIFY=1
+export DOCKER_HOST=tcp://192.168.59.103:2376
+export DOCKER_CERT_PATH=/Users/dharrigan/.boot2docker/certs/boot2docker-vm

@@ -20,6 +20,7 @@ Plugin 'bling/vim-airline'          " Airline
 Plugin 'tpope/vim-fugitive'         " Git support
 Plugin 'airblade/vim-gitgutter'     " Git gutter
 Plugin 'jlanzarotta/bufexplorer'    " File browser
+Plugin 'rking/ag.vim'               " Searching
 Plugin 'https://github.com/kien/ctrlp.vim' " Fuzzy file finding
 
 call vundle#end()         " required
@@ -27,8 +28,7 @@ filetype plugin indent on " required
 set scrolloff=15
 
 " Color settings
-set term=screen-256color
-let g:rehash256=1
+set t_Co=256
 
 " Show line numbers
 set number
@@ -37,12 +37,12 @@ set number
 set mouse=a
 
 " Color Scheme
-set background=dark
 colorscheme spacegray
+set background=dark
 
 " Highlight current line
 set cursorline
-hi CursorLine cterm=NONE ctermbg=lightgrey
+hi CursorLine cterm=NONE ctermbg=black
 highlight LineNr ctermfg=grey
 
 " Set automatic indentation
