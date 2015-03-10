@@ -13,25 +13,31 @@ Plugin 'Valloric/YouCompleteMe'     " Completion
 Plugin 'tpope/vim-sleuth'           " Auto indent
 Plugin 'scrooloose/nerdcommenter'   " Comment helper
 Plugin 'scrooloose/nerdtree'        " File browser
+Plugin 'jlanzarotta/bufexplorer'    " File browser
 Plugin 'scrooloose/syntastic'       " Syntax check
-Plugin 'vim-perl/vim-perl'          " Perl support
-Plugin 'vim-ruby/vim-ruby'          " Ruby support
 Plugin 'bling/vim-airline'          " Airline
 Plugin 'tpope/vim-fugitive'         " Git support
 Plugin 'airblade/vim-gitgutter'     " Git gutter
-Plugin 'jlanzarotta/bufexplorer'    " File browser
 Plugin 'rking/ag.vim'               " Searching
 Plugin 'https://github.com/kien/ctrlp.vim' " Fuzzy file finding
+Plugin 'Lokaltog/vim-easymotion'
+
+" Language, Framework specific
+Plugin 'klen/python-mode'
+Plugin 'vim-perl/vim-perl'
+Plugin 'vim-ruby/vim-ruby'
+Plugin 'burnettk/vim-angular'
+Plugin 'https://github.com/othree/javascript-libraries-syntax.vim'
 
 call vundle#end()         " required
 filetype plugin indent on " required
 set scrolloff=15
 
+set number
+
 " Color settings
 set t_Co=256
-
-" Show line numbers
-set number
+let g:rehash256=1
 
 " Allow mouse control
 set mouse=a
@@ -44,6 +50,9 @@ set background=dark
 set cursorline
 hi CursorLine cterm=NONE ctermbg=black
 highlight LineNr ctermfg=grey
+
+" Italicize comments
+highlight Comment cterm=italic
 
 " Set automatic indentation
 set autoindent
@@ -70,10 +79,6 @@ set list
 
 " Show matching [] and {}
 set showmatch
-
-" Syntax highlighting
-syntax enable
-syntax on
 
 " Spell check on
 set spell spelllang=en_us
@@ -107,9 +112,30 @@ set shell=/bin/zsh
 " NERDTree shortcut
 nmap <silent> <C-D> :NERDTreeToggle<CR>
 
-" Pylint
+" Syntastic
 let g:syntastic_python_checkers = ['pylint']
+let g:syntastic_javascript_checkers = ['jshint']
+
+set statusline+=%#warningmsg#
+set statusline+=%{SyntasticStatuslineFlag()}
+set statusline+=%*
+
+let g:syntastic_always_populate_loc_list = 1
+let g:syntastic_auto_loc_list = 1
+let g:syntastic_check_on_open = 1
+let g:syntastic_check_on_wq = 0
+
+" Syntax highlighting
+syntax enable
+syntax on
 
 " Disable bell banners
 set noerrorbells novisualbell t_vb=
 
+" Powerline
+set laststatus=2
+let g:airline_powerline_fonts = 1
+
+let g:used_javascript_libs = 'underscore,angularjs'
+
+let g:pymode_folding = 0

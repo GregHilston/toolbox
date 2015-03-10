@@ -131,5 +131,7 @@ export PATH=$PATH:$HOME/Library/Python/2.7/bin
 
 alias subl="LANG=en_US.UTF-8 subl"
 
+eval "$(register-python-argcomplete vm.py)"
+
 # Launch tmux on start
-[[ $TERN != "screen" ]] && exec tmux
+#[[ $TERN != "screen" ]] && exec tmux

@@ -82,12 +82,31 @@ source $ZSH/oh-my-zsh.sh
 export LANG="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
 
+# Chef config
+export DYN_CHEF_PROD='dharrigan'
+export DYN_CHEF_DATA='${HOME}/src/cookbooks/dyn_chef_data'
+# export SSL_CERT_FILE='${DYN_CHEF_DATA}/config/cacert.pem'
+export CHEF_CB_DIR='${HOME}/src/cookbooks/'
+export DRIVER_PLUGIN='vagrant'
+export PROVISIONER='chef_solo'
+export VAGRANT_DEFAULT_PROVIDER='virtualbox'
+
 export POWERLINE_CONFIG_COMMAND="/usr/local/bin/powerline-config"
 
-alias fucking="sudo"
+# aliases
 alias spotify="osascript ~/Code/SpotifyControl/SpotifyControl.scpt"
 
 # Docker
 export DOCKER_TLS_VERIFY=1
 export DOCKER_HOST=tcp://192.168.59.103:2376
 export DOCKER_CERT_PATH=/Users/dharrigan/.boot2docker/certs/boot2docker-vm
+alias co="git checkout"
+alias cob="git checkout -b"
+alias cm="git commit -m"
+alias pull="git pull"
+alias push="git push"
+alias dif="git difftool --tool=opendiff -d"
+
+alias restart-dyndns="bash ~/src/vms/dyndns_dev/vm restart-dyndns"
+alias restart-bos="bash ~/src/vms/dyndns_dev/vm restart-bos"
+alias restart-storefront="bash ~/src/vms/dyndns_dev/vm restart-storefront"

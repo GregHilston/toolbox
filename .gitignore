@@ -1,7 +1,7 @@
 backup
-vim/autoload
-vim/bundle
-vim/.*
+dots/vim/autoload
+dots/vim/bundle
+dots/vim/.*
 
 .vim
 .vimrc
@@ -9,8 +9,8 @@ vim/.*
 .tmux*
 .zshrc
 
-*.swp
-.*.swp
+*.sw[po]
+.*.sw[po]
 
 .DS_Store
 iterm2-colors
