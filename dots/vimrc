@@ -34,6 +34,7 @@ filetype plugin indent on " required
 set scrolloff=15
 
 set number
+set relativenumber
 
 " Color settings
 set t_Co=256
@@ -43,13 +44,16 @@ let g:rehash256=1
 set mouse=a
 
 " Color Scheme
-colorscheme spacegray
 set background=dark
 
 " Highlight current line
 set cursorline
-hi CursorLine cterm=NONE ctermbg=black
-highlight LineNr ctermfg=grey
+hi CursorLine cterm=NONE ctermbg=238
+highlight LineNr ctermfg=7
+
+" Color column
+set colorcolumn=100
+highlight ColorColumn ctermbg=0
 
 " Italicize comments
 highlight Comment cterm=italic
@@ -68,7 +72,6 @@ set notextmode
 set notextauto
 set hlsearch
 set incsearch
-set colorcolumn=80
 
 " Reload vimrc
 nmap <silent> <leader>V :source ~/.vimrc/<cr>:filetype detect<cr>
@@ -115,15 +118,24 @@ nmap <silent> <C-D> :NERDTreeToggle<CR>
 " Syntastic
 let g:syntastic_python_checkers = ['pylint']
 let g:syntastic_javascript_checkers = ['jshint']
+let g:syntastic_always_populate_loc_list = 0
+let g:syntastic_auto_loc_list = 0
+let g:syntastic_check_on_open = 0
+let g:syntastic_check_on_wq = 0
+let g:syntastic_mode_map={ 'mode': 'active',
+                     \ 'active_filetypes': [],
+                     \ 'passive_filetypes': ['html'] }
 
 set statusline+=%#warningmsg#
 set statusline+=%{SyntasticStatuslineFlag()}
 set statusline+=%*
 
-let g:syntastic_always_populate_loc_list = 1
-let g:syntastic_auto_loc_list = 1
-let g:syntastic_check_on_open = 1
-let g:syntastic_check_on_wq = 0
+" Pymode
+let g:pymode_lint_ignore = "E501"
+let g:pymode_rope = 0
+let g:pymode_rope_completion = 0
+let g:pymode_rope_complete_on_dot = 0
+let g:pymode_folding = 0
 
 " Syntax highlighting
 syntax enable
@@ -137,5 +149,6 @@ set laststatus=2
 let g:airline_powerline_fonts = 1
 
 let g:used_javascript_libs = 'underscore,angularjs'
+
 
 let g:pymode_folding = 0
