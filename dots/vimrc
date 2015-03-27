@@ -31,10 +31,9 @@ Plugin 'https://github.com/othree/javascript-libraries-syntax.vim'
 
 call vundle#end()         " required
 filetype plugin indent on " required
-set scrolloff=15
 
-set number
 set relativenumber
+set scrolloff=15
 
 " Color settings
 set t_Co=256
@@ -43,16 +42,13 @@ let g:rehash256=1
 " Allow mouse control
 set mouse=a
 
-" Color Scheme
-set background=dark
-
 " Highlight current line
 set cursorline
 hi CursorLine cterm=NONE ctermbg=238
 highlight LineNr ctermfg=7
 
 " Color column
-set colorcolumn=100
+set colorcolumn=120
 highlight ColorColumn ctermbg=0
 
 " Italicize comments
@@ -68,10 +64,15 @@ set cindent
 set tabstop=4
 set shiftwidth=4
 set sw=4
-set notextmode
-set notextauto
 set hlsearch
 set incsearch
+
+" Syntax highlighting
+syntax enable
+syntax on
+
+" Disable bell banners
+set noerrorbells novisualbell t_vb=
 
 " Reload vimrc
 nmap <silent> <leader>V :source ~/.vimrc/<cr>:filetype detect<cr>
@@ -81,9 +82,7 @@ set list listchars=tab:⟶\ ,trail:·,extends:>,precedes:<
 set list
 
 " Show matching [] and {}
-set showmatch
-
-" Spell check on
+set showmatch " Spell check on
 set spell spelllang=en_us
 setlocal spell spelllang=en_us
 
@@ -122,10 +121,9 @@ let g:syntastic_always_populate_loc_list = 0
 let g:syntastic_auto_loc_list = 0
 let g:syntastic_check_on_open = 0
 let g:syntastic_check_on_wq = 0
-let g:syntastic_mode_map={ 'mode': 'active',
+let g:syntastic_mode_map={'mode': 'active',
                      \ 'active_filetypes': [],
                      \ 'passive_filetypes': ['html'] }
-
 set statusline+=%#warningmsg#
 set statusline+=%{SyntasticStatuslineFlag()}
 set statusline+=%*
@@ -136,19 +134,19 @@ let g:pymode_rope = 0
 let g:pymode_rope_completion = 0
 let g:pymode_rope_complete_on_dot = 0
 let g:pymode_folding = 0
+let g:pymode_options_max_line_length = 120
 
-" Syntax highlighting
-syntax enable
-syntax on
-
-" Disable bell banners
-set noerrorbells novisualbell t_vb=
+" Javascript
+let g:used_javascript_libs = 'underscore,angularjs'
 
 " Powerline
 set laststatus=2
 let g:airline_powerline_fonts = 1
 
-let g:used_javascript_libs = 'underscore,angularjs'
-
-
-let g:pymode_folding = 0
+" Macvim settings
+if has("gui_macvim")
+                     " color scheme
+                     colorscheme molokai
+                     set background=dark
+                     set guifont=Inconsolata\ for\ Powerline:h12
+endif
