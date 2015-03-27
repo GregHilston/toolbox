@@ -21,6 +21,8 @@ Plugin 'airblade/vim-gitgutter'     " Git gutter
 Plugin 'rking/ag.vim'               " Searching
 Plugin 'https://github.com/kien/ctrlp.vim' " Fuzzy file finding
 Plugin 'Lokaltog/vim-easymotion'
+Plugin 'nathanaelkane/vim-indent-guides'
+
 
 " Language, Framework specific
 Plugin 'klen/python-mode'
@@ -142,6 +144,10 @@ let g:used_javascript_libs = 'underscore,angularjs'
 " Powerline
 set laststatus=2
 let g:airline_powerline_fonts = 1
+
+" Indent-Guides
+let g:indent_guides_start_level = 2
+let g:indent_guides_guide_size = 1
 
 " Macvim settings
 if has("gui_macvim")
