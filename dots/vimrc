@@ -34,7 +34,10 @@ Plugin 'https://github.com/othree/javascript-libraries-syntax.vim'
 call vundle#end()         " required
 filetype plugin indent on " required
 
+" Set number
+set number
 set relativenumber
+
 set scrolloff=15
 
 " Color settings
@@ -160,11 +163,12 @@ let g:airline_powerline_fonts = 1
 " Indent-Guides
 let g:indent_guides_start_level = 2
 let g:indent_guides_guide_size = 1
+let g:indent_guides_enable_on_vim_startup = 1
 
 " Macvim settings
 if has("gui_macvim")
-                     " color scheme
+                     set go=aiP
                      colorscheme molokai
                      set background=dark
-                     set guifont=Inconsolata\ for\ Powerline:h13
+                     set guifont=Inconsolata\ for\ Powerline:h15
 endif
