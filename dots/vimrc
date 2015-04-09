@@ -141,6 +141,18 @@ let g:pymode_options_max_line_length = 120
 " Javascript
 let g:used_javascript_libs = 'underscore,angularjs'
 
+" Syntastic
+let g:syntastic_always_populate_loc_list = 1
+let g:syntastic_check_on_open = 0
+let g:syntastic_check_on_wq = 0
+
+" Syntax highlighting
+syntax enable
+syntax on
+
+" Disable bell banners
+set noerrorbells novisualbell t_vb=
+
 " Powerline
 set laststatus=2
 let g:airline_powerline_fonts = 1
@@ -154,5 +166,5 @@ if has("gui_macvim")
                      " color scheme
                      colorscheme molokai
                      set background=dark
-                     set guifont=Inconsolata\ for\ Powerline:h12
+                     set guifont=Inconsolata\ for\ Powerline:h13
 endif
