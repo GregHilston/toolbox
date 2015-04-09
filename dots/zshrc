@@ -110,3 +110,5 @@ alias dif="git difftool --tool=opendiff -d"
 alias restart-dyndns="bash ~/src/vms/dyndns_dev/vm restart-dyndns"
 alias restart-bos="bash ~/src/vms/dyndns_dev/vm restart-bos"
 alias restart-storefront="bash ~/src/vms/dyndns_dev/vm restart-storefront"
+
+defaults write org.vim.MacVim MMNativeFullScreen 0
