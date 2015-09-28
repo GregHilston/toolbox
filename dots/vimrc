@@ -23,13 +23,13 @@ Plugin 'https://github.com/kien/ctrlp.vim' " Fuzzy file finding
 Plugin 'Lokaltog/vim-easymotion'
 Plugin 'nathanaelkane/vim-indent-guides'
 
-
 " Language, Framework specific
 Plugin 'klen/python-mode'
 Plugin 'vim-perl/vim-perl'
 Plugin 'vim-ruby/vim-ruby'
 Plugin 'burnettk/vim-angular'
 Plugin 'https://github.com/othree/javascript-libraries-syntax.vim'
+Plugin 'marijnh/tern_for_vim'
 
 call vundle#end()         " required
 filetype plugin indent on " required
@@ -53,7 +53,7 @@ hi CursorLine cterm=NONE ctermbg=238
 highlight LineNr ctermfg=7
 
 " Color column
-set colorcolumn=120
+set colorcolumn=80
 highlight ColorColumn ctermbg=0
 
 " Italicize comments
@@ -77,7 +77,7 @@ syntax on
 set noerrorbells novisualbell t_vb=
 
 " Reload vimrc
-nmap <silent> <leader>V :source ~/.vimrc/<cr>:filetype detect<cr>
+nmap <silent> <leader>V :source ~/.vimrc <cr>:filetype detect<cr>
 
 " Set some nice character listings, then activate list
 set list listchars=tab:⟶\ ,trail:·,extends:>,precedes:<
@@ -89,6 +89,9 @@ setlocal spell spelllang=en_us
 
 " Toggle spelling with the F7 key
 nmap <silent> <F7> :setlocal spell! spelllang=en_us<cr>
+
+" Copy right message
+nmap <leader>ic a Copyright (c) 2015 Dynamic Networks, Inc.
 
 " Spelling
 highlight clear SpellBad
@@ -136,7 +139,7 @@ let g:pymode_rope = 0
 let g:pymode_rope_completion = 0
 let g:pymode_rope_complete_on_dot = 0
 let g:pymode_folding = 0
-let g:pymode_options_max_line_length = 120
+let g:pymode_options_max_line_length = 80
 
 " Javascript
 let g:used_javascript_libs = 'underscore,angularjs'
@@ -161,13 +164,19 @@ let g:airline_powerline_fonts = 1
 let g:indent_guides_enable_on_vim_startup = 1
 let g:indent_guides_start_level = 2
 let g:indent_guides_guide_size = 1
-let g:indent_guides_auto_colors = 1
 let g:indent_guides_exclude_filetypes = ['help', 'nerdtree']
 
-" Macvim settings
-if has("gui_macvim")
-                     set go=aiP
-                     colorscheme molokai
-                     set background=dark
-                     set guifont=Inconsolata\ for\ Powerline:h15
+if has("gui_running")
+     colorscheme jellybeans
+     set background=dark
+     set go=aiP
+     set guifont=Fira\ Mono\ for\ Powerline\ 10
+
+     let g:indent_guides_auto_colors = 1
+else
+     colorscheme jellybeans
+     hi Normal ctermbg=none
+     let g:indent_guides_auto_colors = 0
+     autocmd VimEnter,Colorscheme * :hi IndentGuidesOdd ctermbg=16
+     autocmd VimEnter,Colorscheme * :hi IndentGuidesEven ctermbg=8
 endif

@@ -15,10 +15,6 @@ dots/vim/.*
 .DS_Store
 iterm2-colors
 
-# Sublime
-sublime/Package\ Control.last-run
-sublime/Package\ Control.ca-list
-sublime/Package\ Control.ca-bundle
-sublime/Package\ Control.system-ca-bundle
-sublime/Package\ Control.ca-certs/
 
+dots/env/dyn.env
+private/

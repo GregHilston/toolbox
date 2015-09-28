@@ -117,21 +117,15 @@ if ! shopt -oq posix; then
   fi
 fi
 
-# Setting PATH for Python 3.4
-# The orginal version is saved in .profile.pysave
-PATH="/Library/Frameworks/Python.framework/Versions/3.4/bin:${PATH}"
-export PATH
-
-export EDITOR=vim
-eval "$(rbenv init -)"
-
 LANG=C
-export PATH=~/bin:/Users/dharrigan/.rbenv/shims:/Library/Frameworks/Python.framework/Versions/3.4/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:${HOME}/code/cookbooks/dyn_chef_data/bin
-export PATH=$PATH:$HOME/Library/Python/2.7/bin
 
 alias subl="LANG=en_US.UTF-8 subl"
 
-eval "$(register-python-argcomplete vm.py)"
-
 # Launch tmux on start
 #[[ $TERN != "screen" ]] && exec tmux
+# [ -f ~/.fzf.bash ] && source ~/.fzf.bash
+
+source $HOME/.config/env/common.env
+source $HOME/.config/env/dyn.env
+
+eval "$(rbenv init -)"
