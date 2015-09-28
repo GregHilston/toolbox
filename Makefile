@@ -1,0 +1,3 @@
+
+backup:
+	./install/backup.sh
