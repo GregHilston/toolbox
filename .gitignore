@@ -9,6 +9,8 @@ dots/vim/.*
 .tmux*
 .zshrc
 
+.vagrant
+
 *.sw[po]
 .*.sw[po]
 
