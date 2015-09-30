@@ -2,6 +2,7 @@ backup
 dots/vim/autoload
 dots/vim/bundle
 dots/vim/.*
+!dots/vim/bundle/Vundle.vim
 
 .vim
 .vimrc
