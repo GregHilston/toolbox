@@ -8,9 +8,8 @@ INSTALL=(bashrc gitignore tmux.conf vimrc zshrc env vim oh-my-zsh)
 
 for install in "${INSTALL[@]}"; do
   printf "Installing $install"
-  ln -f -s $TOOLBOX_HOME/dots/$install ~/.$install
+  rm -rf ~/.$install
+  ln -s $TOOLBOX_HOME/dots/$install ~/.$install
   printf "..."
   echo " Done"
 done
-
-chsh -s /bin/zsh

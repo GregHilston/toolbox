@@ -13,7 +13,7 @@ install_bin:
 
 install_submodules:
 	git submodule init; \
-	git fetch
+	git submodule update;
 
 install_vundle:
 	vim +PluginInstall +qall

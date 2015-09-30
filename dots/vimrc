@@ -11,7 +11,6 @@ Plugin 'gmarik/Vundle.vim'
 " Vundle Plug-ins
 Plugin 'Valloric/YouCompleteMe'     " Completion
 Plugin 'tpope/vim-sleuth'           " Auto indent
-Plugin 'scrooloose/nerdcommenter'   " Comment helper
 Plugin 'scrooloose/nerdtree'        " File browser
 Plugin 'jlanzarotta/bufexplorer'    " File browser
 Plugin 'scrooloose/syntastic'       " Syntax check
@@ -113,7 +112,7 @@ set title
 set pastetoggle=<F2>
 
 " Set shell to zsh
-set shell=/bin/zsh
+" set shell=/bin/zsh
 
 " NERDTree
 nmap <silent> <C-E> :NERDTreeToggle<CR>
@@ -123,7 +122,7 @@ let NERDTreeIgnore=['\~$', 'node_modules[[dir]]', 'bower_components[[dir]]', 'di
 let g:syntastic_python_checkers = ['pylint']
 let g:syntastic_javascript_checkers = ['jshint']
 let g:syntastic_always_populate_loc_list = 0
-let g:syntastic_auto_loc_list = 0
+let g:syntastic_auto_loc_list = 1
 let g:syntastic_check_on_open = 0
 let g:syntastic_check_on_wq = 0
 let g:syntastic_mode_map={'mode': 'active',
@@ -143,11 +142,6 @@ let g:pymode_options_max_line_length = 80
 
 " Javascript
 let g:used_javascript_libs = 'underscore,angularjs'
-
-" Syntastic
-let g:syntastic_always_populate_loc_list = 1
-let g:syntastic_check_on_open = 0
-let g:syntastic_check_on_wq = 0
 
 " Syntax highlighting
 syntax enable
