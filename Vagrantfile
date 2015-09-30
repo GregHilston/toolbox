@@ -5,7 +5,7 @@ Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/trusty64"
   config.vm.hostname = "ubuntu-vm"
   config.vm.network :private_network, ip: "192.168.100.100"
-  config.vm.synced_folder ".", "/home/vagrant/toolbox"
+  # config.vm.synced_folder ".", "/home/vagrant/toolbox"
 
   config.vm.provider "virtualbox" do |v|
     v.gui = false
