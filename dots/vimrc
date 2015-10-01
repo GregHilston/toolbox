@@ -167,8 +167,8 @@ let g:indent_guides_guide_size = 1
 let g:indent_guides_exclude_filetypes = ['help', 'nerdtree']
 
 if has("gui_running")
-     colorscheme jellybeans
      set background=dark
+     colorscheme jellybeans
      set go=aiP
      set guifont=Fira\ Mono\ for\ Powerline\ 10
 
