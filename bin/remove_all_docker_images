@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+docker images -qa | xargs docker rmi -f
