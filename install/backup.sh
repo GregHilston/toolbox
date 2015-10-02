@@ -6,7 +6,7 @@ TOOLBOX_HOME=$(echo $SCRIPT_HOME | rev | cut -d/ -f2- | rev)
 
 BACKUP_DIR=$TOOLBOX_HOME/backup
 THIS_BACKUP=$BACKUP_DIR/backup-$(date +%F-%T)
-BACKUPS=(bashrc gitignore tmux.conf vimrc zshrc env vim)
+BACKUPS=(bashrc gitignore tmux.conf vimrc zshrc env vim lib bin)
 
 if [ ! -d $BACKUP_DIR ]; then
   echo Create $BACKUP_DIR
