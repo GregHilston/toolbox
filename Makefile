@@ -1,6 +1,6 @@
 
 
-install: install_dots install_submodules install_vundle install_ycm
+install: install_dots install_submodules install_vundle
 
 install_dots: backup
 	./install/install_dots.sh

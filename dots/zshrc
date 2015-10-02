@@ -22,11 +22,10 @@ alias dif="git difftool --tool=opendiff -d"
 alias cleanup-branches="git branch -d $(git branch --merged | grep -v master | grep -v '^\*')"
 
 # Load OS specific environments
-if [[ "$OSTYPE" == "darwin" ]]; then
-    source $HOME/.config/env/osx.env
+if [[ "$(uname)" == "Darwin" ]]; then
+    source $HOME/.env/osx.env
 fi
 
-source $HOME/.config/env/dyn.env
-source $HOME/.config/env/common.env
+source $HOME/.env/common.env
 
 eval "$(rbenv init -)"
