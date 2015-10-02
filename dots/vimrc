@@ -27,6 +27,9 @@ Plugin 'klen/python-mode'
 Plugin 'vim-perl/vim-perl'
 Plugin 'vim-ruby/vim-ruby'
 Plugin 'burnettk/vim-angular'
+Plugin 'groenewege/vim-less'
+Plugin 'ekalinin/Dockerfile.vim'
+Plugin 'chase/vim-ansible-yaml'
 
 call vundle#end()         " required
 filetype plugin indent on " required
