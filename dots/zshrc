@@ -7,8 +7,7 @@ ZSH_THEME="gnzh"
 COMPLETION_WAITING_DOTS="true"
 
 # Plug-ins
-plugins=(git)
-plugins=(vagrant)
+plugins=(git vagrant knife)
 
 # User configuration
 
