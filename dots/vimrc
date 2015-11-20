@@ -173,12 +173,11 @@ if has("gui_running")
      set background=dark
      colorscheme jellybeans
      set go=aiP
-     set guifont=Fira\ Mono\ for\ Powerline\ 10
+     set guifont=Fira\ Mono:h13
 
      let g:indent_guides_auto_colors = 1
 else
      colorscheme jellybeans
-     hi Normal ctermbg=none
      let g:indent_guides_auto_colors = 0
      autocmd VimEnter,Colorscheme * :hi IndentGuidesOdd ctermbg=16
      autocmd VimEnter,Colorscheme * :hi IndentGuidesEven ctermbg=8
