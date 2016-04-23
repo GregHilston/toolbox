@@ -1,6 +1,12 @@
 # Path to your oh-my-zsh installation.
 export ZSH=$HOME/.oh-my-zsh
 
+# autocomplete
+autoload -Uz compinit
+compinit -i
+autoload -Uz bashcompinit
+bashcompinit
+
 ZSH_THEME="gnzh"
 
 ## oh-my-zsh configuration
@@ -26,5 +32,6 @@ if [[ "$(uname)" == "Darwin" ]]; then
 fi
 
 source $HOME/.env/common.env
+source $HOME/.env/dyn.env
 
 eval "$(rbenv init -)"

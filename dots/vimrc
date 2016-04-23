@@ -13,21 +13,19 @@ Plugin 'Valloric/YouCompleteMe'     " Completion
 Plugin 'tpope/vim-sleuth'           " Auto indent
 Plugin 'scrooloose/nerdtree'        " File browser
 Plugin 'jlanzarotta/bufexplorer'    " File browser
-Plugin 'scrooloose/syntastic'       " Syntax check
 Plugin 'bling/vim-airline'          " Airline
 Plugin 'tpope/vim-fugitive'         " Git support
 Plugin 'airblade/vim-gitgutter'     " Git gutter
 Plugin 'rking/ag.vim'               " Searching
 Plugin 'Shougo/unite.vim'
-Plugin 'Lokaltog/vim-easymotion'
+" Plugin 'Lokaltog/vim-easymotion'
 Plugin 'nathanaelkane/vim-indent-guides'
 
 " Language, Framework specific
 Plugin 'klen/python-mode'
-Plugin 'vim-perl/vim-perl'
 Plugin 'vim-ruby/vim-ruby'
-Plugin 'burnettk/vim-angular'
-Plugin 'groenewege/vim-less'
+" Plugin 'burnettk/vim-angular'
+" Plugin 'groenewege/vim-less'
 Plugin 'ekalinin/Dockerfile.vim'
 Plugin 'chase/vim-ansible-yaml'
 
@@ -39,11 +37,9 @@ let mapleader=","
 set wildignore=*.swp,*.pyc
 set nobackup
 set noswapfile
-
-" Set number
-set number
-set relativenumber
 set scrolloff=15
+
+set nonumber
 
 " Color settings
 set t_Co=256
@@ -96,6 +92,9 @@ nmap <silent> <F7> :setlocal spell! spelllang=en_us<cr>
 
 " Copyright message
 nmap <leader>ic a Copyright (c) 2015 Dynamic Networks, Inc.
+
+" PDB
+nmap <leader>pd a import sys pdb; pdb.Pdb(stdout=sys.__stdout__).set_trace()
 
 " Spelling
 highlight clear SpellBad
@@ -171,9 +170,9 @@ let g:indent_guides_exclude_filetypes = ['help', 'nerdtree']
 
 if has("gui_running")
      set background=dark
-     colorscheme jellybeans
+     colorscheme welpe
      set go=aiP
-     set guifont=Fira\ Mono:h13
+     set guifont=Source\ Code\ Pro\ for\ Powerline:h11
 
      let g:indent_guides_auto_colors = 1
 else
