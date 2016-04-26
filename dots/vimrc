@@ -13,7 +13,8 @@ Plugin 'Valloric/YouCompleteMe'     " Completion
 Plugin 'tpope/vim-sleuth'           " Auto indent
 Plugin 'scrooloose/nerdtree'        " File browser
 Plugin 'jlanzarotta/bufexplorer'    " File browser
-Plugin 'bling/vim-airline'          " Airline
+Plugin 'vim-airline/vim-airline'          " Airline
+Plugin 'vim-airline/vim-airline-themes'
 Plugin 'tpope/vim-fugitive'         " Git support
 Plugin 'airblade/vim-gitgutter'     " Git gutter
 Plugin 'rking/ag.vim'               " Searching
@@ -94,7 +95,7 @@ nmap <silent> <F7> :setlocal spell! spelllang=en_us<cr>
 nmap <leader>ic a Copyright (c) 2015 Dynamic Networks, Inc.
 
 " PDB
-nmap <leader>pd a import sys pdb; pdb.Pdb(stdout=sys.__stdout__).set_trace()
+nmap <leader>pd aimport sys pdb; pdb.Pdb(stdout=sys.__stdout__).set_trace()
 
 " Spelling
 highlight clear SpellBad
@@ -161,6 +162,8 @@ set noerrorbells novisualbell t_vb=
 " Powerline
 set laststatus=2
 let g:airline_powerline_fonts = 1
+let g:airline_theme = 'serene'
+
 
 " Indent-Guides
 let g:indent_guides_enable_on_vim_startup = 1
@@ -168,11 +171,16 @@ let g:indent_guides_start_level = 2
 let g:indent_guides_guide_size = 1
 let g:indent_guides_exclude_filetypes = ['help', 'nerdtree']
 
+" Style vertical split bar
+set fillchars+=vert:│
+hi VertSplit ctermbg=NONE guibg=NONE
+
 if has("gui_running")
      set background=dark
      colorscheme welpe
      set go=aiP
      set guifont=Source\ Code\ Pro\ for\ Powerline:h11
+     set nonumber
 
      let g:indent_guides_auto_colors = 1
 else
