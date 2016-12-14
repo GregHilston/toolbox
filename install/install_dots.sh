@@ -14,8 +14,8 @@ for install in "${INSTALL[@]}"; do
 done
 
 printf "Linking bin and lib... "
-rm "$HOME/.bin"
-rm "$HOME/.lib"
+rm -rf "$HOME/.bin"
+rm -rf "$HOME/.lib"
 ln -s "$TOOLBOX_HOME/bin" "$HOME/.bin"
 ln -s "$TOOLBOX_HOME/lib" "$HOME/.lib"
 echo " Done"
