@@ -16,6 +16,7 @@ COMPLETION_WAITING_DOTS="true"
 plugins=(git vagrant knife)
 
 # User configuration
+export GOPATH=/usr/local/gocode
 
 source $ZSH/oh-my-zsh.sh
 alias co="git checkout"

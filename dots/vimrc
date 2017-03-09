@@ -9,26 +9,27 @@ call vundle#begin()
 Plugin 'gmarik/Vundle.vim'
 
 " Vundle Plug-ins
-Plugin 'Valloric/YouCompleteMe'     " Completion
-Plugin 'tpope/vim-sleuth'           " Auto indent
-Plugin 'scrooloose/nerdtree'        " File browser
-Plugin 'jlanzarotta/bufexplorer'    " File browser
-Plugin 'vim-airline/vim-airline'          " Airline
-Plugin 'vim-airline/vim-airline-themes'
-Plugin 'tpope/vim-fugitive'         " Git support
-Plugin 'airblade/vim-gitgutter'     " Git gutter
-Plugin 'rking/ag.vim'               " Searching
-Plugin 'Shougo/unite.vim'
-" Plugin 'Lokaltog/vim-easymotion'
+Plugin 'Valloric/YouCompleteMe'
 Plugin 'nathanaelkane/vim-indent-guides'
+Plugin 'majutsushi/tagbar'
+Plugin 'scrooloose/nerdtree'
+Plugin 'vim-airline/vim-airline'
+Plugin 'vim-airline/vim-airline-themes'
+Plugin 'tpope/vim-fugitive'
+Plugin 'airblade/vim-gitgutter'
 
 " Language, Framework specific
-Plugin 'klen/python-mode'
+" TODO only load based on file extension
 Plugin 'vim-ruby/vim-ruby'
-" Plugin 'burnettk/vim-angular'
-" Plugin 'groenewege/vim-less'
 Plugin 'ekalinin/Dockerfile.vim'
 Plugin 'chase/vim-ansible-yaml'
+Plugin 'fatih/vim-go'
+
+" TODO go through these
+Plugin 'tpope/vim-sleuth'           " Auto indent
+Plugin 'jlanzarotta/bufexplorer'    " File browser
+Plugin 'rking/ag.vim'               " Searching
+Plugin 'klen/python-mode'
 
 call vundle#end()         " required
 filetype plugin indent on " required
@@ -40,7 +41,7 @@ set nobackup
 set noswapfile
 set scrolloff=15
 
-set nonumber
+set number
 
 " Color settings
 set t_Co=256
@@ -55,11 +56,7 @@ hi CursorLine cterm=NONE ctermbg=238
 highlight LineNr ctermfg=7
 
 " Color column
-set colorcolumn=80
-highlight ColorColumn ctermbg=0
-
-" Italicize comments
-highlight Comment cterm=italic
+" set colorcolumn=80
 
 " Set automatic indentation
 set autoindent
@@ -95,7 +92,9 @@ nmap <silent> <F7> :setlocal spell! spelllang=en_us<cr>
 nmap <leader>ic a Copyright (c) 2015 Dynamic Networks, Inc.
 
 " PDB
-nmap <leader>pd aimport sys pdb; pdb.Pdb(stdout=sys.__stdout__).set_trace()
+nmap <leader>pd aimport sys, pdb; pdb.Pdb(stdout=sys.__stdout__).set_trace()
+
+nnoremap <silent> <F9> :TagbarToggle<CR>
 
 " Spelling
 highlight clear SpellBad
@@ -115,9 +114,6 @@ set title
 
 " Toggle paste
 set pastetoggle=<F2>
-
-" Set shell to zsh
-" set shell=/bin/zsh
 
 " Unite
 nmap <silent> <leader>B :Unite buffer<CR>
@@ -144,7 +140,7 @@ set statusline+=%*
 " Pymode
 let g:pymode_lint_ignore = "E501"
 let g:pymode_rope = 0
-     let g:pymode_rope_completion = 0
+let g:pymode_rope_completion = 0
 let g:pymode_rope_complete_on_dot = 0
 let g:pymode_folding = 0
 let g:pymode_options_max_line_length = 80
@@ -164,25 +160,29 @@ set laststatus=2
 let g:airline_powerline_fonts = 1
 let g:airline_theme = 'serene'
 
-
 " Indent-Guides
 let g:indent_guides_enable_on_vim_startup = 1
 let g:indent_guides_start_level = 2
 let g:indent_guides_guide_size = 1
 let g:indent_guides_exclude_filetypes = ['help', 'nerdtree']
 
+" Italicize comments
+highlight Comment cterm=italic
+
 " Style vertical split bar
-set fillchars+=vert:│
+" set fillchars+=vert:│
+set fillchars+=vert:\ 
 hi VertSplit ctermbg=NONE guibg=NONE
 
 if has("gui_running")
-     set background=dark
-     colorscheme welpe
+     colorscheme moriarty
      set go=aiP
-     set guifont=Source\ Code\ Pro\ for\ Powerline:h11
-     set nonumber
+     set guifont=Roboto\ Mono\ for\ Powerline:h11
+     set guioptions+=e
 
      let g:indent_guides_auto_colors = 1
+     let g:airline_theme='deep_space'
+     let g:deepspace_italics = 1
 else
      colorscheme jellybeans
      let g:indent_guides_auto_colors = 0
