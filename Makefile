@@ -19,5 +19,5 @@ install_vundle:
 	vim +PluginInstall +qall
 
 install_ycm:
-	~/.vim/bundle/YouCompleteMe/install.py --gocode-completer; \
+	~/.vim/bundle/YouCompleteMe/install.sh --gocode-completer; \
 	sudo npm install -g typescript
