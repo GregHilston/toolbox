@@ -20,4 +20,4 @@ install_vundle:
 
 install_ycm:
 	~/.vim/bundle/YouCompleteMe/install.sh --gocode-completer; \
-	sudo npm install -g typescript
+	# sudo npm install -g typescript

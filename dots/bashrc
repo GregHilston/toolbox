@@ -125,7 +125,8 @@ alias subl="LANG=en_US.UTF-8 subl"
 #[[ $TERN != "screen" ]] && exec tmux
 # [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
-source $HOME/.config/env/common.env
-source $HOME/.config/env/dyn.env
+source $HOME/.env/common.env
+source $HOME/.env/dyn.env
+source $HOME/.env/oracle.env
 
 eval "$(rbenv init -)"
