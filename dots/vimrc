@@ -4,36 +4,39 @@ set encoding=utf-8
 " Vundle
 set nocompatible
 filetype plugin indent on
-set rtp+=~/.vim/bundle/Vundle.vim
-call vundle#begin()
-Plugin 'gmarik/Vundle.vim'
 
-" Vundle Plug-ins
-Plugin 'Valloric/YouCompleteMe'
-Plugin 'nathanaelkane/vim-indent-guides'
-Plugin 'majutsushi/tagbar'
-Plugin 'scrooloose/nerdtree'
-Plugin 'vim-airline/vim-airline'
-Plugin 'vim-airline/vim-airline-themes'
-Plugin 'tpope/vim-fugitive'
-Plugin 'airblade/vim-gitgutter'
-Plugin 'ryanoasis/vim-devicons'
-Plugin 'vim-syntastic/syntastic'
+" Plug-ins
+call plug#begin('~/.vim/plugged')
 
-" Language, Framework specific
-" TODO only load based on file extension
+" Editor
+" Plugin 'ryanoasis/vim-devicons'
+Plug 'nathanaelkane/vim-indent-guides'
+Plug 'vim-airline/vim-airline'
+Plug 'vim-airline/vim-airline-themes'
+Plug 'scrooloose/nerdtree'
+Plug 'majutsushi/tagbar'
+
+" Git
+Plug 'airblade/vim-gitgutter'
+Plug 'tpope/vim-fugitive'
+
+" Language
+Plug 'ekalinin/Dockerfile.vim'
+Plug 'chase/vim-ansible-yaml'
+Plug 'fatih/vim-go'
+Plug 'vim-syntastic/syntastic'
+Plug 'posva/vim-vue'
 " Plugin 'vim-ruby/vim-ruby'
-Plugin 'ekalinin/Dockerfile.vim'
-Plugin 'chase/vim-ansible-yaml'
-Plugin 'fatih/vim-go'
+
+Plug 'Valloric/YouCompleteMe'
 
 " TODO go through these
-Plugin 'tpope/vim-sleuth'           " Auto indent
-Plugin 'jlanzarotta/bufexplorer'    " File browser
+Plug 'tpope/vim-sleuth'           " Auto indent
+Plug 'jlanzarotta/bufexplorer'    " File browser
 " Plugin 'rking/ag.vim'               " Searching
 " Plugin 'klen/python-mode'
 
-call vundle#end()         " required
+call plug#end()         " required
 filetype plugin indent on " required
 
 let mapleader=","
@@ -74,8 +77,10 @@ set incsearch
 syntax enable
 syntax on
 
-" Reload vimrc
+" Maps
 nmap <silent> <leader>V :source ~/.vimrc <cr>:filetype detect<cr>
+nmap <silent> <leader>bh <cr>:bprevious<cr>
+nmap <silent> <leader>bl <cr>:bnext<cr>
 
 " Set some nice character listings, then activate list
 set list listchars=tab:⟶\ ,trail:·,extends:>,precedes:<
@@ -116,10 +121,6 @@ set title
 
 " Toggle paste
 set pastetoggle=<F2>
-
-" Unite
-nmap <silent> <leader>B :Unite buffer<CR>
-nmap <silent> <leader>C :Unite file<CR>
 
 " NERDTree
 nmap <silent> <C-E> :NERDTreeToggle<CR>
@@ -166,8 +167,11 @@ set noerrorbells novisualbell t_vb=
 
 " Powerline
 set laststatus=2
+let g:airline#extensions#tabline#enabled = 1
 let g:airline_powerline_fonts = 1
-let g:airline_theme = 'serene'
+let g:airline_theme='minimalist'
+let g:airline_left_sep=''
+let g:airline_right_sep=''
 
 " Indent-Guides
 let g:indent_guides_enable_on_vim_startup = 1
@@ -189,11 +193,10 @@ set linespace=4
 if has("gui_running")
      colorscheme moriarty
      set go=aiP
-     set guifont=RobotoMono\ Nerd\ Font:h11
+     set guifont=Roboto\ Mono\ Light\ for\ Powerline:h11
      set guioptions+=e
 
      let g:indent_guides_auto_colors = 1
-     let g:airline_theme='deep_space'
      let g:deepspace_italics = 1
 else
      colorscheme jellybeans
