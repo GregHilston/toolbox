@@ -193,8 +193,8 @@ set linespace=4
 if has("gui_running")
      colorscheme moriarty
      set go=aiP
-     set guifont=Roboto\ Mono\ Light\ for\ Powerline:h11
      set guioptions+=e
+     set guifont=Source\ Code\ Pro\ for\ Powerline
 
      let g:indent_guides_auto_colors = 1
      let g:deepspace_italics = 1

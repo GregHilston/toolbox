@@ -35,7 +35,3 @@ if [[ "$(uname)" == "Darwin" ]]; then
 fi
 
 source $HOME/.env/common.env
-source $HOME/.env/dyn.env
-source $HOME/.env/oracle.env
-
-eval "$(rbenv init -)"
