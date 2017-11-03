@@ -15,6 +15,7 @@ Plug 'vim-airline/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
 Plug 'scrooloose/nerdtree'
 Plug 'majutsushi/tagbar'
+Plug 'ctrlpvim/ctrlp.vim'
 
 " Git
 Plug 'airblade/vim-gitgutter'
@@ -77,11 +78,6 @@ set incsearch
 syntax enable
 syntax on
 
-" Maps
-nmap <silent> <leader>V :source ~/.vimrc <cr>:filetype detect<cr>
-nmap <silent> <leader>bh <cr>:bprevious<cr>
-nmap <silent> <leader>bl <cr>:bnext<cr>
-
 " Set some nice character listings, then activate list
 set list listchars=tab:⟶\ ,trail:·,extends:>,precedes:<
 
@@ -92,16 +88,23 @@ set showmatch
 set spell spelllang=en_us
 setlocal spell spelllang=en_us
 
+" ============================================================================
+"  Maps
+" ============================================================================
+nmap <silent> <leader>V :source ~/.vimrc <cr>:filetype detect<cr>
+nmap <silent> <leader>bh <cr>:bprevious<cr>
+nmap <silent> <leader>bl <cr>:bnext<cr>
+
 " Toggle spelling with the F7 key
 nmap <silent> <F7> :setlocal spell! spelllang=en_us<cr>
 
 " Copyright message
-nmap <leader>ic a Copyright (c) 2015 Dynamic Networks, Inc.
+nmap <leader>ic a Copyright (c) 2017 Dynamic Networks, Inc.
 
 " PDB
 nmap <leader>pd aimport sys, pdb; pdb.Pdb(stdout=sys.__stdout__).set_trace()
 
-nnoremap <silent> <F9> :TagbarToggle<CR>
+nnoremap <silent> <leader>tb :TagbarToggle<CR>
 
 " Spelling
 highlight clear SpellBad
@@ -139,6 +142,10 @@ let g:syntastic_check_on_wq = 0
 set statusline+=%#warningmsg#
 set statusline+=%{SyntasticStatuslineFlag()}
 set statusline+=%*
+
+" ctrlp
+set wildignore+=*/tmp/*,*.so,*.swp,*.zip
+let g:ctrlp_user_command = ['.git', 'cd %s && git ls-files -co --exclude-standard']
 
 " Pymode
 let g:pymode_lint_ignore = "E501"
