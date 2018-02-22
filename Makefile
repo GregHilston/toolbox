@@ -1,6 +1,9 @@
 
 
-install: install_dots install_submodules install_vundle
+install: install_deps install_dots install_submodules install_vim_plugins
+
+install_deps:
+	./install/install_deps.sh
 
 install_dots: backup
 	./install/install_dots.sh
@@ -15,8 +18,8 @@ install_submodules:
 	git submodule init; \
 	git submodule update;
 
-install_vundle:
-	vim +PluginInstall +qall
+install_vim_plugins:
+	vim +PlugInstall +qall
 
 install_ycm:
 	~/.vim/bundle/YouCompleteMe/install.sh --gocode-completer; \
