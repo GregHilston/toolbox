@@ -1,36 +1,35 @@
-Toolbox
+# Toolbox
 ========
+
+Inspired by and copied from [davidharrigan](https://github.com/davidharrigan/toolbox) and [msoucy](https://github.com/msoucy/Dotfiles)
+
 My toolbox that allows me to be productive on any system... except Windows.
-Includes dotfiles, handy scripts, cool colors for use on Linux and OSX.
 
 ## What's in it?
 ```bash
-├── Makefile     # Makefile for installation
-├── Vagrantfile  # Vagrantfiles are just handy to have around, right?
-├── backup       # Any existing replaced files will go here
-├── bin          # Nifty bin files. Added to $PATH.
-├── dots         # Dotfiles
-│   ├── bashrc
-│   ├── env      # I separate my env vars here - work, OS X specifics
-│   ├── gitignore
-│   ├── oh-my-zsh
-│   ├── tmux.conf
-│   ├── vim
-│   ├── vimrc
-│   ├── zsh
-│   └── zshrc
+├── Makefile        # Makefile for installation
+├── bin             # Nifty bin files. Added to $PATH.
+├── dots            # Dotfiles
+│   ├── bashrc      # BASH config
+│   ├── env         # I separate my env vars here - work, OS X specifics
+│   ├── gitignore   # Global git ignore
+│   ├── oh-my-zsh   # oh-my-zsh installation
+│   ├── tmux.conf   # tmux config
+│   ├── vimrc       # vim config
+│   ├── zsh-custom  # zsh custom theme
+│   └── zshrc       # zsh config
 ├── install     # Installation helper scripts
 ├── lib         # Nifty libs, iterm2, terminator, terminal colors
-│   ├── iterm2
-│   ├── terminator
-│   └── xrdb
+│   ├── iterm2
+│   ├── terminator
+│   └── xrdb
 └── private     # My secret sauce.
 ```
 
 ## External submodules
 Here's a list of third party gitmodules that are included in this repo:
-* [oh-my-zsh](https://github.com/robbyrussell/oh-my-zsh)
-* [Vundle](https://github.com/VundleVim/Vundle.vim)
+* [oh-my-zsh](https://github.com/robbyrussell/oh-my-zsh)    # zsh customization
+* [Vundle](https://github.com/VundleVim/Vundle.vim)         # plugin manager for vim
 
 
 ## How do I use it?
@@ -40,7 +39,7 @@ make install
 ```
 
 [YouCompleteMe](https://github.com/Valloric/YouCompleteMe) is listed inside `vimrc`, however is not installed by default. I have it configured to install
-autocompletion for Python, Javascript, and Go by default. There are some dependencies that need to be taken care of first.
+autocompletion for Python by default. There are some dependencies that need to be taken care of first.
 
 ### OS X
 1. Make sure you are using the MacVim vim binary:

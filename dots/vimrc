@@ -1,68 +1,31 @@
-scriptencoding utf-8
-set encoding=utf-8
+" :help [command] for more information 
 
-" Vundle
-set nocompatible
-filetype plugin indent on
+" Visual Changes
+colorscheme evening
+syntax enable     " Turn on syntax highlighting
+syntax on
+set number        " Shows lines numbers along left side
+set ruler         " Shows file stats in bottom right corner
+set visualbell    " Blink cursor on error instead of beeping 
+set cursorline    " Highlights current line
+set wildmenu      " Visual autocomplete for command menu
 
-" Plug-ins
-call plug#begin('~/.vim/plugged')
+" Whitespace
+set wrap          " Visually wraps long lines
+set textwidth=80  " Max columns before wrap occurs 
+set tabstop=4     " Number of spaces a tab counts for visually
+set softtabstop=4 " Number of spaces a tab counts for when inserting/deleting
+set expandtab     " Tabs are spaces
 
-" Editor
-" Plugin 'ryanoasis/vim-devicons'
-Plug 'nathanaelkane/vim-indent-guides'
-Plug 'vim-airline/vim-airline'
-Plug 'vim-airline/vim-airline-themes'
-Plug 'scrooloose/nerdtree'
-Plug 'majutsushi/tagbar'
-Plug 'ctrlpvim/ctrlp.vim'
+" Last line
+set showmode      " Displays what mode we're in along the bottom bar
+set showcmd       " Shows command in bottom bar
 
-" Git
-Plug 'airblade/vim-gitgutter'
-Plug 'tpope/vim-fugitive'
-
-" Language
-Plug 'ekalinin/Dockerfile.vim'
-Plug 'chase/vim-ansible-yaml'
-Plug 'fatih/vim-go'
-Plug 'vim-syntastic/syntastic'
-Plug 'posva/vim-vue'
-" Plugin 'vim-ruby/vim-ruby'
-
-Plug 'Valloric/YouCompleteMe'
-
-" TODO go through these
-Plug 'tpope/vim-sleuth'           " Auto indent
-Plug 'jlanzarotta/bufexplorer'    " File browser
-" Plugin 'rking/ag.vim'               " Searching
-" Plugin 'klen/python-mode'
-
-call plug#end()         " required
-filetype plugin indent on " required
-
-let mapleader=","
-
-set wildignore=*.swp,*.pyc
-set nobackup
-set noswapfile
-set scrolloff=15
-
-set number
-
-" Color settings
-set t_Co=256
-let g:rehash256=1
-
-" Allow mouse control
-set mouse=a
-
-" Highlight current line
-set cursorline
-hi CursorLine cterm=NONE ctermbg=238
-highlight LineNr ctermfg=7
-
-" Color column
-" set colorcolumn=80
+" Searching
+set incsearch     " Searches as characters are entered
+set hlsearch      " Highlights matches
+set ignorecase    " Ignores cases of characters to match
+set showmatch     " Highlights matching [{()}]
 
 " Set automatic indentation
 set autoindent
@@ -73,141 +36,3 @@ set cindent
 set sw=4 ts=4 et
 set hlsearch
 set incsearch
-
-" Syntax highlighting
-syntax enable
-syntax on
-
-" Set some nice character listings, then activate list
-set list listchars=tab:⟶\ ,trail:·,extends:>,precedes:<
-
-" Show matching brackets
-set showmatch
-
-" Spell check on
-set spell spelllang=en_us
-setlocal spell spelllang=en_us
-
-" ============================================================================
-"  Maps
-" ============================================================================
-nmap <silent> <leader>V :source ~/.vimrc <cr>:filetype detect<cr>
-nmap <silent> <leader>bh <cr>:bprevious<cr>
-nmap <silent> <leader>bl <cr>:bnext<cr>
-
-" Toggle spelling with the F7 key
-nmap <silent> <F7> :setlocal spell! spelllang=en_us<cr>
-
-" Copyright message
-nmap <leader>ic a Copyright (c) 2017 Dynamic Networks, Inc.
-
-" PDB
-nmap <leader>pd aimport sys, pdb; pdb.Pdb(stdout=sys.__stdout__).set_trace()
-
-nnoremap <silent> <leader>tb :TagbarToggle<CR>
-
-" Spelling
-highlight clear SpellBad
-highlight SpellBad term=standout ctermfg=1 term=underline cterm=underline
-highlight clear SpellCap
-highlight SpellCap term=underline cterm=underline
-highlight clear SpellRare
-highlight SpellRare term=underline cterm=underline
-highlight clear SpellLocal
-highlight SpellLocal term=underline cterm=underline
-
-" where it should get the dictionary files
-let g:spellfile_URL = 'http://ftp.vim.org/vim/runtime/spell'
-
-" Set title of window to file name
-set title
-
-" Toggle paste
-set pastetoggle=<F2>
-
-" NERDTree
-nmap <silent> <C-E> :NERDTreeToggle<CR>
-let NERDTreeIgnore=['\~$', 'node_modules[[dir]]', 'bower_components[[dir]]', 'dist[[dir]]', 'venv[[dir]]', '\.pyc$']
-
-" Syntastic
-let g:syntastic_python_checkers = ['pylint']
-let g:syntastic_javascript_checkers = ['jshint']
-let g:syntastic_go_checkers = ['go', 'golint', 'errcheck']
-" let g:syntastic_mode_map={'mode': 'active',
-"                      \ 'active_filetypes': [],
-"                      \ 'passive_filetypes': ['html'] }
-let g:syntastic_check_on_open = 1
-let g:syntastic_check_on_wq = 0
-
-set statusline+=%#warningmsg#
-set statusline+=%{SyntasticStatuslineFlag()}
-set statusline+=%*
-
-" ctrlp
-set wildignore+=*/tmp/*,*.so,*.swp,*.zip
-let g:ctrlp_user_command = ['.git', 'cd %s && git ls-files -co --exclude-standard']
-
-" Pymode
-let g:pymode_lint_ignore = "E501"
-let g:pymode_rope = 0
-let g:pymode_rope_completion = 0
-let g:pymode_rope_complete_on_dot = 0
-let g:pymode_folding = 0
-let g:pymode_options_max_line_length = 80
-
-" Javascript
-let g:used_javascript_libs = 'underscore,angularjs'
-
-" Go
-" use goimports for formatting
-let g:go_fmt_command = "goimports"
-
-" turn highlighting on
-let g:go_highlight_functions = 1
-let g:go_highlight_methods = 1
-let g:go_highlight_structs = 1
-let g:go_highlight_operators = 1
-let g:go_highlight_build_constraints = 1
-
-" Disable bell banners
-set noerrorbells novisualbell t_vb=
-
-" Powerline
-set laststatus=2
-let g:airline#extensions#tabline#enabled = 1
-let g:airline_powerline_fonts = 1
-let g:airline_theme='minimalist'
-let g:airline_left_sep=''
-let g:airline_right_sep=''
-
-" Indent-Guides
-let g:indent_guides_enable_on_vim_startup = 1
-let g:indent_guides_start_level = 2
-let g:indent_guides_guide_size = 1
-let g:indent_guides_exclude_filetypes = ['help', 'nerdtree']
-
-" Italicize comments
-highlight Comment cterm=italic gui=italic
-
-" Style vertical split bar
-" set fillchars+=vert:│
-set fillchars+=vert:\ 
-hi VertSplit ctermbg=NONE guibg=NONE
-
-" Set line height
-set linespace=4
-
-if has("gui_running")
-     colorscheme moriarty
-     set go=aiP
-     set guioptions+=e
-     set guifont=Source\ Code\ Pro\ for\ Powerline
-
-     let g:indent_guides_auto_colors = 1
-     let g:deepspace_italics = 1
-else
-     colorscheme jellybeans
-     let g:indent_guides_auto_colors = 0
-     autocmd VimEnter,Colorscheme * :hi IndentGuidesOdd ctermbg=16
-     autocmd VimEnter,Colorscheme * :hi IndentGuidesEven ctermbg=8
-endif
