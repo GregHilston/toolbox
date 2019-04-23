@@ -1,10 +1,9 @@
-install: install_dots install_submodules install_packages
+install: install_packages install_dots install_submodules
 
 backup:
 	./install/backup.sh
 
-install_dots:
-	backup
+install_dots: backup
 	./install/install_dots.sh
 
 install_submodules:
@@ -17,5 +16,4 @@ install_packages:
     git \
     build-essential \
     tmux \
-    vim \
-    && git clone https://github.com/GregHilston/toolbox.gitapt-get
+    vim
