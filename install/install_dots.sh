@@ -13,6 +13,10 @@ for install in "${INSTALL[@]}"; do
   echo " Done"
 done
 
+printf "Installing $install... "
+ln -s "$TOOLBOX_HOME/dots/zsh-custom/themes" "$HOME/.oh-my-zsh/"
+echo " Done"
+
 printf "Linking bin and lib... "
 rm -rf "$HOME/.bin"
 rm -rf "$HOME/.lib"

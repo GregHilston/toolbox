@@ -70,23 +70,22 @@ setopt HIST_BEEP                 # Beep when accessing nonexistent history.
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git 
-  colored-man-pages 
-  colorize 
-  github 
-  jira 
-  vagrant 
-  virtualenv 
-  pip 
-  python 
-  brew 
-  osx 
-  zsh-syntax-highlighting 
+plugins=(git
+  colorize
+  github
+  jira
+  vagrant
+  virtualenv
+  pip
+  python
+  brew
+  osx
+  zsh-syntax-highlighting
   zsh-autosuggestions
-  web-search 
-  sublime 
-  jsontools 
-  jira 
+  web-search
+  sublime
+  jsontools
+  jira
   fabric
 )
 
