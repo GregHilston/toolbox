@@ -16,4 +16,5 @@ install_packages:
     git \
     build-essential \
     tmux \
-    vim
+    vim \
+	zsh
