@@ -14,7 +14,7 @@ for install in "${INSTALL[@]}"; do
 done
 
 printf "Installing gnzh_customized_by_grehg... "
-ln -s "$TOOLBOX_HOME/dots/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme" "$HOME/.oh-my-zsh/theme/gnzh_customized_by_grehg.zsh-theme"
+ln -sf "$TOOLBOX_HOME/dots/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme" "$HOME/.oh-my-zsh/themes/gnzh_customized_by_grehg.zsh-theme"
 echo " Done"
 
 printf "Linking bin and lib... "
