@@ -13,8 +13,8 @@ for install in "${INSTALL[@]}"; do
   echo " Done"
 done
 
-printf "Installing $install... "
-ln -s "$TOOLBOX_HOME/dots/zsh-custom/themes" "$HOME/.oh-my-zsh/"
+printf "Installing gnzh_customized_by_grehg... "
+ln -s "$TOOLBOX_HOME/dots/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme" "$HOME/.oh-my-zsh/theme/gnzh_customized_by_grehg.zsh-theme"
 echo " Done"
 
 printf "Linking bin and lib... "

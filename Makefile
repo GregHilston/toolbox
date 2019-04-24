@@ -1,4 +1,4 @@
-install: install_packages install_dots install_submodules install_zsh_autocomplete
+install: install_packages install_submodules install_dots  install_zsh_autocomplete
 
 backup:
 	./install/backup.sh
