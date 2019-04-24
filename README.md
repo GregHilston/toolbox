@@ -38,10 +38,6 @@ First, you probably want to fork this repo, change some stuff if you don't like 
 make install
 ```
 
-### Linux
-1. Install development tools
-```
-sudo apt-get install git build-essential -y
-```
+If you're on a barebones system, like alpine linux, use `$ ./bare_bones.sh` to prepare your system for the `$ make install` command
 
 And that's it!
