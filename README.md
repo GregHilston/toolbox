@@ -8,6 +8,7 @@ My toolbox that allows me to be productive on any system... except Windows.
 ## What's in it?
 ```bash
 ├── Makefile        # Makefile for installation
+├── bare_bones.sh   # for preparing a system that has nothing but apt (think alpine linux)
 ├── bin             # Nifty bin files. Added to $PATH.
 ├── dots            # Dotfiles
 │   ├── bashrc      # BASH config

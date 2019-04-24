@@ -1,0 +1,1 @@
+apt-get update && apt-get upgrae -y && apt-get install git build-essential
