@@ -17,6 +17,10 @@ printf "Installing gnzh_customized_by_grehg... "
 ln -sf "$TOOLBOX_HOME/dots/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme" "$HOME/.oh-my-zsh/themes/gnzh_customized_by_grehg.zsh-theme"
 echo " Done"
 
+printf "Installing gnzh_customized_by_grehg... "
+ln -sf "$TOOLBOX_HOME/dots/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme" "$TOOLBOX_HOME/dots/"
+echo " Done"
+
 printf "Linking bin and lib... "
 rm -rf "$HOME/.bin"
 rm -rf "$HOME/.lib"
