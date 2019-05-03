@@ -89,6 +89,6 @@ python37:
 	# At this point, Python 3.7 is installed on your Ubuntu system and ready to be used.
 	@echo "Python3.7 should be installed, use by running '\$ python3.7'
 
-pymysql: python37
+sqlalchemy_dependencies: python37
 	# Installing the dev for python 37 and the client,
 	apt install python3.7-dev -y default-libmysqlclient-dev -y \
