@@ -92,3 +92,6 @@ python37:
 sqlalchemy_dependencies: python37
 	# Installing the dev for python 37 and the client,
 	apt install python3.7-dev -y default-libmysqlclient-dev -y \
+
+email_on_internet_access:
+	
