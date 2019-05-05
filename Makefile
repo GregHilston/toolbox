@@ -95,3 +95,8 @@ sqlalchemy_dependencies: python37
 
 email_on_internet_access:
 	
+
+mount_samba:
+	@echo "Installing samba"
+
+	./install/install_samba.sh
