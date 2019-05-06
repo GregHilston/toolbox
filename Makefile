@@ -45,8 +45,9 @@ sqlalchemy_dependencies: python37
 	@echo "Installing SQL Alchemy dependencies..."
 	./install/install_sqlalchemy_dependencies.sh
 
-email_on_internet_access:
-
+email_on_boot_with_internet:
+	@echo "Installing email on boot with internet..."
+	./install/install_email_on_boot_with_internet.sh
 
 mount_samba:
 	@echo "Installing samba..."

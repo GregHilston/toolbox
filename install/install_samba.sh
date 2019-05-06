@@ -9,4 +9,5 @@ LINE='//retropie/mothership /media/mothership cifs guest,uid=1000,iocharset=utf8
 FILE='/etc/fstab'
 grep -qF -- "$LINE" "$FILE" || echo "$LINE" >> "$FILE"
 
+# mount right now, so we don't have to reboot
 mount -av
