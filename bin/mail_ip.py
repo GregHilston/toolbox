@@ -9,7 +9,7 @@ to = 'Grehgh@gmail.com'
 gmail_user = 'grehgpi@gmail.com'
 gmail_password = ''
 
-with open ("gmail_password.conf.personal", "r") as myfile:
+with open ("../secrets/gmail_password.conf.personal", "r") as myfile:
     gmail_password=myfile.read().replace('\n', '')
 
 smtpserver = smtplib.SMTP('smtp.gmail.com',587)
