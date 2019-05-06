@@ -25,7 +25,7 @@ install_zsh_autocomplete:
 	./install/install_zsh_autocomplete.sh
 
 success_message:
-	@echo "Makefile running was a success!\nLogout and log back in for ZSH to be your default shell or run ZSH right now and future logins should work just fine";
+	@echo "Makefile running was a success!\nLogout and log back in for ZSH to be your default shell or run ZSH right now and future logins should work just fine. Also, don't forget this Makefile has many optional commands!";
 
 # Below are optional packages and not run by default
 
