@@ -34,4 +34,4 @@ TOOLBOX_HOME=$(echo $SCRIPT_HOME | rev | cut -d/ -f2- | rev)
 printf "Installing rc.local (email IP address on boot)... "
 rm -rf /etc/rc.local
 ln -s "$HOME/.rc.local" "/etc/rc.local" 
-echo " Done"
+echo "Done"

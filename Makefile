@@ -48,6 +48,7 @@ sqlalchemy_dependencies: python37
 email_on_boot_with_internet:
 	@echo "Installing email on boot with internet..."
 	./install/install_email_on_boot_with_internet.sh
+	@echo "Don't forget to put gmail_password.conf.personal file in ../secrets"
 
 mount_samba:
 	@echo "Installing samba..."
