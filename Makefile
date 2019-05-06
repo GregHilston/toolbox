@@ -21,7 +21,7 @@ install_zsh_as_default:
 	sudo ./install/install_zsh_as_default.sh
 
 install_zsh_autocomplete:
-	@echo "Installing ZSH auto complete"
+	@echo "Installing ZSH auto complete..."
 	./install/install_zsh_autocomplete.sh
 
 success_message:
@@ -49,5 +49,5 @@ email_on_internet_access:
 
 
 mount_samba:
-	@echo "Installing samba"
+	@echo "Installing samba..."
 	./install/install_samba.sh
