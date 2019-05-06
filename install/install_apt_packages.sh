@@ -2,7 +2,7 @@
 set -e
 
 # update the apt repo
-apt-get update \
+apt-get update
 
 # install things we care about
 && apt-get install -y \
