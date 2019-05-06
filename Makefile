@@ -14,15 +14,8 @@ install_submodules:
 	git submodule update;
 
 install_packages:
-	@echo "Installing packages..."
-	apt-get update \
-    && apt-get install -y \
-    git \
-    build-essential \
-    tmux \
-    vim \
-	htop \
-	zsh
+	@echo "Installing apt packages..."
+	./install/install_apt_packages.sh
 
 install_zsh_as_default:
 	@echo "Instaling zsh as default shell..."

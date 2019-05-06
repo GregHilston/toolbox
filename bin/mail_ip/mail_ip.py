@@ -31,4 +31,3 @@ msg['From'] = gmail_user
 msg['To'] = to
 smtpserver.sendmail(gmail_user, [to], msg.as_string())
 smtpserver.quit()
-
