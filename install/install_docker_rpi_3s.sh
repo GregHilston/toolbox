@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+# For newer pis
+
 # fetch the commands to run
 curl -fsSL get.docker.com -o get-docker.sh && sh get-docker.sh
 
