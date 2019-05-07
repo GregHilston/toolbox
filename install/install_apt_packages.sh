@@ -5,7 +5,7 @@ set -e
 apt-get update
 
 # install things we care about
-&& apt-get install -y \
+apt-get install -y \
 git \
 build-essential \
 tmux \
