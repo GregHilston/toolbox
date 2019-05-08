@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 set -e
 
-docker create \
+# from https://github.com/linuxserver/docker-organizr
+# puid and pgid found by running
+# $ id [username]
+# example:
+# $ id pi
+
+docker rm organizr
+
+docker run \
   --name=organizr \
   -e PUID=1000 \
   -e PGID=1000 \
-  -e TZ=<your timezone, eg Europe/London> \
+  -e TZ=Denver \
   -p 9983:80 \
-  -v <path to data>:/config \
+  -v ~/organizr-config:/config \
   --restart unless-stopped \
   linuxserver/organizr
