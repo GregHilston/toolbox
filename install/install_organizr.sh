@@ -17,4 +17,5 @@ docker run \
   -p 9983:80 \
   -v ~/organizr-config:/config \
   --restart unless-stopped \
+  -d \
   linuxserver/organizr
