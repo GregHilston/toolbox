@@ -1,6 +1,10 @@
-install: install_packages install_submodules install_zsh_as_default install_zsh_autocomplete install_dots success_message
+install: helper_ensure_no_sudo install_packages install_submodules install_zsh_as_default install_zsh_autocomplete install_dots success_message
 
 # Yes, I have iinstall_dots twice, trying to get zsh install to work with just calling make
+
+helper_ensure_no_sudo:
+	@echo "Ensuring this was not run with sudo..."
+	./install/helper_ensure_no_sudo.sh
 
 backup:
 	@echo "Backing up dot files..."
