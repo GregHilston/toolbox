@@ -1,4 +1,6 @@
-install: install_packages install_submodules install_dots install_zsh_as_default install_zsh_autocomplete success_message
+install: install_packages install_submodules install_zsh_as_default install_zsh_autocomplete install_dots success_message
+
+# Yes, I have iinstall_dots twice, trying to get zsh install to work with just calling make
 
 backup:
 	@echo "Backing up dot files..."
@@ -6,7 +8,7 @@ backup:
 
 install_dots: backup
 	@echo "Install dot files..."
-	./install/install_dots.sh
+	sudo ./install/install_dots.sh
 
 install_submodules:
 	@echo "Installing submodule..."
