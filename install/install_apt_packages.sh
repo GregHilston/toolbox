@@ -13,3 +13,4 @@ mosh \
 vim \
 htop \
 zsh
+# samba samba-common-bin
