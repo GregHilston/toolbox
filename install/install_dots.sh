@@ -3,6 +3,7 @@ set -e
 
 SCRIPT_HOME=$(cd "$(dirname $0)" && pwd)
 TOOLBOX_HOME=$(echo $SCRIPT_HOME | rev | cut -d/ -f2- | rev)
+HOME=$(./helper_get_home_directory.sh)
 
 INSTALL=(bashrc gitignore tmux.conf vimrc zshrc env vim oh-my-zsh zsh-custom)
 
