@@ -89,7 +89,8 @@ plugins=(git
   fabric
 )
 
-source $ZSH/oh-my-zsh.sh
+# source $ZSH/oh-my-zsh.sh
+source "$HOME/Git/toolbox/dots/oh-my-zsh/oh-my-zsh.sh"
 
 # User configuration
 

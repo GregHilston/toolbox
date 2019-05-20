@@ -10,12 +10,11 @@ set -e
 docker rm organizr
 
 docker run \
-  --name=organizr \
-  -e PUID=1000 \
-  -e PGID=1000 \
-  -e TZ=Denver \
-  -p 9983:80 \
-  -v ~/organizr-config:/config \
-  --restart unless-stopped \
-  -d \
-  linuxserver/organizr
+           --name=organizr \
+           -v ~/.organizr-config:/config \
+           -e PGID=1000 \
+           -e PUID=1000 \
+           -p 80:80 \
+           -d \
+           --restart unless-stopped \
+           organizrtools/organizr-v2:armhf

@@ -9,6 +9,7 @@ apt-get install -y \
 git \
 build-essential \
 tmux \
+mosh \
 vim \
 htop \
 zsh
