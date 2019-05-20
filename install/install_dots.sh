@@ -8,8 +8,13 @@ INSTALL=(bashrc gitignore tmux.conf vimrc zshrc env vim oh-my-zsh zsh-custom)
 
 for install in "${INSTALL[@]}"; do
   printf "Installing $install... "
+
+  echo -e ' \t removing old symbolic link..'
   rm -rf ~/.$install
+
+  echo -e " \t linking $TOOLBOX_HOME/dots/$install to $HOME/.$install ..."
   ln -s "$TOOLBOX_HOME/dots/$install" "$HOME/.$install"
+
   echo " Done"
 done
 
