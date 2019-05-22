@@ -1,5 +1,12 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 set -e
+
+source ~/.zshrc
+
+if [[ -z "${ZSH_CUSTOM}" ]]; then
+  echo "the environment variable ZSH_CUSTOM is not defined, can't install zsh-autosuggestion"
+  exit -1
+fi
 
 # Need to install the zsh-autosuggestions ourselves, no longer shipped
 # used https://gist.github.com/dogrocker/1efb8fd9427779c827058f873b94df95
