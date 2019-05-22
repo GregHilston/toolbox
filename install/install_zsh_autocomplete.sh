@@ -5,6 +5,8 @@ set -e
 # used https://gist.github.com/dogrocker/1efb8fd9427779c827058f873b94df95
 # and http://www.geekmind.net/2011/08/how-to-reload-your-zshrc.html
 # and https://stackoverflow.com/questions/36498981/shell-dont-fail-if-git-clone-if-folder-already-exists
+echo "zsh-autosuggestions being cloned or updated at path $ZSH_CUSTOM/plugins/zsh-autosuggestions"
+
 if [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ] ; then
     # echo "attempting to clone to $ZSH_CUSTOM/plugins/zsh-autosuggestions"
     git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
