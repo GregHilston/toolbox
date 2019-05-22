@@ -12,5 +12,6 @@ tmux \
 mosh \
 vim \
 htop \
-zsh
+zsh \
+ansible
 # samba samba-common-bin
