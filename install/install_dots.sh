@@ -8,7 +8,7 @@ HOME=$($SCRIPT_HOME/helper_get_home_directory.sh)
 INSTALL=(bashrc gitignore tmux.conf vimrc zshrc env vim oh-my-zsh zsh-custom)
 
 for install in "${INSTALL[@]}"; do
-  printf "Installing $install... "
+  echo -e "Installing $install... "
 
   echo -e ' \t removing old symbolic link..'
   rm -rf ~/.$install
