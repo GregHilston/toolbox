@@ -12,7 +12,7 @@ for install in "${INSTALL[@]}"; do
   echo -e ' \t removing old symbolic link..'
   rm -rf ~/.$install
 
-  echo -e " \t linking $TOOLBOX_HOME/dots/$install to $HOME/.$install ..."
+  echo -e " \t linking $HOME/.$install to $TOOLBOX_HOME/dots/$install ..."
   ln -s "$TOOLBOX_HOME/dots/$install" "$HOME/.$install"
 
   echo " Done"
