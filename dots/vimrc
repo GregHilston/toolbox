@@ -12,7 +12,7 @@ set wildmenu      " Visual autocomplete for command menu
 
 " Whitespace
 " set wrap          " Visually wraps long lines
-set textwidth=80  " Max columns before wrap occurs 
+" set textwidth=80  " Max columns before wrap occurs 
 set tabstop=4     " Number of spaces a tab counts for visually
 set softtabstop=4 " Number of spaces a tab counts for when inserting/deleting
 set expandtab     " Tabs are spaces

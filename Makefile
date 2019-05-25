@@ -1,6 +1,8 @@
-install: install_packages install_submodules install_zsh_as_default install_zsh_autocomplete install_dots success_message
+install: helper_ensure_no_sudo install_packages install_dots install_submodules install_zsh_as_default install_zsh_autocomplete success_message
 
-# Yes, I have iinstall_dots twice, trying to get zsh install to work with just calling make
+helper_ensure_no_sudo:
+	@echo "Ensuring this was not run with sudo..."
+	./install/helper_ensure_no_sudo.sh
 
 backup:
 	@echo "Backing up dot files..."
@@ -8,7 +10,11 @@ backup:
 
 install_dots: backup
 	@echo "Install dot files..."
-	sudo ./install/install_dots.sh
+	./install/install_dots.sh
+
+source_zshrc:
+	@echo "Sourcing zshrc"
+	./install/helper_source_zshrc.sh
 
 install_submodules:
 	@echo "Installing submodule..."
@@ -20,14 +26,14 @@ install_packages:
 
 install_zsh_as_default:
 	@echo "Instaling zsh as default shell..."
-	sudo ./install/install_zsh_as_default.sh
+	./install/install_zsh_as_default.sh
 
 install_zsh_autocomplete:
 	@echo "Installing ZSH auto complete..."
 	./install/install_zsh_autocomplete.sh
 
 success_message:
-	@echo "Makefile running was a success!\nLogout and log back in for ZSH to be your default shell or run ZSH right now and future logins should work just fine. Also, don't forget this Makefile has many optional commands!";
+	@echo "Makefile running was a potentially success!\nLogout and log back in, then run again to be sure. This is so ZSH will be your default shell and will source the ~/.zshrc file. Also, don't forget this Makefile has many optional commands!";
 
 # Below are optional packages and not run by default
 
