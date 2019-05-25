@@ -2,15 +2,16 @@
 set -e
 
 # update the apt repo
-apt-get update
+sudo apt-get update
 
 # install things we care about
-apt-get install -y \
+sudo apt-get install -y \
 git \
 build-essential \
 tmux \
 mosh \
 vim \
 htop \
-zsh
+zsh \
+ansible
 # samba samba-common-bin
