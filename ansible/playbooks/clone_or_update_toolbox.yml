@@ -1,0 +1,11 @@
+hosts: all
+tasks:
+  - name: Creates git and toolbox directories
+    file:
+      path: ~/Git
+      state: directory
+
+  - name: Clone toolbox repo
+    git: >
+      repo=:ssh://git@github.com/greghilston/toolbox.git
+      dest=~/Git
