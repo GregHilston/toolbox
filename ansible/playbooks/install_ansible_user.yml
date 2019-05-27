@@ -1,0 +1,17 @@
+---
+- name: add ansible user
+  hosts: all
+  become: true
+  tasks:
+  - name: add ansible user
+    user:
+     name: ansible
+     shell: /bin/bash
+     groups: sudo_nopasswd
+    become: true
+  - name: add ansible ssh key
+    become: true
+    authorized_key:
+      user: ansible
+      state: present
+      key: "{{ lookup('file', './ansible.pub') }}"
