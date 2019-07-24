@@ -76,6 +76,12 @@ To safely test the `Makefile`, I suggest running it in a barebones Debian Docker
 
 `$ docker exec -it barebones /bin/bash`
 
+### To SSH Into A Stopped Container
+
+Useful if container is instantly dying
+
+`$ docker run -it <image> /bin/bash`
+
 ## TODO
 
 - htop
