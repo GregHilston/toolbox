@@ -2,8 +2,7 @@
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 # Path to your oh-my-zsh installation.
-export ZSH=~/.oh-my-zsh
-export ZSH_CUSTOM=$HOME/.zsh-custom
+export ZSH=/Users/ghilston/.oh-my-zsh
 
 # Set name of the theme to load. Optionally, if you set this to "random"
 # it'll load a random theme each time that oh-my-zsh is loaded.
@@ -71,27 +70,27 @@ setopt HIST_BEEP                 # Beep when accessing nonexistent history.
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git
-  colorize
-  github
-  jira
-  vagrant
-  virtualenv
-  pip
-  python
-  brew
-  osx
-  zsh-syntax-highlighting
+plugins=(git 
+  colored-man-pages 
+  colorize 
+  github 
+  jira 
+  vagrant 
+  virtualenv 
+  pip 
+  python 
+  brew 
+  osx 
+  zsh-syntax-highlighting 
   zsh-autosuggestions
-  web-search
-  sublime
-  jsontools
-  jira
+  web-search 
+  sublime 
+  jsontools 
+  jira 
   fabric
 )
 
-# source $ZSH/oh-my-zsh.sh
-source "$HOME/Git/toolbox/dots/oh-my-zsh/oh-my-zsh.sh"
+source $ZSH/oh-my-zsh.sh
 
 # User configuration
 
@@ -145,6 +144,9 @@ if [ -f '/Users/ghilston/google-cloud-sdk/path.zsh.inc' ]; then source '/Users/g
 # The next line enables shell command completion for gcloud.
 if [ -f '/Users/ghilston/google-cloud-sdk/completion.zsh.inc' ]; then source '/Users/ghilston/google-cloud-sdk/completion.zsh.inc'; fi
 
+# So flutter is in path
+export PATH="$PATH:/Users/ghilston/Git/flutter_projects/flutter/bin"
+
 gitAllHistory() {
   git log --follow -p -- $@
 }
@@ -155,4 +157,8 @@ gitCommitUndo() {
 
 youtubeToAudio() {
   youtube-dl -ci -f "bestaudio[ext=m4a]" $@
+}
+
+recursivelySearchForString() {
+  grep -niro ${1} $PWD
 }
