@@ -160,5 +160,10 @@ youtubeToAudio() {
 }
 
 recursivelySearchForString() {
-  grep -niro ${1} $PWD
+  if hash rg 2>/dev/null; then
+    rg ${1}
+  else
+    echo "ripgrep not installed, falling back on grep"
+    grep -niro ${1} $PWD
+  fi
 }
