@@ -1,0 +1,21 @@
+##
+# Hosts of Local Home Lab. For usage with parallel-ssh (pssh)
+#
+
+# pihole
+10.0.0.146
+
+# pihole2
+10.0.0.192
+
+# retropie
+10.0.0.94
+
+# grehgpi
+10.0.0.63
+
+# plex
+10.0.0.2
+
+# pivpn
+10.0.0.58
