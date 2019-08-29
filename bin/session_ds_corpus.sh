@@ -10,7 +10,7 @@ tmux has-session -t ${SESSION_NAME}
 
 if [ $? != 0 ];then
   # Create the new session
-  tmux new-session -s ${SESSION_NAME} -d
+  tmux new-session -s ${SESSION_NAME} -n ds_corpus -d
 
   # Loop through all paths to open
   for path in "${ABSOLUTE_PATHS_TO_OPEN[@]}"; do
