@@ -167,3 +167,7 @@ recursivelySearchForString() {
     grep -niro ${1} $PWD
   fi
 }
+
+recursivelySearchForFile() {
+  find . -name ${1}
+}
