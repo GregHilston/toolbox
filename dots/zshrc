@@ -180,3 +180,6 @@ if [ -f '/Users/ghilston/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then 
 
 # Add binary files from teaching-java to path
 export PATH=~/Git/teaching-java/bin:$PATH
+
+# to handle fuck (the package that makes mispells easier to rerun correctly)
+eval $(thefuck --alias)
