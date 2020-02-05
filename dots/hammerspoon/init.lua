@@ -19,37 +19,54 @@ function clickScreen(screenNumber, x)
     hs.eventtap.leftClick(hs.mouse.getAbsolutePosition())
 end
 
+function alternateLaptopScreenBrightness()
+  if hs.brightness.get() == 0 then
+    hs.brightness.set(100)
+  else
+    hs.brightness.set(0)
+  end
+end
+
 activationCommandKeyStroke = {"cmd", "ctrl"}
 activationCommandKeyStrokeRight = {"cmd", "ctrl", "shift"}
 
+leftSideClickX = 500
+rightSideClickX = 1200
+
 hs.hotkey.bind(activationCommandKeyStroke, "1", function()
-    hs.alert.show("clickScreen 1 500")
-    clickScreen(2, 500)
+    clickScreen(1, leftSideClickX)
 end)
 hs.hotkey.bind(activationCommandKeyStroke, "2", function()
-    clickScreen(3, 500)
+    clickScreen(3, leftSideClickX)
+    -- hs.brightness.set(100)
 end)
 hs.hotkey.bind(activationCommandKeyStroke, "3", function()
-    clickScreen(4, 500)
+    clickScreen(2, leftSideClickX)
 end)
 hs.hotkey.bind(activationCommandKeyStroke, "4", function()
-    clickScreen(1, 500)
+    clickScreen(4, leftSideClickX)
 end)
 
 hs.hotkey.bind(activationCommandKeyStrokeRight, "1", function()
-    hs.alert.show("clickScreen 1 1200")
-    clickScreen(2, 1200)
+    clickScreen(1, rightSideClickX)
 end)
 hs.hotkey.bind(activationCommandKeyStrokeRight, "2", function()
-    clickScreen(3, 1200)
+    clickScreen(3, rightSideClickX)
 end)
 hs.hotkey.bind(activationCommandKeyStrokeRight, "3", function()
-    clickScreen(4, 1200)
+    clickScreen(2, rightSideClickX)
 end)
 hs.hotkey.bind(activationCommandKeyStrokeRight, "4", function()
-    clickScreen(1, 1200)
+    clickScreen(4, rightSideClickX)
 end)
 
+hs.hotkey.bind(activationCommandKeyStroke, "1", function()
+    clickScreen(1, leftSideClickX)
+end)
+
+hs.hotkey.bind({"alt"}, "1", function()
+  alternateLaptopScreenBrightness()
+end)
 
 hs.hotkey.bind(activationCommandKeyStroke, "left", function()
     hs.window.focusedWindow():moveOneScreenWest()
