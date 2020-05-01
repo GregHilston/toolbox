@@ -89,23 +89,23 @@ rightSideClickX = 1200
 
 -- home w/ laptop closed
 hs.hotkey.bind(activationCommandKeyStroke, "1", function()
-    clickScreen(2, leftSideClickX)
+    clickScreen(3, leftSideClickX)
 end)
 hs.hotkey.bind(activationCommandKeyStroke, "2", function()
-    clickScreen(1, leftSideClickX)
+    clickScreen(2, leftSideClickX)
 end)
 hs.hotkey.bind(activationCommandKeyStroke, "3", function()
-    clickScreen(3, leftSideClickX)
+    clickScreen(1, leftSideClickX)
 end)
 
 hs.hotkey.bind(activationCommandKeyStrokeRight, "1", function()
-    clickScreen(2, rightSideClickX)
+    clickScreen(3, rightSideClickX)
 end)
 hs.hotkey.bind(activationCommandKeyStrokeRight, "2", function()
-    clickScreen(1, rightSideClickX)
+    clickScreen(2, rightSideClickX)
 end)
 hs.hotkey.bind(activationCommandKeyStrokeRight, "3", function()
-    clickScreen(3, rightSideClickX)
+    clickScreen(1, rightSideClickX)
 end)
 
 
