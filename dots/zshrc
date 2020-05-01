@@ -187,3 +187,6 @@ export PATH=~/Git/teaching-java/bin:$PATH
 
 # to handle fuck (the package that makes mispells easier to rerun correctly)
 eval $(thefuck --alias)
+
+# to allow awscli script to be found
+export PATH=/usr/local/bin/python3:$PATH
