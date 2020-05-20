@@ -84,6 +84,10 @@ Useful if container is instantly dying, the `--rm` flag removes the container af
 
 Remember, your `Dockerfile` run command will not execute!
 
+## Known Issues
+
+I've had to run `$ make install`, followed by `$ make instal_zsh_autocomplete` manually to get everything installed correctly.
+
 ## TODO
 
 - htop
