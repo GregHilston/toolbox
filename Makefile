@@ -1,4 +1,4 @@
-install: helper_ensure_no_sudo install_packages install_submodules install_dots  install_zsh_as_default install_zsh_autocomplete success_message
+install: helper_ensure_no_sudo install_apt_packages install_pip_packages install_submodules install_dots  install_zsh_as_default install_zsh_autocomplete success_message
 
 helper_ensure_no_sudo:
 	@echo "Ensuring this was not run with sudo..."
@@ -20,9 +20,13 @@ install_submodules:
 	@echo "Installing submodule..."
 	./install/install_submodules.sh
 
-install_packages:
+install_apt_packages:
 	@echo "Installing apt packages..."
 	./install/install_apt_packages.sh
+
+install_pip_packages:
+	@echo "Installing pip packages..."
+	./install/install_pip_packages.sh
 
 install_zsh_as_default:
 	@echo "Instaling zsh as default shell..."
