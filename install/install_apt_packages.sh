@@ -13,5 +13,8 @@ mosh \
 vim \
 htop \
 zsh \
-ansible
+ansible \
+python3-dev \
+python3-pip \
+python3-setuptools
 # samba samba-common-bin
