@@ -4,3 +4,4 @@ set -e
 # install things we care about
 sudo snap install --classic code
 sudo snap install --classic pycharm-community
+sudo snap install docker --edge
