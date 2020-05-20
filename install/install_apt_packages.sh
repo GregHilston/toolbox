@@ -21,5 +21,6 @@ python3-dev \
 python3-pip \
 python3-setuptools \
 xournalpp \
-snapd
+snapd \
+i3
 # samba samba-common-bin
