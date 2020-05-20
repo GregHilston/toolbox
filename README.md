@@ -86,11 +86,4 @@ Remember, your `Dockerfile` run command will not execute!
 
 ## Known Issues
 
-I've had to run `$ make install`, followed by `$ make instal_zsh_autocomplete` manually to get everything installed correctly.
-
-## TODO
-
-- htop
-- docker
-- jupter run
-- samba
+I've had to run `$ make install`, followed by `$ make instal_zsh_autocomplete` manually to get everything installed correctly, then add the word function to the `man` on  ~/.oh-my-zsh/plugins/colored-man-pages/colored-man-pages.plugin.zsh
