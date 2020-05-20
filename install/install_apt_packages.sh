@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+# add repos
+sudo add-apt-repository ppa:andreasbutti/xournalpp-master -y
+
 # update the apt repo
 sudo apt-get update
 
@@ -16,5 +19,7 @@ zsh \
 ansible \
 python3-dev \
 python3-pip \
-python3-setuptools
+python3-setuptools \
+xournalpp \
+snapd
 # samba samba-common-bin
