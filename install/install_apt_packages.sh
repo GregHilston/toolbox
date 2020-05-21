@@ -26,5 +26,8 @@ i3 \
 redshift \
 redshift-gtk \
 tree \
-lynx
+lynx \
+i3status \
+suckless-tools
+
 # samba samba-common-bin
