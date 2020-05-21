@@ -24,5 +24,6 @@ xournalpp \
 snapd \
 i3 \
 redshift \
-redshift-gtk
+redshift-gtk \
+tree
 # samba samba-common-bin
