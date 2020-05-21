@@ -74,7 +74,6 @@ plugins=(git
   colored-man-pages 
   colorize 
   github 
-  jira 
   vagrant 
   virtualenv 
   pip 
@@ -84,10 +83,7 @@ plugins=(git
   zsh-syntax-highlighting 
   zsh-autosuggestions
   web-search 
-  sublime 
   jsontools 
-  jira 
-  fabric
 )
 
 source $ZSH/oh-my-zsh.sh
@@ -177,16 +173,23 @@ githubRemote() {
 
 # THe next two lines edited by google cloud sdk, if its not working, look at https://gist.github.com/dwchiang/10849350
 # The next line updates PATH for the Google Cloud SDK.
-if [ -f '/Users/ghilston/Downloads/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/ghilston/Downloads/google-cloud-sdk/path.zsh.inc'; fi
+# Disabling cause not on mac anymore
+# if [ -f '/Users/ghilston/Downloads/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/ghilston/Downloads/google-cloud-sdk/path.zsh.inc'; fi
 
 # The next line enables shell command completion for gcloud.
+# Disabling cause not on mac anymore
 if [ -f '/Users/ghilston/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/ghilston/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
 
 # Add binary files from teaching-java to path
-export PATH=~/Git/teaching-java/bin:$PATH
+# Disabling as not teaching anymore
+# export PATH=~/Git/teaching-java/bin:$PATH
+
+# adding the location of thefuck to our path
+export PATH="$PATH:~/.local/bin/"
 
 # to handle fuck (the package that makes mispells easier to rerun correctly)
-eval $(thefuck --alias)
+# eval $(thefuck --alias)
+alias fuck='$(thefuck $(fc -ln -1))'
 
 # to allow awscli script to be found
 export PATH=/usr/local/bin/python3:$PATH
