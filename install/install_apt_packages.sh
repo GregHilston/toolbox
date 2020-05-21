@@ -25,5 +25,6 @@ snapd \
 i3 \
 redshift \
 redshift-gtk \
-tree
+tree \
+lynx
 # samba samba-common-bin
