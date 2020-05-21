@@ -22,5 +22,7 @@ python3-pip \
 python3-setuptools \
 xournalpp \
 snapd \
-i3
+i3 \
+redshift \
+redshift-gtk
 # samba samba-common-bin

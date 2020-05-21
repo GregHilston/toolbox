@@ -1,7 +1,9 @@
 #!/usr/bin/env zsh
 set -e
 
+echo "attemping to source ~/.zshrc will print out after to signal success"
 source ~/.zshrc
+echo "successfully sourced ~/.zshrc"
 
 if [[ -z "${ZSH_CUSTOM}" ]]; then
   echo "the environment variable ZSH_CUSTOM is not defined, can't install zsh-autosuggestion"
