@@ -16,7 +16,7 @@ set -e
 # and https://stackoverflow.com/questions/36498981/shell-dont-fail-if-git-clone-if-folder-already-exists
 echo "zsh-autosuggestions being cloned or updated at path $ZSH/plugins/zsh-autosuggestions"
 
-if [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ] ; then
+if [ ! -d "$ZSH/plugins/zsh-autosuggestions" ] ; then
     # echo "attempting to clone to $ZSH_CUSTOM/plugins/zsh-autosuggestions"
     git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH/plugins/zsh-autosuggestions
 else 
