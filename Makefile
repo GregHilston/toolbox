@@ -1,4 +1,4 @@
-install: helper_ensure_no_sudo install_apt_packages install_snap_packages install_pip_packages install_submodules install_dots  install_zsh_as_default install_zsh_autosuggestions success_message
+install: helper_ensure_no_sudo install_apt_packages install_snap_packages install_deb_packages install_pip_packages install_submodules install_dots  install_zsh_as_default install_zsh_autosuggestions success_message
 
 helper_ensure_no_sudo:
 	@echo "Ensuring this was not run with sudo..."
@@ -27,6 +27,10 @@ install_apt_packages:
 install_snap_packages:
 	@echo "Installing snap packages..."
 	./install/install_snap_packages.sh
+
+install_deb_packages:
+	@echo "Installing deb packages..."
+	./install/install_deb_packages.sh
 
 install_pip_packages:
 	@echo "Installing pip packages..."

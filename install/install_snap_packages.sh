@@ -14,3 +14,6 @@ sudo snap install bitwarden
 sudo snap install anki-woodrow
 sudo snap install chromium
 sudo snap install ngrok
+sudo snap install easy-openvpn
+sudo snap install VLC
+sudo snap install insomnia
