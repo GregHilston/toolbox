@@ -1,4 +1,4 @@
-install: helper_ensure_no_sudo install_apt_packages install_snap_packages install_deb_packages install_pip_packages install_submodules install_dots  install_zsh_as_default install_zsh_autosuggestions success_message
+install: helper_ensure_no_sudo install_apt_packages install_snap_packages install_deb_packages install_python37 install_pip_packages install_submodules install_dots install_zsh_as_default install_zsh_autosuggestions success_message
 
 helper_ensure_no_sudo:
 	@echo "Ensuring this was not run with sudo..."
@@ -57,7 +57,7 @@ docker_arm:
 	@echo "Installing Docker on arm system..."
 	./install/install_docker_rpi.sh
 
-python37:
+install_python37:
 	@echo "Installing python 3.7..."
 	./install/install_python_37.sh
 
