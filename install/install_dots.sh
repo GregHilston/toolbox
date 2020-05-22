@@ -7,6 +7,17 @@ HOME=$($SCRIPT_HOME/helper_get_home_directory.sh)
 
 INSTALL=(bashrc gitignore tmux.conf vimrc zshrc env vim oh-my-zsh zsh-custom)
 
+# special case
+echo -e "Creating i3 config folder if it doesn't exist"
+mkdir -p ~/.i3
+echo -e "Installing i3 config..."
+echo -e ' \t removing old symbolic link..'
+rm -rf ~/.i3/config
+echo -e " \t linking $HOME/.i3/config to $TOOLBOX_HOME/dots/i3/config ..."
+ln -s "$TOOLBOX_HOME/dots/i3/config" "$HOME/.i3/config"
+echo "reload i3 with \$mod + shift + r"
+echo " Done"
+
 for install in "${INSTALL[@]}"; do
   echo -e "Installing $install... "
 
