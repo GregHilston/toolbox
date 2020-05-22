@@ -135,7 +135,10 @@ export VIRTUAL_ENV_DISABLE_PROMPT=
 # export PATH="$PATH:$HOME/.rvm/bin"
 
 # So flutter is in path
-export PATH="$PATH:/Users/ghilston/Git/flutter_projects/flutter/bin"
+# export PATH="$PATH:/Users/ghilston/Git/flutter_projects/flutter/bin"
+
+# So Snap installations are in path
+export PATH="$PATH:/snap/bin"
 
 gitAllHistory() {
   git log --follow -p -- $@
