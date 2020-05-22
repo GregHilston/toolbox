@@ -193,3 +193,6 @@ alias fuck='$(thefuck $(fc -ln -1))'
 
 # to allow awscli script to be found
 export PATH=/usr/local/bin/python3:$PATH
+
+# points python 3 to python 3.7
+alias python3='/usr/bin/python3.7'
