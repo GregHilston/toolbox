@@ -1,0 +1,33 @@
+Configuration Files
+-----------------
+
+Basic Config:
+assignments.conf - Assign programs (by title or class name) to certain workspaces
+exec.conf - Programs to execute on startup
+keybinds.conf - Global keybinds (reenable media keys, etc)
+header.conf - "Anything Goes"; basically this is the base conf file with some stuff removed or put in other files
+
+Config for my i3 system:
+modebinds.conf - Configuration on how to switch "modes" aka "workspace banks"
+
+Template Configuration:
+template_bankbinds.conf - Which keybinds should be included in each "bank"
+template_monitors.conf - Which workspaces should be bound to which monitors
+template_bank.conf - What a "bank" looks like; mainly just keybinds
+
+Bank Setup:
+banks/bank#.conf - The workspaces that belong in each bank
+
+
+Scripts:
+build.sh - Builds the whole config together based on your current installed monitors
+replacer.sh - Internal script that does something related to bash templating
+
+
+Instructions:
+Put all of the other scripts I sent you into a folder in your PATH
+Modify all of the basic config sections with your general i3-config preferences
+Do the "bank setup" aka configure all of the banks you want
+Do the "template configuration" so that workspaces are assigned to monitors, etc
+Run ./build.sh
+Every time you switch your monitor configuraiton, run ./build.sh
