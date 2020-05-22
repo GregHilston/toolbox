@@ -1,7 +1,7 @@
 " :help [command] for more information 
 
 " Visual Changes
-colorscheme evening
+colorscheme elflord
 syntax enable     " Turn on syntax highlighting
 syntax on
 set number        " Shows lines numbers along left side
