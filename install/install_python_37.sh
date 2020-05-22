@@ -15,3 +15,4 @@ apt install python3.7 python3.7-venv -y
 
 # At this point, Python 3.7 is installed on your Ubuntu system and ready to be used.
 echo "Python3.7 should be installed, use by running '\$ python3.7'"
+python3.7 --version
