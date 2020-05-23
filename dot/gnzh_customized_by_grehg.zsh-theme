@@ -1,0 +1,1 @@
+/home/ghilston/Git/toolbox/dot/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme

@@ -11,7 +11,7 @@ My toolbox that allows me to be productive on any system... except Windows.
 ├── Makefile        # Makefile for installation
 ├── bare_bones.sh   # for preparing a system that has nothing but apt (think alpine linux)
 ├── bin             # Nifty bin files. Added to $PATH.
-├── dots            # Dotfiles
+├── dot             # Dotfiles
 │   ├── bashrc      # BASH config
 │   ├── env         # I separate my env vars here - work, OS X specifics
 │   ├── gitignore   # Global git ignore
@@ -25,7 +25,7 @@ My toolbox that allows me to be productive on any system... except Windows.
 │   ├── iterm2
 │   ├── terminator
 │   └── xrdb
-└── private     # My secret sauce.
+└── secret     # My secret sauce.
 ```
 
 ## External submodules
@@ -68,7 +68,7 @@ To safely test the `Makefile`, I suggest running it in a barebones Debian Docker
 
 `$ docker run -d --name barebones linux-test-bed`
 
-### To Run A
+### To Run A Container
 
 `$ docker start barebones`
 
@@ -83,6 +83,10 @@ Useful if container is instantly dying, the `--rm` flag removes the container af
 `$ docker run --rm -it <image> /bin/bash`
 
 Remember, your `Dockerfile` run command will not execute!
+
+## Submodules
+
+I hadn't used submodules prior to working with this. We use oh-my-zsh as a submodule. This writes to .gitmodules and pulls the code to dot/oh-my-zsh. As I write this, no idea why this lives in dot.
 
 ## Known Issues
 

@@ -1,7 +1,7 @@
 bin/mail_ip/gmail_password.conf.personal
 
 backup
-dots/vim/.*
+dot/vim/.*
 
 .vim
 .vimrc
@@ -17,9 +17,12 @@ dots/vim/.*
 .DS_Store
 iterm2-colors
 
-
-dots/env/dyn.env
+dot/env/dyn.env
 private/
 fonts/
 lib/fonts
-dots/vim/plugged
+dot/vim/plugged
+
+# git submodules
+dot/oh-my-zsh
+dot/vim/bundle/Vundle.vim

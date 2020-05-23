@@ -3,7 +3,7 @@ set -e
 
 # add repos
 sudo add-apt-repository ppa:andreasbutti/xournalpp-master -y
-sudo add-apt-repository ppa:nextcloud-devs/client
+sudo add-apt-repository ppa:nextcloud-devs/client -y
 
 # update the apt repo
 sudo apt-get update
