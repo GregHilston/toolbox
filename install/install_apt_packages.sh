@@ -29,6 +29,7 @@ tree \
 lynx \
 i3status \
 suckless-tools \
-blueman
+blueman \
+arandr
 
 # samba samba-common-bin
