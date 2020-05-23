@@ -13,8 +13,8 @@ mkdir -p ~/.i3
 echo -e "Installing i3 config..."
 echo -e ' \t removing old symbolic link..'
 rm -rf ~/.i3/config
-echo -e " \t linking $HOME/.i3/config to $TOOLBOX_HOME/dots/i3/config ..."
-ln -s "$TOOLBOX_HOME/dots/i3/config" "$HOME/.i3/config"
+echo -e " \t linking $HOME/.i3/config to $TOOLBOX_HOME/dot/i3/config ..."
+ln -s "$TOOLBOX_HOME/dot/i3/config" "$HOME/.i3/config"
 echo "reload i3 with \$mod + shift + r"
 echo " Done"
 
@@ -24,18 +24,18 @@ for install in "${INSTALL[@]}"; do
   echo -e ' \t removing old symbolic link..'
   rm -rf ~/.$install
 
-  echo -e " \t linking $HOME/.$install to $TOOLBOX_HOME/dots/$install ..."
-  ln -s "$TOOLBOX_HOME/dots/$install" "$HOME/.$install"
+  echo -e " \t linking $HOME/.$install to $TOOLBOX_HOME/dot/$install ..."
+  ln -s "$TOOLBOX_HOME/dot/$install" "$HOME/.$install"
 
   echo " Done"
 done
 
 printf "Installing gnzh_customized_by_grehg... "
-ln -sf "$TOOLBOX_HOME/dots/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme" "$HOME/.oh-my-zsh/themes/gnzh_customized_by_grehg.zsh-theme"
+ln -sf "$TOOLBOX_HOME/dot/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme" "$HOME/.oh-my-zsh/themes/gnzh_customized_by_grehg.zsh-theme"
 echo " Done"
 
 printf "Installing gnzh_customized_by_grehg... "
-ln -sf "$TOOLBOX_HOME/dots/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme" "$TOOLBOX_HOME/dots/"
+ln -sf "$TOOLBOX_HOME/dot/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme" "$TOOLBOX_HOME/dot/"
 echo " Done"
 
 printf "Linking bin and lib... "

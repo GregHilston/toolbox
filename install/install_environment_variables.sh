@@ -5,10 +5,10 @@ set -e
 
 TOOLBOX_DIR="$PWD"
 TOOLBOX_BIN_DIR="$TOOLBOX_DIR/../bin"
-TOOLBOX_DOTS_DIR="$TOOLBOX_DIR/../dots"
+TOOLBOX_DOT_DIR="$TOOLBOX_DIR/../dot"
 TOOLBOX_INSTALL_DIR="$TOOLBOX_DIR/../install"
 TOOLBOX_LIB_DIR="$TOOLBOX_DIR/../lib"
-TOOLBOX_SECRETS_DIR="$TOOLBOX_DIR/../secrets"
+TOOLBOX_SECRET_DIR="$TOOLBOX_DIR/../secret"
 
 # ensures we're only appending our LINE if it doesn't already in FILE
 LINE=''
