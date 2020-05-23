@@ -3,6 +3,7 @@ set -e
 
 # add repos
 sudo add-apt-repository ppa:andreasbutti/xournalpp-master -y
+sudo add-apt-repository ppa:nextcloud-devs/client
 
 # update the apt repo
 sudo apt-get update
@@ -30,6 +31,7 @@ lynx \
 i3status \
 suckless-tools \
 blueman \
-arandr
+arandr \
+nextcloud-client
 
 # samba samba-common-bin

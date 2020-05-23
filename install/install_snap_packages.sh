@@ -9,7 +9,6 @@ sudo snap install slack --classic
 sudo snap install discord
 sudo snap install spotify
 sudo snap install zerotier-one
-sudo snap install nextcloud
 sudo snap install bitwarden
 sudo snap install anki-woodrow
 sudo snap install chromium
