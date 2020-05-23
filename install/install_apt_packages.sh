@@ -28,6 +28,7 @@ redshift-gtk \
 tree \
 lynx \
 i3status \
-suckless-tools
+suckless-tools \
+blueman
 
 # samba samba-common-bin
