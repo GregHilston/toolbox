@@ -36,3 +36,9 @@ set cindent
 set sw=4 ts=4 et
 set hlsearch
 set incsearch
+
+" From this link https://vi.stackexchange.com/a/5854
+noremap <Up> <Nop>
+noremap <Down> <Nop>
+noremap <Left> <Nop>
+noremap <Right> <Nop>
