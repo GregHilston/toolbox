@@ -1,4 +1,4 @@
-install: helper_ensure_no_sudo install_apt_packages install_snap_packages install_deb_packages install_python37 install_pip_packages install_submodules install_dots install_zsh_as_default install_zsh_autosuggestions success_message
+install: helper_ensure_no_sudo install_apt_packages install_snap_packages install_deb_packages install_python37 install_pip_packages install_submodules install_dots install_zsh_as_default install_zsh_autosuggestions join_zero_tier success_message
 
 helper_ensure_no_sudo:
 	@echo "Ensuring this was not run with sudo..."
@@ -40,9 +40,13 @@ install_zsh_as_default:
 	@echo "Instaling zsh as default shell..."
 	./install/install_zsh_as_default.sh
 
-install_zsh_autosuggestions::
+install_zsh_autosuggestions:
 	@echo "Installing ZSH auto suggestionse..."
 	./install/install_zsh_autosuggestions.sh
+
+join_zero_tier:
+	@echo "Installing well really joining zero tier network"
+	./install/zero_tier_join_network.sh
 
 success_message:
 	@echo "Makefile running was a potentially success!\nLogout and log back in, then run again to be sure. This is so ZSH will be your default shell and will source the ~/.zshrc file, also so snapd's path is setup. Also, don't forget this Makefile has many optional commands!";
