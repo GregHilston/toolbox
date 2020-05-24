@@ -88,6 +88,15 @@ Remember, your `Dockerfile` run command will not execute!
 
 I hadn't used submodules prior to working with this. We use oh-my-zsh as a submodule. This writes to .gitmodules and pulls the code to dot/oh-my-zsh. As I write this, no idea why this lives in dot.
 
+## Vim
+
+With efforts to learn more vim, I'm using vim-plug to install plugins. For my own memory, I'll write some plugins and what they do/how to use them to remind myself.
+
+### fzf
+
+I have this mapped to ';', which will fuzzy search
+### 
+
 ## Known Issues
 
 I've had to run `$ make install`, followed by `$ make instal_zsh_autocomplete` manually to get everything installed correctly, then add the word function to the `man` on  ~/.oh-my-zsh/plugins/colored-man-pages/colored-man-pages.plugin.zsh

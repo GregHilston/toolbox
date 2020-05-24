@@ -21,6 +21,9 @@ echo " Done"
 echo -e "creating directory needed for vim-plug"
 mkdir -p ~/.vim/autoload
 
+echo -e "install vim-plug plugins"
+vim +PlugInstall +qall
+
 for install in "${INSTALL[@]}"; do
   echo -e "Installing $install... "
 
