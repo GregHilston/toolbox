@@ -25,6 +25,21 @@ Plug 'itchyny/lightline.vim'
 " pretty file tree
 Plug 'preservim/nerdtree'
 
+" git status on left hand column of files in a git repo
+Plug 'airblade/vim-gitgutter'
+
+" runs flake8 against python file
+Plug 'nvie/vim-flake8'
+
+" to run git commands in vim
+Plug 'tpope/vim-fugitive'
+
+" to change surronding blocks
+Plug 'tpope/vim-surround'
+
+" running linting in vim
+Plug 'w0rp/ale'
+
 map ; :Files<CR>
 
 " Initialize plugin system

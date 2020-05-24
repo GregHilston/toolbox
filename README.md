@@ -100,6 +100,14 @@ In vim, run the command `:PlugStatus` to check the status of the plugins
 
 I have this mapped to ';', which will fuzzy search
 
+#### nerd tree
+
+Mapped to "ctrl + o"
+
+#### flake 8
+
+Mapped to F7
+
 ## Known Issues
 
 I've had to run `$ make install`, followed by `$ make instal_zsh_autocomplete` manually to get everything installed correctly, then add the word function to the `man` on  ~/.oh-my-zsh/plugins/colored-man-pages/colored-man-pages.plugin.zsh
