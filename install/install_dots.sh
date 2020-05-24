@@ -24,9 +24,10 @@ echo " Done"
 #  mkdir -p ~/.vim/autoload
 #fi
 
-echo -e "install vim-plug plugins"
-rm -rf ~/.vim
-vim +PlugInstall +qall
+# I havent figure dout if this is needed, commenting out but leaving here for now
+# echo -e "install vim-plug plugins"
+# rm -rf ~/.vim
+# vim +PlugInstall +qall
 
 for install in "${INSTALL[@]}"; do
   echo -e "Installing $install... "
