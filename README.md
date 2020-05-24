@@ -90,13 +90,27 @@ I hadn't used submodules prior to working with this. We use oh-my-zsh as a submo
 
 ## Vim
 
+## vim-plug
+
 With efforts to learn more vim, I'm using vim-plug to install plugins. For my own memory, I'll write some plugins and what they do/how to use them to remind myself.
 
-### fzf
+In vim, run the command `:PlugStatus` to check the status of the plugins
+
+#### fzf
 
 I have this mapped to ';', which will fuzzy search
-### 
 
 ## Known Issues
 
 I've had to run `$ make install`, followed by `$ make instal_zsh_autocomplete` manually to get everything installed correctly, then add the word function to the `man` on  ~/.oh-my-zsh/plugins/colored-man-pages/colored-man-pages.plugin.zsh
+
+## TODO
+
+Fix error:
+
+```
+creating directory needed for vim-plug
+mkdir: cannot create directory ‘/home/ghilston/.vim’: File exists
+Makefile:12: recipe for target 'install_dots' failed
+make: *** [install_dots] Error 1
+```
