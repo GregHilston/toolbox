@@ -1,4 +1,4 @@
-install: helper_ensure_no_sudo install_apt_packages install_snap_packages install_deb_packages install_python37 install_pip_packages install_submodules install_dots install_zsh_as_default install_zsh_autosuggestions join_zero_tier success_message
+install: helper_ensure_no_sudo install_apt_packages install_snap_packages install_deb_packages install_homebrew install_homebrew_packages install_python37 install_pip_packages install_submodules install_dots install_zsh_as_default install_zsh_autosuggestions join_zero_tier success_message
 
 helper_ensure_no_sudo:
 	@echo "Ensuring this was not run with sudo..."
@@ -31,6 +31,14 @@ install_snap_packages:
 install_deb_packages:
 	@echo "Installing deb packages..."
 	./install/install_deb_packages.sh
+
+install_homebrew
+	@echo "Installing homebrew..."
+	./install/install_homebrew.sh
+
+install_homebrew_packages
+	@echo "Installing homebrew packages..."
+	./install/install_homebrew_packages.sh
 
 install_pip_packages:
 	@echo "Installing pip packages..."
