@@ -46,7 +46,7 @@ install_zsh_autosuggestions:
 
 join_zero_tier:
 	@echo "Installing well really joining zero tier network"
-	./install/zero_tier_join_network.sh
+	./install/install_zero_tier_join_network.sh
 
 success_message:
 	@echo "Makefile running was a potentially success!\nLogout and log back in, then run again to be sure. This is so ZSH will be your default shell and will source the ~/.zshrc file, also so snapd's path is setup. Also, don't forget this Makefile has many optional commands!";
