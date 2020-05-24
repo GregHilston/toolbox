@@ -22,6 +22,9 @@ Plug 'junegunn/fzf.vim'
 " pretty status bar
 Plug 'itchyny/lightline.vim'
 
+" pretty file tree
+Plug 'preservim/nerdtree'
+
 map ; :Files<CR>
 
 " Initialize plugin system
@@ -31,6 +34,9 @@ call plug#end()
 set laststatus=2
 " disable redundant insert display
 set noshowmode
+
+" map nerd Tree to CTRL + o
+map <C-o> :NERDTreeToggle<CR>
 
 " Visual Changes
 colorscheme elflord
