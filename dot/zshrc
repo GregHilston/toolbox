@@ -199,3 +199,12 @@ export PATH=/usr/local/bin/python3:$PATH
 
 # points python 3 to python 3.7
 alias python3='/usr/bin/python3.7'
+
+# adds brew command to path
+eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
+
+SCRIPT_HOME=$(cd "$(dirname $0)" && pwd)
+TOOLBOX_HOME=$(echo $SCRIPT_HOME | rev | cut -d/ -f2- | rev)
+
+# allows our binaries to be called, adding to path
+export PATH=$PATH:$TOOLBOX_HOME/bin
