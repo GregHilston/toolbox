@@ -11,7 +11,6 @@ endif
 " Specify a directory for plugins
 " - For Neovim: stdpath('data') . '/plugged'
 " - Avoid using standard Vim directory names like 'plugin'
-" commented out, i think i should call this b yhand
 call plug#begin('~/.vim/plugged')
 
 " Make sure you use single quotes

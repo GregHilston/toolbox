@@ -108,9 +108,5 @@ I've had to run `$ make install`, followed by `$ make instal_zsh_autocomplete` m
 
 Fix error:
 
-```
-creating directory needed for vim-plug
-mkdir: cannot create directory ‘/home/ghilston/.vim’: File exists
-Makefile:12: recipe for target 'install_dots' failed
-make: *** [install_dots] Error 1
-```
+- permission denied when running `$ brew install fzf`
+- fix errors that pop up when running vim
