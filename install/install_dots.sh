@@ -25,6 +25,7 @@ echo " Done"
 #fi
 
 echo -e "install vim-plug plugins"
+rm -rf ~/.vim
 vim +PlugInstall +qall
 
 for install in "${INSTALL[@]}"; do
