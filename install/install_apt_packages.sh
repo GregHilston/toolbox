@@ -32,6 +32,7 @@ i3status \
 suckless-tools \
 blueman \
 arandr \
-nextcloud-client
+nextcloud-client \
+ranger
 
 # samba samba-common-bin

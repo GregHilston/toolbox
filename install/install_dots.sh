@@ -18,8 +18,11 @@ ln -s "$TOOLBOX_HOME/dot/i3/config" "$HOME/.i3/config"
 echo "reload i3 with \$mod + shift + r"
 echo " Done"
 
-echo -e "creating directory needed for vim-plug"
-mkdir -p ~/.vim/autoload
+#echo -e "creating directory needed for vim-plug"
+#if [ ! -e ~/.vim ]; then
+#  echo "HERE"
+#  mkdir -p ~/.vim/autoload
+#fi
 
 echo -e "install vim-plug plugins"
 vim +PlugInstall +qall
