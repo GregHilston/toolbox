@@ -15,12 +15,22 @@ call plug#begin('~/.vim/plugged')
 
 " Make sure you use single quotes
 
+" fzf fuzzy find searching
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
+
+" pretty status bar
+Plug 'itchyny/lightline.vim'
+
 map ; :Files<CR>
 
 " Initialize plugin system
 call plug#end()
+
+" Enable lightline
+set laststatus=2
+" disable redundant insert display
+set noshowmode
 
 " Visual Changes
 colorscheme elflord
@@ -40,7 +50,6 @@ set softtabstop=4 " Number of spaces a tab counts for when inserting/deleting
 set expandtab     " Tabs are spaces
 
 " Last line
-set showmode      " Displays what mode we're in along the bottom bar
 set showcmd       " Shows command in bottom bar
 
 " Searching
