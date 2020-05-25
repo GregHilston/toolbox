@@ -40,6 +40,8 @@ Plug 'tpope/vim-surround'
 " running linting in vim
 Plug 'w0rp/ale'
 
+
+
 map ; :Files<CR>
 
 " Initialize plugin system
