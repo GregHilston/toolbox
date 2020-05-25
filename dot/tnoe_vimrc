@@ -1,0 +1,34 @@
+vim-plug
+call plug#begin()
+Plug 'w0rp/ale'
+Plug 'Shougo/deoplete.nvim', { 'do': 'UpdateRemotePlugins' }
+Plug 'carlitux/deoplete-ternjs', { 'for': ['javascript', 'javascript.jsx'] }
+Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+Plug 'morhetz/gruvbox'
+Plug 'othree/jspc.vim', { 'for': ['javascript', 'javascript.jsx'] }
+Plug 'itchyny/lightline.vim'
+Plug 'euclio/vim-markdown-composer', { 'do': 'cargo build --release' }
+Plug 'ervandew/supertab'
+Plug 'SirVer/ultisnips',
+Plug 'tpope/vim-fugitive'
+Plug 'jamessan/vim-gnupg'
+Plug 'honza/vim-snippets'
+Plug 'tpope/vim-surround'
+Plug 'rakr/vim-one'
+Plug 'kudabux/vim-srcery-drk'
+Plug 'cnj4/horseradish256'
+Plug 'tomlion/vim-solidity'
+Plug 'mileszs/ack.vim'
+Plug 'fatih/vim-go'
+Plug 'scrooloose/nerdcommenter'
+Plug 'nanotech/jellybeans.vim', { 'tag': 'v1.6' }
+Plug 'elixir-editors/vim-elixir'
+Plug 'slashmili/alchemist.vim'
+Plug 'chemzqm/vim-jsx-improve' " this will break vim-javascript
+Plug 'elmcast/elm-vim'
+Plug 'tpope/vim-dadbod'
+Plug 'tpope/vim-dotenv'
+Plug 'lisposter/vim-blackboard'
+Plug 'vim-vdebug/vdebug'
+Plug 'junegunn/rainbow_parentheses.vim'
+call plug#end()

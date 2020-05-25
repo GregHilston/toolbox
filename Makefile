@@ -32,11 +32,11 @@ install_deb_packages:
 	@echo "Installing deb packages..."
 	./install/install_deb_packages.sh
 
-install_homebrew
+install_homebrew:
 	@echo "Installing homebrew..."
 	./install/install_homebrew.sh
 
-install_homebrew_packages
+install_homebrew_packages:
 	@echo "Installing homebrew packages..."
 	./install/install_homebrew_packages.sh
 
