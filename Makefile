@@ -1,4 +1,4 @@
-install: helper_ensure_no_sudo install_apt_packages install_snap_packages install_deb_packages install_homebrew install_homebrew_packages install_python37 install_pip_packages install_submodules install_dots install_zsh_as_default install_zsh_autosuggestions join_zero_tier success_message
+install: helper_ensure_no_sudo install_apt_packages install_snap_packages install_deb_packages install_homebrew install_homebrew_packages install_python37 install_pip_packages install_submodules install_dots install_zsh_as_default install_zsh_autosuggestions install_vim_plugins join_zero_tier success_message
 
 helper_ensure_no_sudo:
 	@echo "Ensuring this was not run with sudo..."
@@ -51,6 +51,10 @@ install_zsh_as_default:
 install_zsh_autosuggestions:
 	@echo "Installing ZSH auto suggestionse..."
 	./install/install_zsh_autosuggestions.sh
+
+install_vim_plugins:
+	@echo "Installing vim plugins..."
+	vim +PlugInstall +qall
 
 join_zero_tier:
 	@echo "Installing well really joining zero tier network"
