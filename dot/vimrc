@@ -40,12 +40,21 @@ Plug 'tpope/vim-surround'
 " running linting in vim
 Plug 'w0rp/ale'
 
-
+" markdown
+Plug 'dkarter/bullets.vim' " auto creates bulleted lists
 
 map ; :Files<CR>
 
 " Initialize plugin system
 call plug#end()
+
+" Picking list indicators for bullets vim plugin
+let g:bullets_enabled_file_types = [
+    \ 'markdown',
+    \ 'text',
+    \ 'gitcommit',
+    \ 'scratch'
+    \]
 
 " Enable lightline
 set laststatus=2
