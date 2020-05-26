@@ -7,7 +7,13 @@ HOME=$($SCRIPT_HOME/helper_get_home_directory.sh)
 
 INSTALL=(bashrc gitignore tmux.conf vimrc zshrc env vim oh-my-zsh zsh-custom)
 
-# special case
+# nvim (special case)
+ehco -e "Creating nvim config folder if it doesn't exist..."
+mkdir -p ~/.config/nvim
+echo -e "Installing nvim config..."
+ln -s "$TOOLBOX_HOME/dot/config/nvim" "$HOME/.config/nvim"
+
+# i3 (special case)
 echo -e "Creating i3 config folder if it doesn't exist"
 mkdir -p ~/.i3
 echo -e "Installing i3 config..."
