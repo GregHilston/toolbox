@@ -33,6 +33,7 @@ suckless-tools \
 blueman \
 arandr \
 nextcloud-client \
-ranger
+ranger \
+neovim
 
 # samba samba-common-bin
