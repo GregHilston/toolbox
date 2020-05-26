@@ -208,3 +208,7 @@ TOOLBOX_HOME=$(echo $SCRIPT_HOME | rev | cut -d/ -f2- | rev)
 
 # allows our binaries to be called, adding to path
 export PATH=$PATH:$TOOLBOX_HOME/bin
+
+# only using nvim, can ues an old one by putting a \ in front of binary call, ex \vim
+alias vim="nvim"
+alias vi="nvim"
