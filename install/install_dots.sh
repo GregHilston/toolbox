@@ -8,19 +8,17 @@ HOME=$($SCRIPT_HOME/helper_get_home_directory.sh)
 INSTALL=(bashrc gitignore tmux.conf vimrc zshrc env vim oh-my-zsh zsh-custom)
 
 # nvim (special case)
-ehco -e "Creating nvim config folder if it doesn't exist..."
+echo -e "Creating nvim config folder if it doesn't exist..."
 mkdir -p ~/.config/nvim
 echo -e "Installing nvim config..."
-ln -s "$TOOLBOX_HOME/dot/config/nvim" "$HOME/.config/nvim"
+ln -sf "$TOOLBOX_HOME/dot/config/nvim/init.vim" "$HOME/.config/nvim/init.vim"
 
 # i3 (special case)
 echo -e "Creating i3 config folder if it doesn't exist"
 mkdir -p ~/.i3
 echo -e "Installing i3 config..."
-echo -e ' \t removing old symbolic link..'
-rm -rf ~/.i3/config
 echo -e " \t linking $HOME/.i3/config to $TOOLBOX_HOME/dot/i3/config ..."
-ln -s "$TOOLBOX_HOME/dot/i3/config" "$HOME/.i3/config"
+ln -sf "$TOOLBOX_HOME/dot/i3/config" "$HOME/.i3/config"
 echo "reload i3 with \$mod + shift + r"
 echo " Done"
 
