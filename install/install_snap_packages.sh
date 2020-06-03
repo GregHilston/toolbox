@@ -16,3 +16,4 @@ sudo snap install ngrok
 sudo snap install easy-openvpn
 sudo snap install vlc
 sudo snap install insomnia
+sudo snap install helm --classic

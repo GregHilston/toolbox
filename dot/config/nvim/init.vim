@@ -23,6 +23,8 @@ Plug 'nvie/vim-flake8' 		" runs flake8 against python file
 
 " ----- Markdown -----
 Plug 'dkarter/bullets.vim' 	" auto creates bulleted lists for markdown files
+Plug 'godlygeek/tabular'
+Plug 'plasticboy/vim-markdown'
 
 call plug#end()
 
@@ -80,6 +82,8 @@ set cindent
 set sw=4 ts=4 et
 set hlsearch
 set incsearch
+
+set pastetoggle=<F3> " toggle paste mode with f3, paste mode is a special insert mode that lets you pate configs/code without auto indenting or commenting lines
 
 " Disable arrow keys for movemnet in normal mode (From this link https://vi.stackexchange.com/a/5854)
 noremap <Up> <Nop>
