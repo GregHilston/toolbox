@@ -34,6 +34,8 @@ blueman \
 arandr \
 nextcloud-client \
 ranger \
-neovim
+neovim \
+thefuck
 
 # samba samba-common-bin
+
