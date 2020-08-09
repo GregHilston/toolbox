@@ -5,7 +5,7 @@ SCRIPT_HOME=$(cd "$(dirname $0)" && pwd)
 TOOLBOX_HOME=$(echo $SCRIPT_HOME | rev | cut -d/ -f2- | rev)
 HOME=$($SCRIPT_HOME/helper_get_home_directory.sh)
 
-INSTALL=(bashrc gitignore tmux.conf vimrc zshrc env vim oh-my-zsh zsh-custom)
+INSTALL=(bashrc gitignore tmux.conf vimrc zshrc env vim)
 
 # nvim (special case)
 echo -e "Creating nvim config folder if it doesn't exist..."
@@ -45,12 +45,9 @@ for install in "${INSTALL[@]}"; do
   echo " Done"
 done
 
-printf "Installing gnzh_customized_by_grehg... "
-ln -sf "$TOOLBOX_HOME/dot/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme" "$HOME/.oh-my-zsh/themes/gnzh_customized_by_grehg.zsh-theme"
-echo " Done"
 
-printf "Installing gnzh_customized_by_grehg... "
-ln -sf "$TOOLBOX_HOME/dot/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme" "$TOOLBOX_HOME/dot/"
+printf "Install gnzh_customized_by_grehg manually by symbolically linking, ⚠️  this requires oh-my-zsh to have already been installed ..."
+ln -sf $TOOLBOX_HOME/dot/zsh-custom/themes/gnzh_customized_by_grehg.zsh-theme ~/.oh-my-zsh/themes/gnzh_customized_by_grehg.zsh-theme
 echo " Done"
 
 printf "Linking bin and lib... "

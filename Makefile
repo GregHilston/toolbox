@@ -1,4 +1,4 @@
-install: helper_ensure_no_sudo install_apt_packages install_snap_packages install_deb_packages install_homebrew install_homebrew_packages install_python37 install_pip_packages install_submodules install_dots install_zsh_as_default install_zsh_autosuggestions install_vim_plugins join_zero_tier success_message
+install: helper_ensure_no_sudo install_oh_my_zsh install_dots install_zsh_autosuggestions install_vim_plugins success_message
 
 helper_ensure_no_sudo:
 	@echo "Ensuring this was not run with sudo..."
@@ -7,6 +7,10 @@ helper_ensure_no_sudo:
 backup:
 	@echo "Backing up dot files..."
 	./install/backup.sh
+
+install_oh_my_zsh:
+	@echo "Install oh my zsh..."
+	./install/install_oh_my_zsh.sh
 
 install_dots: backup
 	@echo "Install dot files..."
@@ -44,7 +48,12 @@ install_pip_packages:
 	@echo "Installing pip packages..."
 	./install/install_pip_packages.sh
 
+install_zsh:
+	@echo "Installing zsh..."
+	./install/zsh.sh
+
 install_zsh_as_default:
+	# Not needed anymore as oh-my-zsh installation does this
 	@echo "Instaling zsh as default shell..."
 	./install/install_zsh_as_default.sh
 
