@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install git build-essential -y
+sudo apt-get update  && sudo apt-get install git build-essential tmux curl vim neovim -y

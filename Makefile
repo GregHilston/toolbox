@@ -1,19 +1,23 @@
-install: helper_ensure_no_sudo install_oh_my_zsh install_dots install_zsh_autosuggestions install_vim_plugins success_message
+install: helper_ensure_no_sudo install_bare_bones install_zsh install_oh_my_zsh install_dots install_zsh_autosuggestions install_vim_plugins configure_git success_message
 
 helper_ensure_no_sudo:
 	@echo "Ensuring this was not run with sudo..."
 	./install/helper_ensure_no_sudo.sh
+
+install_bare_bones:
+	@echo "Installing bare minimum..."
+	sudo ./bare_bones.sh
 
 backup:
 	@echo "Backing up dot files..."
 	./install/backup.sh
 
 install_oh_my_zsh:
-	@echo "Install oh my zsh..."
+	@echo "Installing oh my zsh..."
 	./install/install_oh_my_zsh.sh
 
 install_dots: backup
-	@echo "Install dot files..."
+	@echo "Installing dot files..."
 	./install/install_dots.sh
 
 source_zshrc:
@@ -52,6 +56,10 @@ install_zsh:
 	@echo "Installing zsh..."
 	./install/zsh.sh
 
+configure_git:
+	@echo "Configuring Git..."
+	./install/configure_git.sh
+
 install_zsh_as_default:
 	# Not needed anymore as oh-my-zsh installation does this
 	@echo "Instaling zsh as default shell..."
@@ -70,7 +78,7 @@ join_zero_tier:
 	./install/install_zero_tier_join_network.sh
 
 success_message:
-	@echo "Makefile running was a potentially success!\nLogout and log back in, then run again to be sure. This is so ZSH will be your default shell and will source the ~/.zshrc file, also so snapd's path is setup. Also, don't forget this Makefile has many optional commands!";
+	@echo "Makefile running was potentially success!\nLogout and log back in, then run again to be sure. This is so ZSH will be your default shell and will source the ~/.zshrc file, also so snapd's path is setup. Also, don't forget this Makefile has many optional commands!";
 
 # Below are optional packages and not run by default
 
