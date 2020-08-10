@@ -1,4 +1,4 @@
-install: helper_ensure_no_sudo install_bare_bones install_zsh install_oh_my_zsh install_dots install_zsh_autosuggestions install_vim_plugins configure_git success_message
+install: helper_ensure_no_sudo install_bare_bones install_zsh install_oh_my_zsh install_dots install_zsh_autosuggestions install_vim_plug install_vim_plugins configure_git success_message
 
 helper_ensure_no_sudo:
 	@echo "Ensuring this was not run with sudo..."
@@ -68,6 +68,10 @@ install_zsh_as_default:
 install_zsh_autosuggestions:
 	@echo "Installing ZSH auto suggestionse..."
 	./install/install_zsh_autosuggestions.sh
+
+install_vim_plug:
+	sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
+       https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
 
 install_vim_plugins:
 	@echo "Installing vim plugins..."
