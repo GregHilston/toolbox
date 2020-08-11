@@ -121,7 +121,7 @@ HOSTNAME=$(hostname)
 
 # displays which virtual environment you're working on 
 # this wasn't working, but leaving the comment for now
-export VIRTUAL_ENV_DISABLE_PROMPT=
+# export VIRTUAL_ENV_DISABLE_PROMPT=
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
@@ -139,6 +139,7 @@ export VIRTUAL_ENV_DISABLE_PROMPT=
 
 # So Snap installations are in path
 export PATH="$PATH:/snap/bin"
+
 
 gitAllHistory() {
   git log --follow -p -- $@
