@@ -114,9 +114,6 @@ I've had to run `$ make install`, followed by `$ make instal_zsh_autocomplete` m
 
 Running `$ make install` twice can cause `~/.vim` symbolic link incorrectly and cause errors when launching vim. Not sure why yet. Can resolve this by running `$ rm -rf ~/.vim`
 
-## TODO
+### `Unknown function: plug#begin`
 
-Fix error:
-
-- permission denied when running `$ brew install fzf`
-- fix errors that pop up when running vim
+Install vim plug, can use `$ make install_vim_plug`

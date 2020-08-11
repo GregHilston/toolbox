@@ -54,7 +54,7 @@ install_pip_packages:
 
 install_zsh:
 	@echo "Installing zsh..."
-	./install/zsh.sh
+	./install/install_ezsh.sh
 
 configure_git:
 	@echo "Configuring Git..."
