@@ -54,7 +54,7 @@ install_pip_packages:
 
 install_zsh:
 	@echo "Installing zsh..."
-	./install/install_ezsh.sh
+	./install/install_zsh.sh
 
 configure_git:
 	@echo "Configuring Git..."
@@ -70,8 +70,8 @@ install_zsh_autosuggestions:
 	./install/install_zsh_autosuggestions.sh
 
 install_vim_plug:
-	@echo "Installing vim plug
-	./install/install_vim_plug
+	@echo "Installing vim plug"
+	./install/install_vim_plug.sh
 
 install_vim_plugins:
 	@echo "Installing vim plugins..."
