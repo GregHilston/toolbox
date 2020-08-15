@@ -46,6 +46,15 @@ set noshowmode
 " map fzf to ;
 map ; :Files<CR>
 
+" have fzf use ripgrep
+set grepprg=rg\ --vimgrep\ --smart-case\ --hidden\ --follow
+
+" allow ctrl left/right h/j switch between tabs
+nnoremap <C-Left> :tabprevious<CR>                                                                            
+nnoremap <C-Right> :tabnext<CR>
+nnoremap <C-j> :tabprevious<CR>                                                                            
+nnoremap <C-k> :tabnext<CR>
+
 " map nerd Tree to CTRL + o
 map <C-o> :NERDTreeToggle<CR>
 
