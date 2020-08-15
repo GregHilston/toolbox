@@ -28,6 +28,8 @@ Plug 'plasticboy/vim-markdown'
 
 call plug#end()
 
+let g:vim_markdown_override_foldtext = 0
+
 " Picking list indicators for bullets vim plugin
 let g:bullets_enabled_file_types = [
     \ 'markdown',
