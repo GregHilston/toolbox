@@ -108,6 +108,11 @@ Mapped to "ctrl + o"
 
 Mapped to F7
 
+
+## Notes
+
+As I start to try to use Vim more and other tools, I find myself learning commands that I want to remember and add to my daily workflow. I'll add these notes to a notes.md file.
+
 ## Known Issues
 
 I've had to run `$ make install`, followed by `$ make instal_zsh_autocomplete` manually to get everything installed correctly, then add the word function to the `man` on  ~/.oh-my-zsh/plugins/colored-man-pages/colored-man-pages.plugin.zsh

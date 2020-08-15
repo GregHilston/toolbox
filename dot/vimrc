@@ -64,6 +64,8 @@ set noshowmode
 " map nerd Tree to CTRL + o
 map <C-o> :NERDTreeToggle<CR>
 
+let g:vim_markdown_override_foldtext = 0
+
 " Visual Changes
 colorscheme elflord
 syntax enable     " Turn on syntax highlighting
