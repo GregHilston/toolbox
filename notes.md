@@ -8,6 +8,7 @@
 
 ## Vim
 
+- use :f to get the current file's path
 - use following to open new tab 
     - :tabnew path/to/file
 - use following to move tab 
