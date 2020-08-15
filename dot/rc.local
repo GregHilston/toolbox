@@ -23,6 +23,6 @@ sleep 1
 done
 
 # Emailing out our IP address
-python3.7 /home/pi/Git/toolbox/bin/mail_ip.py &
+python3 /home/pi/Git/toolbox/bin/mail_ip.py &
 
 exit 0
