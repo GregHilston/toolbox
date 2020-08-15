@@ -21,6 +21,11 @@
     - Ctrl+W |: set width (ex. 50<C-w>|)
     - Ctrl+W =: equalize width and height of all windows
 - To indent multiple line Press "<SHIFT> + v" to enter VISUAL LINE mode. Select the text you wish to indent but using either the cursor keys or the "j" and "k" keys. To indent press "<SHIFT> + dot" (> character).
+- hotkeyed ; to use fzf
+    - From inside the menu, fzf will automatically detect ctrl-t to open the file in a new tab, ctrl-v for a vertical split or ctrl-x for a horizontal split.
+- to open tabs 
+    - From inside the menu, fzf will automatically detect ctrl-t to open the file in a new tab, ctrl-v for a vertical split or ctrl-x for a horizontal split.
+    - From the terminal, you can do vim -p filename1 filename2 to open the two files in tabs.
 
 ### NerdTree
 
