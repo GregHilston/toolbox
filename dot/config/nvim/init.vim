@@ -43,6 +43,9 @@ set laststatus=2
 " disable redundant insert display
 set noshowmode
 
+" map fzf to ;
+map ; :Files<CR>
+
 " map nerd Tree to CTRL + o
 map <C-o> :NERDTreeToggle<CR>
 
