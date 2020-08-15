@@ -43,8 +43,11 @@ set laststatus=2
 " disable redundant insert display
 set noshowmode
 
-" map fzf to ;
-map ; :Files<CR>
+" map fzf to shift + ;
+" map ; :Files<CR>
+
+" map ripgrep with fzf to ;
+: map ; :Rg<CR>
 
 " have fzf use ripgrep
 set grepprg=rg\ --vimgrep\ --smart-case\ --hidden\ --follow
@@ -57,6 +60,10 @@ nnoremap <C-k> :tabnext<CR>
 
 " map nerd Tree to CTRL + o
 map <C-o> :NERDTreeToggle<CR>
+
+" setting vim title bar to name of file and time of last modification
+set title
+set titlestring=%{hostname()}\ \ %F\ \ %{strftime('%Y-%m-%d\ %H:%M',getftime(expand('%')))}
 
 " ============================================================================
 " Editor config
@@ -73,7 +80,7 @@ set wildmenu      " Visual autocomplete for command menu
 " Italicize comments
 highlight Comment cterm=italic gui=italic
 set linespace=4 " Set line height
-set title 	" Set title of window to file name
+" set title 	" Set title of window to file name
 
 " Last line
 set showcmd       " Shows command in bottom bar
