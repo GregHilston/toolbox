@@ -8,6 +8,7 @@
 
 ## Vim
 
+use: gt to switch active tab
 - use :f to get the current file's path
 - use following to open new tab 
     - :tabnew path/to/file

@@ -8,6 +8,10 @@ install_bare_bones:
 	@echo "Installing bare minimum..."
 	sudo ./bare_bones.sh
 
+install_essentials:
+	@echo "Installing essentials..."
+	sudo ./install/install_essentials.sh
+
 backup:
 	@echo "Backing up dot files..."
 	./install/backup.sh
