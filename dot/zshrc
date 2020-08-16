@@ -120,8 +120,7 @@ source $ZSH/oh-my-zsh.sh
 HOSTNAME=$(hostname)
 
 # displays which virtual environment you're working on 
-# this wasn't working, but leaving the comment for now
-# export VIRTUAL_ENV_DISABLE_PROMPT=
+export VIRTUAL_ENV_DISABLE_PROMPT=
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
