@@ -12,6 +12,10 @@ install_essentials:
 	@echo "Installing essentials..."
 	sudo ./install/install_essentials.sh
 
+install_use_vim_as_tool:
+	@echo "Using Vim as tool..."
+	sudo ./install/install_vim_as_git_tool.sh
+
 backup:
 	@echo "Backing up dot files..."
 	./install/backup.sh
