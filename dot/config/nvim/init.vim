@@ -20,6 +20,7 @@ Plug 'w0rp/ale'			" running linting in vim
 " Language
 " ----- Python -----
 Plug 'nvie/vim-flake8' 		" runs flake8 against python file
+Plug 'davidhalter/jedi-vim' " python autocomplete
 
 " ----- Markdown -----
 Plug 'dkarter/bullets.vim' 	" auto creates bulleted lists for markdown files
