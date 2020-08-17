@@ -10,12 +10,18 @@ call plug#begin('~/.local/share/nvim/plugged')
 " Editor
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } } " fuzzy file search
 Plug 'junegunn/fzf.vim'
-Plug 'itchyny/lightline.vim' 	" pretty status bar
-Plug 'preservim/nerdtree' 	" pretty file tree
-Plug 'airblade/vim-gitgutter' 	" git status on left hand column of files in a git repo
-Plug 'tpope/vim-fugitive' 	" to run git commands in vim
-Plug 'tpope/vim-surround' 	" to change surronding blocks
-Plug 'w0rp/ale'			" running linting in vim
+Plug 'itchyny/lightline.vim' 	        " pretty status bar
+Plug 'preservim/nerdtree' 	            " pretty file tree
+Plug 'airblade/vim-gitgutter' 	        " git status on left hand column of files in a git repo
+Plug 'tpope/vim-fugitive' 	            " to run git commands in vim
+Plug 'tpope/vim-surround' 	            " to change surronding blocks
+Plug 'w0rp/ale'			                " running linting in vim
+Plug 'tpope/vim-fugitive'               " somewhat of a wrapper for Git in vim
+Plug 'tpope/vim-surround'                " surronding parentheses, brackets, quoates, XMl, etc...
+Plug 'scrooloose/syntastic'             " syntax checking for many languages
+Plug 'godlygeek/tabular'                " for lining up text
+Plug 'christoomey/vim-tmux-navigator'   " seamless navigation between tmux panes and vim splits
+Plug 'bronson/vim-trailing-whitespace'  " highlights and removes trailing whitespace
 
 " Language
 " ----- Python -----
