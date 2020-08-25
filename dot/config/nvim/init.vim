@@ -22,6 +22,7 @@ Plug 'scrooloose/syntastic'             " syntax checking for many languages
 Plug 'godlygeek/tabular'                " for lining up text
 Plug 'christoomey/vim-tmux-navigator'   " seamless navigation between tmux panes and vim splits
 Plug 'bronson/vim-trailing-whitespace'  " highlights and removes trailing whitespace
+Plug 'bogado/file-line'                 " allows `$ file:line` to open vim at a specific line
 
 " Language
 " ----- Python -----
@@ -34,6 +35,9 @@ Plug 'godlygeek/tabular'
 Plug 'plasticboy/vim-markdown'
 
 call plug#end()
+
+" enabling plugin syntastic to use mypy for us
+let g:syntastic_python_checkers=['mypy']
 
 let g:vim_markdown_override_foldtext = 0
 

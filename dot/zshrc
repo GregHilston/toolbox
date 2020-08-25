@@ -217,13 +217,17 @@ alias python='/usr/bin/python3'
 
 # adds brew command to path
 # not installed by default
-# eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
+eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
 
 SCRIPT_HOME=$(cd "$(dirname $0)" && pwd)
 TOOLBOX_HOME=$(echo $SCRIPT_HOME | rev | cut -d/ -f2- | rev)
 
 # allows our binaries to be called, adding to path
 export PATH=$PATH:$TOOLBOX_HOME/bin
+
+# make the preferred editor vim, for like git merges and what not
+export VISUAL=vim
+export EDITOR="$VISUAL"
 
 # only using nvim, can ues an old one by putting a \ in front of binary call, ex \vim
 alias vim="nvim"
