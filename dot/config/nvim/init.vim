@@ -23,6 +23,7 @@ Plug 'godlygeek/tabular'                " for lining up text
 Plug 'christoomey/vim-tmux-navigator'   " seamless navigation between tmux panes and vim splits
 Plug 'bronson/vim-trailing-whitespace'  " highlights and removes trailing whitespace
 Plug 'bogado/file-line'                 " allows `$ file:line` to open vim at a specific line
+Plug 'tpope/vim-eunuch'                 " adds unix commands within vim like sudowrite, chmod and rename
 
 " Language
 " ----- Python -----
@@ -33,6 +34,9 @@ Plug 'davidhalter/jedi-vim' " python autocomplete
 Plug 'dkarter/bullets.vim' 	" auto creates bulleted lists for markdown files
 Plug 'godlygeek/tabular'
 Plug 'plasticboy/vim-markdown'
+
+" ----- HTML/CSS/JS -----
+Plug 'mattn/emmet-vim'      " auto completion for html/css/js
 
 call plug#end()
 
