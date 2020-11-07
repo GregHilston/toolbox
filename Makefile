@@ -1,34 +1,39 @@
+.DEFAULT_GOAL := help
+.PHONY: help
+help: ## This help.
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
 install: helper_ensure_no_sudo install_bare_bones install_zsh install_oh_my_zsh install_dots install_zsh_autosuggestions install_vim_plug install_vim_plugins configure_git success_message
 
-helper_ensure_no_sudo:
+helper_ensure_no_sudo: ## Ensures this script was not ran by sudo. A helper function.
 	@echo "Ensuring this was not run with sudo..."
 	./install/helper_ensure_no_sudo.sh
 
-install_bare_bones:
+install_bare_bones: ## Installs content not usually available on barebone systems such as Alpine Linux.
 	@echo "Installing bare minimum..."
 	sudo ./bare_bones.sh
 
-install_essentials:
+install_essentials: ## Installs only the essentials.
 	@echo "Installing essentials..."
 	sudo ./install/install_essentials.sh
 
-install_use_vim_as_tool:
+install_use_vim_as_tool: ## Makes Git use Vim as the default tool to edit files, opposed to Nano.
 	@echo "Using Vim as tool..."
 	sudo ./install/install_vim_as_git_tool.sh
 
-backup:
+backup: ## Backs up dot files. Ensures we don't replace anything by accident.
 	@echo "Backing up dot files..."
 	./install/backup.sh
 
-install_oh_my_zsh:
+install_oh_my_zsh: ## Installs oh my zsh.
 	@echo "Installing oh my zsh..."
 	./install/install_oh_my_zsh.sh
 
-install_dots: backup
+install_dots: backup ## Installs my personal dot files.
 	@echo "Installing dot files..."
 	./install/install_dots.sh
 
-source_zshrc:
+source_zshrc: ## Reloads the zshrc file.
 	@echo "Sourcing zshrc"
 	./install/helper_source_zshrc.sh
 
@@ -36,27 +41,27 @@ install_submodules:
 	@echo "Installing submodule..."
 	./install/install_submodules.sh
 
-install_apt_packages:
+install_apt_packages: ## Installs my favorite apt packages.
 	@echo "Installing apt packages..."
 	./install/install_apt_packages.sh
 
-install_snap_packages:
+install_snap_packages: ## Installs my favorite snap packages.
 	@echo "Installing snap packages..."
 	./install/install_snap_packages.sh
 
-install_deb_packages:
+install_deb_packages: ## Installs my favorite deb packages.
 	@echo "Installing deb packages..."
 	./install/install_deb_packages.sh
 
-install_homebrew:
+install_homebrew: ## Installs homebrew, that package manager.
 	@echo "Installing homebrew..."
 	./install/install_homebrew.sh
 
-install_homebrew_packages:
+install_homebrew_packages: ## Installs my favorite homebrew packages. 
 	@echo "Installing homebrew packages..."
 	./install/install_homebrew_packages.sh
 
-install_pip_packages:
+install_pip_packages: ## Installs my favorite pip packages.
 	@echo "Installing pip packages..."
 	./install/install_pip_packages.sh
 
