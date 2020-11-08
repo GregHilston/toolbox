@@ -4,6 +4,8 @@ set -e
 # add repos
 sudo add-apt-repository ppa:andreasbutti/xournalpp-master -y
 sudo add-apt-repository ppa:nextcloud-devs/client -y
+# adds timeshift
+sudo add-apt-repository ppa:teejee2008/ppa -y
 
 # update the apt repo
 sudo apt-get update
@@ -35,7 +37,8 @@ arandr \
 nextcloud-client \
 ranger \
 neovim \
-thefuck
+thefuck \
+timeshift
 
 # samba samba-common-bin
 
