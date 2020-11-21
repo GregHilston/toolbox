@@ -1,10 +1,13 @@
+import subprocess
+
 from send_message_to_grehg_xyz_slack import send_message_to_grehg_xyz_slack
 
 
 send_message_to_grehg_xyz_slack("#backup", "Rsyncing backup to Fob started")
 
-
-# rsync -azh --progress --password-file=passFile /mnt/user/backup/ pi@fob:/media/hdd/backup/
-# sshpass -p $(cat passFile) rsync -azh --progress /mnt/user/backup/ pi@fob:/media/hdd/backup/
+try:
+    subprocess.call(["rsync", "-azh", "/mnt/user/backup", "pi@fob:/media/hdd/backup/"])
+except Exception as e:
+    send_message_to_grehg_xyz_slack("#backup", f"An exception occurred when trying to Rsync our backup to remote Fob. The exception was {str(e)}")
 
 send_message_to_grehg_xyz_slack("#backup", "Rsyncing backup to Fob ended")
