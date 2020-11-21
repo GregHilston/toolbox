@@ -1,5 +1,3 @@
-secrets/
-
 *.pyc
 
 bin/mail_ip/gmail_password.conf.personal
