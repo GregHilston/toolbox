@@ -2,7 +2,7 @@ import json
 
 import requests
 
-from secrets.grehg_xyz_slack_webhook_url import grehg_xyz_slack_webhook_url
+from secrets.secrets import grehg_xyz_slack_webhook_url
 
 
 def send_message_to_grehg_xyz_slack(channel: str, text: str):
