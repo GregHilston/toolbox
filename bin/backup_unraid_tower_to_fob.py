@@ -1,6 +1,6 @@
 import subprocess
 
-from send_message_to_grehg_xyz_slack import send_message_to_grehg_xyz_slack
+from utils import send_message_to_grehg_xyz_slack
 
 
 send_message_to_grehg_xyz_slack("#backup", "Rsyncing backup to Fob started")
