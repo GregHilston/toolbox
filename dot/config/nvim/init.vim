@@ -24,6 +24,7 @@ Plug 'christoomey/vim-tmux-navigator'   " seamless navigation between tmux panes
 Plug 'bronson/vim-trailing-whitespace'  " highlights and removes trailing whitespace
 Plug 'bogado/file-line'                 " allows `$ file:line` to open vim at a specific line
 Plug 'tpope/vim-eunuch'                 " adds unix commands within vim like sudowrite, chmod and rename
+Plug 'preservim/nerdcommenter'          " allows ctrl + / to comment or uncommentc
 
 " Language
 " ----- Python -----
@@ -52,6 +53,32 @@ let g:bullets_enabled_file_types = [
     \ 'gitcommit',
     \ 'scratch'
     \]
+
+" Making CTRL + SPACE use jedi-vim for auto complete
+" From here https://kevinmartinjose.com/2020/11/22/vimcharm-approximating-pycharm-on-vim/
+let jedi#show_call_signatures = 0
+let jedi#documentation_command = ""
+autocmd FileType python setlocal completeopt-=preview
+
+" Making CTRL + CLICK go to definition using jedi-vim
+" Also enables opening a new tab when navigating to a different file
+" From here https://kevinmartinjose.com/2020/11/22/vimcharm-approximating-pycharm-on-vim/
+set mouse=a
+let g:jedi#goto_command = "<C-LeftMouse>"
+map <C-b> <C-LeftMouse>
+
+let g:jedi#use_tabs_not_buffers = 1
+nnoremap J :tabp<CR>
+nnoremap K :tabn<CR>
+
+" Making CTRL + / comment and uncomment lines using nerdcommenter
+" From here https://kevinmartinjose.com/2020/11/22/vimcharm-approximating-pycharm-on-vim/
+" The part after "=" in the below line should be inserted using Ctrl+v while in insert mode and then pressing Ctrl+/
+set <F13>=^_
+noremap <F13> :call NERDComment(0,"toggle")<CR>
+
+" So that NERDCommenter can automatically decide how to comment a particular filetype
+filetype plugin on
 
 " Enable lightline
 set laststatus=2
