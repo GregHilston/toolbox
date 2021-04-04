@@ -153,3 +153,7 @@ noremap <Up> <Nop>
 noremap <Down> <Nop>
 noremap <Left> <Nop>
 noremap <Right> <Nop>
+
+" From this link
+" https://github.com/vim/vim/issues/1326#issuecomment-266955735
+set mouse-=a
