@@ -6,7 +6,8 @@ from utils import send_message_to_grehg_xyz_slack
 send_message_to_grehg_xyz_slack("#backup", "Rsyncing backup to Fob started")
 
 try:
-    subprocess.call(["rsync", "-azh", "/mnt/user/backup", "pi@fob:/media/hdd/backup/"])
+    subprocess.call(["rsync", "-azh", "--progress",  "/mnt/user/backup", "pi@fob:/media/hdd/backup/"])
+    send_message_to_grehg_xyz_slack("#backup", "Rsyncing backup to Fob finished successfully")
 except Exception as e:
     send_message_to_grehg_xyz_slack("#backup", f"An exception occurred when trying to Rsync our backup to remote Fob. The exception was {str(e)}")
 

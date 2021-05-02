@@ -6,7 +6,7 @@ import requests
 import smtplib
 from email.mime.text import MIMEText
 
-from secrets.grehg_xyz_slack_webhook_url import grehg_xyz_slack_webhook_url
+from env import slack
 
 
 def send_email(to_email_address: str, subject: str, body: str):
@@ -43,4 +43,4 @@ def send_message_to_grehg_xyz_slack(channel: str, text: str):
         "icon_emoji": "ghost"
     }
     payload = json.dumps(data)
-    requests.post(grehg_xyz_slack_webhook_url, data=payload)
+    requests.post(slack.grehg_xyz_slack_webhook_url, data=payload)
