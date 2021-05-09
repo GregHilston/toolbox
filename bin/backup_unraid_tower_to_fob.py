@@ -1,14 +1,9 @@
-import subprocess
-
-from utils import send_message_to_grehg_xyz_slack
+from bin.backup_source_directory_to_destination import backup_source_directory_to_destination
 
 
-send_message_to_grehg_xyz_slack("#backup", "Rsyncing backup to Fob started")
-
-try:
-    subprocess.call(["rsync", "-azh", "--progress",  "--update", "/mnt/user/backup", "pi@fob:/media/hdd/backup/"])
-    send_message_to_grehg_xyz_slack("#backup", "Rsyncing backup to Fob finished successfully")
-except Exception as e:
-    send_message_to_grehg_xyz_slack("#backup", f"An exception occurred when trying to Rsync our backup to remote Fob. The exception was {str(e)}")
-
-send_message_to_grehg_xyz_slack("#backup", "Rsyncing backup to Fob ended")
+backup_source_directory_to_destination(
+    source_directory_path="/mnt/user/backup",
+    source_directory_name="unraid backup share",
+    destination_directory_path="pi@fob:/media/hdd/backup/",
+    destination_directory_name="Fob external hard drive"
+)
