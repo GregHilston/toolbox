@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import json
@@ -7,6 +8,9 @@ import smtplib
 from email.mime.text import MIMEText
 
 from env import slack
+
+
+logger = logging.getLogger(__name__)
 
 
 def send_email(to_email_address: str, subject: str, body: str):
@@ -34,12 +38,18 @@ def send_email(to_email_address: str, subject: str, body: str):
     smtpserver.sendmail(from_email_address, [to_email_address], msg.as_string())
     smtpserver.quit()
 
-def send_message_to_grehg_xyz_slack(channel: str, text: str):
+
+def log_locally_and_to_grehg_xyz_slack(message: str, slack_channeL: str):
+    logger.info(message)
+    send_message_to_grehg_xyz_slack(slack_channeL, message)
+
+
+def send_message_to_grehg_xyz_slack(slack_channel: str, message: str):
     """Sends a message to our Grehg XYZ Slack team"""
     data = {
-        "channel": channel,
+        "channel": slack_channel,
         "username": "webhookbot",
-        "text": text,
+        "text": message,
         "icon_emoji": "ghost"
     }
     payload = json.dumps(data)
