@@ -1,4 +1,4 @@
-from bin.backup_source_directory_to_destination import backup_source_directory_to_destination
+from backup_source_directory_to_destination import backup_source_directory_to_destination 
 
 
 backup_source_directory_to_destination(
