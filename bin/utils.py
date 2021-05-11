@@ -10,7 +10,10 @@ from email.mime.text import MIMEText
 from env import slack
 
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
+logging.basicConfig(filename="toolbox.log", level=logging.DEBUG)
+# logger.addHandler(logging.StreamHandler())
+# logger.addHandler(logging.FileHandler(f"toolbox-logger.log"))
 
 
 def send_email(to_email_address: str, subject: str, body: str):
@@ -39,9 +42,9 @@ def send_email(to_email_address: str, subject: str, body: str):
     smtpserver.quit()
 
 
-def log_locally_and_to_grehg_xyz_slack(message: str, slack_channeL: str):
-    logger.info(message)
-    send_message_to_grehg_xyz_slack(slack_channeL, message)
+def log_locally_and_to_grehg_xyz_slack(message: str, slack_channel: str):
+    logging.info(message)
+    send_message_to_grehg_xyz_slack(slack_channel, message)
 
 
 def send_message_to_grehg_xyz_slack(slack_channel: str, message: str):
