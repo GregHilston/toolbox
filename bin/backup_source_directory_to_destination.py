@@ -9,7 +9,7 @@ def backup_source_directory_to_destination(source_directory_path: str, source_di
 
     try:
         # flags come from https://stackoverflow.com/a/30717322/1983957
-        subprocess.call(["rsync", "-azh", "--no-perms", "--no-group", "--no-owner", "--update", "--progress", source_directory_path, destination_directory_path])
+        subprocess.call(["rsync", "-azh", "--exclude-from", "bin/rsync-exclude-from.txt", "--no-perms", "--no-group", "--no-owner", "--update", "--progress", source_directory_path, destination_directory_path])
         log_locally_and_to_grehg_xyz_slack(f"Rsync'ing backup from {source_directory_name} ({source_directory_path}) to {destination_directory_name} ({destination_directory_path}) finished", "#backup")
     except Exception as e:
         log_locally_and_to_grehg_xyz_slack(f"An exception occurred when Rsyncing backup to {destination_directory_name}. The exception was {str(e)}", "#backup")
