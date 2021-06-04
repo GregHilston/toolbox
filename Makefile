@@ -3,7 +3,7 @@
 help: ## This help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-install: helper_ensure_no_sudo install_bare_bones install_zsh install_oh_my_zsh install_dots install_zsh_autosuggestions install_vim_plug install_vim_plugins configure_git success_message
+install: helper_ensure_no_sudo install_bare_bones install_essentials install_zsh install_oh_my_zsh install_dots install_zsh_autosuggestions install_vim_plug install_vim_plugins success_message
 
 helper_ensure_no_sudo: ## Ensures this script was not ran by sudo. A helper function.
 	@echo "Ensuring this was not run with sudo..."
@@ -11,7 +11,7 @@ helper_ensure_no_sudo: ## Ensures this script was not ran by sudo. A helper func
 
 install_bare_bones: ## Installs content not usually available on barebone systems such as Alpine Linux.
 	@echo "Installing bare minimum..."
-	sudo ./bare_bones.sh
+	sudo ./install/install_essential_on_bare_bones.sh
 
 install_essentials: ## Installs only the essentials.
 	@echo "Installing essentials..."
@@ -81,6 +81,7 @@ install_zsh_as_default:
 install_zsh_autosuggestions:
 	@echo "Installing ZSH auto suggestionse..."
 	./install/install_zsh_autosuggestions.sh
+	# TODO investigate why may get output [oh-my-zsh] plugin 'zsh-syntax-highlighting' not found
 
 install_vim_plug:
 	@echo "Installing vim plug"
@@ -88,6 +89,7 @@ install_vim_plug:
 
 install_vim_plugins:
 	@echo "Installing vim plugins..."
+	# TODO might need to source ~/.zshrc before running this
 	vim +PlugInstall +qall
 
 join_zero_tier:

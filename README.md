@@ -9,7 +9,6 @@ My toolbox that allows me to be productive on any system... except Windows.
 
 ```bash
 ├── Makefile        # Makefile for installation
-├── bare_bones.sh   # for preparing a system that has nothing but apt (think alpine linux)
 ├── bin             # Nifty bin files. Added to $PATH.
 ├── dot             # Dotfiles
 │   ├── bashrc      # BASH config
@@ -41,16 +40,9 @@ First, you probably want to fork this repo, change some stuff if you don't like 
 make install
 ```
 
-If you're on a barebones system, like alpine linux, use `$ ./bare_bones.sh` to prepare your system for the `$ make install` command
+If you're on a barebones system, like alpine linux, use `$ ./bin/bare_bones.sh` to prepare your system for the `$ make install` command
 
 And that's it!
-
-## Optional Installs
-
-There are a series of optional installs that can be performed using the `Makefile`.
-- docker
-- jupter
-- samba
 
 ## Safely Testing
 
@@ -72,7 +64,7 @@ To safely test the `Makefile`, I suggest running it in a barebones Debian Docker
 
 `$ docker start barebones`
 
-### To SSH Into Running Container
+### To Shell Exec Into Running Container
 
 `$ docker exec -it barebones /bin/bash`
 
