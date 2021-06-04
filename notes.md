@@ -53,6 +53,7 @@
 - to move windows use the hotkey we added to our tmux.conf
     - ctrl + shift + left to move to the left
     - ctrl + shift + right to move to the right
+- to toggle fullscreen on a pane ctrl + b + z
 
 ### plasticboy/vim-markdown
 
