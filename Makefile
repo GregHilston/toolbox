@@ -97,8 +97,6 @@ join_zero_tier:
 success_message:
 	@echo "Makefile running was potentially success!\nLogout and log back in, then run again to be sure. This is so ZSH will be your default shell and will source the ~/.zshrc file, also so snapd's path is setup. Also, don't forget this Makefile has many optional commands!";
 
-# Below are optional packages and not run by default
-
 docker_debian:
 	@echo "Installing Docker on debian system..."
 	./install/install_docker_debian.sh
