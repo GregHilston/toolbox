@@ -190,7 +190,20 @@ dockerClearNetworks() {
     docker network rm $(docker network ls | tail -n+2 | awk '{if($2 !~ /bridge|none|host/){ print $1 }}')
 }
 
-# THe next two lines edited by google cloud sdk, if its not working, look at https://gist.github.com/dwchiang/10849350
+# next two commands allow one to capture and restore the output of the last bash command
+# from https://stackoverflow.com/a/58598185/1983957
+
+# capture the output of a command so it can be retrieved with ret
+cap() { 
+    tee /tmp/capture.out
+}
+
+# return the output of the most recent command that was captured by cap
+ret() {
+    cat /tmp/capture.out
+}
+
+# The next two lines edited by google cloud sdk, if its not working, look at https://gist.github.com/dwchiang/10849350
 # The next line updates PATH for the Google Cloud SDK.
 # Disabling cause not on mac anymore
 # if [ -f '/Users/ghilston/Downloads/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/ghilston/Downloads/google-cloud-sdk/path.zsh.inc'; fi
@@ -231,3 +244,5 @@ export EDITOR="$VISUAL"
 # only using nvim, can ues an old one by putting a \ in front of binary call, ex \vim
 alias vim="nvim"
 alias vi="nvim"
+
+export PATH="$HOME/.poetry/bin:$PATH"
