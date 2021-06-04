@@ -1,8 +1,0 @@
-# we don't want to expose our user name or keys
-ansible.cfg
-
-# we don't want to expose our host names
-inventory.cfg
-
-# we don't care about commands that have failed
-*.retry
