@@ -11,19 +11,12 @@ My toolbox that allows me to be productive on any system... except Windows.
 ├── Makefile        # Makefile for installation
 ├── bin             # Nifty bin files. Added to $PATH.
 ├── dot             # Dotfiles
-│   ├── bashrc      # BASH config
-│   ├── env         # I separate my env vars here - work, OS X specifics
-│   ├── gitignore   # Global git ignore
 │   ├── oh-my-zsh   # oh-my-zsh installation
 │   ├── tmux.conf   # tmux config
 │   ├── vimrc       # vim config
 │   ├── zsh-custom  # zsh custom theme
 │   └── zshrc       # zsh config
 ├── install     # Installation helper scripts
-├── lib         # Nifty libs, iterm2, terminator, terminal colors
-│   ├── iterm2
-│   ├── terminator
-│   └── xrdb
 └── secret     # My secret sauce.
 ```
 
