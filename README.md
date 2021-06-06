@@ -10,6 +10,7 @@ My toolbox that allows me to be productive on any system... except Windows.
 ```bash
 ├── Makefile                                # Makefile for installation
 ├── bin                                     # Nifty bin files. Added to $PATH.
+├── docker/Dockerfile                       # Useful simple Docker image to test out this repo
 ├── dot                                     # Dotfiles
 │   ├── config/nvim/init.vim                # nvim config
 │   ├── hammerspoon/init.lua                # hammerspoon config (for mac)
