@@ -2,7 +2,7 @@
 set -e
 
 echo "installing zsh..."
-sudo apt-get install zsh -y
+apt-get install zsh -y
 exit 
 
 echo "setting zsh as the default shell..."

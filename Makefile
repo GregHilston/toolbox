@@ -3,7 +3,7 @@
 help: ## This help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-install: helper_ensure_no_sudo install_bare_bones install_essentials install_zsh install_oh_my_zsh install_dots install_zsh_autosuggestions install_vim_plug install_vim_plugins success_message ## Installs and configures our whole system.
+install: install_ensure_no_sudo install_bare_bones install_essentials install_zsh install_oh_my_zsh install_dots install_zsh_autosuggestions install_vim_plug install_vim_plugins success_message ## Installs and configures our whole system.
 
 helper_ensure_no_sudo: ## Ensures this script was not ran by sudo. A helper function.
 	@echo "Ensuring this was not run with sudo..."
@@ -24,6 +24,10 @@ install_oh_my_zsh: ## Installs oh my zsh.
 install_dots: backup ## Installs my personal dot files.
 	@echo "Installing dot files..."
 	./install/install_dots.sh
+
+install_zsh:
+	@echo "Installing zsh..."
+	./install/install_zsh.sh
 
 install_zsh_autosuggestions:
 	@echo "Installing ZSH auto suggestionse..."
