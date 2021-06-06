@@ -8,16 +8,17 @@ My toolbox that allows me to be productive on any system... except Windows.
 ## What's in it?
 
 ```bash
-├── Makefile        # Makefile for installation
-├── bin             # Nifty bin files. Added to $PATH.
-├── dot             # Dotfiles
-│   ├── oh-my-zsh   # oh-my-zsh installation
-│   ├── tmux.conf   # tmux config
-│   ├── vimrc       # vim config
-│   ├── zsh-custom  # zsh custom theme
-│   └── zshrc       # zsh config
-├── install     # Installation helper scripts
-└── secret     # My secret sauce.
+├── Makefile                    # Makefile for installation
+├── bin                         # Nifty bin files. Added to $PATH.
+├── dot                         # Dotfiles
+│   ├── config/nvim/init.vim    # nvim config
+│   ├── oh-my-zsh               # oh-my-zsh installation
+│   ├── tmux.conf               # tmux config
+│   ├── vimrc                   # vim config
+│   ├── zsh-custom              # zsh custom theme
+│   └── zshrc                   # zsh config
+├── install                     # Installation helper scripts
+└── secret                      # My secret sauce.
 ```
 
 ## External submodules
