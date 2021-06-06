@@ -50,33 +50,13 @@ And that's it!
 
 To safely test the `Makefile`, I suggest running it in a barebones Debian Docker container. In this repo you'll find a `Dockerfile` which is our barebones container.
 
-### To Build Image From `Dockerfile` and Name It
+### To Build Image From `Dockerfile`
 
-`$ docker build -t linux-test-bed .`
+./docker-build.sh
 
-### To Instantiate A Container, For The First Time, By Image Name For Development
+### To Run A Fresh Temporary Container and Shell Exec Into It
 
-`$ docker run -d --name linux-test-bed -v $(pwd):/toolbox linux-test-bed`
-
-### To Instantiate A Container, For The First Time, By Image Name For Clean Runs
-
-`$ docker run -d --name barebones linux-test-bed`
-
-### To Run A Container
-
-`$ docker start barebones`
-
-### To Shell Exec Into Running Container
-
-`$ docker exec -it barebones /bin/bash`
-
-### To SSH Into A Stopped Container
-
-Useful if container is instantly dying, the `--rm` flag removes the container afterwords
-
-`$ docker run --rm -it <image> /bin/bash`
-
-Remember, your `Dockerfile` run command will not execute!
+`$ ./docker-run.sh`
 
 ## Submodules
 
