@@ -3,14 +3,13 @@
 
 Inspired by and copied from [davidharrigan](https://github.com/davidharrigan/toolbox) and [msoucy](https://github.com/msoucy/Dotfiles)
 
-My toolbox that allows me to be productive on any system... except Windows.
+My toolbox contains a series of configuration files and useful commands.
 
 ## What's in it?
 
 ```bash
 ├── Makefile                                # Makefile for installation
 ├── bin                                     # Nifty bin files. Added to $PATH.
-├── docker/Dockerfile                       # Useful simple Docker image to test out this repo
 ├── dot                                     # Dotfiles
 │   ├── config/nvim/init.vim                # nvim config
 │   ├── hammerspoon/init.lua                # hammerspoon config (for mac)
@@ -23,8 +22,11 @@ My toolbox that allows me to be productive on any system... except Windows.
 │   ├── oh-my-zsh                           # oh-my-zsh installation
 │   ├── spectacle_config.png                # spectacle config (for mac)
 │   └── zshrc                               # zsh config
-├── install                                 # Installation helper scripts
-└── secret                                  # My secret sauce
+├── install/                                # Installation helper scripts
+└── secret/                                 # My secret sauce
+├── docker-build.sh                         # TODO 
+├── docker-run.sh                           # TODO 
+├── docker-shell-exec.sh                    # TODO 
 ```
 
 ## External submodules
@@ -54,7 +56,7 @@ To safely test the `Makefile`, I suggest running it in a barebones Debian Docker
 
 ### To Instantiate A Container, For The First Time, By Image Name For Development
 
-`$ docker run -d --name barebones -v $(pwd):/toolbox linux-test-bed`
+`$ docker run -d --name linux-test-bed -v $(pwd):/toolbox linux-test-bed`
 
 ### To Instantiate A Container, For The First Time, By Image Name For Clean Runs
 
