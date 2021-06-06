@@ -58,6 +58,8 @@ To safely test the `Makefile`, I suggest running it in a barebones Debian Docker
 
 `$ ./docker-run.sh`
 
+_Note: This may require you to slightly modify the Makefile to not check if the script was ran as sudo, as our container runs as root and also remove the sudo calls to every Makefile target._
+
 ## Submodules
 
 I hadn't used submodules prior to working with this. We use oh-my-zsh as a submodule. This writes to .gitmodules and pulls the code to dot/oh-my-zsh.
@@ -92,13 +94,17 @@ Running `$ make install` twice can cause `~/.vim` symbolic link incorrectly and 
 
 Install vim plug, can use `$ make install_vim_plug`
 
-## Notes
 
-### To figure out
+## TODO
 
+- Figure out how to both allow zsh be made as the default script AND have it continue the rst of the installation, without requiring a CTRL + D
+- remove the configuration of GregHilston <Gregory.Hilston@gmail.com> for Git
+- figure out why the plugins zsh-syntax-highlighting and zsh-autosuggestions are not being found
 - Where to put the following script to disable auto folding
     - command 
     - from https://github.com/plasticboy/vim-markdown#set-header-folding-level
+
+## Notes
 
 ### Vim
 
