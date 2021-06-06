@@ -78,7 +78,7 @@ Remember, your `Dockerfile` run command will not execute!
 
 ## Submodules
 
-I hadn't used submodules prior to working with this. We use oh-my-zsh as a submodule. This writes to .gitmodules and pulls the code to dot/oh-my-zsh. As I write this, no idea why this lives in dot.
+I hadn't used submodules prior to working with this. We use oh-my-zsh as a submodule. This writes to .gitmodules and pulls the code to dot/oh-my-zsh.
 
 ## Vim
 
