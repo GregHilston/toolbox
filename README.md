@@ -97,6 +97,7 @@ Install vim plug, can use `$ make install_vim_plug`
 
 ## TODO
 
+- Look at why `./install/install.zsh` returns early
 - Figure out how to both allow zsh be made as the default script AND have it continue the rst of the installation, without requiring a CTRL + D
 - remove the configuration of GregHilston <Gregory.Hilston@gmail.com> for Git
 - figure out why the plugins zsh-syntax-highlighting and zsh-autosuggestions are not being found

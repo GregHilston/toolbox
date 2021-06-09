@@ -1,5 +1,8 @@
-#!/usr/bin/env zsh
-set -e
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+echo "Installing ZSH auto suggestions..."
 
 #echo "attemping to source ~/.zshrc will print out after to signal success"
 #source ~/.zshrc
@@ -9,6 +12,11 @@ set -e
 #  echo "the environment variable ZSH_CUSTOM is not defined, can't install zsh-autosuggestion"
 #  exit -1
 #fi
+
+# setting $ZSH and $ZSH_CUSTOM to where i think it should be installed not sure why this is needed
+export ZSH=~/.oh-my-zsh
+export ZSH_CUSTOM=~/.oh-my-zsh/custom
+
 
 # Need to install the zsh-autosuggestions ourselves, no longer shipped
 # used https://gist.github.com/dogrocker/1efb8fd9427779c827058f873b94df95
