@@ -1,5 +1,8 @@
-#!/usr/bin/env bash
-set -e
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+echo "Installing dot files..."
 
 SCRIPT_HOME=$(cd "$(dirname $0)" && pwd)
 TOOLBOX_HOME=$(echo $SCRIPT_HOME | rev | cut -d/ -f2- | rev)

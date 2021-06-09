@@ -1,7 +1,8 @@
 #!/bin/bash
-set -e
+set -euo pipefail
+IFS=$'\n\t'
 
-echo "installing zsh..."
+echo "Installing zsh..."
 apt-get install zsh -y
 exit 
 
