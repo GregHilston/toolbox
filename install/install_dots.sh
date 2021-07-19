@@ -16,12 +16,12 @@ mkdir -p ~/.config/nvim
 echo -e "Installing nvim config..."
 ln -sf "$TOOLBOX_HOME/dot/config/nvim/init.vim" "$HOME/.config/nvim/init.vim"
 
-# i3 (special case)
-echo -e "Creating i3 config folder if it doesn't exist"
+# i3-gaps (special case)
+echo -e "Creating i3-gaps config folder if it doesn't exist"
 mkdir -p ~/.i3
 echo -e "Installing i3 config..."
-echo -e " \t linking $HOME/.i3/config to $TOOLBOX_HOME/dot/i3/config ..."
-ln -sf "$TOOLBOX_HOME/dot/i3/config" "$HOME/.i3/config"
+echo -e " \t linking $HOME/.i3/config to $TOOLBOX_HOME/dot/i3-gaps/config ..."
+ln -sf "$TOOLBOX_HOME/dot/i3-gaps/config" "$HOME/.i3/config"
 echo "reload i3 with \$mod + shift + r"
 echo " Done"
 
