@@ -106,11 +106,12 @@ bindsym $mod+Shift+9 move container to workspace 9
 bindsym $mod+Shift+0 move container to workspace 10
 
 # Always open some programs on specified workspace
-assign [class="^Firefox"]          $workspace3
-assign [class="^Slack"]            $workspace1
-assign [class="^Spotify"]          $workspace1
+# assign [class="^Firefox"]          $workspace3
+# assign [class="^Slack"]            $workspace1
+# assign [class="^Spotify"]          $workspace1
 
 # Enable float for some windows 
+# for_window [class="^Slack"] floating enable
 for_window [class="^Arandr$"]       floating enable
 
 # reload the configuration file
