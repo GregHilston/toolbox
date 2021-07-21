@@ -124,7 +124,7 @@ bindsym $mod+Shift+c reload
 bindsym $mod+Shift+r restart
 
 # Lock screen
-bindsym $mod+Shift+x exec betterlockscreen -l dimblur
+bindsym $mod+Shift+i exec i3lock --color=000000
 
 # Putting workspaces on specific monitors
 workspace 1 output primary
