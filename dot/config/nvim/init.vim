@@ -25,7 +25,8 @@ Plug 'bronson/vim-trailing-whitespace'  " highlights and removes trailing whites
 Plug 'bogado/file-line'                 " allows `$ file:line` to open vim at a specific line
 Plug 'tpope/vim-eunuch'                 " adds unix commands within vim like sudowrite, chmod and rename
 Plug 'preservim/nerdcommenter'          " allows ctrl + / to comment or uncommentc
-Plug 'kamykn/popup-menu.nvim'            " advanced spell check
+Plug 'kamykn/popup-menu.nvim'           " advanced spell check
+Plug 'mechatroner/rainbow_csv'          " highlight columns in CSV and TSV files and query like SQL-Like language
 
 " Language
 " ----- Python -----
