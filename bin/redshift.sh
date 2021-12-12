@@ -1,1 +1,1 @@
-redshift -O 3000 -g 0.4
+redshift -P -O 3000 -g 0.6
