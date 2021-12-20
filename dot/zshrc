@@ -139,6 +139,9 @@ export VIRTUAL_ENV_DISABLE_PROMPT=
 # So Snap installations are in path
 export PATH="$PATH:/snap/bin"
 
+# So binaries I install are in path (jetbrains toolbox for ex)
+export PATH="$PATH:/home/ghilston/bin"
+
 
 gitAllHistory() {
   git log --follow -p -- $@
