@@ -1,9 +1,9 @@
-# Work specific
+# Personal Foundation specific
 
 # Enables media volume keys
-bindsym XF86AudioMute exec amixer sset -c 4 'Speaker' toggle
-bindsym XF86AudioLowerVolume exec amixer -c 4 sset 'Speaker' 5%-
-bindsym XF86AudioRaiseVolume exec amixer -c 4 sset 'Speaker' 5%+
+bindsym XF86AudioMute exec amixer sset -c 5 'Speaker' toggle
+bindsym XF86AudioLowerVolume exec amixer -c 5 sset 'Speaker' 5%-
+bindsym XF86AudioRaiseVolume exec amixer -c 5 sset 'Speaker' 5%+
 
 # Media Keys
 bindsym XF86AudioPlay exec playerctl play-pause
@@ -37,10 +37,10 @@ bar {
 bar {
     font pango: SauceCodePro Nerd Font 10
     i3bar_command i3bar
-    output HDMI-1
+    output DP-4
     position top
     strip_workspace_numbers yes
-    tray_output HDMI-1
+    tray_output DP-4
 
     colors {
         background #282A36
@@ -58,10 +58,10 @@ bar {
 bar {
     font pango: SauceCodePro Nerd Font 10
     i3bar_command i3bar
-    output DP-1-1
+    output DP-2
     position top
     strip_workspace_numbers yes
-    tray_output DP-1-1
+    tray_output DP-2
 
     colors {
         background #282A36
@@ -80,11 +80,10 @@ bar {
 set $ws1 "1:coms"
 set $ws2 "2:music"
 
-set $ws5 "3:project1"
-set $ws6 "4:project2"
-set $ws7 "5:project3"
-set $ws7 "6:project4"
-set $ws7 "7:other"
+set $ws5 "3:terminal"
+set $ws6 "4:ide"
+set $ws7 "5:browser"
+set $ws7 "6:other"
 
 set $ws3 "8:notes"
 set $ws4 "9:misc"
@@ -93,11 +92,10 @@ set $ws4 "9:misc"
 bindsym $mod+1 workspace "1:coms"
 bindsym $mod+2 workspace "2:music"
 
-bindsym $mod+3 workspace "3:project1"
-bindsym $mod+4 workspace "4:project2"
-bindsym $mod+5 workspace "5:project3"
-bindsym $mod+6 workspace "6:project4"
-bindsym $mod+7 workspace "7:other"
+bindsym $mod+3 workspace "3:terminal"
+bindsym $mod+4 workspace "4:ide"
+bindsym $mod+5 workspace "5:browser"
+bindsym $mod+6 workspace "6:other"
 
 bindsym $mod+8 workspace "8:notes"
 bindsym $mod+9 workspace "9:misc"
@@ -106,24 +104,22 @@ bindsym $mod+9 workspace "9:misc"
 bindsym $mod+Shift+1 move container to workspace "1:coms"
 bindsym $mod+Shift+2 move container to workspace "2:music"
 
-bindsym $mod+Shift+3 move container to workspace "3:project1"
-bindsym $mod+Shift+4 move container to workspace "4:project2"
-bindsym $mod+Shift+5 move container to workspace "5:project3"
-bindsym $mod+Shift+6 move container to workspace "6:project4"
-bindsym $mod+Shift+7 move container to workspace "7:other"
+bindsym $mod+Shift+3 move container to workspace "3:terminal"
+bindsym $mod+Shift+4 move container to workspace "4:ide"
+bindsym $mod+Shift+5 move container to workspace "5:browser"
+bindsym $mod+Shift+6 move container to workspace "6:other"
 
 bindsym $mod+Shift+8 move container to workspace "8:notes"
 bindsym $mod+Shift+9 move container to workspace "9:misc"
 
 # Putting workspaces on specific monitors
-workspace "1:coms" output DP-1-1
-workspace "2:music" output DP-1-1
+workspace "1:coms" output DP-4
+workspace "2:music" output DP-4
 
-workspace "3:project1" output primary
-workspace "4:project2" output primary
-workspace "5:project3" output primary
-workspace "6:project4" output primary
-workspace "7:other" output primary
+workspace "3:terminal" output primary
+workspace "4:ide" output primary
+workspace "5:browser" output primary
+workspace "6:other" output primary
 
-workspace "8:notes" output HDMI-1
-workspace "9:misc" output HDMI-1
+workspace "8:notes" output DP-2
+workspace "9:misc" output DP-2
