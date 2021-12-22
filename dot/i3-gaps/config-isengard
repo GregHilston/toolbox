@@ -1,0 +1,62 @@
+# Personal Isengard specific
+
+# Start i3blocks to display a workspace bar
+bar {
+    font pango: SauceCodePro Nerd Font 9
+    i3bar_command i3bar
+    output primary
+    position top
+    status_command i3blocks
+    strip_workspace_numbers yes
+    tray_output nonprimary
+
+    colors {
+        background #282A36
+        statusline #F8F8F2
+        separator  #44475A
+
+        focused_workspace  #44475A #44475A #F8F8F2
+        active_workspace   #282A36 #44475A #F8F8F2
+        inactive_workspace #282A36 #282A36 #BFBFBF
+        urgent_workspace   #FF5555 #FF5555 #F8F8F2
+        binding_mode       #FF5555 #FF5555 #F8F8F2
+    }
+}
+
+# names workspaces
+set $ws1 "1:coms"
+set $ws2 "2:terminal"
+set $ws5 "3:editor"
+set $ws6 "4:ide"
+set $ws7 "5:firefox"
+set $ws7 "6:notes"
+
+# switch to workspace
+bindsym $mod+1 workspace "1:coms"
+bindsym $mod+2 workspace "2:terminal"
+bindsym $mod+3 workspace "3:ide"
+bindsym $mod+4 workspace "4:browser"
+bindsym $mod+5 workspace "5:nots"
+bindsym $mod+6 workspace 6
+bindsym $mod+7 workspace 7
+bindsym $mod+8 workspace 8
+bindsym $mod+9 workspace 9
+
+# move focused container to workspace
+bindsym $mod+Shift+1 move container to workspace "1:coms"
+bindsym $mod+Shift+2 move container to workspace "2:terminal"
+bindsym $mod+Shift+3 move container to workspace "3:ide"
+bindsym $mod+Shift+4 move container to workspace "4:browser"
+bindsym $mod+Shift+5 move container to workspace "5:notes"
+bindsym $mod+Shift+6 move container to workspace 6
+bindsym $mod+Shift+7 move container to workspace 7
+bindsym $mod+Shift+8 move container to workspace 8
+bindsym $mod+Shift+9 move container to workspace 9
+
+# Putting workspaces on specific monitors
+# workspace "1:coms" output primary
+# workspace "2:terminal" output primary
+# workspace "3:editor" output primary
+# workspace "4:ide" output primary
+# workspace "5:firefox" output primary
+# workspace "6:notes" output primary
