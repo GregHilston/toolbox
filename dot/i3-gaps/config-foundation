@@ -82,16 +82,16 @@ bar {
 }
 
 # names workspaces to variables
-set $ws1 "1:coms"
-set $ws2 "2:music"
+set $ws1 "1:1 coms"
+set $ws2 "2:2 music"
 
-set $ws3 "3:terminal"
-set $ws4 "4:ide"
-set $ws5 "5:browser"
-set $ws6 "6:other"
+set $ws3 "3:3 terminal"
+set $ws4 "4:4 ide"
+set $ws5 "5:5 browser"
+set $ws6 "6:6 other"
 
-set $ws8 "8:notes"
-set $ws9 "9:misc"
+set $ws8 "8:8 notes"
+set $ws9 "9:9 misc"
 
 # switch to workspace
 bindsym $mod+1 workspace $ws1
