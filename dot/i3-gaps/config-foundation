@@ -11,15 +11,20 @@ bindsym XF86AudioPause exec playerctl play-pause
 bindsym XF86AudioNext exec playerctl next
 bindsym XF86AudioPrev exec playerctl previous
 
+# names displays to variables
+set $left-monitor "DP-4"
+set $middle-monitor "primary"
+set $right-monitor "DP-2"
+
 # Start i3blocks to display a workspace bar
 bar {
     font pango: SauceCodePro Nerd Font 9
     i3bar_command i3bar
-    output primary
+    output $middle-monitor
     position top
     status_command i3blocks
     strip_workspace_numbers yes
-    tray_output nonprimary
+    tray_output $middle-monitor
 
     colors {
         background #282A36
@@ -37,10 +42,10 @@ bar {
 bar {
     font pango: SauceCodePro Nerd Font 10
     i3bar_command i3bar
-    output DP-4
+    output $left-monitor
     position top
     strip_workspace_numbers yes
-    tray_output DP-4
+    tray_output $left-monitor
 
     colors {
         background #282A36
@@ -58,10 +63,10 @@ bar {
 bar {
     font pango: SauceCodePro Nerd Font 10
     i3bar_command i3bar
-    output DP-2
+    output $right-monitor
     position top
     strip_workspace_numbers yes
-    tray_output DP-2
+    tray_output $right-monitor
 
     colors {
         background #282A36
@@ -76,50 +81,53 @@ bar {
     }
 }
 
-# names workspaces
+# names workspaces to variables
 set $ws1 "1:coms"
 set $ws2 "2:music"
 
-set $ws5 "3:terminal"
-set $ws6 "4:ide"
-set $ws7 "5:browser"
-set $ws7 "6:other"
+set $ws3 "3:terminal"
+set $ws4 "4:ide"
+set $ws5 "5:browser"
+set $ws6 "6:other"
 
-set $ws3 "8:notes"
-set $ws4 "9:misc"
+set $ws8 "8:notes"
+set $ws9 "9:misc"
 
 # switch to workspace
-bindsym $mod+1 workspace "1:coms"
-bindsym $mod+2 workspace "2:music"
+bindsym $mod+1 workspace $ws1
+bindsym $mod+2 workspace $ws2
 
-bindsym $mod+3 workspace "3:terminal"
-bindsym $mod+4 workspace "4:ide"
-bindsym $mod+5 workspace "5:browser"
-bindsym $mod+6 workspace "6:other"
+bindsym $mod+3 workspace $ws3
+bindsym $mod+4 workspace $ws4
+bindsym $mod+5 workspace $ws5
+bindsym $mod+6 workspace $ws6
+bindsym $mod+6 workspace 7
 
-bindsym $mod+8 workspace "8:notes"
-bindsym $mod+9 workspace "9:misc"
+bindsym $mod+8 workspace $ws8
+bindsym $mod+9 workspace $ws9
 
 # move focused container to workspace
-bindsym $mod+Shift+1 move container to workspace "1:coms"
-bindsym $mod+Shift+2 move container to workspace "2:music"
+bindsym $mod+Shift+1 move container to workspace $ws1
+bindsym $mod+Shift+2 move container to workspace $ws2
 
-bindsym $mod+Shift+3 move container to workspace "3:terminal"
-bindsym $mod+Shift+4 move container to workspace "4:ide"
-bindsym $mod+Shift+5 move container to workspace "5:browser"
-bindsym $mod+Shift+6 move container to workspace "6:other"
+bindsym $mod+Shift+3 move container to workspace $ws3
+bindsym $mod+Shift+4 move container to workspace $ws4
+bindsym $mod+Shift+5 move container to workspace $ws5
+bindsym $mod+Shift+6 move container to workspace $ws6
+bindsym $mod+Shift+6 move container to workspace 7
 
-bindsym $mod+Shift+8 move container to workspace "8:notes"
-bindsym $mod+Shift+9 move container to workspace "9:misc"
+bindsym $mod+Shift+8 move container to workspace $ws8
+bindsym $mod+Shift+9 move container to workspace $ws9
 
 # Putting workspaces on specific monitors
-workspace "1:coms" output DP-4
-workspace "2:music" output DP-4
+workspace $ws1 output $left-monitor
+workspace $ws2 output $left-monitor
 
-workspace "3:terminal" output primary
-workspace "4:ide" output primary
-workspace "5:browser" output primary
-workspace "6:other" output primary
+workspace $ws3 output $middle-monitor
+workspace $ws4 output $middle-monitor
+workspace $ws5 output $middle-monitor
+workspace $ws6 output $middle-monitor
+workspace 7 output $middle-monitor
 
-workspace "8:notes" output DP-2
-workspace "9:misc" output DP-2
+workspace $ws8 output $right-monitor
+workspace $ws9 output $right-monitor
