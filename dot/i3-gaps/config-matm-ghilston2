@@ -85,50 +85,50 @@ bar {
 set $ws1 "1:coms"
 set $ws2 "2:music"
 
-set $ws5 "3:project1"
-set $ws6 "4:project2"
-set $ws7 "5:project3"
-set $ws8 "6:project4"
-set $ws9 "7:other"
+set $ws3 "3:project1"
+set $ws4 "4:project2"
+set $ws5 "5:project3"
+set $ws6 "6:project4"
+set $ws7 "7:other"
 
-set $ws3 "8:notes"
-set $ws4 "9:misc"
+set $ws8 "8:notes"
+set $ws9 "9:misc"
 
 # switch to workspace
 bindsym $mod+1 workspace $ws1
 bindsym $mod+2 workspace $ws2
 
-bindsym $mod+3 workspace $ws5
-bindsym $mod+4 workspace $ws6
-bindsym $mod+5 workspace $ws7
-bindsym $mod+6 workspace $ws8
-bindsym $mod+7 workspace $ws9
+bindsym $mod+3 workspace $ws3
+bindsym $mod+4 workspace $ws4
+bindsym $mod+5 workspace $ws5
+bindsym $mod+6 workspace $ws6
+bindsym $mod+7 workspace $ws7
 
-bindsym $mod+8 workspace $ws3
-bindsym $mod+9 workspace $ws4
+bindsym $mod+8 workspace $ws8
+bindsym $mod+9 workspace $ws9
 
 # move focused container to workspace
 bindsym $mod+Shift+1 move container to workspace $ws1
 bindsym $mod+Shift+2 move container to workspace $ws2
 
-bindsym $mod+Shift+3 move container to workspace $ws5
-bindsym $mod+Shift+4 move container to workspace $ws6
-bindsym $mod+Shift+5 move container to workspace $ws7
-bindsym $mod+Shift+6 move container to workspace $ws8
-bindsym $mod+Shift+7 move container to workspace $ws9
+bindsym $mod+Shift+3 move container to workspace $ws3
+bindsym $mod+Shift+4 move container to workspace $ws4
+bindsym $mod+Shift+5 move container to workspace $ws5
+bindsym $mod+Shift+6 move container to workspace $ws6
+bindsym $mod+Shift+7 move container to workspace $ws7
 
-bindsym $mod+Shift+8 move container to workspace $ws3
-bindsym $mod+Shift+9 move container to workspace $ws4
+bindsym $mod+Shift+8 move container to workspace $ws8
+bindsym $mod+Shift+9 move container to workspace $ws9
 
 # Putting workspaces on specific monitors
 workspace $ws1 output $left-monitor
 workspace $ws2 output $left-monitor
 
+workspace $ws3 output $middle-monitor
+workspace $ws4 output $middle-monitor
 workspace $ws5 output $middle-monitor
 workspace $ws6 output $middle-monitor
 workspace $ws7 output $middle-monitor
-workspace $ws8 output $middle-monitor
-workspace $ws9 output $middle-monitor
 
-workspace $ws3 output $right-monitor
-workspace $ws4 output $right-monitor
+workspace $ws8 output $right-monitor
+workspace $ws9 output $right-monitor
