@@ -88,36 +88,20 @@ bindsym $mod+a focus parent
 # focus the child container
 #bindsym $mod+d focus child
 
-# switch to workspace
-bindsym $mod+1 workspace 1
-bindsym $mod+2 workspace 2
-bindsym $mod+3 workspace 3
-bindsym $mod+4 workspace 4
-bindsym $mod+5 workspace 5
-bindsym $mod+6 workspace 6
-bindsym $mod+7 workspace 7
-bindsym $mod+8 workspace 8
-bindsym $mod+9 workspace 9
-bindsym $mod+0 workspace 10
-
-# move focused container to workspace
-bindsym $mod+Shift+1 move container to workspace 1
-bindsym $mod+Shift+2 move container to workspace 2
-bindsym $mod+Shift+3 move container to workspace 3
-bindsym $mod+Shift+4 move container to workspace 4
-bindsym $mod+Shift+5 move container to workspace 5
-bindsym $mod+Shift+6 move container to workspace 6
-bindsym $mod+Shift+7 move container to workspace 7
-bindsym $mod+Shift+8 move container to workspace 8
-bindsym $mod+Shift+9 move container to workspace 9
-bindsym $mod+Shift+0 move container to workspace 10
-
 # Always open some programs on specified workspace
 # assign [class="^Firefox"]          $workspace3
 # assign [class="^Slack"]            $workspace1
 # assign [class="^Spotify"]          $workspace1
 
-# Enable float for some windows 
+# Make the currently focused window a scratchpad
+bindsym $mod+Shift+minus move scratchpad
+
+# To make the currently focused window not a scratchpad anymore just turn it into floating mode
+
+# Cyles through the scratchpad windows
+bindsym $mod+minus scratchpad show
+
+# Enable float for some windows
 # for_window [class="^Slack"] floating enable
 for_window [class="^Arandr$"]       floating enable
 
@@ -130,14 +114,6 @@ bindsym $mod+Shift+r restart
 # Lock screen
 bindsym $mod+Shift+i exec i3lock --color=000000
 
-# Putting workspaces on specific monitors
-workspace 1 output primary
-workspace 2 output primary
-workspace 5 output DP-2
-workspace 6 output DP-2
-workspace 3 output DP-4
-workspace 4 output DP-4
-
 # exit i3 (logs you out of your X session)
 bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -b 'Yes, exit i3' 'i3-msg exit'"
 
@@ -149,10 +125,10 @@ mode "resize" {
         # Pressing right will grow the window’s width.
         # Pressing up will shrink the window’s height.
         # Pressing down will grow the window’s height.
-        bindsym j resize shrink width 10 px or 10 ppt
-        bindsym k resize grow height 10 px or 10 ppt
-        bindsym l resize shrink height 10 px or 10 ppt
-        bindsym semicolon resize grow width 10 px or 10 ppt
+        bindsym h resize shrink width 10 px or 10 ppt
+        bindsym j resize grow height 10 px or 10 ppt
+        bindsym k resize shrink height 10 px or 10 ppt
+        bindsym l resize grow width 10 px or 10 ppt
 
         # same bindings, but for the arrow keys
         bindsym Left resize shrink width 10 px or 10 ppt
@@ -166,7 +142,6 @@ mode "resize" {
 }
 
 bindsym $mod+r mode "resize"
-
 
 # Activating gaps
 # from https://github.com/cartok/i3-gapps
@@ -211,49 +186,3 @@ mode "$mode_gaps_outer" {
 # If you want gaps to only be used if there is more than one container on the workspace, you can use
 # This will disable all gaps (outer and inner) on the workspace whenever only one container is on the current workspace.
 smart_gaps on
-
-
-# Start i3blocks to display a workspace bar
-bar {
-    font pango: SauceCodePro Nerd Font 9
-    i3bar_command i3bar
-    output primary
-    position top
-    status_command i3blocks
-    strip_workspace_numbers yes
-    tray_output nonprimary
-
-    colors {
-        background #282A36
-        statusline #F8F8F2
-        separator  #44475A
-
-        focused_workspace  #44475A #44475A #F8F8F2
-        active_workspace   #282A36 #44475A #F8F8F2
-        inactive_workspace #282A36 #282A36 #BFBFBF
-        urgent_workspace   #FF5555 #FF5555 #F8F8F2
-        binding_mode       #FF5555 #FF5555 #F8F8F2
-    }
-}
-
-bar {
-    font pango: SauceCodePro Nerd Font 10
-    i3bar_command i3bar
-    output nonprimary
-    position top
-    strip_workspace_numbers yes
-    tray_output DP-4
-
-    colors {
-        background #282A36
-        statusline #F8F8F2
-        separator  #44475A
-
-        focused_workspace  #44475A #44475A #F8F8F2
-        active_workspace   #282A36 #44475A #F8F8F2
-        inactive_workspace #282A36 #282A36 #BFBFBF
-        urgent_workspace   #FF5555 #FF5555 #F8F8F2
-        binding_mode       #FF5555 #FF5555 #F8F8F2
-    }
-}
-
