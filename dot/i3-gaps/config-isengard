@@ -27,11 +27,11 @@ bar {
 }
 
 # names workspaces to variables
-set $ws1 "1:coms"
-set $ws2 "2:terminal"
-set $ws3 "3:editor"
-set $ws4 "4:firefox"
-set $ws5 "5:notes"
+set $ws1 "1:1 coms"
+set $ws2 "2:2 terminal"
+set $ws3 "3:3 editor"
+set $ws4 "4:4 firefox"
+set $ws5 "5:5 notes"
 
 # switch to workspace
 bindsym $mod+1 workspace $ws1
