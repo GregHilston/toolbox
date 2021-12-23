@@ -23,7 +23,6 @@ bar {
     output $left-monitor
     position top
     status_command i3blocks
-    strip_workspace_numbers yes
     tray_output $left-monitor
 
     colors {
@@ -44,7 +43,6 @@ bar {
     i3bar_command i3bar
     output $middle-monitor
     position top
-    strip_workspace_numbers yes
     tray_output $middle-monitor
 
     colors {
@@ -65,7 +63,6 @@ bar {
     i3bar_command i3bar
     output $right-monitor
     position top
-    strip_workspace_numbers yes
     tray_output $right-monitor
 
     colors {
@@ -82,17 +79,17 @@ bar {
 }
 
 # names workspaces to variables
-set $ws1 "1:1 coms"
-set $ws2 "2:2 music"
+set $ws1 "1:coms"
+set $ws2 "2:music"
 
-set $ws3 "3:3 project1"
-set $ws4 "4:4 project2"
-set $ws5 "5:5 project3"
-set $ws6 "6:6 project4"
-set $ws7 "7:7 other"
+set $ws3 "3:project1"
+set $ws4 "4:project2"
+set $ws5 "5:project3"
+set $ws6 "6:project4"
+set $ws7 "7:other"
 
-set $ws8 "8:8 notes"
-set $ws9 "9:9 misc"
+set $ws8 "8:notes"
+set $ws9 "9:misc"
 
 # switch to workspace
 bindsym $mod+1 workspace $ws1
