@@ -18,13 +18,12 @@ set $right-monitor "DP-2"
 
 # Start i3blocks to display a workspace bar
 bar {
-    font pango: SauceCodePro Nerd Font 9
+    font pango: SauceCodePro Nerd Font 10
     i3bar_command i3bar
-    output $middle-monitor
+    output $left-monitor
     position top
-    status_command i3blocks
     strip_workspace_numbers yes
-    tray_output $middle-monitor
+    tray_output $left-monitor
 
     colors {
         background #282A36
@@ -40,12 +39,13 @@ bar {
 }
 
 bar {
-    font pango: SauceCodePro Nerd Font 10
+    font pango: SauceCodePro Nerd Font 9
     i3bar_command i3bar
-    output $left-monitor
+    output $middle-monitor
     position top
-    strip_workspace_numbers yes
-    tray_output $left-monitor
+    status_command i3blocks
+    # strip_workspace_numbers yes
+    tray_output $middle-monitor
 
     colors {
         background #282A36
@@ -82,16 +82,16 @@ bar {
 }
 
 # names workspaces to variables
-set $ws1 "1:1 coms"
-set $ws2 "2:2 music"
+set $ws1 "1:coms"
+set $ws2 "2:music"
 
-set $ws3 "3:3 terminal"
-set $ws4 "4:4 ide"
-set $ws5 "5:5 browser"
-set $ws6 "6:6 other"
+set $ws3 "3:terminal"
+set $ws4 "4:ide"
+set $ws5 "5:browser"
+set $ws6 "6:other"
 
-set $ws8 "8:8 notes"
-set $ws9 "9:9 misc"
+set $ws8 "8:notes"
+set $ws9 "9:misc"
 
 # switch to workspace
 bindsym $mod+1 workspace $ws1
@@ -101,7 +101,7 @@ bindsym $mod+3 workspace $ws3
 bindsym $mod+4 workspace $ws4
 bindsym $mod+5 workspace $ws5
 bindsym $mod+6 workspace $ws6
-bindsym $mod+6 workspace 7
+bindsym $mod+7 workspace 7
 
 bindsym $mod+8 workspace $ws8
 bindsym $mod+9 workspace $ws9
@@ -114,7 +114,7 @@ bindsym $mod+Shift+3 move container to workspace $ws3
 bindsym $mod+Shift+4 move container to workspace $ws4
 bindsym $mod+Shift+5 move container to workspace $ws5
 bindsym $mod+Shift+6 move container to workspace $ws6
-bindsym $mod+Shift+6 move container to workspace 7
+bindsym $mod+Shift+7 move container to workspace 7
 
 bindsym $mod+Shift+8 move container to workspace $ws8
 bindsym $mod+Shift+9 move container to workspace $ws9

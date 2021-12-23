@@ -142,26 +142,26 @@ mode "resize" {
 }
 bindsym $mod+r mode "resize"
 
-# move window (you can alos use the mouse for that)                                                                                                                          
-mode "move" {                   
-    bindsym $mod+Tab focus right           
-    bindsym $mod+shift+Tab focus left    
-                                                 
-    bindsym Left  move left          
-    bindsym Down  move down          
-    bindsym Up    move up        
-    bindsym Right move right           
-    
-    bindsym h     move left          
-    bindsym j     move down    
-    bindsym k     move up    
-    bindsym l     move right       
-                          
-    # back to normal: Enter or Escape    
-    bindsym Return mode "default"                    
-    bindsym Escape mode "default"    
-}    
-bindsym $mod+m mode "move" focus floating    
+# move window (you can alos use the mouse for that)
+mode "move" {
+    bindsym $mod+Tab focus right
+    bindsym $mod+shift+Tab focus left
+
+    bindsym Left  move left
+    bindsym Down  move down
+    bindsym Up    move up
+    bindsym Right move right
+
+    bindsym h     move left
+    bindsym j     move down
+    bindsym k     move up
+    bindsym l     move right
+
+    # back to normal: Enter or Escape
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+m mode "move" focus floating
 
 # Activating gaps
 # from https://github.com/cartok/i3-gapps
