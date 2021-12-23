@@ -22,8 +22,7 @@ bar {
     i3bar_command i3bar
     output $left-monitor
     position top
-    strip_workspace_numbers yes
-    tray_output $left-monitor
+    tray_output none
 
     colors {
         background #282A36
@@ -44,7 +43,6 @@ bar {
     output $middle-monitor
     position top
     status_command i3blocks
-    # strip_workspace_numbers yes
     tray_output $middle-monitor
 
     colors {
@@ -65,8 +63,7 @@ bar {
     i3bar_command i3bar
     output $right-monitor
     position top
-    strip_workspace_numbers yes
-    tray_output $right-monitor
+    tray_output none
 
     colors {
         background #282A36

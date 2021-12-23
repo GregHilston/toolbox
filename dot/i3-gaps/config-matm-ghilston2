@@ -23,7 +23,7 @@ bar {
     output $left-monitor
     position top
     status_command i3blocks
-    tray_output $left-monitor
+    tray_output none
 
     colors {
         background #282A36
@@ -63,7 +63,7 @@ bar {
     i3bar_command i3bar
     output $right-monitor
     position top
-    tray_output $right-monitor
+    tray_output none
 
     colors {
         background #282A36
