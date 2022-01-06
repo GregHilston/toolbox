@@ -258,3 +258,6 @@ alias night="redshift"
 alias audio="pavucontrol"
 
 export PATH="$HOME/.poetry/bin:$PATH"
+
+# Adds the ~/.screenlayout directory to path, which are shell scripts written by arandr for running xrandr
+export PATH="$HOME/.screenlayout:$PATH"
