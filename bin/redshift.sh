@@ -1,1 +1,1 @@
-redshift -P -O 3000 -g 0.6
+redshift -l 44.8:-73 -t 5800:3600 -g 0.8 -m randr -v
