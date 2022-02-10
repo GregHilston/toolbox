@@ -254,7 +254,7 @@ export EDITOR="$VISUAL"
 alias vim="nvim"
 alias vi="nvim"
 
-alias night="redshift"
+alias night="redshift -l 44.8:-73 -t 5800:3600 -g 0.8 -m randr -v &"
 alias audio="pavucontrol"
 
 export PATH="$HOME/.poetry/bin:$PATH"
