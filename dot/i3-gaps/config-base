@@ -206,3 +206,7 @@ mode "$mode_gaps_outer" {
 # If you want gaps to only be used if there is more than one container on the workspace, you can use
 # This will disable all gaps (outer and inner) on the workspace whenever only one container is on the current workspace.
 smart_gaps on
+
+# Binds our "focus mode" script
+# https://www.greghilston.com/post/focus-mode/
+bindsym $mod+shift+f exec --no-startup-id toggle-focus.sh
