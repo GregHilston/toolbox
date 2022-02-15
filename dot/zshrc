@@ -140,6 +140,7 @@ export VIRTUAL_ENV_DISABLE_PROMPT=
 export PATH="$PATH:/snap/bin"
 
 # So binaries I install are in path (jetbrains toolbox for ex)
+# This is probably very out of date...
 export PATH="$PATH:/home/ghilston/bin"
 
 
