@@ -2,5 +2,5 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-./set-audio.sh
-./set-monitors.sh
+set-audio.sh
+set-monitors.sh
