@@ -5,6 +5,9 @@ help: ## This help.
 
 install: install_ensure_no_sudo install_bare_bones install_essentials install_zsh install_oh_my_zsh install_dots install_zsh_autosuggestions install_vim_plug install_vim_plugins success_message ## Installs and configures our whole system.
 
+backup:
+	./install/backup_dot_files.sh
+
 helper_ensure_no_sudo: ## Ensures this script was not ran by sudo. A helper function.
 	@echo "Ensuring this was not run with sudo..."
 	./install/helper_ensure_no_sudo.sh
