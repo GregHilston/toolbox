@@ -33,6 +33,8 @@ brew "zsh-autosuggestions"
 brew "zsh-history-substring-search"
 brew "neovim"
 brew "wget"
+brew "koekeishiya/formulae/yabai"
+brew "koekeishiya/formulae/skhd"
 
 cask "google-drive"
 cask  "maccy"
