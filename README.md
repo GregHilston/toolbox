@@ -8,7 +8,6 @@ My toolbox contains a series of configuration files and useful commands.
 ## What's in it?
 
 ```bash
-├── Makefile                                # Makefile for installation
 ├── bin                                     # Nifty bin files. Added to $PATH.
 ├── dot                                     # Dotfiles
 │   ├── config/nvim/init.vim                # nvim config
@@ -24,9 +23,11 @@ My toolbox contains a series of configuration files and useful commands.
 │   └── zshrc                               # zsh config
 ├── install/                                # Installation helper scripts
 └── secret/                                 # My secret sauce
-├── docker-build.sh                         # TODO 
-├── docker-run.sh                           # TODO 
-├── docker-shell-exec.sh                    # TODO 
+├── docker-build.sh                         # TODO
+├── docker-run.sh                           # TODO
+├── docker-shell-exec.sh                    # TODO
+├── Makefile                                # Makefile, which houses commands for easy installation
+├── README.md                               # This documentation
 ```
 
 ## External submodules
