@@ -37,6 +37,10 @@ install_zsh_autosuggestions:
 	./install/install_zsh_autosuggestions.sh
 	# TODO investigate why may get output [oh-my-zsh] plugin 'zsh-syntax-highlighting' not found
 
+install_zsh_syntax_highlighting:
+	@echo "Installing ZSH Syntax Highlighting"
+	./install/install_zsh_syntax_highlighting
+
 install_vim_plug:
 	@echo "Installing vim plug"
 	./install/install_vim_plug.sh
