@@ -1259,6 +1259,12 @@
         "options": {
           "full_name": "zerotier-one"
         }
+      },
+      "private-internet-access": {
+        "version": "3.3-06906",
+        "options": {
+          "full_name": "private-internet-access"
+        }
       }
     },
     "mas": {
