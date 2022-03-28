@@ -1,3 +1,4 @@
+# Install this file by running $ brew bundle
 tap "homebrew/bundle"
 tap "homebrew/cask"
 tap "homebrew/cask-fonts"
@@ -5,6 +6,8 @@ tap "homebrew/core"
 tap "homebrew/services"
 # tap "neovim/neovim"
 
+# Command line applications
+brew "mas"
 brew "readline"
 brew "graphviz"
 brew "git"
@@ -36,6 +39,7 @@ brew "wget"
 brew "koekeishiya/formulae/yabai"
 brew "koekeishiya/formulae/skhd"
 
+# GUI applications
 cask "google-drive"
 cask  "maccy"
 cask "anki"
@@ -63,3 +67,6 @@ cask "nextcloud"
 cask "obsidian"
 cask "teamviewer"
 cask "zerotier-one"
+
+# Applications not on Brew, but on the Mac App Store
+mas "Amphetamine", id:937984704
