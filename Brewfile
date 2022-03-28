@@ -4,7 +4,6 @@ tap "homebrew/cask"
 tap "homebrew/cask-fonts"
 tap "homebrew/core"
 tap "homebrew/services"
-# tap "neovim/neovim"
 
 # Command line applications
 brew "mas"
@@ -67,6 +66,7 @@ cask "nextcloud"
 cask "obsidian"
 cask "teamviewer"
 cask "zerotier-one"
+cask "private-internet-access"
 
 # Applications not on Brew, but on the Mac App Store
 mas "Amphetamine", id:937984704
