@@ -68,6 +68,7 @@ cask "teamviewer"
 cask "zerotier-one"
 cask "private-internet-access"
 cask "steam"
+cask "stats"
 
 # Applications not on Brew, but on the Mac App Store
 mas "Amphetamine", id:937984704
