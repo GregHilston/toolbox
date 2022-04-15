@@ -69,7 +69,6 @@ cask "spotify"
 cask "jetbrains-toolbox"
 # cask "nextcloud"
 cask "obsidian"
-cask "stats"
 # cask "teamviewer"
 # cask "zerotier-one"
 # cask "private-internet-access"
@@ -78,6 +77,7 @@ cask "lastpass"
 cask "google-cloud-sdk" # for gcloud CLI
 cask "dbeaver-community"
 cask "hammerspoon"
+cask "stats"
 
 # Applications not on Brew, but on the Mac App Store
 mas "Amphetamine", id:937984704
