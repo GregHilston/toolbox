@@ -265,4 +265,3 @@ export PATH="$HOME/.screenlayout:$PATH"
 # Might be just for OSX
 # From thiis article https://www.stuartellis.name/articles/mac-setup/
 autoload bashcompinit && bashcompinit
-
