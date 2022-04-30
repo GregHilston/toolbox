@@ -12,9 +12,9 @@ bindsym XF86AudioNext exec playerctl next
 bindsym XF86AudioPrev exec playerctl previous
 
 # names displays to variables
-set $left-monitor "DP-4"
+set $left-monitor "DP-0"
 set $middle-monitor "primary"
-set $right-monitor "DP-2"
+set $right-monitor "DP-4"
 
 # Start i3blocks to display a workspace bar
 bar {
@@ -98,7 +98,7 @@ bindsym $mod+3 workspace $ws3
 bindsym $mod+4 workspace $ws4
 bindsym $mod+5 workspace $ws5
 bindsym $mod+6 workspace $ws6
-bindsym $mod+7 workspace 7
+bindsym $mod+7 workspace $ws7
 
 bindsym $mod+8 workspace $ws8
 bindsym $mod+9 workspace $ws9
