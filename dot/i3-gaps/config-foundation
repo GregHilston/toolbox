@@ -18,7 +18,7 @@ set $right-monitor "DP-4"
 
 # Start i3blocks to display a workspace bar
 bar {
-    font pango: SauceCodePro Nerd Font 10
+    font pango: SauceCodePro Nerd Font 12
     i3bar_command i3bar
     output $left-monitor
     position top
@@ -38,7 +38,7 @@ bar {
 }
 
 bar {
-    font pango: SauceCodePro Nerd Font 9
+    font pango: SauceCodePro Nerd Font 12
     i3bar_command i3bar
     output $middle-monitor
     position top
@@ -59,7 +59,7 @@ bar {
 }
 
 bar {
-    font pango: SauceCodePro Nerd Font 10
+    font pango: SauceCodePro Nerd Font 12
     i3bar_command i3bar
     output $right-monitor
     position top
