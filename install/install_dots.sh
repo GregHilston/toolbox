@@ -17,21 +17,21 @@ echo -e "Installing nvim config..."
 ln -sf "$TOOLBOX_HOME/dot/config/nvim/init.vim" "$HOME/.config/nvim/init.vim"
 
 # i3-gaps (special case)
-echo -e "Creating i3-gaps config folder if it doesn't exist"
-mkdir -p ~/.i3
-echo -e "Installing i3 config..."
-echo -e " \t linking $HOME/.i3/config to $TOOLBOX_HOME/dot/i3-gaps/config ..."
-ln -sf "$TOOLBOX_HOME/dot/i3-gaps/config" "$HOME/.i3/config"
-echo "reload i3 with \$mod + shift + r"
-echo " Done"
+# echo -e "Creating i3-gaps config folder if it doesn't exist"
+# mkdir -p ~/.i3
+# echo -e "Installing i3 config..."
+# echo -e " \t linking $HOME/.i3/config to $TOOLBOX_HOME/dot/i3-gaps/config ..."
+# ln -sf "$TOOLBOX_HOME/dot/i3-gaps/config" "$HOME/.i3/config"
+# echo "reload i3 with \$mod + shift + r"
+# echo " Done"
 
 # redshift (special case)
-echo -e "Creating redshift directory if it doesn't exist..."
-mkdir -p ~/.config
-echo -e "Installing redshift config..."
-echo -e "\t linking $HOME/.config/redshift.conf to $TOOLBOX_HOME/dot/config/redshift.conf ..."
-ln -s "$TOOLBOX_HOME/dot/config/redshift.conf" "$HOME/.config/redshift.conf"
-echo " Done"
+# echo -e "Creating redshift directory if it doesn't exist..."
+# mkdir -p ~/.config
+# echo -e "Installing redshift config..."
+# echo -e "\t linking $HOME/.config/redshift.conf to $TOOLBOX_HOME/dot/config/redshift.conf ..."
+# ln -s "$TOOLBOX_HOME/dot/config/redshift.conf" "$HOME/.config/redshift.conf"
+# echo " Done"
 
 #echo -e "creating directory needed for vim-plug"
 #if [ ! -e ~/.vim ]; then
