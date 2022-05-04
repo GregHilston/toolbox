@@ -46,6 +46,7 @@ brew "java"
 brew "slides"
 brew "mermaid-cli"
 brew "brew install gnupg"
+brew "sd"
 
 # GUI applications
 cask "google-drive"
