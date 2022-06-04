@@ -73,31 +73,29 @@ Install vim plug, can use `./bin/install_vim_plug.sh`
 ## TODO
 
 - get i3-gaps to be installed and not just i3-wm. the repository is not working for pop os 22.04
-- Figure out how to both allow zsh be made as the default script AND have it continue the rst of the installation, without requiring a CTRL + D
-- remove the configuration of GregHilston <Gregory.Hilston@gmail.com> for Git
-- figure out why the plugins zsh-syntax-highlighting and zsh-autosuggestions are not being found
-- Where to put the following script to disable auto folding
-    - command 
-    - from https://github.com/plasticboy/vim-markdown#set-header-folding-level
 
-## Notes
+## References
+
+### Git Plugin Hotkeys
+
+see `~/.oh-my-zsh/plugins/git/git.plugin.zsh`, after installing
 
 ### Vim
 
 - use `:source ~/.config/nvim/init.vim` to resource inside of neovim
 - use: gt to switch active tab
 - use :f to get the current file's path
-- use following to open new tab 
+- use following to open new tab
     - :tabnew path/to/file
-- use following to move tab 
+- use following to move tab
     - :tabm i
 - switch windows, CTRL + W CTRL + W
 - horizontal splitting Ctrl+W, S (upper case)
-- vertical splitting Ctrl+W, v (lower case) 
+- vertical splitting Ctrl+W, v (lower case)
 - Edit start of line Shift + i
 - Edit end of line A
 - To switch focus from one window to another, use Ctrl+w <direction> , where direction can be an arrow key or one of the h j k l characters
-- Resizing windows 
+- Resizing windows
     - Ctrl+W +/-: increase/decrease height (ex. 20<C-w>+)
     - Ctrl+W >/<: increase/decrease width (ex. 30<C-w><)
     - Ctrl+W _: set height (ex. 50<C-w>_)
@@ -109,7 +107,7 @@ Install vim plug, can use `./bin/install_vim_plug.sh`
 
 - hotkeyed ; to use fzf
     - From inside the menu, fzf will automatically detect ctrl-t to open the file in a new tab, ctrl-v for a vertical split or ctrl-x for a horizontal split.
-- to open tabs 
+- to open tabs
     - From inside the menu, fzf will automatically detect ctrl-t to open the file in a new tab, ctrl-v for a vertical split or ctrl-x for a horizontal split.
     - From the terminal, you can do vim -p filename1 filename2 to open the two files in tabs.
 - basically use fzf, hotkeyed to ;, to search for file names
@@ -120,7 +118,7 @@ Install vim plug, can use `./bin/install_vim_plug.sh`
 - Open/Close Nerdtree with :NerdTree and :NerdTreeClose respectively
 - Have a hotkey set for CTRL + o
 
-#### tmux 
+#### tmux
 
 - To reload confiuguration This can be done either from within tmux, by pressing Ctrl+B and then : to bring up a command prompt, and typing:
   - :source-file ~/.tmux.conf
