@@ -247,13 +247,12 @@ export TOOLBOX_HOME=$TOOLBOX_HOME
 export PATH=$PATH:$TOOLBOX_HOME/bin
 
 # make the preferred editor vim, for like git merges and what not
-# export VISUAL=nvim
-export VISUAL=vim
+ export VISUAL=nvim
 export EDITOR="$VISUAL"
 
 # only using nvim, can ues an old one by putting a \ in front of binary call, ex \vim
-# alias vim="nvim"
-# alias vi="nvim"
+alias vim="nvim"
+alias vi="nvim"
 
 alias night="redshift -l 44.8:-73 -t 5800:3600 -g 0.8 -m randr -v &"
 alias audio="pavucontrol"
