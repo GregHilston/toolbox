@@ -18,6 +18,8 @@ sudo ./bin/install_dots.sh
 
 ./bin/install_zsh_syntax_highlighting.sh
 
+./bin/add_user_to_docker_group.sh
+
 echo "Changing default shell to be zsh..."
 chsh -s $(which zsh)
 
