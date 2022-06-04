@@ -20,6 +20,8 @@ sudo ./bin/install_dots.sh
 
 ./bin/add_user_to_docker_group.sh
 
+./bin/install_jetbrains_toolbox.sh
+
 echo "Changing default shell to be zsh..."
 chsh -s $(which zsh)
 
