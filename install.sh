@@ -26,6 +26,6 @@ zsh -c "source ~/.zshrc"
 
 ./bin/install_vim_plug.sh
 
-./bin/install_nvim_plug_plugins.sh
+./bin/install_vim_plug_plugins.sh
 
 echo "Installation of toolbox was potentially success!\nLogout and log back in, then run again to be sure. This is so ZSH will be your default shell and will source the ~/.zshrc file.";
