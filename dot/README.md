@@ -1,4 +1,4 @@
-A directory containing all my configuration files. 
+A directory containing all my configuration files.
 
 ## What's in it?
 
@@ -9,7 +9,7 @@ A directory containing all my configuration files.
 ├── vim/                                # ? TODO figure out
 ├── zsh-custom/                         # zsh custom theme
 ├── tmux.conf                           # tmux config
-├── vimrc                               # vim config (Outdated, as we prefer to use config/nvim/init.vim)
+├── vimrc                               # vim config (We prefer to use config/nvim/init.vim, but this is kept around incase nvim isn't available)
 ├── vs_code_settings_sync_gist_url.txt  # gist for vs code extension settings
 ├── oh-my-zsh                           # oh-my-zsh installation
 ├── spectacle_config.png                # spectacle config (for mac)
