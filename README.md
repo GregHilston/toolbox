@@ -72,7 +72,10 @@ Install vim plug, can use `./bin/install_vim_plug.sh`
 
 ## TODO
 
-- get i3-gaps to be installed and not just i3-wm. the repository is not working for pop os 22.04
+- Get our i3 dot file to be close to our i3 gaps dot file
+- i3-gaps currently does not have a PPA released for Ubuntu 22.04 Jamming Jelly Fish. Once it does, resolve these two issues
+    - get i3-gaps to be installed and not just i3-wm. the repository is not working for pop os 22.04
+    - Get `dot/i3-gaps/build-i3-config.sh` to be ran, and `/home/ghilston/.i3` directory to be created so we can symlink the build `dot/i3-gaps/config` directory
 
 ## References
 
