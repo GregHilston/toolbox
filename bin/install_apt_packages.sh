@@ -50,6 +50,9 @@ fzf \
 ripgrep \
 jq \
 tldr \
+code \
+vlc \
+gimp \
 ngrok
 
 # docker

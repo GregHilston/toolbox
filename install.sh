@@ -6,6 +6,8 @@ IFS=$'\n\t'
 
 sudo ./bin/install_apt_packages.sh
 
+./bin/install_flatpaks.sh
+
 sudo ./bin/configure_zsh.sh
 
 ./bin/install_oh_my_zsh.sh
