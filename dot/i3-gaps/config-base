@@ -156,11 +156,11 @@ mode "move" {
 bindsym $mod+m mode "move" focus floating
 
 # names workspaces to variables
-set $ws1 "1:coms"
-set $ws2 "2:terminal"
-set $ws3 "3:editor"
-set $ws4 "4:firefox"
-set $ws5 "5:notes"
+set $ws1 "1"
+set $ws2 "2"
+set $ws3 "3"
+set $ws4 "4"
+set $ws5 "5"
 
 # switch to workspace
 bindsym $mod+1 workspace $ws1
