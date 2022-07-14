@@ -1,4 +1,7 @@
-# Personal Isengard specific
+# i3 config file (v4)
+#
+# Please see https://i3wm.org/docs/userguide.html for a complete reference!
+# used following config as a refernce https://github.com/da-edra/dotfiles/blob/master/.config/i3/config
 
 # names displays to variables
 set $laptop-monitor "primary"

@@ -32,6 +32,7 @@ python3-setuptools \
 xournalpp \
 i3 \ # once a PPA exists for Jamming Jellyfish (ubuntu 22.04), add the PPA above and switch this line to i3-gaps
 i3lock \
+i3blocks \
 i3status \
 redshift \
 redshift-gtk \
