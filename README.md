@@ -66,7 +66,7 @@ I've had to run `$ make install`, followed by `$ make instal_zsh_autocomplete` m
 
 Running `$ make install` twice can cause `~/.vim` symbolic link incorrectly and cause errors when launching vim. Not sure why yet. Can resolve this by running `$ rm -rf ~/.vim`
 
-### `Unknown function: plug#begin`
+### Fixing `Unknown function: plug#begin`
 
 Install vim plug, can use `./bin/install_vim_plug.sh`
 
@@ -76,6 +76,17 @@ Install vim plug, can use `./bin/install_vim_plug.sh`
 - i3-gaps currently does not have a PPA released for Ubuntu 22.04 Jamming Jelly Fish. Once it does, resolve these two issues
     - get i3-gaps to be installed and not just i3-wm. the repository is not working for pop os 22.04
     - Get `dot/i3-gaps/build-i3-config.sh` to be ran, and `/home/ghilston/.i3` directory to be created so we can symlink the build `dot/i3-gaps/config` directory
+
+## Install Preference
+
+Since Linux has many different ways to install something (from your package manager, snap, flatpak, brew, compile from source, etc...) I've elected to ouse a very specific process. I will not be using Snap or Brew on Linux. While the former has lack of sandboxing that flatpak has, and the latter can conflict build tools with the base linux install, while this generally doesn't cause a problem on OS X. My preference for installation will be:
+
+- apt (via default packages or an external PPA)
+- flatpak (via flathub)
+- a raw binary
+- clone and build
+
+For raw binaries, we'll store them in `~/Apps` and symlink that to `~/bin`.
 
 ## References
 
