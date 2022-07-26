@@ -1,4 +1,7 @@
-# Personal Isengard specific
+# i3 config file (v4)
+#
+# Please see https://i3wm.org/docs/userguide.html for a complete reference!
+# used following config as a refernce https://github.com/da-edra/dotfiles/blob/master/.config/i3/config
 
 # names displays to variables
 set $laptop-monitor "primary"
@@ -60,3 +63,8 @@ bindsym $mod+Shift+9 move container to workspace 9
 # workspace $ws3 output $laptop-monitor
 # workspace $ws4 output $laptop-monitor
 # workspace $ws5 output $laptop-monitor
+
+# Volume
+bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5%
+bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -5%
+bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle

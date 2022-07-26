@@ -16,6 +16,16 @@ mkdir -p ~/.config/nvim
 echo -e "Installing nvim config..."
 ln -sf "$TOOLBOX_HOME/dot/config/nvim/init.vim" "$HOME/.config/nvim/init.vim"
 
+# i3 (special case)
+echo -e "Creating i3 config folder if it doesn't exist"
+mkdir -p ~/.i3
+echo -e "Installing i3 config..."
+echo -e " \t linking $HOME/.i3/config to $TOOLBOX_HOME/dot/i3/config ..."
+ln -sf "$TOOLBOX_HOME/dot/i3/config" "$HOME/.i3/config"
+echo "reload i3 with \$mod + shift + r"
+echo " Done"
+
+
 # i3-gaps (special case)
 # echo -e "Creating i3-gaps config folder if it doesn't exist"
 # mkdir -p ~/.i3
@@ -26,23 +36,23 @@ ln -sf "$TOOLBOX_HOME/dot/config/nvim/init.vim" "$HOME/.config/nvim/init.vim"
 # echo " Done"
 
 # redshift (special case)
-# echo -e "Creating redshift directory if it doesn't exist..."
-# mkdir -p ~/.config
-# echo -e "Installing redshift config..."
-# echo -e "\t linking $HOME/.config/redshift.conf to $TOOLBOX_HOME/dot/config/redshift.conf ..."
-# ln -s "$TOOLBOX_HOME/dot/config/redshift.conf" "$HOME/.config/redshift.conf"
-# echo " Done"
+echo -e "Creating redshift directory if it doesn't exist..."
+mkdir -p ~/.config
+echo -e "Installing redshift config..."
+echo -e "\t linking $HOME/.config/redshift.conf to $TOOLBOX_HOME/dot/config/redshift.conf ..."
+ln -s "$TOOLBOX_HOME/dot/config/redshift.conf" "$HOME/.config/redshift.conf"
+echo " Done"
 
-#echo -e "creating directory needed for vim-plug"
-#if [ ! -e ~/.vim ]; then
-#  echo "HERE"
-#  mkdir -p ~/.vim/autoload
-#fi
+echo -e "creating directory needed for vim-plug"
+if [ ! -e ~/.vim ]; then
+  echo "HERE"
+  mkdir -p ~/.vim/autoload
+fi
 
-# I havent figure dout if this is needed, commenting out but leaving here for now
-# echo -e "install vim-plug plugins"
-# rm -rf ~/.vim
-# vim +PlugInstall +qall
+echo -e "install vim-plug plugins"
+rm -rf ~/.vim
+/usr/bin/vim +PlugInstall +qall
+nvim +PlugInstall +qall
 
 for install in "${INSTALL[@]}"; do
   echo -e "Installing $install... "

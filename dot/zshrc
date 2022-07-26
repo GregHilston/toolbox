@@ -247,7 +247,7 @@ export TOOLBOX_HOME=$TOOLBOX_HOME
 export PATH=$PATH:$TOOLBOX_HOME/bin
 
 # make the preferred editor vim, for like git merges and what not
-export VISUAL=nvim
+ export VISUAL=nvim
 export EDITOR="$VISUAL"
 
 # only using nvim, can ues an old one by putting a \ in front of binary call, ex \vim
@@ -265,3 +265,7 @@ export PATH="$HOME/.screenlayout:$PATH"
 # Might be just for OSX
 # From thiis article https://www.stuartellis.name/articles/mac-setup/
 autoload bashcompinit && bashcompinit
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
