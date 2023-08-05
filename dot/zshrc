@@ -1,3 +1,10 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
@@ -7,7 +14,8 @@ export ZSH=~/.oh-my-zsh
 # Set name of the theme to load. Optionally, if you set this to "random"
 # it'll load a random theme each time that oh-my-zsh is loaded.
 # See https://github.com/robbyrussell/oh-my-zsh/wiki/Themes
-ZSH_THEME="gnzh_customized_by_grehg"
+# ZSH_THEME="gnzh_customized_by_grehg"
+ZSH_THEME="powerlevel10k/powerlevel10k"
 
 # Uncomment the following line to use case-sensitive completion.
 # CASE_SENSITIVE="true"
@@ -70,20 +78,25 @@ setopt HIST_BEEP                 # Beep when accessing nonexistent history.
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git 
-  colored-man-pages 
-  colorize 
-  github  
-  virtualenv 
-  pip 
-  python 
-  brew 
-  macos 
-  zsh-syntax-highlighting 
+plugins=(git
+  colored-man-pages
+  colorize
+  github
+  virtualenv
+  pip
+  python
+  brew
+  macos
+  zsh-syntax-highlighting
   zsh-autosuggestions
+<<<<<<< HEAD
   web-search 
   jsontools 
 dotenv
+=======
+  web-search
+  jsontools
+>>>>>>> c5df162b38024fde085f8fc5438c386f838a992f
 )
 
 source $ZSH/oh-my-zsh.sh
@@ -124,9 +137,6 @@ export VIRTUAL_ENV_DISABLE_PROMPT=
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-# OPAM configuration
-. /Users/ghilston/.opam/opam-init/init.zsh > /dev/null 2> /dev/null || true
-
 # required by rbenv
 # eval "$(rbenv init -)"
 
@@ -135,14 +145,6 @@ export VIRTUAL_ENV_DISABLE_PROMPT=
 
 # So flutter is in path
 # export PATH="$PATH:/Users/ghilston/Git/flutter_projects/flutter/bin"
-
-# So Snap installations are in path
-export PATH="$PATH:/snap/bin"
-
-# So binaries I install are in path (jetbrains toolbox for ex)
-# This is probably very out of date...
-export PATH="$PATH:/home/ghilston/bin"
-
 
 gitAllHistory() {
   git log --follow -p -- $@
@@ -198,7 +200,7 @@ dockerClearNetworks() {
 # from https://stackoverflow.com/a/58598185/1983957
 
 # capture the output of a command so it can be retrieved with ret
-cap() { 
+cap() {
     tee /tmp/capture.out
 }
 
@@ -214,7 +216,7 @@ ret() {
 
 # The next line enables shell command completion for gcloud.
 # Disabling cause not on mac anymore
-if [ -f '/Users/ghilston/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/ghilston/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
+# if [ -f '/Users/ghilston/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/ghilston/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
 
 # Add binary files from teaching-java to path
 # Disabling as not teaching anymore
@@ -248,7 +250,7 @@ export TOOLBOX_HOME=$TOOLBOX_HOME
 export PATH=$PATH:$TOOLBOX_HOME/bin
 
 # make the preferred editor vim, for like git merges and what not
- export VISUAL=nvim
+export VISUAL=nvim
 export EDITOR="$VISUAL"
 
 # only using nvim, can ues an old one by putting a \ in front of binary call, ex \vim
@@ -276,3 +278,13 @@ export PATH="$HOME/Apps:$PATH"
 export OPENAI_API_KEY="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"
 
 alais lg="lazygit"
+
+# Adding Poetry to path
+export PATH="$PATH:$HOME/.poetry/bin"
+
+# Adding Gcloud binaries to path based on output of `$ gcloud info` and this SO post
+# https://stackoverflow.com/questions/51450441/trying-to-run-cbt-cloud-bigtable-command-line-tool-from-google-sdk
+export PATH="$PATH:/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin"
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
