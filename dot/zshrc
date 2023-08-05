@@ -274,7 +274,7 @@ export PATH="$HOME/Apps:$PATH"
 
 export OPENAI_API_KEY="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"
 
-alais lg="lazygit"
+alias lg="lazygit"
 
 # Adding Poetry to path
 export PATH="$PATH:$HOME/.poetry/bin"
