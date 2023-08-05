@@ -89,14 +89,11 @@ plugins=(git
   macos
   zsh-syntax-highlighting
   zsh-autosuggestions
-<<<<<<< HEAD
-  web-search 
-  jsontools 
-dotenv
-=======
   web-search
   jsontools
->>>>>>> c5df162b38024fde085f8fc5438c386f838a992f
+  dotenv
+  web-search
+  jsontools
 )
 
 source $ZSH/oh-my-zsh.sh
