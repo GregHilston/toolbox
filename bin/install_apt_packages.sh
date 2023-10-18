@@ -16,6 +16,7 @@ curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
 sudo apt-get update -y
 
 # most of our packages
+# w.r.t i3 below, once a PPA exists for Jamming Jellyfish (ubuntu 22.04), add the PPA above and switch the i3 line to i3-gaps
 sudo apt-get install -y \
 git \
 build-essential \
@@ -30,7 +31,7 @@ python3-dev \
 python3-pip \
 python3-setuptools \
 xournalpp \
-i3 \ # once a PPA exists for Jamming Jellyfish (ubuntu 22.04), add the PPA above and switch this line to i3-gaps
+i3 \
 i3lock \
 i3blocks \
 i3status \
