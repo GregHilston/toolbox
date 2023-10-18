@@ -278,6 +278,7 @@ alias lg="lazygit"
 
 # Adding Poetry to path
 export PATH="$PATH:$HOME/.poetry/bin"
+export PATH="$PATH:$HOME/.local/share/pypoetry/venv/bin"
 
 # Adding Gcloud binaries to path based on output of `$ gcloud info` and this SO post
 # https://stackoverflow.com/questions/51450441/trying-to-run-cbt-cloud-bigtable-command-line-tool-from-google-sdk
