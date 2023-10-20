@@ -42,3 +42,5 @@ apt_packages:
   - vlc                   # Multimedia player and streamer
   - xournalpp             # Notetaking software, which I use with a Bamboo tablet
   - zsh                   # Zsh shell and environment
+flatpaks:
+  

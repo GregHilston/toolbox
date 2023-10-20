@@ -1,0 +1,19 @@
+- hosts: "localhost"
+  tasks:
+    - name: Install Flatpak
+      package:
+        name: flatpak
+        state: present
+
+    - name: Add Flathub remote
+      command: flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+    - name: Install Slack from Flathub
+      command: flatpak install flathub com.slack.Slack
+      async: 600
+      poll: 0
+
+    - name: Install Spotify from Flathub
+      command: flatpak install flathub com.spotify.Client
+      async: 600
+      poll: 0

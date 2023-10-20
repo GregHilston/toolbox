@@ -1,6 +1,6 @@
 ---
 - name: Set ZSH as default shell
-  hosts: "*"
+  hosts: "localhost"
   become: true
   tasks:
     - name: Set ZSH as the default shell
