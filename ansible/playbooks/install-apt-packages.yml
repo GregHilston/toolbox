@@ -1,0 +1,10 @@
+---
+- name: Install apt packages
+  hosts: "*"
+  become: true
+  tasks:
+    - name: Install apt packages
+      package:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ apt_packages }}"

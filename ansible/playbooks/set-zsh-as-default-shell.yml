@@ -1,0 +1,7 @@
+---
+- name: Set ZSH as default shell
+  hosts: "*"
+  become: true
+  tasks:
+    - name: Set ZSH as the default shell
+      shell: chsh -s /bin/zsh {{ target_user }}
