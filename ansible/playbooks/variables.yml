@@ -1,4 +1,4 @@
-target_username: ghilston
+target_username: root     # ghilston
 apt_packages:
   - ansible               # Automation tool
   - arandr                # Screen layout editor
