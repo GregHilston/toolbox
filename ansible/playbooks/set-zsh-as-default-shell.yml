@@ -4,4 +4,4 @@
   become: true
   tasks:
     - name: Set ZSH as the default shell
-      shell: chsh -s /bin/zsh {{ target_user }}
+      shell: chsh -s /bin/zsh {{ target_username }}
