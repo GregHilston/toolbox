@@ -1,7 +1,10 @@
 ---
-- name: Set ZSH as default shell
+- name: ZSH
   hosts: "localhost"
   become: true
   tasks:
-    - name: Set ZSH as the default shell
-      shell: chsh -s /bin/zsh {{ target_username }}
+    - name: Change user shell to zsh
+      become: true
+      ansible.builtin.user:
+        name: "{{ target_username }}"
+        shell: /bin/zsh

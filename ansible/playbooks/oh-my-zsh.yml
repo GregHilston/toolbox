@@ -1,0 +1,60 @@
+---
+- name: oh my ZSH
+  hosts: "localhost"
+  become: true
+  tasks:
+  - name: Install Oh My Zsh # noqa: latest
+    ansible.builtin.git:
+      repo: https://github.com/ohmyzsh/ohmyzsh.git
+      dest: ~/.oh-my-zsh
+      depth: 1
+
+  - name: Install zsh-autosuggestions plugin # noqa: latest
+    ansible.builtin.git:
+      repo: https://github.com/zsh-users/zsh-autosuggestions
+      dest: ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions
+      depth: 1
+
+  - name: Install zsh-completions plugin # noqa: latest
+    ansible.builtin.git:
+      repo: https://github.com/zsh-users/zsh-completions
+      dest: ~/.oh-my-zsh/custom/plugins/zsh-completions
+      depth: 1
+
+  - name: Install zsh-syntax-highlighting plugin # noqa: latest
+    ansible.builtin.git:
+      repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
+      dest: ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
+      depth: 1
+
+  - name: Install autoupdate-zsh-plugin # noqa: latest
+    ansible.builtin.git:
+      repo: https://github.com/TamCore/autoupdate-oh-my-zsh-plugins
+      dest: ~/.oh-my-zsh/custom/plugins/autoupdate
+      depth: 1
+
+  - name: Install Powerline10k theme # noqa: latest
+    ansible.builtin.git:
+      repo: https://github.com/romkatv/powerlevel10k.git
+      dest: ~/.oh-my-zsh/custom/themes/powerlevel10k
+      depth: 1
+
+  - name: Echo PWD
+    command: pwd
+    register: pwd_output
+
+  - name: Display PWD
+    debug:
+      var: pwd_output.stdout_lines
+
+  - name: Copy zshrc (for p10k)
+    ansible.builtin.copy:
+      src: ../../dot/zshrc
+      dest: ~/.zshrc
+      mode: 0644
+
+  - name: Copy p10k.zsh
+    ansible.builtin.copy:
+      src: ../../dot/p10k.zsh
+      dest: ~/.p10k.zsh
+      mode: 0644
