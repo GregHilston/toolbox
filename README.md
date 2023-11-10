@@ -34,7 +34,7 @@ And that's it!
 
 ## Safely Testing
 
-To safely test the `install.sh` script, I suggest running it in a barebones Debian Docker container. In this repo you'll find the `docker/` directory which is our barebones container and scripts to assist with this.
+To safely test the `install.sh` script, I suggest running it in a barebones Debian Docker container. In this repo you'll find the `docker/` directory which is our barebones container and scripts to assist with this. See `docker/README.md` for further instructions.
 
 ## Submodules
 
