@@ -30,6 +30,7 @@ ansible \
 python3-dev \
 python3-pip \
 python3-setuptools \
+python3-venv \
 xournalpp \
 i3 \
 i3lock \
@@ -54,7 +55,8 @@ tldr \
 code \
 vlc \
 gimp \
-ngrok
+ngrok \
+usbutils
 
 # docker
 # Update the apt package index and install packages to allow apt to use a repository over HTTPS

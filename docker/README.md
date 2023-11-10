@@ -2,8 +2,8 @@
 
 ```
 ├── Dockerfile                              # Dockerfile defining a barebones system that one can try out this Toolbox in.
-├── docker-build.sh                         # Command to build our Docker image.
-├── docker-run.sh                           # Command to start a Docker container of our Docker image.
+├── docker-build.sh                         # Script to build our Docker image.
+├── docker-run.sh                           # Script to start a Docker container of our Docker image.
 ```
 
 ### To Build Image From `Dockerfile`
@@ -14,4 +14,10 @@
 
 `$ ./docker/docker-run.sh`
 
-_Note: This may require you to slightly modify the ./install.sh script to not check if the script was ran as sudo, as our container runs as root._
+### To Run Toolbox In Docker
+
+Here are the steps needed to run this tool in a standalone container:
+
+1. Since we're in a barebones system, we'll have to bootstrap our necessary dependencies: `$ ./bootstrap.sh`
+2. Source our bashrc file so we have ansible-playbook in our PATH: `$ source ~/.bashrc`
+3. Run our installation script: `$ ./install.sh`
