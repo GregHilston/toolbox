@@ -5,15 +5,39 @@
         name: flatpak
         state: present
 
-    - name: Add Flathub remote
-      command: flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    - name: Add the flathub flatpak repository remote to the user installation
+      community.general.flatpak_remote:
+        name: flathub
+        state: present
+        flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
+        method: user
 
     - name: Install Slack from Flathub
-      command: flatpak install flathub com.slack.Slack
-      async: 600
-      poll: 0
+      flatpak:
+        name: com.slack.Slack
+        state: present
+        method: user
 
     - name: Install Spotify from Flathub
-      command: flatpak install flathub com.spotify.Client
-      async: 600
-      poll: 0
+      flatpak:
+        name: com.spotify.Client
+        state: present
+        method: user
+
+    - name: Install Bitwarden from Flathub
+      flatpak:
+        name: com.bitwarden.desktop
+        state: present
+        method: user
+
+    - name: Install Obsidian from Flathub
+      flatpak:
+        name: com.obsidian.Obsidian
+        state: present
+        method: user
+
+    - name: Install Visual Studio Code from Flathub
+      flatpak:
+        name: com.visualsutdio.code
+        state: present
+        method: user
