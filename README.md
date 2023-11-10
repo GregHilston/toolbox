@@ -70,13 +70,6 @@ Running `$ make install` twice can cause `~/.vim` symbolic link incorrectly and 
 
 Install vim plug, can use `./bin/install_vim_plug.sh`
 
-## TODO
-
-- Get our i3 dot file to be close to our i3 gaps dot file
-- i3-gaps currently does not have a PPA released for Ubuntu 22.04 Jamming Jelly Fish. Once it does, resolve these two issues
-    - get i3-gaps to be installed and not just i3-wm. the repository is not working for pop os 22.04
-    - Get `dot/i3-gaps/build-i3-config.sh` to be ran, and `/home/ghilston/.i3` directory to be created so we can symlink the build `dot/i3-gaps/config` directory
-
 ## Install Preference
 
 Since Linux has many different ways to install something (from your package manager, snap, flatpak, brew, compile from source, etc...) I've elected to ouse a very specific process. I will not be using Snap or Brew on Linux. While the former has lack of sandboxing that flatpak has, and the latter can conflict build tools with the base linux install, while this generally doesn't cause a problem on OS X. My preference for installation will be:
@@ -86,7 +79,7 @@ Since Linux has many different ways to install something (from your package mana
 - a raw binary
 - clone and build
 
-For raw binaries, we'll store them in `~/Apps` and symlink that to `~/bin`.
+For raw binaries, we'll store them in `~/Apps` and symlink that to `~/bin`
 
 ## References
 
@@ -155,3 +148,16 @@ see `~/.oh-my-zsh/plugins/git/git.plugin.zsh`, after installing
     - zA: open a fold your cursor is on recursively
     - zc: close a fold your cursor is on
     - zC: close a fold your cursor is on recursively
+
+## TODO
+
+### Ansible Refactor
+
+- [ ] Get Flatpaks that we're installed by `./bin/install_flatpaks.sh` to be installed by `./ansible/playbooks/install-flatpaks.yml`
+
+### Legacy
+
+- Get our i2 dot file to be close to our i3 gaps dot file
+- i2-gaps currently does not have a PPA released for Ubuntu 22.04 Jamming Jelly Fish. Once it does, resolve these two issues
+    - get i2-gaps to be installed and not just i3-wm. the repository is not working for pop os 22.04
+    - Get `dot/i2-gaps/build-i3-config.sh` to be ran, and `/home/ghilston/.i3` directory to be created so we can symlink the build `dot/i3-gaps/config` directory
