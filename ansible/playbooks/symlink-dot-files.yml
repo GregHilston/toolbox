@@ -37,11 +37,29 @@
         dest: ~/.config/redshift.conf
         state: link
 
-    - name: Create vim-plug directory
+    - name: Create vim-plug directory for vim
       ansible.builtin.file:
         path: ~/.vim/autoreload
         state: directory
         mode: "0644"
+
+    - name: Download Vim-Plug for Neovim
+      ansible.builtin.command:
+        cmd: >
+          curl -fLo ~/.config/nvim/autoload/plug.vim --create-dirs
+          https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+      changed_when: false # Solves this https://github.com/geerlingguy/ansible-role-certbot/issues/144
+
+    - name: Create vim-plug directory for nvim
+      ansible.builtin.file:
+        path: ~/.config/nvim/plugged
+        state: directory
+        mode: "0755"
+
+    - name: Install nvim plugins using Vim-Plug
+      ansible.builtin.command:
+        cmd: "nvim +PlugInstall +qall"
+      changed_when: false # Solves this https://github.com/geerlingguy/ansible-role-certbot/issues/144
 
     - name: Symlink other dotfiles
       ansible.builtin.file:
@@ -54,7 +72,7 @@
         - zshrc
         - p10k.zsh
 
-    - name: Install plugins using Vim-Plug
+    - name: Install vim plugins using Vim-Plug
       ansible.builtin.command:
         cmd: "vim +PlugInstall +qall"
       environment:

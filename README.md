@@ -39,32 +39,6 @@ To safely test the `install.sh` script, I suggest running it in a barebones Debi
 
 We use oh-my-zsh as a submodule. This writes to .gitmodules and pulls the code to dot/oh-my-zsh.
 
-## Vim
-
-## vim-plug
-
-I'm using vim-plug to install plugins. For my own memory, I'll write some plugins and what they do/how to use them to remind myself.
-
-In vim, run the command `:PlugStatus` to check the status of the plugins
-
-### fzf
-
-I have this mapped to ';', which will fuzzy search
-
-### nerd tree
-
-Mapped to "ctrl + o"
-
-### flake 8
-
-Mapped to F7
-
-## Known Issues
-
-I've had to run `$ make install`, followed by `$ make instal_zsh_autocomplete` manually to get everything installed correctly, then add the word function to the `man` on  ~/.oh-my-zsh/plugins/colored-man-pages/colored-man-pages.plugin.zsh
-
-Running `$ make install` twice can cause `~/.vim` symbolic link incorrectly and cause errors when launching vim. Not sure why yet. Can resolve this by running `$ rm -rf ~/.vim`
-
 ### Fixing `Unknown function: plug#begin`
 
 Install vim plug, can use `./bin/install_vim_plug.sh`

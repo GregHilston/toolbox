@@ -25,9 +25,15 @@ see `~/.oh-my-zsh/plugins/git/git.plugin.zsh`, after installing
     - Ctrl+W =: equalize width and height of all windows
 - To indent multiple line Press "<SHIFT> + v" to enter VISUAL LINE mode. Select the text you wish to indent but using either the cursor keys or the "j" and "k" keys. To indent press "<SHIFT> + dot" (> character).
 
+## vim-plug
+
+I'm using vim-plug to install plugins. For my own memory, I'll write some plugins and what they do/how to use them to remind myself.
+
+In vim, run the command `:PlugStatus` to check the status of the plugins
+
 ## Fzf + Ripgrep
 
-- hotkeyed ; to use fzf
+- hotkeyed `;` to use fzf
     - From inside the menu, fzf will automatically detect ctrl-t to open the file in a new tab, ctrl-v for a vertical split or ctrl-x for a horizontal split.
 - to open tabs
     - From inside the menu, fzf will automatically detect ctrl-t to open the file in a new tab, ctrl-v for a vertical split or ctrl-x for a horizontal split.
@@ -37,8 +43,8 @@ see `~/.oh-my-zsh/plugins/git/git.plugin.zsh`, after installing
 
 ## NerdTree
 
+- hotkeyey to `CTRL + o``
 - Open/Close Nerdtree with :NerdTree and :NerdTreeClose respectively
-- Have a hotkey set for CTRL + o
 
 ## tmux
 
@@ -63,3 +69,7 @@ see `~/.oh-my-zsh/plugins/git/git.plugin.zsh`, after installing
     - zA: open a fold your cursor is on recursively
     - zc: close a fold your cursor is on
     - zC: close a fold your cursor is on recursively
+
+## flake8
+
+- hotkeyed to f7
