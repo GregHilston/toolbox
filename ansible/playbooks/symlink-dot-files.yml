@@ -1,14 +1,62 @@
 - name: Symlink Dot Files
   hosts: "localhost"
   tasks:
-    - name: Prepare nvim directory
+    - name: Create nvim directory
       ansible.builtin.file:
         path: ~/.config/nvim
         state: directory
         mode: "0644"
 
-    - name: Copy nvim dotfile
+    - name: Symlink nvim dotfile
       ansible.builtin.file:
         src: "{{ playbook_dir }}/../../dot/config/nvim/init.vim"
         dest: ~/.config/nvim/init.vim
         state: link
+
+    - name: Create i3 directory
+      ansible.builtin.file:
+        path: ~/.i3
+        state: directory
+        mode: "0644"
+
+    - name: Symlink i3 dotfile
+      ansible.builtin.file:
+        src: "{{ playbook_dir }}/../../dot/i3/config"
+        dest: ~/.i3/config
+        state: link
+
+    - name: Create redshift directory
+      ansible.builtin.file:
+        path: ~/.config
+        state: directory
+        mode: "0644"
+
+    - name: Symlink redshift dotfile
+      ansible.builtin.file:
+        src: "{{ playbook_dir }}/../../dot/config/redshift.conf"
+        dest: ~/.config/redshift.conf
+        state: link
+
+    - name: Create vim-plug directory
+      ansible.builtin.file:
+        path: ~/.vim/autoreload
+        state: directory
+        mode: "0644"
+
+    - name: Symlink other dotfiles
+      ansible.builtin.file:
+        src: "{{ playbook_dir }}/../../dot/{{ item }}"
+        dest: ~/.{{ item }}
+        state: link
+      loop:
+        - tmux.conf
+        - vimrc
+        - zshrc
+        - p10k.zsh
+
+    - name: Install plugins using Vim-Plug
+      ansible.builtin.command:
+        cmd: "vim +PlugInstall +qall"
+      environment:
+        VIM_SKIP_INTRO: 1  # Skip the "Press Enter" prompt when running Vim non-interactively
+      changed_when: false # Solves this https://github.com/geerlingguy/ansible-role-certbot/issues/144
