@@ -62,12 +62,10 @@ For raw binaries, we'll store them in `~/Apps` and symlink that to `~/bin`
 
 ### Ansible Refactor
 
-1. Move dot files from this repository to their respective locations on the target machine
-2. install docker and add user to docker group
-3. install vim plug, and plugins for vim, and nvim
-4. [ ] Test that we're actually installing flatpaks with `./ansible/playbooks/install-flatpaks.yml`, on a VM that has a non-root account, instead of our throwaway Docker container
-5. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
-6. [ ] Write a playbook to automate, or at least semi automate installing fonts. See [here](https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/)
+1. [ ] install docker and add user to docker group
+2. [ ] Test that we're actually installing flatpaks with `./ansible/playbooks/install-flatpaks.yml`, on a VM that has a non-root account, instead of our throwaway Docker container
+3. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
+4. [ ] Write a playbook to automate, or at least semi automate installing fonts. See [here](https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/)
 
 ### Legacy
 
