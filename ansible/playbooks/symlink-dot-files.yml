@@ -1,0 +1,11 @@
+- hosts: "localhost"
+  tasks:
+    - name: prepare nvim directory
+      ansible.builtin.file:
+        path: ~/.config/nvim
+        state: directory
+
+      ansible.builtin.file:
+        src: ../../dot/
+        dest: 
+        state: link
