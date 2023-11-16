@@ -1,4 +1,3 @@
----
 - name: Oh My ZSH
   hosts: "localhost"
   become: true
@@ -39,22 +38,14 @@
         dest: ~/.oh-my-zsh/custom/themes/powerlevel10k
         depth: 1
 
-    - name: Echo PWD
-      command: pwd
-      register: pwd_output
-
-    - name: Display PWD
-      debug:
-        var: pwd_output.stdout_lines
-
     - name: Copy zshrc (for p10k)
       ansible.builtin.copy:
         src: ../../dot/zshrc
         dest: ~/.zshrc
-        mode: 0644
+        mode: "0644"
 
     - name: Copy p10k.zsh
       ansible.builtin.copy:
         src: ../../dot/p10k.zsh
         dest: ~/.p10k.zsh
-        mode: 0644
+        mode: "0644"

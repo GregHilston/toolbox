@@ -1,10 +1,12 @@
-- hosts: "localhost"
+- name: Symlink Dot Files
+  hosts: "localhost"
   tasks:
-    - name: prepare nvim directory
+    - name: Prepare nvim directory
       ansible.builtin.file:
         path: ~/.config/nvim
         state: directory
 
+    - name: Copy nvim dotfile
       ansible.builtin.file:
         src: ../../dot/
         dest: 
