@@ -37,15 +37,3 @@
         repo: https://github.com/romkatv/powerlevel10k.git
         dest: ~/.oh-my-zsh/custom/themes/powerlevel10k
         depth: 1
-
-    - name: Copy zshrc (for p10k)
-      ansible.builtin.copy:
-        src: ../../dot/zshrc
-        dest: ~/.zshrc
-        mode: "0644"
-
-    - name: Copy p10k.zsh
-      ansible.builtin.copy:
-        src: ../../dot/p10k.zsh
-        dest: ~/.p10k.zsh
-        mode: "0644"
