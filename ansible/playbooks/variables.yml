@@ -43,4 +43,4 @@ apt_packages:
   - xournalpp             # Notetaking software, which I use with a Bamboo tablet
   - zsh                   # Zsh shell and environment
 flatpaks:
-  
+  # TODO
