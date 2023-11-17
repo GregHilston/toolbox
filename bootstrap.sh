@@ -25,13 +25,13 @@ if ! command -v ansible &> /dev/null; then
     PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
     if ! grep -q "$PATH_LINE" ~/.bashrc; then
         echo "╔════════════════════════════════════════════════════════════╗"
-        echo "║ ⚠                                                       ⚠ ║"
+        echo "║ ⚠                                                       ⚠  ║"
         echo "║                                                            ║"
         echo "║ I've added ansible to your PATH, this requires reloading   ║"
         echo "║ your bashrc. Be sure to do this, as ansible will not be    ║"
         echo "║ able to be ran. Run $ source ~/.bashrc to resolve this.    ║"
         echo "║                                                            ║"
-        echo "║ ⚠                                                       ⚠ ║"
+        echo "║ ⚠                                                       ⚠  ║"
         echo "╚════════════════════════════════════════════════════════════╝"
         echo "$PATH_LINE" >> ~/.bashrc
     else
