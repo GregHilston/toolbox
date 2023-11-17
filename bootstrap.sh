@@ -12,39 +12,32 @@ else
     SUDO="sudo"
 fi
 
-# Check if Python 3 is installed
-if ! command -v python3 &> /dev/null; then
-    echo "Python 3 is not installed. Installing Python 3..."
-    $SUDO apt update
-    $SUDO apt install -y python3
-    echo "Python 3 has been installed."
-else
-    echo "Python 3 is already installed."
-fi
-
-# Check if pip for Python 3 is installed
-if ! command -v pip3 &> /dev/null; then
-    echo "pip for Python 3 is not installed. Installing pip for Python 3..."
-    $SUDO apt update
-    $SUDO apt install -y python3-pip
-    echo "pip for Python 3 has been installed."
-else
-    echo "pip for Python 3 is already installed."
-fi
-
 # Check if Ansible is installed
 if ! command -v ansible &> /dev/null; then
-    echo "Ansible is not installed. Installing Ansible using pip..."
-    python3 -m pip install --user ansible
+    echo "Ansible is not installed. Installing Ansible..."
+    # python3 -m pip install --user ansible
+    $SUDO apt-get update
+    # Setting the DEBIAN_FRONTEND and TZ allows us to ignore the geographical
+    # questionaire that comes from installing tzdata, which is a dependency
+    DEBIAN_FRONTEND=noninteractive TZ=America/New_York $SUDO apt-get install ansible -y
 
     # Check if the PATH line is already present in ~/.bashrc
     PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
     if ! grep -q "$PATH_LINE" ~/.bashrc; then
-        echo "Adding ansible to PATH, requires reloading of bashrc"
+        echo "╔════════════════════════════════════════════════════════════╗"
+        echo "║ ⚠                                                       ⚠ ║"
+        echo "║                                                            ║"
+        echo "║ I've added ansible to your PATH, this requires reloading   ║"
+        echo "║ your bashrc. Be sure to do this, as ansible will not be    ║"
+        echo "║ able to be ran. Run $ source ~/.bashrc to resolve this.    ║"
+        echo "║                                                            ║"
+        echo "║ ⚠                                                       ⚠ ║"
+        echo "╚════════════════════════════════════════════════════════════╝"
         echo "$PATH_LINE" >> ~/.bashrc
     else
         echo "Ansible is already in PATH."
     fi
+
 
     echo "Ansible has been installed."
 else
