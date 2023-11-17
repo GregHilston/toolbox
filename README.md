@@ -66,6 +66,8 @@ I've decided against using Snap, due to its widespread criticism.
 4. [ ] Write a playbook to automate, or at least semi automate installing fonts. See [here](https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/)
 5. [ ] Clean up our `./bin` directory, removing all old scripts, and ensuring that the scripts are both bash files, in our path, and accessible to our `~/.zshrc`? or perhaps just being in the path is enough for autocomplete.
 6. [ ] Remove all legacy dot files. see the `./dot/` directory for old files, and `./dot/README.md`'s mentions of the word "legacy" to determine what to remove
+7. [ ] Discuss if `~/bootstrap.sh` should still use [bash strict mode](http://redsymbol.net/articles/unofficial-bash-strict-mode/). Recall that Jesse's Proxmox VM's `$ apt-get update` failed, and exited
+8. [ ] Draw more attention to `~/bootstrap.sh`'s output reminder of "run `source ~/.bashrc`
 
 ### Legacy
 
