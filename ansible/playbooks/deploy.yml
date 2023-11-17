@@ -13,3 +13,4 @@
 # - import_playbook: install-flatpaks.yml # Assume this works, but is failing in our Docker container perhaps due to root being the user.
 - import_playbook: symlink-dot-files.yml
 - import_playbook: oh-my-zsh.yml
+- import_playbook: install-docker.yml

@@ -38,7 +38,6 @@ if ! command -v ansible &> /dev/null; then
         echo "Ansible is already in PATH."
     fi
 
-
     echo "Ansible has been installed."
 else
     echo "Ansible is already installed."
