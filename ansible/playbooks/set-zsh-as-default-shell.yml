@@ -1,4 +1,3 @@
----
 - name: ZSH
   hosts: "localhost"
   become: true
