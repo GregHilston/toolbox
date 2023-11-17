@@ -1,9 +1,8 @@
----
-- hosts: all
+- hosts: "localhost"
   become: true
   tasks:
     - name: Install apt packages
-      apt:
+      ansible.builtin.apt:
         name: "{{ apt_packages }}"
         state: present
-        update_cache: yes
+        update_cache: true
