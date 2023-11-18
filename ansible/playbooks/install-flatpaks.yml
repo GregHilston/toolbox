@@ -1,9 +1,10 @@
 - hosts: "localhost"
   tasks:
     - name: Install Flatpak
-      package:
+      ansible.builtin.package:
         name: flatpak
         state: present
+      become: true
 
     - name: Add the flathub flatpak repository remote to the user installation
       community.general.flatpak_remote:
@@ -12,32 +13,32 @@
         flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
         method: user
 
-    - name: Install Slack from Flathub
-      flatpak:
-        name: com.slack.Slack
-        state: present
-        method: user
+    # - name: Install Slack from Flathub
+    #   community.general.flatpak:
+    #     name: com.slack.Slack
+    #     state: present
+    #     method: user
 
     - name: Install Spotify from Flathub
-      flatpak:
+      community.general.flatpak:
         name: com.spotify.Client
         state: present
         method: user
 
     - name: Install Bitwarden from Flathub
-      flatpak:
+      community.general.flatpak:
         name: com.bitwarden.desktop
         state: present
         method: user
 
     - name: Install Obsidian from Flathub
-      flatpak:
+      community.general.flatpak:
         name: com.obsidian.Obsidian
         state: present
         method: user
 
     - name: Install Visual Studio Code from Flathub
-      flatpak:
+      community.general.flatpak:
         name: com.visualsutdio.code
         state: present
         method: user
