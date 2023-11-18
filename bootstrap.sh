@@ -15,11 +15,9 @@ fi
 # Check if Ansible is installed
 if ! command -v ansible &> /dev/null; then
     echo "Ansible is not installed. Installing Ansible..."
-    # python3 -m pip install --user ansible
+
     $SUDO apt-get update
-    # Setting the DEBIAN_FRONTEND and TZ allows us to ignore the geographical
-    # questionaire that comes from installing tzdata, which is a dependency
-    DEBIAN_FRONTEND=noninteractive TZ=America/New_York $SUDO apt-get install ansible -y
+    $SUDO apt-get install ansible -y
 
     # Check if the PATH line is already present in ~/.bashrc
     PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'

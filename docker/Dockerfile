@@ -4,6 +4,12 @@ ARG USERNAME=toolbox
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
+# Set configuration needed so Ansible installation will not ask us questions
+# during installation. Based on:
+# https://dev.to/setevoy/docker-configure-tzdata-and-timezone-during-build-21bk
+ENV TZ=Europe/Kiev
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # Create the non-root user
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
