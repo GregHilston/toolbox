@@ -19,24 +19,13 @@ if ! command -v ansible &> /dev/null; then
     $SUDO apt-get update
     $SUDO apt-get install ansible -y
 
-    # Check if the PATH line is already present in ~/.bashrc
-    PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
-    if ! grep -q "$PATH_LINE" ~/.bashrc; then
-        echo "╔════════════════════════════════════════════════════════════╗"
-        echo "║ ⚠                                                       ⚠  ║"
-        echo "║                                                            ║"
-        echo "║ I've added ansible to your PATH, this requires reloading   ║"
-        echo "║ your bashrc. Be sure to do this, as ansible will not be    ║"
-        echo "║ able to be ran. Run $ source ~/.bashrc to resolve this.    ║"
-        echo "║                                                            ║"
-        echo "║ ⚠                                                       ⚠  ║"
-        echo "╚════════════════════════════════════════════════════════════╝"
-        echo "$PATH_LINE" >> ~/.bashrc
-    else
-        echo "Ansible is already in PATH."
-    fi
-
     echo "Ansible has been installed."
 else
     echo "Ansible is already installed."
 fi
+
+echo "╔════════════════════════════════════════════════════════════╗"
+echo "║                                                            ║"
+echo "║ You should be good to run install.sh now                   ║"
+echo "║                                                            ║"
+echo "╚════════════════════════════════════════════════════════════╝"
