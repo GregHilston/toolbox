@@ -3,9 +3,8 @@
   tasks:
     - name: Create nvim directory
       ansible.builtin.file:
-        path: ~/.config/nvim
+        path: "{{ ansible_env.HOME }}/.config/nvim"
         state: directory
-        mode: "0644"
 
     - name: Symlink nvim dotfile
       ansible.builtin.file:
@@ -17,19 +16,12 @@
       ansible.builtin.file:
         path: ~/.i3
         state: directory
-        mode: "0644"
 
     - name: Symlink i3 dotfile
       ansible.builtin.file:
         src: "{{ playbook_dir }}/../../dot/i3/config"
         dest: ~/.i3/config
         state: link
-
-    - name: Create redshift directory
-      ansible.builtin.file:
-        path: ~/.config
-        state: directory
-        mode: "0644"
 
     - name: Symlink redshift dotfile
       ansible.builtin.file:
@@ -41,7 +33,6 @@
       ansible.builtin.file:
         path: ~/.vim/autoreload
         state: directory
-        mode: "0644"
 
     - name: Download Vim-Plug for Neovim
       ansible.builtin.command:
@@ -54,7 +45,6 @@
       ansible.builtin.file:
         path: ~/.config/nvim/plugged
         state: directory
-        mode: "0755"
 
     - name: Install nvim plugins using Vim-Plug
       ansible.builtin.command:
