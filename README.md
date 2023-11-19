@@ -21,15 +21,24 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 
 ## How Do I Use This Repo?
 
-First, you probably want to fork this repo, change some stuff if you don't like what you see. Then, it's as easy as:
+First, you probably want to fork this repo, and take a look at `ansible/playbooks/variables.yml`. This file is where you'll be able to configure:
+
+1. Which apt repositories are added
+2. Which apt packages are installed
+3. Which flatpak repositories are added
+4. Which flatpak packages are installed
+5. Which directories are created for dot files to live in
+6. Where we symbolically link dot files to
+
+Then, it's as easy as:
 
 ```bash
-./install.sh
+$ ./install.sh
 ```
 
-If you're on a barebones system, like alpine linux, use `$ ./bin/bare_bones.sh` fire, to prepare your system for the `$ ./install.sh` command
+If you're on a barebones system, like alpine linux, use `$ ./bin/bare_bones.sh` fire, to prepare your system for the `install.sh` script.
 
-And that's it!
+And that's it! You can run the `install.sh` script again to upgrade packages, or apply any new changes you've made to the repository.
 
 ### How To Run In An Ephemeral Environment
 
