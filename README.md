@@ -42,7 +42,7 @@ And that's it! You can run the `install.sh` script again to upgrade packages, or
 
 ### How To Run In An Ephemeral Environment
 
-To run this toolbox in an ephemeral environment, I suggest running it in a barebones Ubuntu Docker container. In this repo you'll find the `docker/` directory which is a barebones container and scripts to assist with this. See `docker/README.md` for further instructions.
+To run this toolbox in an ephemeral environment, I suggest running it in a barebones Docker container. In this repo you'll find the `docker/` directory which house  barebones containers and scripts to assist with this. See `docker/README.md` for further instructions.
 
 ## My Application Installation Preferences
 
