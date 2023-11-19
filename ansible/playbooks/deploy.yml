@@ -1,7 +1,5 @@
 - name: Deploy Toolbox
   hosts: "localhost"
-  vars_files:
-    - variables.yml  # Include variables from variables.yml
 
   tasks:
     - name: Include variables from variables.yml
