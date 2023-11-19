@@ -60,14 +60,13 @@ I've decided against using Snap, due to its widespread criticism.
 
 ### Ansible Refactor
 
-1. [ ] install docker and add user to docker group
-2. [ ] Test that we're actually installing flatpaks with `./ansible/playbooks/install-flatpaks.yml`, on a VM that has a non-root account, instead of our throwaway Docker container
-3. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
-4. [ ] Write a playbook to automate, or at least semi automate installing fonts. See [here](https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/)
-5. [ ] Clean up our `./bin` directory, removing all old scripts, and ensuring that the scripts are both bash files, in our path, and accessible to our `~/.zshrc`? or perhaps just being in the path is enough for autocomplete.
-6. [ ] Remove all legacy dot files. see the `./dot/` directory for old files, and `./dot/README.md`'s mentions of the word "legacy" to determine what to remove
-7. [ ] Discuss if `~/bootstrap.sh` should still use [bash strict mode](http://redsymbol.net/articles/unofficial-bash-strict-mode/). Recall that Jesse's Proxmox VM's `$ apt-get update` failed, and exited
-8. [ ] Draw more attention to `~/bootstrap.sh`'s output reminder of "run `source ~/.bashrc`
+1. [ ] Make everything into variables, so other users can this repo
+2. [ ] Make the `install.sh` script take in an environment name, which can be used to call different ansible playbooks.
+3. [ ] Clean up our `./bin` directory, removing all old scripts, and ensuring that the scripts are both bash files, in our path, and accessible to our `~/.zshrc`? or perhaps just being in the path is enough for autocomplete.
+4. [ ] Remove all legacy dot files. see the `./dot/` directory for old files, and `./dot/README.md`'s mentions of the word "legacy" to determine what to remove
+5. [ ] Discuss if `bootstrap.sh` should still use [bash strict mode](http://redsymbol.net/articles/unofficial-bash-strict-mode/). Recall that Jesse's Proxmox VM's `$ apt-get update` failed, and exited
+6. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
+7. [ ] Write a playbook to automate, or at least semi automate installing fonts. See [here](https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/)
 
 ### Legacy
 
