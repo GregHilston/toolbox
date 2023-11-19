@@ -13,11 +13,11 @@
         flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
         method: user
 
-    # - name: Install Slack from Flathub
-    #   community.general.flatpak:
-    #     name: com.slack.Slack
-    #     state: present
-    #     method: user
+    - name: Install Slack from Flathub
+      community.general.flatpak:
+        name: com.slack.Slack
+        state: present
+        method: user
 
     - name: Install Spotify from Flathub
       community.general.flatpak:
@@ -33,7 +33,7 @@
 
     - name: Install Obsidian from Flathub
       community.general.flatpak:
-        name: com.obsidian.Obsidian
+        name: md.obsidian.Obsidian
         state: present
         method: user
 
