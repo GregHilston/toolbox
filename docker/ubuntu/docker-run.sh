@@ -6,4 +6,4 @@
 # here for more information:
 # https://discourse.flathub.org/t/error-running-flatpack-in-dockerfile/1636
 
-docker run --privileged --rm -it --volume $(pwd):/toolbox --workdir /toolbox --entrypoint /bin/bash toolbox
+docker run --privileged --rm -it --volume $(pwd):/toolbox --workdir /toolbox --entrypoint /bin/bash toolbox-ubuntu
