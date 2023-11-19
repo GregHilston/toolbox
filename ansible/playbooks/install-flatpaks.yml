@@ -6,39 +6,21 @@
         state: present
       become: true
 
-    - name: Add the flathub flatpak repository remote to the user installation
+    - name: Add flatpak repositories
       community.general.flatpak_remote:
         name: flathub
         state: present
-        flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
+        flatpakrepo_url: "{{ item }}"
         method: user
+      loop: "{{ flatpak_repositories }}"
 
-    - name: Install Slack from Flathub
+    # TODO refactor this to not require a loop, but rather pass in all
+    # desired packages as a list, all at once. This would be a performance
+    # enhancement.
+    - name: Install flatpaks
       community.general.flatpak:
-        name: com.slack.Slack
+        name: "{{ item }}"
         state: present
         method: user
-
-    - name: Install Spotify from Flathub
-      community.general.flatpak:
-        name: com.spotify.Client
-        state: present
-        method: user
-
-    - name: Install Bitwarden from Flathub
-      community.general.flatpak:
-        name: com.bitwarden.desktop
-        state: present
-        method: user
-
-    - name: Install Obsidian from Flathub
-      community.general.flatpak:
-        name: md.obsidian.Obsidian
-        state: present
-        method: user
-
-    - name: Install Visual Studio Code from Flathub
-      community.general.flatpak:
-        name: com.visualsutdio.code
-        state: present
-        method: user
+      loop: "{{ flatpak_applications }}"
+ 

@@ -41,5 +41,11 @@ apt_packages:
   - vlc                   # Multimedia player and streamer
   - xournalpp             # Notetaking software, which I use with a Bamboo tablet
   - zsh                   # Zsh shell and environment
-flatpaks:
-  # TODO
+flatpak_repositories:
+  - https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak_applications:
+  - com.slack.Slack
+  - com.spotify.Client
+  - com.bitwarden.desktop
+  - md.obsidian.Obsidian
+  - com.visualstudio.code
