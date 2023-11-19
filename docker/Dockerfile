@@ -23,5 +23,12 @@ RUN groupadd --gid $USER_GID $USERNAME \
 # [Optional] Set the default user. Omit if you want to keep the default as root.
 USER $USERNAME
 
+# Required to allow Flatpak to work in our Docker container. Learned about
+# this approach here:
+# https://github.com/flatpak/flatpak/issues/5076#issuecomment-1425841966
+# which links to here:
+# https://invent.kde.org/sysadmin/ci-images/-/merge_requests/99/diffs#9ecac16eff5bf2026941d65c5ab5fce22e080caf_19_20
+ENV FLATPAK_SYSTEM_HELPER_ON_SESSION=foo
+
 # keeps the container alive
 CMD ["tail", "-f", "/dev/null"]
