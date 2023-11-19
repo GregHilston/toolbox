@@ -1,3 +1,4 @@
+# These apt packages will be installed or upgraded
 apt_packages:
   - ansible               # Automation tool
   - arandr                # Screen layout editor
@@ -41,11 +42,28 @@ apt_packages:
   - vlc                   # Multimedia player and streamer
   - xournalpp             # Notetaking software, which I use with a Bamboo tablet
   - zsh                   # Zsh shell and environment
+# These Flatpak repositories will be added
 flatpak_repositories:
   - https://dl.flathub.org/repo/flathub.flatpakrepo
+# These Flatpak applications will be installed or upgraded
 flatpak_applications:
   - com.slack.Slack
   - com.spotify.Client
   - com.bitwarden.desktop
   - md.obsidian.Obsidian
   - com.visualstudio.code
+# These directories will be created, recursively, for dot files to be linked to
+dot_file_directories:
+  - "{{ ansible_env.HOME }}/.config/nvim"
+  - "~/.i3"
+  - "~/.vim/autoreload"
+  - "~/.config/nvim/plugged"
+# These dot file mappings will be linked from source to directory
+dot_file_mappings:
+  - { src: "{{ playbook_dir }}/../../dot/tmux.conf", dest: "~/.tmux.conf" }
+  - { src: "{{ playbook_dir }}/../../dot/vimrc", dest: "~/.vimrc" }
+  - { src: "{{ playbook_dir }}/../../dot/zshrc", dest: "~/.zshrc" }
+  - { src: "{{ playbook_dir }}/../../dot/p10k.zsh", dest: "~/.p10k.zsh" }
+  - { src: "{{ playbook_dir }}/../../dot/config/nvim/init.vim", dest: "~/.config/nvim/init.vim" }
+  - { src: "{{ playbook_dir }}/../../dot/i3/config", dest: "~/.i3/config" }
+  - { src: "{{ playbook_dir }}/../../dot/config/redshift.conf", dest: "~/.config/redshift.conf" }

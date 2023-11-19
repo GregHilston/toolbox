@@ -1,66 +1,30 @@
 - name: Symlink Dot Files
   hosts: "localhost"
   tasks:
-    - name: Create nvim directory
+    - name: Create dot file directories
       ansible.builtin.file:
-        path: "{{ ansible_env.HOME }}/.config/nvim"
+        path: "{{ item }}"
         state: directory
+      loop: "{{ dot_file_directories }}"
 
-    - name: Symlink nvim dotfile
+    - name: Symlink dot files
       ansible.builtin.file:
-        src: "{{ playbook_dir }}/../../dot/config/nvim/init.vim"
-        dest: ~/.config/nvim/init.vim
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
         state: link
+      loop: "{{ dot_file_mappings }}"
 
-    - name: Create i3 directory
-      ansible.builtin.file:
-        path: ~/.i3
-        state: directory
-
-    - name: Symlink i3 dotfile
-      ansible.builtin.file:
-        src: "{{ playbook_dir }}/../../dot/i3/config"
-        dest: ~/.i3/config
-        state: link
-
-    - name: Symlink redshift dotfile
-      ansible.builtin.file:
-        src: "{{ playbook_dir }}/../../dot/config/redshift.conf"
-        dest: ~/.config/redshift.conf
-        state: link
-
-    - name: Create vim-plug directory for vim
-      ansible.builtin.file:
-        path: ~/.vim/autoreload
-        state: directory
-
-    - name: Download Vim-Plug for Neovim
+    - name: Download Vim-Plug for nvim and vim
       ansible.builtin.command:
         cmd: >
           curl -fLo ~/.config/nvim/autoload/plug.vim --create-dirs
           https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
       changed_when: false # Solves this https://github.com/geerlingguy/ansible-role-certbot/issues/144
 
-    - name: Create vim-plug directory for nvim
-      ansible.builtin.file:
-        path: ~/.config/nvim/plugged
-        state: directory
-
     - name: Install nvim plugins using Vim-Plug
       ansible.builtin.command:
         cmd: "nvim +PlugInstall +qall"
       changed_when: false # Solves this https://github.com/geerlingguy/ansible-role-certbot/issues/144
-
-    - name: Symlink other dotfiles
-      ansible.builtin.file:
-        src: "{{ playbook_dir }}/../../dot/{{ item }}"
-        dest: ~/.{{ item }}
-        state: link
-      loop:
-        - tmux.conf
-        - vimrc
-        - zshrc
-        - p10k.zsh
 
     - name: Install vim plugins using Vim-Plug
       ansible.builtin.command:
