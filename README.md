@@ -9,10 +9,10 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 ```bash
 ├── ansible/                                # Ansible playbooks for automation.
 ├── bin/                                    # Helper scripts. Should be added to $PATH for user convenience.
-└── docker/                                 # Contains all scripts related to using Docker to easily test out this toolbox in a throwaway environment.
+├── docker/                                 # Contains all scripts related to using Docker to easily test out this toolbox in a throwaway environment.
 ├── docs/                                   # Additional documentation that supplements this `README.md`
 ├── dot/                                    # Dotfiles to configure a slew of programs and environments.
-└── secret/                                 # Secrets, such as passwords. Purposefully ignored by Git, and populated on each individual machine.
+├── secret/                                 # Secrets, such as passwords. Purposefully ignored by Git, and populated on each individual machine.
 ├── bootstrap.sh                            # Optional precursor to install.sh for barebones systems, which prepares an environment for install.sh to be ran.
 ├── Brewfile                                # Describes which programs to install with Brew.
 ├── install.sh                              # Main entrypoint to leverage this Toolbox to configure an environment just the way I like it.
@@ -21,7 +21,7 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 
 ## How Do I Use This Repo?
 
-First, you probably want to fork this repo, and take a look at `ansible/playbooks/variables.yml`. This file is where you'll be able to configure:
+First, you probably want to fork this repo, and take a look at `ansible/variables/`. These files are where you'll be able to configure:
 
 1. Which apt repositories are added
 2. Which apt packages are installed
@@ -69,12 +69,13 @@ I've decided against using Snap, due to its widespread criticism.
 
 ### Ansible Refactor
 
-1. [ ] Make the `install.sh` script take in an environment name, which can be used to call different ansible playbooks.
+1. [ ] Get Oh My Zsh `~/.oh-my-zsh/oh-my-zsh.sh` to exist. This means that after running `./install.sh`, one can close their terminal, re-open it, and get zsh to run with the desired prompt.
 2. [ ] Clean up our `./bin` directory, removing all old scripts, and ensuring that the scripts are both bash files, in our path, and accessible to our `~/.zshrc`? or perhaps just being in the path is enough for autocomplete.
 3. [ ] Remove all legacy dot files. see the `./dot/` directory for old files, and `./dot/README.md`'s mentions of the word "legacy" to determine what to remove
-4. [ ] Discuss if `bootstrap.sh` should still use [bash strict mode](http://redsymbol.net/articles/unofficial-bash-strict-mode/). Recall that Jesse's Proxmox VM's `$ apt-get update` failed, and exited
-5. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
-6. [ ] Write a playbook to automate, or at least semi automate installing fonts. See [here](https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/)
+4. [ ] Make our `install.sh` support upgrading things like packages from apt, flatpak, and brew, etc..
+5. [ ] Consider looking into Ansible roles to simplify some of the custom things we've done here
+6. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
+7. [ ] Write a playbook to automate, or at least semi automate installing fonts. See [here](https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/)
 
 ### Legacy
 

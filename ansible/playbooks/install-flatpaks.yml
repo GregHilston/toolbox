@@ -23,4 +23,3 @@
         state: present
         method: user
       loop: "{{ flatpak_applications }}"
- 
