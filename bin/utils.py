@@ -31,7 +31,7 @@ def send_email(to_email_address: str, subject: str, body: str):
     smtpserver.ehlo()
     smtpserver.starttls()
     smtpserver.ehlo
-    
+
     smtpserver.login(from_email_address, gmail_password)
 
     msg = MIMEText(body)

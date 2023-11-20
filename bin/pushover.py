@@ -5,7 +5,6 @@ import os
 import requests
 import urllib
 
-
 def send_notification_requests(message: str="Hello World"):
     response = requests.post(
             "https://api.pushover.net/1/messages.json",
@@ -16,7 +15,6 @@ def send_notification_requests(message: str="Hello World"):
         }
     )
     return response
-
 
 def send_notification_urllib(message: str="Hello World"):
     conn = http.client.HTTPSConnection("api.pushover.net:443")
@@ -36,7 +34,6 @@ def send_notification_urllib(message: str="Hello World"):
     )
 
     return conn.getresponse().read()
- 
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -46,7 +43,6 @@ def parse_args():
         type=str,
     )
     return vars(parser.parse_args())
-
 
 if __name__ == "__main__":
     args = parse_args()
