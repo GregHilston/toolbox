@@ -36,3 +36,17 @@
         repo: https://github.com/romkatv/powerlevel10k.git
         dest: ~/.oh-my-zsh/custom/themes/powerlevel10k
         depth: 1
+
+    - name: Install Powerline fonts
+      become: true
+      ansible.builtin.package:
+        state: present
+        name: "fonts-powerline"
+      register: package_result
+      notify: fonts_installed
+
+  handlers:
+    - name: Remind user to leverage Powerline fonts
+      listen: fonts_installed
+      ansible.builtin.debug:
+        msg: "I've just installed powerline fonts. Configure your terminal to take advantage of this new font."
