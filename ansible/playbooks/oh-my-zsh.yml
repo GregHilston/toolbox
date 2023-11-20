@@ -1,6 +1,5 @@
 - name: Oh My ZSH
   hosts: "localhost"
-  become: true
   tasks:
     - name: Install Oh My Zsh # noqa: latest
       ansible.builtin.git:
