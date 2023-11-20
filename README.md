@@ -67,19 +67,7 @@ I've decided against using Snap, due to its widespread criticism.
 
 ## TODO
 
-### Ansible Refactor
-
 1. [ ] Get Oh My Zsh `~/.oh-my-zsh/oh-my-zsh.sh` to exist. This means that after running `./install.sh`, one can close their terminal, re-open it, and get zsh to run with the desired prompt.
-2. [ ] Clean up our `./bin` directory, removing all old scripts, and ensuring that the scripts are both bash files, in our path, and accessible to our `~/.zshrc`? or perhaps just being in the path is enough for autocomplete.
-3. [ ] Remove all legacy dot files. see the `./dot/` directory for old files, and `./dot/README.md`'s mentions of the word "legacy" to determine what to remove
-4. [ ] Make our `install.sh` support upgrading things like packages from apt, flatpak, and brew, etc..
-5. [ ] Consider looking into Ansible roles to simplify some of the custom things we've done here
-6. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
-7. [ ] Write a playbook to automate, or at least semi automate installing fonts. See [here](https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/)
-
-### Legacy
-
-- Get our i3 dot file to be close to our i3 gaps dot file
-- i3-gaps currently does not have a PPA released for Ubuntu 22.04 Jamming Jelly Fish. Once it does, resolve these two issues
-  - get i3-gaps to be installed and not just i3-wm. the repository is not working for pop os 22.04
-  - Get `dot/i3-gaps/build-i3-config.sh` to be ran, and `/home/ghilston/.i3` directory to be created so we can symlink the build `dot/i3-gaps/config` directory
+2. [ ] Consider looking into Ansible roles to simplify some of the custom things we've done here
+3. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
+4. [ ] Write a playbook to automate, or at least semi automate installing fonts. See [here](https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/)
