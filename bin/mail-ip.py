@@ -3,7 +3,7 @@
 import subprocess
 import socket
 
-from utils import send_email
+from bin.python.utils import send_email
 
 
 def get_ipv4_address():
