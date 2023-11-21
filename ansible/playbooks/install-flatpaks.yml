@@ -1,0 +1,25 @@
+- hosts: "localhost"
+  tasks:
+    - name: Install Flatpak
+      ansible.builtin.package:
+        name: flatpak
+        state: present
+      become: true
+
+    - name: Add flatpak repositories
+      community.general.flatpak_remote:
+        name: flathub
+        state: present
+        flatpakrepo_url: "{{ item }}"
+        method: user
+      loop: "{{ flatpak_repositories }}"
+
+    # TODO refactor this to not require a loop, but rather pass in all
+    # desired packages as a list, all at once. This would be a performance
+    # enhancement.
+    - name: Install flatpaks
+      community.general.flatpak:
+        name: "{{ item }}"
+        state: present
+        method: user
+      loop: "{{ flatpak_applications }}"

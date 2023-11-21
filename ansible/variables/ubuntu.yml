@@ -1,0 +1,69 @@
+# These apt packages will be installed or upgraded
+apt_packages:
+  - ansible               # Automation tool
+  - arandr                # Screen layout editor
+  - blueman               # Bluetooth management utility
+  - build-essential       # Developer tools and libraries
+  - cifs-utils            # Utilities for mounting and managing CIFS shares
+  # - code                  # Visual Studio Code
+  - curl                  # Command-line tool for transferring data with URLs
+  - fzf                   # Fuzzy finder for the terminal
+  - gimp                  # GNU Image Manipulation Program
+  - git                   # Version control system
+  - htop                  # Interactive process viewer
+  - i3                    # Tiling window manager
+  - i3blocks              # Status bar for i3 window manager
+  - i3lock                # Screen locker for i3 window manager
+  - i3status              # Status bar for i3 window manager
+  - jq                    # Command-line JSON processor
+  - lynx                  # Text-based web browser
+  - mosh                  # Mobile shell for remote connections
+  - neofetch              # System information and ASCII art
+  - neovim                # Extensible text editor
+  # - nextcloud-client      # Nextcloud desktop client
+  - nfs-common            # Network File System utilities
+  # - ngrok                 # Secure introspectable tunnels to localhost
+  - python3-dev           # Python 3 development headers
+  - python3-pip           # Python package installer
+  - python3-setuptools    # Python package development and distribution utilities
+  - ranger                # Console file manager
+  - redshift              # Screen color temperature adjustment
+  - redshift-gtk          # GTK frontend for Redshift
+  - ripgrep               # Line-oriented search tool
+  - rsync                 # Remote file synchronization
+  - speedtest-cli         # Command-line interface for speedtest.net
+  - suckless-tools        # Simple and efficient desktop tools
+  - thefuck               # Magnificent app which corrects your previous console command
+  - timeshift             # System restore utility for Linux
+  - tldr                  # Simplified and community-driven man pages
+  - tmux                  # Terminal multiplexer
+  - tree                  # Display directories as trees
+  - vim                   # Text editor
+  - vlc                   # Multimedia player and streamer
+  - xournalpp             # Notetaking software, which I use with a Bamboo tablet
+  - zsh                   # Zsh shell and environment
+# These Flatpak repositories will be added
+flatpak_repositories:
+  - https://dl.flathub.org/repo/flathub.flatpakrepo
+# These Flatpak applications will be installed or upgraded
+flatpak_applications:
+  - com.slack.Slack
+  - com.spotify.Client
+  - com.bitwarden.desktop
+  - md.obsidian.Obsidian
+  - com.visualstudio.code
+# These directories will be created, recursively, for dot files to be linked to
+dot_file_directories:
+  - "{{ ansible_env.HOME }}/.config/nvim"
+  - "~/.i3"
+  - "~/.vim/autoreload"
+  - "~/.config/nvim/plugged"
+# These dot file mappings will be linked from source to directory
+dot_file_mappings:
+  - { src: "{{ playbook_dir }}/../../dot/tmux.conf", dest: "~/.tmux.conf" }
+  - { src: "{{ playbook_dir }}/../../dot/vimrc", dest: "~/.vimrc" }
+  - { src: "{{ playbook_dir }}/../../dot/zshrc", dest: "~/.zshrc" }
+  - { src: "{{ playbook_dir }}/../../dot/p10k.zsh", dest: "~/.p10k.zsh" }
+  - { src: "{{ playbook_dir }}/../../dot/config/nvim/init.vim", dest: "~/.config/nvim/init.vim" }
+  - { src: "{{ playbook_dir }}/../../dot/i3/config", dest: "~/.i3/config" }
+  - { src: "{{ playbook_dir }}/../../dot/config/redshift.conf", dest: "~/.config/redshift.conf" }

@@ -278,6 +278,7 @@ alias lg="lazygit"
 
 # Adding Poetry to path
 export PATH="$PATH:$HOME/.poetry/bin"
+export PATH="$PATH:$HOME/.local/share/pypoetry/venv/bin"
 
 # Adding Gcloud binaries to path based on output of `$ gcloud info` and this SO post
 # https://stackoverflow.com/questions/51450441/trying-to-run-cbt-cloud-bigtable-command-line-tool-from-google-sdk
@@ -285,3 +286,22 @@ export PATH="$PATH:/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# Check if pyenv is installed
+if command -v pyenv >/dev/null 2>&1; then
+    # Set PYENV_ROOT environment variable
+    export PYENV_ROOT="$HOME/.pyenv"
+
+    # Add pyenv binary directory to the PATH if not already present
+    if [[ ":$PATH:" != *":$PYENV_ROOT/bin:"* ]]; then
+        export PATH="$PYENV_ROOT/bin:$PATH"
+    fi
+
+    # Initialize pyenv
+    eval "$(pyenv init --path)"
+
+    # Initialize pyenv virtualenv if available
+    if command -v pyenv virtualenv-init >/dev/null 2>&1; then
+        eval "$(pyenv virtualenv-init -)"
+    fi
+fi

@@ -1,0 +1,13 @@
+- name: ZSH
+  hosts: "localhost"
+  become: false
+  # This approach is based on this lovely SO post:
+  # https://stackoverflow.com/a/59700987/1983957
+  vars:
+    the_user: "{{ ansible_user_id }}"
+  tasks:
+    - name: Change user shell to zsh
+      become: true
+      ansible.builtin.user:
+        name: "{{ the_user }}"
+        shell: /bin/zsh
