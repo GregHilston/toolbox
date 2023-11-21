@@ -61,6 +61,39 @@ Since Linux has many different ways to install something, from your package mana
 
 I've decided against using Snap, due to its widespread criticism.
 
+## Setting Terminal Font
+
+### Windows 11
+
+Since we do not do much developing on Windows, and may only use it to SSH into a remote Linux box, we will not be automating this much. Please follow these steps to get the fonts working on your Windows machine.
+
+1. Navigate to [this URL](https://github.com/romkatv/powerlevel10k#manual-font-installation), and download `MesloLGS NF Regular.ttf`, `MesloLGS NF Bold.ttf`, `MesloLGS NF Italic.ttf`, and `MesloLGS NF Bold Italic.ttf`.
+2. For each of the four `.ttf` files, double click them, which opens up a popup showing you sample text in your font. Click the `install` button in the right corner.
+
+![Font Installation](./docs/res/font-installation.png)
+
+3. Open our WSL application, which is usually called `Debian` or `Ubuntu.`
+
+![Debian Application](./docs/res/debian-application.png)
+
+![Ubuntu Application](./docs/res/ubuntu-application.png)
+
+4. Right click on the top of the terminal, and navigate to `Settings`
+
+![Application Settings](./docs/res/application-settings.png)
+
+5. Then navigate to `Profiles > Debian/Ubuntu` <sup>5</sup>
+
+![More Application Settings](./docs/res/application-settings2.png)
+
+6. Then navigate to `Additional Settings/Appearance` <sup>6</sup>
+
+![Additional Settings](./docs/res/additional-settings.png)
+
+7. Select `MesloLGS NF` from the `Font face` dropdown. <sup>7</sup>
+
+![Font Face](./docs/res/font-face.png)
+
 ## References
 
 1. https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/
