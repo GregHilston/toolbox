@@ -2,36 +2,45 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-./bin/ensure_no_sudo.sh
+# Directory containing variables files
+variables_dir="./ansible/variables"
 
-sudo ./bin/install_apt_packages.sh
+# Populate supported operating systems based on available files
+supported_operating_systems=()
 
-./bin/install_flatpaks.sh
+for file in "$variables_dir"/*.yml; do
+  # Extract the filename without the path and extension
+  os=$(basename "$file" .yml)
+  supported_operating_systems+=("$os")
+done
 
-sudo ./bin/configure_zsh.sh
+# Function to display usage text
+display_usage() {
+  echo "Error: $1"
+  echo "Usage: $0 <operating system (${supported_operating_systems[@]})>"
+}
 
-./bin/install_oh_my_zsh.sh
+# Check if the required operating system parameter is provided
+if [ "$#" -ne 1 ]; then
+  display_usage "Missing required operating system parameter."
+  exit 1
+fi
 
-sudo ./bin/backup_dot_files.sh
+# Set the operating system variable
+OS="$1"
 
-sudo ./bin/install_dots.sh
+# Validate the supported operating systems
+found=false
+for supported_os in "${supported_operating_systems[@]}"; do
+  if [ "$OS" == "$supported_os" ]; then
+    found=true
+    break
+  fi
+done
 
-./bin/install_zsh_autosuggestions.sh
+if [ "$found" == false ]; then
+  display_usage "Unsupported operating system '$OS'."
+  exit 2
+fi
 
-./bin/install_zsh_syntax_highlighting.sh
-
-./bin/add_user_to_docker_group.sh
-
-./bin/install_jetbrains_toolbox.sh
-
-echo "Changing default shell to be zsh..."
-chsh -s $(which zsh)
-
-echo "Reloading our ~/.zshrc"
-zsh -c "source ~/.zshrc"
-
-./bin/install_vim_plug.sh
-
-./bin/install_vim_plug_plugins.sh
-
-echo "Installation of toolbox was potentially success!\nLogout and log back in, then run again to be sure. This is so ZSH will be your default shell and will source the ~/.zshrc file.";
+ansible-playbook -i ansible/hosts.ini ansible/playbooks/deploy-$OS.yml

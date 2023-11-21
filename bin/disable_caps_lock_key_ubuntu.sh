@@ -1,1 +1,0 @@
-setxkbmap -option ctrl:nocaps

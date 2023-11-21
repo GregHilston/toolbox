@@ -1,0 +1,14 @@
+- name: Deploy Toolbox
+  hosts: "localhost"
+
+  tasks:
+    - name: Include variables from variables/ubuntu.yml
+      ansible.builtin.include_vars:
+        file: ../variables/ubuntu.yml
+
+- import_playbook: install-apt-packages.yml
+- import_playbook: set-zsh-as-default-shell.yml
+- import_playbook: install-flatpaks.yml
+- import_playbook: symlink-dot-files.yml
+- import_playbook: oh-my-zsh.yml
+- import_playbook: install-docker.yml

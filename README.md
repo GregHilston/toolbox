@@ -1,157 +1,106 @@
 # Toolbox
-========
 
-My toolbox contains a series of configuration files, helper scripts, and automations to allow me to quickly configure a OSX or Linux environment.
+---
 
-## What's in it?
+My toolbox contains a series of configuration files, helper scripts, and automations to allow me to quickly configure an OSX or Linux environment.
+
+## What's In This Repo?
 
 ```bash
+├── ansible/                                # Ansible playbooks for automation.
 ├── bin/                                    # Helper scripts. Should be added to $PATH for user convenience.
-└── docker/                                 # Contains all scripts related to using Docker to easily test out this toolbox in a throwaway environment.
+├── docker/                                 # Contains all scripts related to using Docker to easily test out this toolbox in a throwaway environment.
+├── docs/                                   # Additional documentation that supplements this `README.md`
 ├── dot/                                    # Dotfiles to configure a slew of programs and environments.
-└── secret/                                 # Secrets, such as passwords. Purposefully ignored by Git, and populated on each individual machine.
-├── install.sh                              # Single script to leverage this Toolbox to configure an environment just the way I like it.
+├── secret/                                 # Secrets, such as passwords. Purposefully ignored by Git, and populated on each individual machine.
+├── bootstrap.sh                            # Optional precursor to install.sh for barebones systems, which prepares an environment for install.sh to be ran.
+├── Brewfile                                # Describes which programs to install with Brew.
+├── install.sh                              # Main entrypoint to leverage this Toolbox to configure an environment just the way I like it.
 ├── README.md                               # This documentation.
 ```
 
-## External submodules
+## How Do I Use This Repo?
 
-Here's a list of third party gitmodules that are included in this repo:
-- [oh-my-zsh](https://github.com/robbyrussell/oh-my-zsh)    # zsh customization
+First, you probably want to fork this repo, and take a look at `ansible/variables/`. These files are where you'll be able to configure:
 
+1. Which apt repositories are added
+2. Which apt packages are installed
+3. Which flatpak repositories are added
+4. Which flatpak packages are installed
+5. Which directories are created for dot files to live in
+6. Where we symbolically link dot files to
 
-## How do I use it?
+Then, it's as easy as:
 
-First, you probably want to fork this repo, change some stuff if you don't like what you see. Then, it's as easy as:
-
+```bash
+$ ./install.sh
 ```
-./install.sh
-```
 
-If you're on a barebones system, like alpine linux, use `$ ./bin/bare_bones.sh` to prepare your system for the `$ ./install.sh` command
+If you're on a barebones system, like alpine linux, use `$ ./bin/bare_bones.sh` fire, to prepare your system for the `install.sh` script.
 
-And that's it!
+And that's it! You can run the `install.sh` script again to upgrade packages, or apply any new changes you've made to the repository.
 
-## Safely Testing
+### How To Run In An Ephemeral Environment
 
-To safely test the `install.sh` script, I suggest running it in a barebones Debian Docker container. In this repo you'll find the `docker/` directory which is our barebones container and scripts to assist with this.
+To run this toolbox in an ephemeral environment, I suggest running it in a barebones Docker container. In this repo you'll find the `docker/` directory which house  barebones containers and scripts to assist with this. See `docker/README.md` for further instructions.
 
-## Submodules
+## My Application Installation Preferences
 
-I hadn't used submodules prior to working with this. We use oh-my-zsh as a submodule. This writes to .gitmodules and pulls the code to dot/oh-my-zsh.
+### OSX
 
-## Vim
+Generally, I'll install everything using Brew.
 
-## vim-plug
+### Linux
 
-With efforts to learn more vim, I'm using vim-plug to install plugins. For my own memory, I'll write some plugins and what they do/how to use them to remind myself.
+Since Linux has many different ways to install something, from your package manager, snap, flatpak, brew, compile from source, etc...,  I've decided on these preferences for installing software:
 
-In vim, run the command `:PlugStatus` to check the status of the plugins
+1. Via the default package manager. For Debian based distributions this would be `apt`.
+2. Flatpak (via flathub).
+3. A raw binary. Which we'll store in `~/Apps` and symlink them to `~/bin`.
+4. clone and build
 
-#### fzf
+I've decided against using Snap, due to its widespread criticism.
 
-I have this mapped to ';', which will fuzzy search
+## Setting Terminal Font
 
-#### nerd tree
+### Windows 11
 
-Mapped to "ctrl + o"
+Since we do not do much developing on Windows, and may only use it to SSH into a remote Linux box, we will not be automating this much. Please follow these steps to get the fonts working on your Windows machine.
 
-#### flake 8
+1. Navigate to [this URL](https://github.com/romkatv/powerlevel10k#manual-font-installation), and download `MesloLGS NF Regular.ttf`, `MesloLGS NF Bold.ttf`, `MesloLGS NF Italic.ttf`, and `MesloLGS NF Bold Italic.ttf`.
+2. For each of the four `.ttf` files, double click them, which opens up a popup showing you sample text in your font. Click the `install` button in the right corner.
 
-Mapped to F7
+![Font Installation](./docs/res/font-installation.png)
 
-## Known Issues
+3. Open our WSL application, which is usually called `Debian` or `Ubuntu.`
 
-I've had to run `$ make install`, followed by `$ make instal_zsh_autocomplete` manually to get everything installed correctly, then add the word function to the `man` on  ~/.oh-my-zsh/plugins/colored-man-pages/colored-man-pages.plugin.zsh
+![Debian Application](./docs/res/debian-application.png)
 
-Running `$ make install` twice can cause `~/.vim` symbolic link incorrectly and cause errors when launching vim. Not sure why yet. Can resolve this by running `$ rm -rf ~/.vim`
+![Ubuntu Application](./docs/res/ubuntu-application.png)
 
-### Fixing `Unknown function: plug#begin`
+4. Right click on the top of the terminal, and navigate to `Settings`
 
-Install vim plug, can use `./bin/install_vim_plug.sh`
+![Application Settings](./docs/res/application-settings.png)
 
-## TODO
+5. Then navigate to `Profiles > Debian/Ubuntu` <sup>5</sup>
 
-- Get our i3 dot file to be close to our i3 gaps dot file
-- i3-gaps currently does not have a PPA released for Ubuntu 22.04 Jamming Jelly Fish. Once it does, resolve these two issues
-    - get i3-gaps to be installed and not just i3-wm. the repository is not working for pop os 22.04
-    - Get `dot/i3-gaps/build-i3-config.sh` to be ran, and `/home/ghilston/.i3` directory to be created so we can symlink the build `dot/i3-gaps/config` directory
+![More Application Settings](./docs/res/application-settings2.png)
 
-## Install Preference
+6. Then navigate to `Additional Settings/Appearance` <sup>6</sup>
 
-Since Linux has many different ways to install something (from your package manager, snap, flatpak, brew, compile from source, etc...) I've elected to ouse a very specific process. I will not be using Snap or Brew on Linux. While the former has lack of sandboxing that flatpak has, and the latter can conflict build tools with the base linux install, while this generally doesn't cause a problem on OS X. My preference for installation will be:
+![Additional Settings](./docs/res/additional-settings.png)
 
-- apt (via default packages or an external PPA)
-- flatpak (via flathub)
-- a raw binary
-- clone and build
+7. Select `MesloLGS NF` from the `Font face` dropdown. <sup>7</sup>
 
-For raw binaries, we'll store them in `~/Apps` and symlink that to `~/bin`.
+![Font Face](./docs/res/font-face.png)
 
 ## References
 
-### Git Plugin Hotkeys
+1. https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/
 
-see `~/.oh-my-zsh/plugins/git/git.plugin.zsh`, after installing
+## TODO
 
-### Vim
-
-- use `:source ~/.config/nvim/init.vim` to resource inside of neovim
-- use: gt to switch active tab
-- use :f to get the current file's path
-- use following to open new tab
-    - :tabnew path/to/file
-- use following to move tab
-    - :tabm i
-- switch windows, CTRL + W CTRL + W
-- horizontal splitting Ctrl+W, S (upper case)
-- vertical splitting Ctrl+W, v (lower case)
-- Edit start of line Shift + i
-- Edit end of line A
-- To switch focus from one window to another, use Ctrl+w <direction> , where direction can be an arrow key or one of the h j k l characters
-- Resizing windows
-    - Ctrl+W +/-: increase/decrease height (ex. 20<C-w>+)
-    - Ctrl+W >/<: increase/decrease width (ex. 30<C-w><)
-    - Ctrl+W _: set height (ex. 50<C-w>_)
-    - Ctrl+W |: set width (ex. 50<C-w>|)
-    - Ctrl+W =: equalize width and height of all windows
-- To indent multiple line Press "<SHIFT> + v" to enter VISUAL LINE mode. Select the text you wish to indent but using either the cursor keys or the "j" and "k" keys. To indent press "<SHIFT> + dot" (> character).
-
-#### Fzf + Ripgrep
-
-- hotkeyed ; to use fzf
-    - From inside the menu, fzf will automatically detect ctrl-t to open the file in a new tab, ctrl-v for a vertical split or ctrl-x for a horizontal split.
-- to open tabs
-    - From inside the menu, fzf will automatically detect ctrl-t to open the file in a new tab, ctrl-v for a vertical split or ctrl-x for a horizontal split.
-    - From the terminal, you can do vim -p filename1 filename2 to open the two files in tabs.
-- basically use fzf, hotkeyed to ;, to search for file names
-- use rp, :Rg, to search contents of files
-
-#### NerdTree
-
-- Open/Close Nerdtree with :NerdTree and :NerdTreeClose respectively
-- Have a hotkey set for CTRL + o
-
-#### tmux
-
-- To reload confiuguration This can be done either from within tmux, by pressing Ctrl+B and then : to bring up a command prompt, and typing:
-  - :source-file ~/.tmux.conf
-  - Or simply from a shell:
-  - $ tmux source-file ~/.tmux.conf
-- to move windows use the hotkey we added to our tmux.conf
-    - ctrl + shift + left to move to the left
-    - ctrl + shift + right to move to the right
-- to toggle fullscreen on a pane ctrl + b + z
-
-#### plasticboy/vim-markdown
-
-- Use : commands to open and close folds
-- Otherwise use these
-    - zr: reduces fold level throughout the buffer
-    - zR: opens all folds
-    - zm: increases fold level throughout the buffer
-    - zM: folds everything all the way
-    - za: open a fold your cursor is on
-    - zA: open a fold your cursor is on recursively
-    - zc: close a fold your cursor is on
-    - zC: close a fold your cursor is on recursively
+1. [ ] Get Oh My Zsh `~/.oh-my-zsh/oh-my-zsh.sh` to exist. This means that after running `./install.sh`, one can close their terminal, re-open it, and get zsh to run with the desired prompt.
+2. [ ] Consider looking into Ansible roles to simplify some of the custom things we've done here
+3. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
+4. [ ] Write a playbook to automate, or at least semi automate installing fonts. See [here](https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/)

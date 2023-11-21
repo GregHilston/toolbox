@@ -1,0 +1,34 @@
+- name: Symlink Dot Files
+  hosts: "localhost"
+  tasks:
+    - name: Create dot file directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+      loop: "{{ dot_file_directories }}"
+
+    - name: Symlink dot files
+      ansible.builtin.file:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        state: link
+      loop: "{{ dot_file_mappings }}"
+
+    - name: Download Vim-Plug for nvim and vim
+      ansible.builtin.command:
+        cmd: >
+          curl -fLo ~/.config/nvim/autoload/plug.vim --create-dirs
+          https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+      changed_when: false # Solves this https://github.com/geerlingguy/ansible-role-certbot/issues/144
+
+    - name: Install nvim plugins using Vim-Plug
+      ansible.builtin.command:
+        cmd: "nvim +PlugInstall +qall"
+      changed_when: false # Solves this https://github.com/geerlingguy/ansible-role-certbot/issues/144
+
+    - name: Install vim plugins using Vim-Plug
+      ansible.builtin.command:
+        cmd: "vim +PlugInstall +qall"
+      environment:
+        VIM_SKIP_INTRO: 1  # Skip the "Press Enter" prompt when running Vim non-interactively
+      changed_when: false # Solves this https://github.com/geerlingguy/ansible-role-certbot/issues/144
