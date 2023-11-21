@@ -100,7 +100,5 @@ Since we do not do much developing on Windows, and may only use it to SSH into a
 
 ## TODO
 
-1. [ ] Get Oh My Zsh `~/.oh-my-zsh/oh-my-zsh.sh` to exist. This means that after running `./install.sh`, one can close their terminal, re-open it, and get zsh to run with the desired prompt.
-2. [ ] Consider looking into Ansible roles to simplify some of the custom things we've done here
-3. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
-4. [ ] Write a playbook to automate, or at least semi automate installing fonts. See [here](https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/)
+1. [ ] Consider looking into Ansible roles to simplify some of the custom things we've done here
+2. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
