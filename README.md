@@ -100,5 +100,6 @@ Since we do not do much developing on Windows, and may only use it to SSH into a
 
 ## TODO
 
-1. [ ] Consider looking into Ansible roles to simplify some of the custom things we've done here
-2. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
+1. [ ] Look into the `flatpak-warning.txt` that pops up when you install VS Code using this repo
+2. [ ] Consider looking into Ansible roles to simplify some of the custom things we've done here
+3. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
