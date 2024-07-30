@@ -24,29 +24,51 @@ in
       enable = true;
       enableCompletion = true;
       # syntaxHighlighting.enable = true;
+      zplug = {
+        enable = true;
+        plugins = [
+          { name = "agkozak/zsh-z"; }
+          { name = "belak/zsh-utils"; }
+          { name = "jeffreytse/zsh-vi-mode"; }
+          { name = "zsh-users/zsh-autosuggestions"; }
+          { name = "MichaelAquilina/zsh-you-should-use"; }
+          { name = "zdharma-continuum/fast-syntax-highlighting"; }
+        ];
+      };
       oh-my-zsh = {
-          enable = true;
-          plugins = [ 
-            "git"
-            "docker"
-            # "zsh-completions"
-            # "zsh-history-substring-search"
-            # "zsh-syntax-highlighting"
-            # "zsh-powerlevel10k"
-          ];
-      };    
+        enable = true;
+        plugins = [
+          "git"
+          "docker"
+        ];
+      };
 
-      # # Set location for zsh config
-      # home.file.".zshrc" = {
-      #   source = /home/${user}/Git/toolbox/dot/zshrc;
-      # };
+      shellAliases = {
+        vim = "nvim";
+        v = "nvim";
+        e = "exit";
+        c = "clear";
+        cs = "sudo nix-store --gc";
+        lg = "lazygit";
+        ll = "ls -l";
+        test = "sudo nixos-rebuild test";
+        edit = "sudo nvim /etc/nixos/configuration.nix";
+        update = "sudo cp  /home/${user}/Git/toolbox/nixos/configuration.nix /etc/nixos && sudo nixos-rebuild switch";
+      };
+      history.size = 10000;
+      history.path = "/home/${user}/.zsh_history";
     };
 
     programs.git = {
       enable = true;
       userName  = "GregHilston";
       userEmail = "Gregory.Hilston@gmail.com";
-    };
+      };
+
+    # # Set location for zsh config
+    # home.file.".zshrc" = {
+    #   source = /home/${user}/Git/toolbox/dot/zshrc;
+    # };
   };
 
   # Bootloader.
