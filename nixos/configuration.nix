@@ -23,16 +23,16 @@ in
     programs.zsh = {
       enable = true;
       enableCompletion = true;
-      syntaxHighlighting.enable = true;
+      # syntaxHighlighting.enable = true;
       oh-my-zsh = {
           enable = true;
           plugins = [ 
             "git"
             "docker"
-            "zsh-completions"
-            "zsh-history-substring-search"
-            "zsh-syntax-highlighting"
-            "zsh-powerlevel10k"
+            # "zsh-completions"
+            # "zsh-history-substring-search"
+            # "zsh-syntax-highlighting"
+            # "zsh-powerlevel10k"
           ];
       };    
 
