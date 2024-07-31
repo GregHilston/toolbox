@@ -75,7 +75,7 @@ in
         lg = "lazygit";
         ll = "ls -l";
         test = "sudo nixos-rebuild test";
-        edit = "sudo nvim /etc/nixos/configuration.nix";
+        edit = "nvim /home/${user}/Git/toolbox/nixos/configuration.nix";
         update = "sudo cp  /home/${user}/Git/toolbox/nixos/configuration.nix /etc/nixos && sudo nixos-rebuild switch";
       };
       history.size = 10000;
