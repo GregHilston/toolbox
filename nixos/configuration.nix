@@ -82,6 +82,16 @@ in
       history.path = "/home/${user}/.zsh_history";
     };
 
+    programs.neovim = {
+      enable = true;
+      extraConfig = ''
+        call plug#begin('~/.local/share/nvim/plugged')
+        Plug 'preservim/nerdtree'
+        " Add other Plug plugins here
+        call plug#end()
+      '';
+    };
+
     # Set location for nvim config to DotFiles repo in home directory
     home.file.".config/nvim/init.vim" = {
       source = /home/${user}/Git/toolbox/dot/config/nvim/init.vim;
@@ -211,6 +221,7 @@ in
     rsync
     tldr
     neovim
+    vimPlugins.vim-plug
     unzip
     wget
     zip

@@ -30,8 +30,8 @@ Plug 'mechatroner/rainbow_csv'          " highlight columns in CSV and TSV files
 
 " Language
 " ----- Python -----
-Plug 'nvie/vim-flake8' 		" runs flake8 against python file
-Plug 'davidhalter/jedi-vim' " python autocomplete
+# Plug 'nvie/vim-flake8' 		" runs flake8 against python file
+# Plug 'davidhalter/jedi-vim' " python autocomplete
 
 " ----- Markdown -----
 Plug 'dkarter/bullets.vim' 	" auto creates bulleted lists for markdown files
@@ -39,12 +39,12 @@ Plug 'godlygeek/tabular'
 Plug 'plasticboy/vim-markdown'
 
 " ----- HTML/CSS/JS -----
-Plug 'mattn/emmet-vim'      " auto completion for html/css/js
+# Plug 'mattn/emmet-vim'      " auto completion for html/css/js
 
 call plug#end()
 
 " enabling plugin syntastic to use mypy for us
-let g:syntastic_python_checkers=['mypy']
+# let g:syntastic_python_checkers=['mypy']
 
 let g:vim_markdown_override_foldtext = 0
 
@@ -58,9 +58,9 @@ let g:bullets_enabled_file_types = [
 
 " Making CTRL + SPACE use jedi-vim for auto complete
 " From here https://kevinmartinjose.com/2020/11/22/vimcharm-approximating-pycharm-on-vim/
-let jedi#show_call_signatures = 0
-let jedi#documentation_command = ""
-autocmd FileType python setlocal completeopt-=preview
+# let jedi#show_call_signatures = 0
+# let jedi#documentation_command = ""
+# autocmd FileType python setlocal completeopt-=preview
 
 " Making CTRL + CLICK go to definition using jedi-vim
 " Also enables opening a new tab when navigating to a different file
