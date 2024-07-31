@@ -33,6 +33,8 @@ in
           { name = "zsh-users/zsh-autosuggestions"; }
           { name = "MichaelAquilina/zsh-you-should-use"; }
           { name = "zdharma-continuum/fast-syntax-highlighting"; }
+          # fuzzy file search
+          { name = "junegunn/fzf"; }
         ];
       };
       oh-my-zsh = {
@@ -57,6 +59,13 @@ in
       };
       history.size = 10000;
       history.path = "/home/${user}/.zsh_history";
+    };
+
+    # Set location for nvim config to DotFiles repo in home directory
+    home.file.".config/nvim" = {
+      source = /home/${user}/Git/toolbox/dot/config/nvim/init.vim;
+      recursive = true;
+      executable = true;
     };
 
     programs.git = {
