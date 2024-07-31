@@ -27,14 +27,35 @@ in
       zplug = {
         enable = true;
         plugins = [
-          { name = "agkozak/zsh-z"; }
-          { name = "belak/zsh-utils"; }
-          { name = "jeffreytse/zsh-vi-mode"; }
+          # Fast jump around
+          # { name = "agkozak/zsh-z"; }
+
+          # A collection of utility functions for Zsh
+          # { name = "belak/zsh-utils"; }
+
+          # Adds vi mode to Zsh, allowing modal editing
+          # { name = "jeffreytse/zsh-vi-mode"; }
+
+          # Suggests commands as you type based on history and completions
           { name = "zsh-users/zsh-autosuggestions"; }
+
+          # Reminds you to use commands you've forgotten
           { name = "MichaelAquilina/zsh-you-should-use"; }
+
+          # Fast syntax highlighting for Zsh
           { name = "zdharma-continuum/fast-syntax-highlighting"; }
-          # fuzzy file search
-          { name = "junegunn/fzf"; }
+
+          # Better history search
+          { name = "zsh-users/zsh-history-substring-search"; }
+
+          # Auto-pairing of quotes, brackets, etc.
+          { name = "hlissner/zsh-autopair"; }
+
+          # Directory listings with colors
+          # { name = "supercrabtree/k"; }
+
+          # Visual mode for Zsh
+          # { name = "b4b4r07/zsh-vimode-visual"; }
         ];
       };
       oh-my-zsh = {
