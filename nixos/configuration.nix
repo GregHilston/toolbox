@@ -83,7 +83,7 @@ in
     };
 
     # Set location for nvim config to DotFiles repo in home directory
-    home.file.".config/nvim" = {
+    home.file.".config/nvim/init.vim" = {
       source = /home/${user}/Git/toolbox/dot/config/nvim/init.vim;
       recursive = true;
       executable = true;
