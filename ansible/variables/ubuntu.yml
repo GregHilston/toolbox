@@ -52,6 +52,7 @@ flatpak_applications:
   - com.bitwarden.desktop
   - md.obsidian.Obsidian
   - com.visualstudio.code
+  - com.discordapp.Discord
 # These directories will be created, recursively, for dot files to be linked to
 dot_file_directories:
   - "{{ ansible_env.HOME }}/.config/nvim"
