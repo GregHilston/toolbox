@@ -88,27 +88,17 @@ in
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.${user} = {
-    isNormalUser = true;
-    extraGroups = [ "networkmanager" "wheel" "docker" ];
-    packages = with pkgs; [
-      kdePackages.kate
-      bitwarden
-      dmenu
-      obsidian
-      slack
-      spotify
-      vlc
-      vscode
-    ];
-  };
+
 
   # Install firefox.
   programs.firefox.enable = true;
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
+
+  environment.sessionVariables = {
+      EDITOR = "nvim";
+  };
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
@@ -128,6 +118,7 @@ in
     vimPlugins.vim-plug
     unzip
     wget
+    curl
     zip
 
     # Fun
@@ -135,6 +126,7 @@ in
 
     # Misc
     tree
+    ncdu
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -164,4 +156,12 @@ in
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "24.05"; # Did you read the comment?
+
+  # Define the user and its groups in the system configuration
+  users.users = {
+    ghilston = {
+      isNormalUser = true;
+      extraGroups = [ "networkmanager" "wheel" "docker" ];
+    };
+  };
 }

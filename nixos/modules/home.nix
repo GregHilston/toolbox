@@ -11,7 +11,20 @@ in
   ];
 
   home-manager.users.${user} = {
+    home.username = user;
     home.stateVersion = "24.05";
+
+    home.packages = with pkgs; [
+    #   kdeApplications.kate
+      bitwarden
+      dmenu
+      obsidian
+      slack
+      spotify
+      vlc
+      vscode
+      firefox
+    ];
 
     programs.zsh = {
       enable = true;
