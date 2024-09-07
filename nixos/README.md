@@ -7,6 +7,12 @@
 3. On NixOS Server: `# cp -r ~/Git/toolbox/nixos/* /etc/nixos/`
 4. `# nixos-rebuild switch`
 
+## References
+
+- Good home-manager references
+  - [tutorial](http://ghedam.at/24353/tutorial-getting-started-with-home-manager-for-nix)
+  - [example home.nix](https://github.com/bobvanderlinden/nix-home/blob/master/home.nix)
+
 ## TODO
 
 - [ ] Get VS Code remote to work with this Nix OS installation. Currently, our remote server fails to be set up.
