@@ -15,5 +15,6 @@
 
 ## TODO
 
+- [ ] Fix nvim config issue with respect to init.lua and init.vim. Open any file with nvim to see the full error message.
 - [ ] Get VS Code remote to work with this Nix OS installation. Currently, our remote server fails to be set up.
 - [ ] Leverage [nixos-hardware](https://github.com/NixOS/nixos-hardware) for our Lenovo Thinkpad T420, and Lenovo Thinkpad x201.
