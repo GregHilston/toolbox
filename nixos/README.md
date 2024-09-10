@@ -1,5 +1,9 @@
 # NixOS
 
+## Just
+
+I use [just](https://github.com/casey/just) to help make commands more easily runnable. To install it, see [this documentation](https://github.com/casey/just?tab=readme-ov-file#packages).
+
 ## How To Deploy
 
 1. On development machine `$ cd nixos`
@@ -9,7 +13,8 @@
 
 ## References
 
-- Good home-manager references
+- [Module, and repository organization reference](https://github.com/Fryuni/config-files)
+- home-manager references
   - [tutorial](http://ghedam.at/24353/tutorial-getting-started-with-home-manager-for-nix)
   - [example home.nix](https://github.com/bobvanderlinden/nix-home/blob/master/home.nix)
 
