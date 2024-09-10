@@ -1,0 +1,10 @@
+localPath := "~/Git/toolbox/nixos/*"
+remotePath := "/home/ghilston/Git/toolbox/nixos/"
+
+scp_files:
+    scp -r * nixos:"{{remotePath}}"
+
+remote_update:
+    ssh -t nixos 'sudo cp -r {{localPath}} /etc/nixos/ && sudo nixos-rebuild switch'
+
+deploy: scp_files remote_update
