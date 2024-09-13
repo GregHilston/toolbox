@@ -20,15 +20,14 @@ in
   boot.loader.grub.device = "/dev/sda";
   boot.loader.grub.useOSProber = true;
 
-  networking.hostName = "nixos"; # Define your hostname.
+  # Networking
+  networking.networkmanager.enable = true;
+  networking.hostName = "nixos";
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   # Configure network proxy if necessary
   # networking.proxy.default = "http://user:password@proxy:port/";
   # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
-
-  # Enable networking
-  networking.networkmanager.enable = true;
 
   # Set your time zone.
   time.timeZone = "America/New_York";
@@ -63,7 +62,7 @@ in
   };
 
   # Enable CUPS to print documents.
-  services.printing.enable = true;
+  # services.printing.enable = true;
 
   # Enable zsh as main shell
   programs.zsh.enable = true;
@@ -85,15 +84,8 @@ in
     #media-session.enable = true;
   };
 
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
-
-
-
-  # Install firefox.
   programs.firefox.enable = true;
 
-  # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
   environment.sessionVariables = {
@@ -137,8 +129,6 @@ in
   #   enableSSHSupport = true;
   # };
 
-  # List services that you want to enable:
-
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
   services.openssh.settings.X11Forwarding = true;
@@ -159,6 +149,7 @@ in
 
   # Define the user and its groups in the system configuration
   users.users = {
+    # TODO use user account above
     ghilston = {
       isNormalUser = true;
       extraGroups = [ "networkmanager" "wheel" "docker" ];
