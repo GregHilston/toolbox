@@ -1,6 +1,6 @@
 deploy_isengard:
     sudo ln -sf machines/isengard/configuration.nix /etc/nixos/configuration.nix
-    sudo ln -sf machines/isengard/hardware-configuration.nix /etc/nixos/harware-configuration.nix
+    sudo ln -sf machines/isengard/hardware-configuration.nix /etc/nixos/hardware-configuration.nix
     sudo nixos-rebuild switch
 
 update:
