@@ -8,9 +8,7 @@ scp_files:
 remote_update:
     ssh -t "{{machineName}}" 'sudo cp -r {{localPath}} /etc/nixos/ && sudo nixos-rebuild switch'
 
-update:
-    sudo nixos-rebuild -I nixos-config=/home/ghilston/Git/toolbox/nixos/configuration.nix switch
-
 remote_deploy: scp_files remote_update
 
-local_deploy: update
+deploy_isengard:
+    nixos-rebuild -I nixos-config=$(pwd)/configuration.nix --target-host ghilston@192.168.1.149 switch
