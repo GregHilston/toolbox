@@ -1,10 +1,16 @@
+machineName := "nixos" # Use when talking about say remote nixOS VM, in your /etc/hosts file
 localPath := "~/Git/toolbox/nixos/*"
 remotePath := "/home/ghilston/Git/toolbox/nixos/"
 
 scp_files:
-    scp -r * nixos:"{{remotePath}}"
+    scp -r * "{{machineName}}:{{remotePath}}"
 
 remote_update:
-    ssh -t nixos 'sudo cp -r {{localPath}} /etc/nixos/ && sudo nixos-rebuild switch'
+    ssh -t "{{machineName}}" 'sudo cp -r {{localPath}} /etc/nixos/ && sudo nixos-rebuild switch'
 
-deploy: scp_files remote_update
+update:
+    sudo nixos-rebuild -I nixos-config=/home/ghilston/Git/toolbox/nixos/configuration.nix switch
+
+remote_deploy: scp_files remote_update
+
+local_deploy: update

@@ -12,7 +12,7 @@ in
   [
     ./hardware-configuration.nix
     ./modules/home.nix
-    ./modules/gaming.nix
+    ./modules/gaming
   ];
 
   # Bootloader.
