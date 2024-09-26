@@ -11,8 +11,8 @@ in
   imports =
   [
     ./hardware-configuration.nix
-    ./modules/home
-    ./modules/gaming
+    ../../modules/home
+    ../../modules/gaming
   ];
 
   # Bootloader.
