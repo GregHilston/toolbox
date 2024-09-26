@@ -1,10 +1,16 @@
 # NixOS
 
+## Shell
+
+We have a preconfigured shell available, with all the required tooling. Simply run `$ nix-shell` and you have everything set up. THis is powered by our `shell.nix` file.
+
 ## Just
 
 I use [just](https://github.com/casey/just) to help make commands more easily runnable. To install it, see [this documentation](https://github.com/casey/just?tab=readme-ov-file#packages).
 
 ## How To Deploy
+
+TODO update once we have finished our `justfile`
 
 1. On development machine `$ cd nixos`
 2. On development machine: `$ scp -r * ghilston@192.168.1.99:/home/ghilston/Git/toolbox/nixos/` or `$ scp -r * nixos:/home/ghilston/Git/toolbox/nixos/`
