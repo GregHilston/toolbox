@@ -1,5 +1,7 @@
 deploy_isengard:
-    nixos-rebuild -I nixos-config=$(pwd)/configuration.nix --target-host ghilston@192.168.1.149 switch
+    sudo ln -sf machines/isengard/configuration.nix /etc/nixos/configuration.nix
+    sudo ln -sf machines/isengard/hardware-configuration.nix /etc/nixos/harware-configuration.nix
+    sudo nixos-rebuild switch
 
 update:
     nixos-rebuild -I nixos-config=$(pwd)/configuration switch

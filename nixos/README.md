@@ -28,6 +28,7 @@ TODO update once we have finished our `justfile`
 
 ## TODO
 
+- [ ] Make a configuration.nix file for just isengard in the machines directory and import what i need from our modules. IE dont have gaming be a module that's imported. Make one for nixos vm too and say work machine, etc
 - [ ] Add SSH keys to our NixOS to allow us to SSH into the machine
 - [ ] Fix nvim config issue with respect to init.lua and init.vim. Open any file with nvim to see the full error message.
 - [ ] Get VS Code remote to work with this Nix OS installation. Currently, our remote server fails to be set up.
