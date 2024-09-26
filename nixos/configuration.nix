@@ -11,7 +11,7 @@ in
   imports =
   [
     ./hardware-configuration.nix
-    ./modules/home.nix
+    ./modules/home
     ./modules/gaming
   ];
 
