@@ -1,3 +1,8 @@
+deploy_vm:
+    sudo ln -sf "$HOME/Git/toolbox/nixos/machines/vm/configuration.nix" /etc/nixos/configuration.nix
+    sudo ln -sf "$HOME/Git/toolbox/nixos/machines/vm/hardware-configuration.nix" /etc/nixos/hardware-configuration.nix
+    sudo nixos-rebuild switch
+
 deploy_isengard:
     sudo ln -sf "$HOME/Git/toolbox/nixos/machines/isengard/configuration.nix" /etc/nixos/configuration.nix
     sudo ln -sf "$HOME/Git/toolbox/nixos/machines/isengard/hardware-configuration.nix" /etc/nixos/hardware-configuration.nix
