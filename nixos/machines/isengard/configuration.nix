@@ -156,4 +156,6 @@ in
       extraGroups = [ "networkmanager" "wheel" "docker" ];
     };
   };
+
+  virtualisation.docker.enable = true;
 }
