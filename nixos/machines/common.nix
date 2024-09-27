@@ -7,8 +7,7 @@ in
   # Common imports
   imports =
   [
-    ./hardware-configuration.nix
-    ../../modules/home
+    ../modules/home
   ];
 
   # Bootloader
