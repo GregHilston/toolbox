@@ -3,7 +3,7 @@
 {
   imports = [
     ./hardware-configuration.nix
-    ../common.nix
+    ../../common.nix
   ];
 }
 
