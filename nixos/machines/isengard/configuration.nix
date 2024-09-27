@@ -119,6 +119,7 @@ in
     # Misc
     tree
     ncdu
+    just
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
