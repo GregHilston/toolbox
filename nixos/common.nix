@@ -7,7 +7,7 @@ in
   # Common imports
   imports =
   [
-    ../modules/home
+    modules/home
   ];
 
   # Bootloader
