@@ -26,6 +26,8 @@ TODO update once we have finished our `justfile`
   - [tutorial](http://ghedam.at/24353/tutorial-getting-started-with-home-manager-for-nix)
   - [example home.nix](https://github.com/bobvanderlinden/nix-home/blob/master/home.nix)
 - [example of separating out per program configuration](https://github.com/hans-chrstn/.dotfiles/tree/main/home/common/programs)
+  - [another example, which separates out gui and tui configs](https://github.com/GaetanLepage/nix-config/tree/master/home/modules)
+  - [and another](https://github.com/AlexNabokikh/nix-config/tree/master/files/configs/nvim)
 
 ## TODO
 
