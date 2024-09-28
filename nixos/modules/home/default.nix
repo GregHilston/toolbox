@@ -3,6 +3,10 @@
 let
   user = "ghilston";
   home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/release-24.05.tar.gz";
+  lazyvim = pkgs.fetchTarball {
+    url = "https://github.com/LazyVim/starter/archive/refs/heads/main.tar.gz";
+    sha256 = "13ajrzgw9i0nna88l3bnfbf7m3nb889zgzrbyldd6ls82jsbf7lw";
+  };
 in
 {
   imports =
@@ -83,6 +87,7 @@ in
         test = "sudo nixos-rebuild test";
         edit = "nvim /home/${user}/Git/toolbox/nixos/configuration.nix";
         update = "sudo cp  /home/${user}/Git/toolbox/nixos/configuration.nix /etc/nixos && sudo nixos-rebuild switch";
+        gitCommitUndo = "git reset --soft HEAD\\^";
       };
       history.size = 10000;
       history.path = "/home/${user}/.zsh_history";
@@ -99,10 +104,8 @@ in
     };
 
     # Set location for nvim config to DotFiles repo in home directory
-    home.file.".config/nvim/init.vim" = {
-      source = /home/${user}/Git/toolbox/dot/config/nvim/init.vim;
-      recursive = true;
-      executable = true;
+    home.file.".config/nvim" = {
+      source = lazyvim;
     };
 
     programs.git = {
