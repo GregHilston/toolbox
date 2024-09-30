@@ -1,17 +1,29 @@
-{ config, pkgs, user, ... }:
+{ config, pkgs, ... }:
 
+let
+  home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/release-24.05.tar.gz";
+in
 {
+  imports =
+  [
+    (import "${home-manager}/nixos")
+  ];
+
   environment.systemPackages = with pkgs; [
     alacritty
     nerdfonts
   ];
 
-  home-manager.users.${user} = {
+  home-manager.users.ghilston = {
+    home.stateVersion = "24.05";
+
     programs.alacritty = {
       enable = true;
-      font = {
-        normalFamily = "Nerd Font";
-        size = 12;
+      settings = {
+      	font = {
+          normal.family = "Nerd Font";
+          size = 12;
+        };
       };
     };
   };
