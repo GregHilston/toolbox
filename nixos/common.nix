@@ -83,6 +83,11 @@ in
     tree
     ncdu
     just
+    gcc # Needed for LazyVim's usage of nvim-treesitter
+    nerdfonts # Needed for LazyVim's display of some icons
+    lazygit # Needed for LazyVim
+    ripgrep # Needed for LazyVim
+    fd # Needed for LazyVim
   ];
 
   # Set session variables
@@ -113,5 +118,9 @@ in
 
   # System state version
   system.stateVersion = "24.05";
+
+  fonts.packages = with pkgs; [
+    nerdfonts
+  ];
 }
 
