@@ -10,7 +10,7 @@ in
 {
   imports = [
     ./hardware-configuration.nix
-    (import ../../modules/programs/gui/alacritty/default.nix { inherit user; })  # Pass the user
+    (import ../../modules/programs/gui/alacritty/default.nix { inherit config pkgs user; })  # Pass the user
   ];
 }
 
