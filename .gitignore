@@ -33,7 +33,6 @@ iterm2-colors
 
 dot/env/dyn.env
 private/
-fonts/
 lib/fonts
 dot/vim/plugged
 
