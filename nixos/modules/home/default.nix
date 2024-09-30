@@ -3,10 +3,6 @@
 let
   user = "ghilston";
   home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/release-24.05.tar.gz";
-  lazyvim = pkgs.fetchTarball {
-    url = "https://github.com/LazyVim/starter/archive/refs/heads/main.tar.gz";
-    sha256 = "13ajrzgw9i0nna88l3bnfbf7m3nb889zgzrbyldd6ls82jsbf7lw";
-  };
 in
 {
   imports =
@@ -101,11 +97,6 @@ in
         " Add other Plug plugins here
         call plug#end()
       '';
-    };
-
-    # Set location for nvim config to DotFiles repo in home directory
-    home.file.".config/nvim" = {
-      source = lazyvim;
     };
 
     programs.git = {
