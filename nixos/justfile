@@ -1,12 +1,30 @@
+install_nvim_lazyvim_distro:
+    if [ ! -d "$HOME/.config/nvim/" ]; then
+        echo "Cloning LazyVim starter template..."
+        git clone https://github.com/LazyVim/starter ~/.config/nvim
+    fi
+
+    echo "Installing LazyVim plugins..."
+    nvim +Lazy sync +qa
+
+    echo "Removing ~/.config/nvim/.git directory so we can use this in git ourselves"
+    rm -rf ~/.config/nvim/.git
+
+    echo "LazyVim installation complete!"
+
 deploy_vm:
     sudo ln -sf "$HOME/Git/toolbox/nixos/machines/vm/configuration.nix" /etc/nixos/configuration.nix
     sudo ln -sf "$HOME/Git/toolbox/nixos/machines/vm/hardware-configuration.nix" /etc/nixos/hardware-configuration.nix
     sudo nixos-rebuild switch
 
+    just install_nvim_lazyvim_distro
+
 deploy_isengard:
     sudo ln -sf "$HOME/Git/toolbox/nixos/machines/isengard/configuration.nix" /etc/nixos/configuration.nix
     sudo ln -sf "$HOME/Git/toolbox/nixos/machines/isengard/hardware-configuration.nix" /etc/nixos/hardware-configuration.nix
     sudo nixos-rebuild switch
+
+    just install_nvim_lazyvim_distro
 
 update:
     nixos-rebuild -I nixos-config=$(pwd)/configuration switch
