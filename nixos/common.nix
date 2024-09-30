@@ -107,7 +107,7 @@ in
 
   # User configuration
   users.users = {
-    ghilston = {
+    "${user}" = {
       isNormalUser = true;
       extraGroups = [ "networkmanager" "wheel" "docker" ];
     };
