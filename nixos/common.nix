@@ -112,7 +112,7 @@
   # Enable Docker
   virtualisation.docker.enable = true;
 
-  # System state version
+  # https://nixos.wiki/wiki/FAQ/When_do_I_update_stateVersion
   system.stateVersion = "24.05";
 
   fonts.packages = with pkgs; [

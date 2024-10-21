@@ -35,6 +35,7 @@ TODO update once we have finished our `justfile`
 
 ## TODO
 
+- [ ] Fix redundant system.stateVersion
 - [ ] Get nvim copy to clipboard to work. See [here](https://discourse.nixos.org/t/how-to-support-clipboard-for-neovim/9534/3), and [here](https://www.reddit.com/r/neovim/comments/3fricd/easiest_way_to_copy_from_neovim_to_system/)
 - [ ] Simplify our Justfile by using [this approach](https://nixos-and-flakes.thiscute.world/best-practices/simplify-nixos-related-commands) to handle different machines. See the # usage
 - [ ] Add per program configs. See the References above. Say for neovim, zsh, firefox, git, etc
