@@ -1,8 +1,8 @@
 deploy: 
-    nixos-rebuild switch --flake .#isengard
+    sudo nixos-rebuild switch --flake .#isengard
 
 debug:
-    nixos-rebuild switch --flake .#isengard --show-trace --verbose
+    sudo nixos-rebuild switch --flake .#isengard --show-trace --verbose
 
 up:
   nix flake update
