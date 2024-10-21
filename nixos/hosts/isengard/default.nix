@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ inputs, lib, config, pkgs, vars, ... }:
 
 let
   # Import common configuration
@@ -13,4 +13,3 @@ in
     (import ../../modules/programs/gui/alacritty/default.nix { inherit config pkgs user; })  # Pass the user
   ];
 }
-

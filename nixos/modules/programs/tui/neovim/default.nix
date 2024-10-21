@@ -1,4 +1,3 @@
-# https://github.com/water-sucks/nixed/blob/main/home/profiles/base/nvim/default.nix
 { pkgs, inputs, ... }:
 
 {
@@ -17,12 +16,9 @@
       imagemagick
 
       # Language Servers
-      # https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md
       erlang_26
       elixir
       elixir_ls
-      # inputs.next-ls
-      # vimPlugins.elixir-tools-nvim
       lua-language-server
       nil
       nixd
@@ -31,7 +27,6 @@
       nodePackages."@tailwindcss/language-server"
 
       # Formatters
-      # https://github.com/stevearc/conform.nvim?tab=readme-ov-file#formatters
       black
       nixfmt-rfc-style
       nodePackages.prettier

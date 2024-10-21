@@ -1,14 +1,11 @@
-{ config, pkgs, ... }:
+{ config, pkgs, vars, ... }:
 
-let
-  user = "ghilston";
-in
 {
-  # Common imports
-  imports =
-  [
-    modules/home
+  imports = [
+    ./modules/home
   ];
+
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   # Bootloader
   boot.loader.grub.enable = true;
@@ -106,11 +103,10 @@ in
   services.openssh.settings.X11Forwarding = true;
 
   # User configuration
-  users.users = {
-    ghilston = {
-      isNormalUser = true;
-      extraGroups = [ "networkmanager" "wheel" "docker" ];
-    };
+  users.users.${vars.user} = {
+    isNormalUser = true;
+    extraGroups = [ "networkmanager" "wheel" "docker" ];
+    shell = pkgs.zsh;
   };
 
   # Enable Docker
@@ -123,4 +119,3 @@ in
     nerdfonts
   ];
 }
-

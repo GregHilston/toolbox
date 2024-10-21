@@ -17,6 +17,10 @@ TODO update once we have finished our `justfile`
 3. On NixOS Server: `# cp -r ~/Git/toolbox/nixos/* /etc/nixos/`
 4. `# nixos-rebuild switch`
 
+## Flake
+
+
+
 ## References
 
 - [Hashicorp's Co-Founder Micthell Hashimoto's repo that inspired me to look into development in a VM, using Nix OS](https://github.com/mitchellh/nixos-config?tab=readme-ov-file#how-i-work)
@@ -31,6 +35,8 @@ TODO update once we have finished our `justfile`
 
 ## TODO
 
+- [ ] Get nvim copy to clipboard to work. See [here](https://discourse.nixos.org/t/how-to-support-clipboard-for-neovim/9534/3), and [here](https://www.reddit.com/r/neovim/comments/3fricd/easiest_way_to_copy_from_neovim_to_system/)
+- [ ] Simplify our Justfile by using [this approach](https://nixos-and-flakes.thiscute.world/best-practices/simplify-nixos-related-commands) to handle different machines. See the # usage
 - [ ] Add per program configs. See the References above. Say for neovim, zsh, firefox, git, etc
 - [ ] Add SSH keys to our NixOS to allow us to SSH into the machine
 - [ ] Fix nvim config issue with respect to init.lua and init.vim. Open any file with nvim to see the full error message.
