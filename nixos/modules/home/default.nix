@@ -4,6 +4,7 @@
   imports = [
     inputs.home-manager.nixosModules.home-manager
     # ../programs/tui/neovim
+    # ../programs/gui/alacritty
   ];
 
   nixpkgs = {
