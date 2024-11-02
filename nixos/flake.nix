@@ -11,6 +11,8 @@
       url = "github:nix-community/home-manager/release-24.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    stylix.url = "github:danth/stylix/release-24.05";
   };
 
   outputs = inputs@{ self, nixpkgs, ... }:
@@ -34,11 +36,12 @@
         };
         modules = [
           ./hosts/isengard
+          inputs.stylix.nixosModules.stylix
           {
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
-	      backupFileExtension = "backup2";
+	            backupFileExtension = "backup2";
             };
           }
         ];
