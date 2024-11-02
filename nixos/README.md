@@ -8,6 +8,12 @@ We have a preconfigured shell available, with all the required tooling. Simply r
 
 I use [just](https://github.com/casey/just) to help make commands more easily runnable. To install it, see [this documentation](https://github.com/casey/just?tab=readme-ov-file#packages).
 
+## NixOs Pattern
+
+1. Our usage of Just will leverage a `--flake` argument, indicating what machine we'll be building and deploying by pointing to a specific section in `flake.nix`.
+2. The machine's `flake.nix` section will point to a `./hosts/[machine-name]`, which will resolve to `./hosts/[machine-name]/default.nix`.
+3. That `./hosts/[machine-name]/default.nix` file will define system things, and point to that machine's `./hosts/[machine-name]/hardware-configuration.nix`, and any and all `./modules/` that are relevant for that machine. For example, like `./modules/home/default.nix` which defines user packages.
+
 ## How To Deploy
 
 TODO update once we have finished our `justfile`
@@ -16,6 +22,8 @@ TODO update once we have finished our `justfile`
 2. On development machine: `$ scp -r * ghilston@192.168.1.99:/home/ghilston/Git/toolbox/nixos/` or `$ scp -r * nixos:/home/ghilston/Git/toolbox/nixos/`
 3. On NixOS Server: `# cp -r ~/Git/toolbox/nixos/* /etc/nixos/`
 4. `# nixos-rebuild switch`
+
+## Flake
 
 ## References
 
@@ -31,6 +39,9 @@ TODO update once we have finished our `justfile`
 
 ## TODO
 
+- [ ] Fix redundant system.stateVersion
+- [ ] Get nvim copy to clipboard to work. See [here](https://discourse.nixos.org/t/how-to-support-clipboard-for-neovim/9534/3), and [here](https://www.reddit.com/r/neovim/comments/3fricd/easiest_way_to_copy_from_neovim_to_system/)
+- [ ] Simplify our Justfile by using [this approach](https://nixos-and-flakes.thiscute.world/best-practices/simplify-nixos-related-commands) to handle different machines. See the # usage
 - [ ] Add per program configs. See the References above. Say for neovim, zsh, firefox, git, etc
 - [ ] Add SSH keys to our NixOS to allow us to SSH into the machine
 - [ ] Fix nvim config issue with respect to init.lua and init.vim. Open any file with nvim to see the full error message.
