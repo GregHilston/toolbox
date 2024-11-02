@@ -36,7 +36,11 @@ TODO update once we have finished our `justfile`
 - [example of separating out per program configuration](https://github.com/hans-chrstn/.dotfiles/tree/main/home/common/programs)
   - [another example, which separates out gui and tui configs](https://github.com/GaetanLepage/nix-config/tree/master/home/modules)
   - [and another](https://github.com/AlexNabokikh/nix-config/tree/master/files/configs/nvim)
-- [Nerd Fords visualizer and explorer](https://www.nerdfonts.com/)
+- Useful font tools
+  - [Nerd Fords visualizer and explorer](https://www.nerdfonts.com/)
+  - [compare two fonts](https://www.pairandcompare.net/)
+- [Ricing guide with Stylix](https://journix.dev/posts/ricing-linux-has-never-been-easier-nixos-and-stylix/)
+- [Great wallpapers](https://github.com/dharmx/walls/tree/main)
 
 ## TODO
 
