@@ -8,6 +8,12 @@ We have a preconfigured shell available, with all the required tooling. Simply r
 
 I use [just](https://github.com/casey/just) to help make commands more easily runnable. To install it, see [this documentation](https://github.com/casey/just?tab=readme-ov-file#packages).
 
+## NixOs Pattern
+
+1. Our usage of Just will leverage a `--flake` argument, indicating what machine we'll be building and deploying by pointing to a specific section in `flake.nix`.
+2. The machine's `flake.nix` section will point to a `./hosts/[machine-name]`, which will resolve to `./hosts/[machine-name]/default.nix`.
+3. That `./hosts/[machine-name]/default.nix` file will define system things, and point to that machine's `./hosts/[machine-name]/hardware-configuration.nix`, and any and all `./modules/` that are relevant for that machine. For example, like `./modules/home/default.nix` which defines user packages.
+
 ## How To Deploy
 
 TODO update once we have finished our `justfile`
@@ -18,8 +24,6 @@ TODO update once we have finished our `justfile`
 4. `# nixos-rebuild switch`
 
 ## Flake
-
-
 
 ## References
 
