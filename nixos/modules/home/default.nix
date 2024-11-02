@@ -37,6 +37,7 @@
       firefox
 
       # fonts
+      nerdfonts
       jetbrains-mono
     ];
   };
