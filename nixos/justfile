@@ -1,30 +1,27 @@
-install_nvim_lazyvim_distro:
-    if [ ! -d "$HOME/.config/nvim/" ]; then
-        echo "Cloning LazyVim starter template..."
-        git clone https://github.com/LazyVim/starter ~/.config/nvim
-    fi
+deploy: 
+    sudo nixos-rebuild switch --flake .#isengard
 
-    echo "Installing LazyVim plugins..."
-    nvim +Lazy sync +qa
+debug:
+    sudo nixos-rebuild switch --flake .#isengard --show-trace --verbose
 
-    echo "Removing ~/.config/nvim/.git directory so we can use this in git ourselves"
-    rm -rf ~/.config/nvim/.git
+up:
+  nix flake update
 
-    echo "LazyVim installation complete!"
+# Update specific input
+# usage: make upp i=home-manager
+upp:
+  nix flake update $(i)
 
-deploy_vm:
-    sudo ln -sf "$HOME/Git/toolbox/nixos/machines/vm/configuration.nix" /etc/nixos/configuration.nix
-    sudo ln -sf "$HOME/Git/toolbox/nixos/machines/vm/hardware-configuration.nix" /etc/nixos/hardware-configuration.nix
-    sudo nixos-rebuild switch
+history:
+  nix profile history --profile /nix/var/nix/profiles/system
 
-    just install_nvim_lazyvim_distro
+repl:
+  nix repl -f flake:nixpkgs
 
-deploy_isengard:
-    sudo ln -sf "$HOME/Git/toolbox/nixos/machines/isengard/configuration.nix" /etc/nixos/configuration.nix
-    sudo ln -sf "$HOME/Git/toolbox/nixos/machines/isengard/hardware-configuration.nix" /etc/nixos/hardware-configuration.nix
-    sudo nixos-rebuild switch
+clean:
+  # remove all generations older than 7 days
+  sudo nix profile wipe-history --profile /nix/var/nix/profiles/system  --older-than 7d
 
-    just install_nvim_lazyvim_distro
-
-update:
-    nixos-rebuild -I nixos-config=$(pwd)/configuration switch
+gc:
+  # garbage collect all unused nix store entries
+  sudo nix-collect-garbage --delete-old
