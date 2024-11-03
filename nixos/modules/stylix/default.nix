@@ -1,5 +1,9 @@
 { pkgs, ... }: 
- 
+
+let
+  opacity = 0.95;
+  fontSize = 11;
+in
 {
   stylix = {
     enable = true;
@@ -22,18 +26,18 @@
       };
 
       sizes = {
-        applications = 12;
-        terminal = 15;
-        desktop = 10;
-        popups = 10;
+        applications = fontSize;
+        desktop = fontSize;
+        popups = fontSize;
+        terminal = fontSize;
       };
     };
 
     opacity = {
-      applications = 1.0;
-      terminal = 1.0;
-      desktop = 1.0;
-      popups = 1.0;
+      applications = opacity;
+      terminal = opacity;
+      desktop = opacity;
+      popups = opacity;
     };
   };
 }
