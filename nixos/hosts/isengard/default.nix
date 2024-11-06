@@ -132,6 +132,7 @@
       ripgrep # Needed for LazyVim
       fd # Needed for LazyVim
       python3
+      pandoc
     ];
 
     # Set session variables
