@@ -1,4 +1,4 @@
-{ vars, pkgs, ... }:
+{ inputs, vars, pkgs, ... }:
 
 {
   imports = [
@@ -6,6 +6,7 @@
     ../programs/tui/neovim
     ../programs/tui/zsh
     ../programs/gui/alacritty
+    ../programs/gui/firefox
   ];
 
   nixpkgs = {
@@ -15,6 +16,11 @@
     };
   };
 
+  nixpkgs.overlays = [
+    inputs.nur.overlay
+  ];
+
+  # User packages. IE not system-packages
   home = {
     username = "${vars.user}";
     homeDirectory = "/home/${vars.user}";
@@ -34,7 +40,6 @@
       spotify
       vlc
       vscode
-      firefox
 
       # fonts
       nerdfonts

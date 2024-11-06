@@ -13,6 +13,8 @@
     };
 
     stylix.url = "github:danth/stylix/release-24.05";
+
+    nur.url = "github:nix-community/NUR";
   };
 
   outputs = inputs@{ self, nixpkgs, ... }:
@@ -39,7 +41,6 @@
           inputs.stylix.nixosModules.stylix
           {
             home-manager = {
-              useGlobalPkgs = true;
               useUserPackages = true;
 	            backupFileExtension = "backup";
             };

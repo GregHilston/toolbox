@@ -21,7 +21,14 @@
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
-  nixpkgs.config.allowUnfree = true;
+  nixpkgs = {
+    overlays = [
+      inputs.nur.overlay
+    ];
+    config = {
+      allowUnfree = true;
+    };
+  };
 
   boot = {
     loader.grub.enable = true;
@@ -130,10 +137,6 @@
     sessionVariables = {
       EDITOR = "nvim";
     };
-  };
-
-  programs = {
-    firefox.enable = true;
   };
 
   fonts.packages = with pkgs; [
