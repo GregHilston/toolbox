@@ -20,7 +20,7 @@
     inputs.nur.overlay
   ];
 
-  # User packages. IE not system-packages
+  # User packages. IE not system packages
   home = {
     username = "${vars.user}";
     homeDirectory = "/home/${vars.user}";
