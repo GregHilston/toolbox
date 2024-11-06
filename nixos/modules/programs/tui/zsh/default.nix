@@ -56,6 +56,7 @@
         lg = "lazygit";
         ll = "ls -l";
         gitCommitUndo = "git reset --soft HEAD\\^";
+        cat = "bat";
       };
       history.size = 10000;
       history.path = "/home/${vars.user}/.zsh_history";

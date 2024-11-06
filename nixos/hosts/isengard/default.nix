@@ -105,8 +105,9 @@
   };
 
   environment = {
-    # Install useful system-wide packages
+    # System packages. IE not user packages
     systemPackages = with pkgs; [
+      bat
       zsh
       tmux
       file
