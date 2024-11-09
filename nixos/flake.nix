@@ -15,6 +15,8 @@
     stylix.url = "github:danth/stylix/release-24.05";
 
     nur.url = "github:nix-community/NUR";
+
+    nix-vscode-extensions.url = "github:nix-community/nix-vscode-extensions";
   };
 
   outputs = inputs@{ self, nixpkgs, ... }:
@@ -25,7 +27,7 @@
         name = "Greg Hilston";
         email = "Gregory.Hilston@gmail.com";
         location = "$HOME/.nix";
-        # terminal = "kitty";
+        terminal = "alacritty";
         editor = "nvim";
         shell = "zsh";
       };
@@ -42,7 +44,7 @@
           {
             home-manager = {
               useUserPackages = true;
-	            backupFileExtension = "backup";
+              backupFileExtension = "backup";
             };
           }
         ];
