@@ -44,6 +44,8 @@ TODO update once we have finished our `justfile`
 
 ## TODO
 
+- [ ] Factor out most of the content from the `hosts/default.nix` file
+- [ ] Add other window managers, like i3 and i3 + KDE
 - [ ] Get nvim copy to clipboard to work. See [here](https://discourse.nixos.org/t/how-to-support-clipboard-for-neovim/9534/3), and [here](https://www.reddit.com/r/neovim/comments/3fricd/easiest_way_to_copy_from_neovim_to_system/)
 - [ ] Add SSH keys to our NixOS to allow us to SSH into the machine
 - [ ] Get VS Code remote to work with this Nix OS installation. Currently, our remote server fails to be set up.
