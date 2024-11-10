@@ -33,21 +33,40 @@
       };
     in
     {
-      nixosConfigurations.isengard = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = {
-          inherit inputs outputs vars;
+      nixosConfigurations = {
+        isengard = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          specialArgs = {
+            inherit inputs outputs vars;
+          };
+          modules = [
+            ./hosts/isengard
+            inputs.stylix.nixosModules.stylix
+            {
+              home-manager = {
+                useUserPackages = true;
+                backupFileExtension = "backup";
+              };
+            }
+          ];
         };
-        modules = [
-          ./hosts/isengard
-          inputs.stylix.nixosModules.stylix
-          {
-            home-manager = {
-              useUserPackages = true;
-              backupFileExtension = "backup";
-            };
-          }
-        ];
+        
+        vm = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          specialArgs = {
+            inherit inputs outputs vars;
+          };
+          modules = [
+            ./hosts/vm
+            inputs.stylix.nixosModules.stylix
+            {
+              home-manager = {
+                useUserPackages = true;
+                backupFileExtension = "backup";
+              };
+            }
+          ];
+        };
       };
     };
 }

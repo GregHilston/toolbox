@@ -13,6 +13,6 @@
     device = "/dev/sda";
     useOSProber = true;
   };
-
+  
   powerManagement.powertop.enable = true;
 }

@@ -1,8 +1,14 @@
-deploy: 
-    sudo nixos-rebuild switch --flake .#isengard
+# Deploy to a specific host
+deploy host:
+    sudo nixos-rebuild switch --flake .#{{host}}
 
-debug:
-    sudo nixos-rebuild switch --flake .#isengard --show-trace --verbose
+# Debug deployment to a specific host
+debug host:
+    sudo nixos-rebuild switch --flake .#{{host}} --show-trace --verbose
+
+# List available hosts (assuming they're in the hosts directory)
+list-hosts:
+    @ls hosts/
 
 up:
   nix flake update
