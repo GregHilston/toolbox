@@ -7,6 +7,7 @@
     ../programs/tui/zsh
     ../programs/gui/alacritty
     ../programs/gui/firefox
+    ../programs/gui/vscode
   ];
 
   nixpkgs = {
@@ -18,6 +19,7 @@
 
   nixpkgs.overlays = [
     inputs.nur.overlay
+    inputs.nix-vscode-extensions.overlays.default
   ];
 
   # User packages. IE not system packages

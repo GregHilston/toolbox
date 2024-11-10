@@ -24,6 +24,7 @@
   nixpkgs = {
     overlays = [
       inputs.nur.overlay
+      inputs.nix-vscode-extensions.overlays.default
     ];
     config = {
       allowUnfree = true;
@@ -57,6 +58,8 @@
       LC_TIME = "en_US.UTF-8";
     };
   };
+
+  programs.nix-ld.enable = true; # mainly for vscode extensions
 
   virtualisation.docker.enable = true;
 
