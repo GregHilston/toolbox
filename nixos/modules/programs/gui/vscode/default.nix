@@ -4,7 +4,7 @@
     package = pkgs.vscode;
     enableUpdateCheck = false;
     enableExtensionUpdateCheck = false;
-    mutableExtensionsDir = true;
+    mutableExtensionsDir = false;
 
     # Add extensions that are in Nix OS package manager
     extensions = with pkgs.vscode-extensions; [
@@ -13,11 +13,11 @@
       ms-vscode-remote.remote-ssh-edit
       ms-azuretools.vscode-docker
 
-      # vim
+      # tools
       vscodevim.vim
       vspacecode.whichkey
 
-      # Languages
+      # languages
       golang.go
       ms-python.python
       jnoortheen.nix-ide
