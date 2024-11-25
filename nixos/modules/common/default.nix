@@ -69,11 +69,6 @@
       alsa.support32Bit = true;
       pulse.enable = true;
     };
-
-    openssh = {
-      enable = true;
-      settings.X11Forwarding = true;
-    };
   };
 
   security.rtkit.enable = true;

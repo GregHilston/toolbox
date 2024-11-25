@@ -27,19 +27,17 @@
     username = "${vars.user}";
     homeDirectory = "/home/${vars.user}";
     packages = with pkgs; [
-      bitwarden
+      # bitwarden
       chromium
-      discord
+      # discord
       dmenu
       firefox
       ncdu
       obsidian
       ollama
-      slack
-      spotify
+      # slack
+      # spotify
       ripgrep
-      slack
-      spotify
       vlc
       vscode
 
