@@ -1,8 +1,28 @@
-deploy: 
-    sudo nixos-rebuild switch --flake .#isengard
+# Deploy to a specific host
+# Usage: $ deploy host <host name>
+deploy host:
+  sudo nixos-rebuild switch --flake .#{{host}}
 
-debug:
-    sudo nixos-rebuild switch --flake .#isengard --show-trace --verbose
+# Debug deployment to a specific host
+# Usage: $ debug host <host name>
+debug host:
+  sudo nixos-rebuild switch --flake .#{{host}} --show-trace --verbose
+
+# List available hosts (assuming they're in the hosts directory)
+list-hosts:
+  @ls hosts/
+
+# List past NixOS generations
+list-generations:
+  nix-env --list-generations
+
+# Delete specific generations
+delete-specific-generations generations:
+  nix-collect-garbage --delete-generations #{{generations}}
+
+# Delete all old generations. Can remove sudo to remove not remove system packages
+delete-all-old-generations:
+  sudo nix-collect-garbage --delete-old
 
 up:
   nix flake update
