@@ -19,7 +19,7 @@
 
       # languages
       golang.go
-      ms-python.python
+      # ms-python.python
       jnoortheen.nix-ide
       golang.go
       mikestead.dotenv

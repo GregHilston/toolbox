@@ -27,26 +27,26 @@
     username = "${vars.user}";
     homeDirectory = "/home/${vars.user}";
     packages = with pkgs; [
-      bitwarden
       chromium
-      discord
       dmenu
       firefox
       ncdu
       obsidian
       ollama
-      slack
-      spotify
       ripgrep
-      slack
-      spotify
       vlc
       vscode
 
       # fonts
       nerdfonts
       jetbrains-mono
-    ];
+    ] ++ (if pkgs.stdenv.hostPlatform.system != "aarch64-linux" then [
+      # ARM does not support every package, so only install these if we're not on an ARM basd architecture
+      bitwarden
+      discord
+      slack
+      spotify
+    ] else []);
   };
 
   programs.home-manager.enable = true;
