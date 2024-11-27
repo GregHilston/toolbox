@@ -19,7 +19,7 @@
     nix-vscode-extensions.url = "github:nix-community/nix-vscode-extensions";
   };
 
-  outputs = inputs@{ self, nixpkgs, ... }:
+  outputs = inputs@{ self, nixpkgs, home-manager, ... }:
     let
       inherit (self) outputs;
       vars = {
@@ -31,23 +31,43 @@
         editor = "nvim";
         shell = "zsh";
       };
+
+      # Helper function to create the home-manager module configuration
+      mkHomeManagerModule = { config, ... }: {
+        home-manager = {
+          useUserPackages = true;
+          backupFileExtension = "backup";
+          users.${vars.user} = {};
+        };
+      };
     in
     {
-      nixosConfigurations.isengard = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = {
-          inherit inputs outputs vars;
+      nixosConfigurations = {
+        isengard = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          specialArgs = {
+            inherit inputs outputs vars;
+          };
+          modules = [
+            ./hosts/isengard
+            inputs.stylix.nixosModules.stylix
+            inputs.home-manager.nixosModules.home-manager
+            mkHomeManagerModule
+          ];
         };
-        modules = [
-          ./hosts/isengard
-          inputs.stylix.nixosModules.stylix
-          {
-            home-manager = {
-              useUserPackages = true;
-              backupFileExtension = "backup";
-            };
-          }
-        ];
+
+        vm = nixpkgs.lib.nixosSystem {
+          system = "aarch64-linux";
+          specialArgs = {
+            inherit inputs outputs vars;
+          };
+          modules = [
+            ./hosts/vms/arm
+            inputs.stylix.nixosModules.stylix
+            inputs.home-manager.nixosModules.home-manager
+            mkHomeManagerModule
+          ];
+        };
       };
     };
 }
