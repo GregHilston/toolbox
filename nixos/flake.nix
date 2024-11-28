@@ -56,7 +56,20 @@
           ];
         };
 
-        vm = nixpkgs.lib.nixosSystem {
+        vm-x86 = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          specialArgs = {
+            inherit inputs outputs vars;
+          };
+          modules = [
+            ./hosts/vms/arm
+            inputs.stylix.nixosModules.stylix
+            inputs.home-manager.nixosModules.home-manager
+            mkHomeManagerModule
+          ];
+        };
+
+        vm-arm = nixpkgs.lib.nixosSystem {
           system = "aarch64-linux";
           specialArgs = {
             inherit inputs outputs vars;
