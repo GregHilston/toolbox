@@ -10,7 +10,7 @@
 
   boot.loader.grub = {
     enable = true;
-    device = "/dev/vda";  # Typical for VMs
+    device = "/dev/sda";  # Typical for VMs
     useOSProber = false;  # Usually not needed in VMs
   };
 
