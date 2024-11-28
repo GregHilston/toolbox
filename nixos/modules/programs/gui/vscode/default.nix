@@ -47,7 +47,6 @@
       # }
     ];
 
-    # Rest of your VS Code configuration remains the same
     userSettings = {
       "vim.handleKeys" = {
         # Disables the usage of `CTRL + p` for Vim, so we can let VSCode use that for opening the file searcher
