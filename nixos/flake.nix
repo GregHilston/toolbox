@@ -21,23 +21,14 @@
 
   outputs = inputs@{ self, nixpkgs, home-manager, ... }:
     let
-      inherit (self) outputs;
-      vars = {
-        user = "ghilston";
-        name = "Greg Hilston";
-        email = "Gregory.Hilston@gmail.com";
-        location = "$HOME/.nix";
-        terminal = "alacritty";
-        editor = "nvim";
-        shell = "zsh";
-      };
+      vars = import ./config/vars.nix { inherit (nixpkgs) lib; };
 
       # Helper function to create the home-manager module configuration
       mkHomeManagerModule = { config, ... }: {
         home-manager = {
           useUserPackages = true;
           backupFileExtension = "backup";
-          users.${vars.user} = {};
+          users.${vars.user.name} = {};
         };
       };
     in
@@ -46,7 +37,8 @@
         isengard = nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           specialArgs = {
-            inherit inputs outputs vars;
+            inherit inputs vars;
+            outputs = self;
           };
           modules = [
             ./hosts/pcs/isengard
@@ -59,7 +51,8 @@
         vm-x86 = nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           specialArgs = {
-            inherit inputs outputs vars;
+            inherit inputs vars;
+            outputs = self;
           };
           modules = [
             ./hosts/vms/x86_64
@@ -72,7 +65,8 @@
         vm-arm = nixpkgs.lib.nixosSystem {
           system = "aarch64-linux";
           specialArgs = {
-            inherit inputs outputs vars;
+            inherit inputs vars;
+            outputs = self;
           };
           modules = [
             ./hosts/vms/arm

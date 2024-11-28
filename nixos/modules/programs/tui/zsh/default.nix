@@ -59,6 +59,6 @@
         cat = "bat";
       };
       history.size = 10000;
-      history.path = "/home/${vars.user}/.zsh_history";
+      history.path = "/home/${vars.user.name}/.zsh_history";
     };
 }

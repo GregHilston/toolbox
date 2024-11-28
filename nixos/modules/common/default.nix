@@ -15,7 +15,7 @@
     extraSpecialArgs = {
       inherit inputs outputs vars;
     };
-    users.${vars.user} = import ../../modules/home;
+    users.${vars.user.name} = import ../../modules/home;
   };
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -32,12 +32,12 @@
 
   networking.networkmanager.enable = true;
 
-  time.timeZone = "America/New_York";
+  time.timeZone = vars.system.timeZone; 
 
   i18n = {
-    defaultLocale = "en_US.UTF-8";
+    defaultLocale = vars.system.locale;
     extraLocaleSettings = {
-      LC_ADDRESS = "en_US.UTF-8";
+      LC_ADDRESS = vars.system.locale;
       LC_IDENTIFICATION = "en_US.UTF-8";
       LC_MEASUREMENT = "en_US.UTF-8";
       LC_MONETARY = "en_US.UTF-8";
@@ -73,13 +73,13 @@
 
   security.rtkit.enable = true;
 
-  users.users.${vars.user} = {
+  users.users.${vars.user.name} = {
     initialPassword = "password";
     isNormalUser = true;
-    description = "${vars.name}";
+    description = "${vars.user.fullName}";
     extraGroups = [ "networkmanager" "wheel" "input" "docker" ];
     ignoreShellProgramCheck = true;
-    shell = pkgs.${vars.shell};
+    shell = pkgs.${vars.user.packages.shell};
   };
 
   environment = {
