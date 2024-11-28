@@ -17,8 +17,9 @@ See `flake.nix` for machine names, these are based off of `hosts/`.
 ## NixOS Pattern
 
 1. Our usage of Just will leverage a `--flake` argument, passed by the CLI as an argument, indicating what machine we'll be building and deploying by pointing to a specific section in `flake.nix`.
-2. The machine's `flake.nix` section will point to a `./hosts/[machine-name]`, which will resolve to `./hosts/[machine-name]/default.nix`.
-3. That `./hosts/[machine-name]/default.nix` file will define system things, and point to that machine's `./hosts/[machine-name]/hardware-configuration.nix`, and any and all `./modules/` that are relevant for that machine. For example, like `./modules/home/default.nix` which defines user packages.
+2. Configuration variables are defined n `config/vars.nix`. These can be overridden by each `./hosts/`'s `default.nix`. This is done here, as we're using `flake.nix` for system level configurations.
+3. The machine's `flake.nix` section will point to a `./hosts/[machine-name]`, which will resolve to `./hosts/[machine-name]/default.nix`.
+4. That `./hosts/[machine-name]/default.nix` file will define system things, and point to that machine's `./hosts/[machine-name]/hardware-configuration.nix`, and any and all `./modules/` that are relevant for that machine. For example, like `./modules/home/default.nix` which defines user packages.
 
 ## References
 
