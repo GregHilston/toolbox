@@ -62,7 +62,7 @@
             inherit inputs outputs vars;
           };
           modules = [
-            ./hosts/vms/arm
+            ./hosts/vms/x86_64
             inputs.stylix.nixosModules.stylix
             inputs.home-manager.nixosModules.home-manager
             mkHomeManagerModule
