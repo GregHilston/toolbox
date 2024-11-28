@@ -110,6 +110,7 @@
       fd
       python3
       pandoc
+      xclip
     ];
 
     sessionVariables = {
