@@ -49,6 +49,18 @@
 
     # Rest of your VS Code configuration remains the same
     userSettings = {
+      "vim.handleKeys" = {
+        # Disables the usage of `CTRL + p` for Vim, so we can let VSCode use that for opening the file searcher
+        "<C-p>" = false;
+        # Disables the usage of `CTRL + p` for Vim, so we can let VSCode use that for closing a file
+        "<C-w>" = false;
+        # Disables the usage of `CTRL + f` for Vim, so we can let VSCode use that for searching a file
+        "<C-f>" = false;
+        # Disables the usage of `CTRL + n` for Vim, so we can let VSCode use that for opening a file
+        "<C-n>" = false;
+        # Disables the usage of `CTRL + b` for Vim, so we can let VSCode use that for toggling the file explorer
+        "<C-b>" = false;
+      };
     };
 
     keybindings = [
