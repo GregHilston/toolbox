@@ -49,7 +49,7 @@
             inherit inputs outputs vars;
           };
           modules = [
-            ./hosts/isengard
+            ./hosts/pcs/isengard
             inputs.stylix.nixosModules.stylix
             inputs.home-manager.nixosModules.home-manager
             mkHomeManagerModule
