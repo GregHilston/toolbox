@@ -111,6 +111,7 @@
       python3
       pandoc
       xclip
+      gnumake
     ];
 
     sessionVariables = {

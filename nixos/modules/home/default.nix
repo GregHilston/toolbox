@@ -36,6 +36,7 @@
       ripgrep
       vlc
       vscode
+      hugo
 
       # fonts
       nerdfonts
