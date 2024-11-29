@@ -5,6 +5,7 @@
     # Nixpkgs
     nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
     # Home manager
     home-manager = {
@@ -19,7 +20,7 @@
     nix-vscode-extensions.url = "github:nix-community/nix-vscode-extensions";
   };
 
-  outputs = inputs@{ self, nixpkgs, home-manager, ... }:
+  outputs = inputs@{ self, nixpkgs, nixos-hardware, home-manager, ... }:
     let
       vars = import ./config/vars.nix { inherit (nixpkgs) lib; };
 
@@ -41,6 +42,7 @@
             outputs = self;
           };
           modules = [
+            nixos-hardware.nixosModules.lenovo-thinkpad-t420
             ./hosts/pcs/isengard
             inputs.stylix.nixosModules.stylix
             inputs.home-manager.nixosModules.home-manager
