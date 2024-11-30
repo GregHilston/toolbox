@@ -37,6 +37,7 @@
       vlc
       vscode
       hugo
+      texstudio
 
       # fonts
       nerdfonts
