@@ -17,8 +17,9 @@ See `flake.nix` for machine names, these are based off of `hosts/`.
 ## NixOS Pattern
 
 1. Our usage of Just will leverage a `--flake` argument, passed by the CLI as an argument, indicating what machine we'll be building and deploying by pointing to a specific section in `flake.nix`.
-2. The machine's `flake.nix` section will point to a `./hosts/[machine-name]`, which will resolve to `./hosts/[machine-name]/default.nix`.
-3. That `./hosts/[machine-name]/default.nix` file will define system things, and point to that machine's `./hosts/[machine-name]/hardware-configuration.nix`, and any and all `./modules/` that are relevant for that machine. For example, like `./modules/home/default.nix` which defines user packages.
+2. Configuration variables are defined n `config/vars.nix`. These can be overridden by each `./hosts/`'s `default.nix`. This is done here, as we're using `flake.nix` for system level configurations.
+3. The machine's `flake.nix` section will point to a `./hosts/[machine-name]`, which will resolve to `./hosts/[machine-name]/default.nix`.
+4. That `./hosts/[machine-name]/default.nix` file will define system things, and point to that machine's `./hosts/[machine-name]/hardware-configuration.nix`, and any and all `./modules/` that are relevant for that machine. For example, like `./modules/home/default.nix` which defines user packages.
 
 ## References
 
@@ -39,9 +40,6 @@ See `flake.nix` for machine names, these are based off of `hosts/`.
 
 ## TODO
 
-- [ ] Factor out most of the content from the `hosts/default.nix` file
 - [ ] Add other window managers, like i3 and i3 + KDE
 - [ ] Get nvim copy to clipboard to work. See [here](https://discourse.nixos.org/t/how-to-support-clipboard-for-neovim/9534/3), and [here](https://www.reddit.com/r/neovim/comments/3fricd/easiest_way_to_copy_from_neovim_to_system/)
-- [ ] Add SSH keys to our NixOS to allow us to SSH into the machine
 - [ ] Get VS Code remote to work with this Nix OS installation. Currently, our remote server fails to be set up.
-- [ ] Leverage [nixos-hardware](https://github.com/NixOS/nixos-hardware) for our Lenovo Thinkpad T420, and Lenovo Thinkpad x201.

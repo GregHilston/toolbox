@@ -24,8 +24,8 @@
 
   # User packages. IE not system packages
   home = {
-    username = "${vars.user}";
-    homeDirectory = "/home/${vars.user}";
+    username = "${vars.user.name}";
+    homeDirectory = "/home/${vars.user.name}";
     packages = with pkgs; [
       chromium
       dmenu
@@ -36,6 +36,8 @@
       ripgrep
       vlc
       vscode
+      hugo
+      texstudio
 
       # fonts
       nerdfonts

@@ -57,8 +57,10 @@
         ll = "ls -l";
         gitCommitUndo = "git reset --soft HEAD\\^";
         cat = "bat";
+        # Copies a file's contents into the system's clipboard.
+        clip = "xclip -sel clip <";
       };
       history.size = 10000;
-      history.path = "/home/${vars.user}/.zsh_history";
+      history.path = "/home/${vars.user.name}/.zsh_history";
     };
 }
