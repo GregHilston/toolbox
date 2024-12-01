@@ -1,0 +1,9 @@
+{ ... }:
+
+{
+  imports = [
+    ./git
+    ./neovim
+    ./zsh
+  ];
+}

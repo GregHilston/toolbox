@@ -2,12 +2,8 @@
 
 {
   imports = [
-    ../programs/tui/git
-    ../programs/tui/neovim
-    ../programs/tui/zsh
-    ../programs/gui/alacritty
-    ../programs/gui/firefox
-    ../programs/gui/vscode
+    ../programs/tui
+    ../programs/gui
   ];
 
   nixpkgs = {
