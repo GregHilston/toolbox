@@ -8,11 +8,9 @@
 
   networking.hostName = "nixos-vm";
 
-  boot.loader.grub = {
-    enable = true;
-    device = "/dev/vda";  # Typical for VMs
-    useOSProber = false;  # Usually not needed in VMs
-  };
+  # Use the systemd-boot EFI boot loader.
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
 
   services.spice-vdagentd.enable = true;
   services.qemuGuest.enable = true;
