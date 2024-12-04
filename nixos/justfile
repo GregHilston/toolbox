@@ -14,7 +14,7 @@ list-hosts:
 
 # List past NixOS generations
 list-generations:
-  nix-env --list-generations
+  sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
 
 # Delete specific generations
 delete-specific-generations generations:
@@ -33,7 +33,7 @@ upp:
   nix flake update $(i)
 
 history:
-  nix profile history --profile /nix/var/nix/profiles/system
+  sudo nix profile history --profile /nix/var/nix/profiles/system
 
 repl:
   nix repl -f flake:nixpkgs
