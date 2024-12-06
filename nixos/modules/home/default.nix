@@ -34,6 +34,7 @@
       vscode
       hugo
       texstudio
+      godot_4
 
       # fonts
       nerdfonts
