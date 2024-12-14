@@ -5,6 +5,7 @@
     # Nixpkgs
     nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixos-wsl.url = "github:nix-community/NixOS-WSL/main";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
     # Home manager
@@ -35,6 +36,21 @@
     in
     {
       nixosConfigurations = {
+        foundation = nixpkgs-unstable.lib.nixosSystem {
+          system = "x86_64-linux";
+          specialArgs = {
+            inherit inputs vars;
+            outputs = self;
+          };
+          modules = [
+	    nixos-wsl.nixosModules.default
+            {
+              system.stateVersion = "24.05";
+              wsl.enable = true;
+            }
+          ];
+        };
+
         isengard = nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           specialArgs = {
