@@ -37,7 +37,7 @@
   wsl = {
     enable = true;
     nativeSystemd = true;
-    defaultUser = "nixos"; #vars.user.name;
+    defaultUser = vars.user.name;
     startMenuLaunchers = true;
     wslConf = {
       automount.root = "/mnt";
