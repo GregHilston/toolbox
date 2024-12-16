@@ -2,7 +2,7 @@
 
 {
   imports = [
-    #../../../modules/common
+    ../../../modules/common
   ];
 
   networking.hostName = "foundation";

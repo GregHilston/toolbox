@@ -44,6 +44,9 @@
           };
           modules = [
 	    nixos-wsl.nixosModules.default
+            ./hosts/pcs/foundation
+            inputs.home-manager.nixosModules.home-manager
+            mkHomeManagerModule
             {
               system.stateVersion = "24.05";
               # Based on: 
