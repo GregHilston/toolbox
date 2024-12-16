@@ -21,7 +21,7 @@
     nix-vscode-extensions.url = "github:nix-community/nix-vscode-extensions";
   };
 
-  outputs = inputs@{ self, nixpkgs, nixos-hardware, home-manager, ... }:
+  outputs = inputs@{ self, nixpkgs, nixpkgs-unstable, nixos-wsl, nixos-hardware, home-manager, ... }:
     let
       vars = import ./config/vars.nix { inherit (nixpkgs) lib; };
 
@@ -46,8 +46,15 @@
 	    nixos-wsl.nixosModules.default
             {
               system.stateVersion = "24.05";
-              wsl.enable = true;
-            }
+              # Based on: 
+              # https://github.com/Atry/nixos-wsl-vscode/blob/main/flake.nix#L43
+              wsl = {
+                enable = true;
+                wslConf.automount.root = "/mnt";
+                defaultUser = "nixos";
+                startMenuLaunchers = true;
+                useWindowsDriver = true;
+              };            }
           ];
         };
 
