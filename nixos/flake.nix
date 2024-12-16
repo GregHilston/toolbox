@@ -45,19 +45,9 @@
           modules = [
 	    nixos-wsl.nixosModules.default
             ./hosts/pcs/foundation
+            inputs.stylix.nixosModules.stylix
             inputs.home-manager.nixosModules.home-manager
             mkHomeManagerModule
-            {
-              system.stateVersion = "24.05";
-              # Based on: 
-              # https://github.com/Atry/nixos-wsl-vscode/blob/main/flake.nix#L43
-              wsl = {
-                enable = true;
-                wslConf.automount.root = "/mnt";
-                defaultUser = "nixos";
-                startMenuLaunchers = true;
-                useWindowsDriver = true;
-              };            }
           ];
         };
 
