@@ -21,6 +21,21 @@ See `flake.nix` for machine names, these are based off of `hosts/`.
 3. The machine's `flake.nix` section will point to a `./hosts/[machine-name]`, which will resolve to `./hosts/[machine-name]/default.nix`.
 4. That `./hosts/[machine-name]/default.nix` file will define system things, and point to that machine's `./hosts/[machine-name]/hardware-configuration.nix`, and any and all `./modules/` that are relevant for that machine. For example, like `./modules/home/default.nix` which defines user packages.
 
+## How To Update To New Version
+
+1. In your flake.nix, you need to update the following inputs:
+
+```nix
+nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
+home-manager = {
+  url = "github:nix-community/home-manager/release-24.11";
+  inputs.nixpkgs.follows = "nixpkgs";
+};
+stylix.url = "github:danth/stylix/release-24.11";
+```
+2. Update your flake.lock file: `$ nix flake update`
+3. Then rebuild your system: `$ just deploy <host-name>`
+
 ## References
 
 - [krisztian fekete write's some NixOS tips and organization of your repo](https://krisztianfekete.org/nine-months-of-nixos/)
