@@ -34,6 +34,8 @@
       hugo
       texstudio
       godot_4
+      go
+      duckdb
 
       # fonts
       nerdfonts
