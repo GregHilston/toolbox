@@ -14,7 +14,7 @@
     extraPackages = with pkgs; [
       imagemagick
 
-      # Language Servers
+      # Language Servers (LSP)
       erlang_26
       elixir
       elixir_ls
@@ -24,6 +24,7 @@
       nodePackages_latest.svelte-language-server
       pyright
       nodePackages."@tailwindcss/language-server"
+      gopls
 
       # Formatters
       black
