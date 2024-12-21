@@ -104,7 +104,6 @@
       ncdu
       just
       gcc
-      nerdfonts
       lazygit
       ripgrep
       fd
@@ -118,10 +117,6 @@
       EDITOR = "nvim";
     };
   };
-
-  fonts.packages = with pkgs; [
-    nerdfonts
-  ];
 
   system.stateVersion = "24.05";
 }
