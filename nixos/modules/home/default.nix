@@ -25,7 +25,6 @@
     packages = with pkgs; [
       chromium
       dmenu
-      firefox
       ncdu
       obsidian
       ollama
