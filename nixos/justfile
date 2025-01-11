@@ -1,12 +1,12 @@
 # Deploy to a specific host
 # Usage: $ deploy host <host name>
 deploy host:
-  sudo nixos-rebuild switch --flake .#{{host}}
+  NIXPKGS_ALLOW_INSECURE=1 NIXPKGS_ALLOW_UNFREE=1 sudo -E nixos-rebuild switch --flake .#{{host}} --impure
 
 # Debug deployment to a specific host
 # Usage: $ debug host <host name>
 debug host:
-  sudo nixos-rebuild switch --flake .#{{host}} --show-trace --verbose
+  NIXPKGS_ALLOW_INSECURE=1 NIXPKGS_ALLOW_UNFREE=1 sudo -E nixos-rebuild switch --flake .#{{host}} --show-trace --verbose --impure
 
 # List available hosts (assuming they're in the hosts directory)
 list-hosts:
