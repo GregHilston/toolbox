@@ -23,7 +23,7 @@
     flake-utils.url = "github:numtide/flake-utils";
 
     claude-desktop = {
-      url = "github:k3d3/claude-desktop-linux-flake";
+      url = "github:nonsleepr/claude-desktop-linux-flake";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         flake-utils.follows = "flake-utils";
