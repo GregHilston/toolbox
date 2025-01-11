@@ -1,11 +1,13 @@
 # Deploy to a specific host
 # Usage: $ deploy host <host name>
 deploy host:
+  # TODO figure out why the two NIXPGS and --impure are needed here. Should be a part of our configuration files...
   NIXPKGS_ALLOW_INSECURE=1 NIXPKGS_ALLOW_UNFREE=1 sudo -E nixos-rebuild switch --flake .#{{host}} --impure
 
 # Debug deployment to a specific host
 # Usage: $ debug host <host name>
 debug host:
+  # TODO figure out why the two NIXPGS and --impure are needed here. Should be a part of our configuration files...
   NIXPKGS_ALLOW_INSECURE=1 NIXPKGS_ALLOW_UNFREE=1 sudo -E nixos-rebuild switch --flake .#{{host}} --show-trace --verbose --impure
 
 # List available hosts (assuming they're in the hosts directory)
