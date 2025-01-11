@@ -19,6 +19,16 @@
     nur.url = "github:nix-community/NUR";
 
     nix-vscode-extensions.url = "github:nix-community/nix-vscode-extensions";
+
+    flake-utils.url = "github:numtide/flake-utils";
+
+    claude-desktop = {
+      url = "github:k3d3/claude-desktop-linux-flake";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-utils.follows = "flake-utils";
+      };
+    };
   };
 
   outputs = inputs@{ self, nixpkgs, nixpkgs-unstable, nixos-wsl, nixos-hardware, home-manager, ... }:
