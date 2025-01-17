@@ -38,8 +38,15 @@
       duckdb
 
       # fonts
+<<<<<<< Updated upstream
       nerd-fonts.jetbrains-mono
       jetbrains-mono
+=======
+      # nerd-fonts.jetbrains-mono
+      # jetbrains-mono
+
+      inputs.claude-desktop.packages.${system}.claude-desktop
+>>>>>>> Stashed changes
     ] ++ (if pkgs.stdenv.hostPlatform.system != "aarch64-linux" then [
       # ARM does not support every package, so only install these if we're not on an ARM basd architecture
       bitwarden
