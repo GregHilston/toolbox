@@ -21,6 +21,8 @@
                 { "PackageIdentifier": "OpenJS.NodeJS" },
                 { "PackageIdentifier": "astral-sh.uv" },
                 { "PackageIdentifier": "Sniptool.Sniptool" },
+                { "PackageIdentifier": "Microsoft.Skype" },
+                { "PackageIdentifier": "Postman.Postman" },
             ],
             "SourceDetails": {
                 "Argument": "https://cdn.winget.microsoft.com/cache",
