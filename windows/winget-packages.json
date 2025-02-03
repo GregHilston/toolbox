@@ -23,6 +23,7 @@
                 { "PackageIdentifier": "Sniptool.Sniptool" },
                 { "PackageIdentifier": "Microsoft.Skype" },
                 { "PackageIdentifier": "Postman.Postman" },
+                { "PackageIdentifier": "calibre.calibre" },
             ],
             "SourceDetails": {
                 "Argument": "https://cdn.winget.microsoft.com/cache",
