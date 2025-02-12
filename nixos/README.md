@@ -37,7 +37,7 @@ home-manager = {
 };
 stylix.url = "github:danth/stylix/release-24.11";
 ```
-2. Update your flake.lock file: `$ nix flake update`
+2. Update your flake.lock file: `$ nix flake update`. This command can take a while.
 3. Then rebuild your system: `$ just deploy <host-name>`
 
 ## References
