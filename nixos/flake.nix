@@ -43,7 +43,7 @@
             outputs = self;
           };
           modules = [
-	    nixos-wsl.nixosModules.default
+	          nixos-wsl.nixosModules.default
             ./hosts/pcs/foundation
             inputs.stylix.nixosModules.stylix
             inputs.home-manager.nixosModules.home-manager
@@ -51,7 +51,7 @@
           ];
         };
 
-        isengard = nixpkgs.lib.nixosSystem {
+        isengard = nixpkgs-unstable.lib.nixosSystem {
           system = "x86_64-linux";
           specialArgs = {
             inherit inputs vars;
