@@ -21,6 +21,10 @@ See `flake.nix` for machine names, these are based off of `hosts/`.
 3. The machine's `flake.nix` section will point to a `./hosts/[machine-name]`, which will resolve to `./hosts/[machine-name]/default.nix`.
 4. That `./hosts/[machine-name]/default.nix` file will define system things, and point to that machine's `./hosts/[machine-name]/hardware-configuration.nix`, and any and all `./modules/` that are relevant for that machine. For example, like `./modules/home/default.nix` which defines user packages.
 
+## To View Your NixOs Version
+
+`$ nixos-version`
+
 ## How To Update To New Version
 
 1. In your flake.nix, you need to update the following inputs:
