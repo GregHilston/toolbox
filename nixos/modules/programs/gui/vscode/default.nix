@@ -45,6 +45,12 @@
       #   version = "0.107.2024030816";
       #   sha256 = "sha256-yoursha256here"; # Replace with actual SHA
       # }
+      {
+        name = "copilot";
+        publisher = "GitHub";
+        version = "1.270.1373";
+        sha256 = "sha256-5HlZKJQBdzXBjWki5owYD9vMo72A/6ukoDNgzIIaJt8=";
+      }
     ];
 
     userSettings = {
