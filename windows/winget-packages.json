@@ -24,6 +24,8 @@
                 { "PackageIdentifier": "Microsoft.Skype" },
                 { "PackageIdentifier": "Postman.Postman" },
                 { "PackageIdentifier": "calibre.calibre" },
+                { "PackageIdentifier": "LizardByte.Sunshine" },
+                { "PackageIdentifier": "TeXstudio.TeXstudio" },
             ],
             "SourceDetails": {
                 "Argument": "https://cdn.winget.microsoft.com/cache",
