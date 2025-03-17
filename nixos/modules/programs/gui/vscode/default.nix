@@ -38,18 +38,19 @@
       pkief.material-icon-theme
     ] ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
       # Add extensions that aren't in nixpkgs but are in the marketplace
-      
-      # {
-      #   name = "remote-ssh";
-      #   publisher = "ms-vscode-remote";
-      #   version = "0.107.2024030816";
-      #   sha256 = "sha256-yoursha256here"; # Replace with actual SHA
-      # }
+      # https://marketplace.visualstudio.com/items?itemName=GitHub.copilot
       {
         name = "copilot";
         publisher = "GitHub";
         version = "1.270.1373";
         sha256 = "sha256-5HlZKJQBdzXBjWki5owYD9vMo72A/6ukoDNgzIIaJt8=";
+      }
+      # https://marketplace.visualstudio.com/items?itemName=RooVeterinaryInc.roo-cline
+      {
+        name = "roo-cline";
+        publisher = "RooVeterinaryInc";
+        version = "3.3.19";
+        sha256 = "sha256-4IA9r6yJCn7pJqsCd+WvoEMfjp2K3FvzbTudCjFiqKg=";
       }
     ];
 
