@@ -26,6 +26,8 @@
                 { "PackageIdentifier": "calibre.calibre" },
                 { "PackageIdentifier": "LizardByte.Sunshine" },
                 { "PackageIdentifier": "TeXstudio.TeXstudio" },
+                { "PackageIdentifier": "MiKTeX.MiKTeX" },
+                { "PackageIdentifier": "DBBrowserForSQLite.DBBrowserForSQLite" },
             ],
             "SourceDetails": {
                 "Argument": "https://cdn.winget.microsoft.com/cache",
