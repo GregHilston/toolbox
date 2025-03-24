@@ -28,6 +28,7 @@
                 { "PackageIdentifier": "TeXstudio.TeXstudio" },
                 { "PackageIdentifier": "MiKTeX.MiKTeX" },
                 { "PackageIdentifier": "DBBrowserForSQLite.DBBrowserForSQLite" },
+                { "PackageIdentifier": "dbeaver.dbeaver" },
             ],
             "SourceDetails": {
                 "Argument": "https://cdn.winget.microsoft.com/cache",
