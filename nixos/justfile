@@ -1,10 +1,15 @@
 # Deploy to a specific host
-# Usage: $ deploy host <host name>
+# Usage: $ just deploy host <host name>
 deploy host:
   sudo nixos-rebuild switch --flake .#{{host}}
 
+# Upgrade a specific host
+# Usage: $ just deploy host <host name>
+upgrade host:
+  sudo nixos-rebuild --upgrade switch --flake .#{{host}}
+
 # Debug deployment to a specific host
-# Usage: $ debug host <host name>
+# Usage: $ just debug host <host name>
 debug host:
   sudo nixos-rebuild switch --flake .#{{host}} --show-trace --verbose
 
