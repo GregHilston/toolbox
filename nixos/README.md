@@ -37,8 +37,9 @@ home-manager = {
 };
 stylix.url = "github:danth/stylix/release-24.11";
 ```
-2. Update your flake.lock file: `$ nix flake update`. This command can take a while.
-3. Then rebuild your system: `$ just deploy <host-name>`
+2. Make sure that your `flake.nix`'s configuration for the target machine has a URL that looks like `nixpkgs-unstable.lib.nixosSystem`
+// 3. Update your flake.lock file: `$ nix flake update`. This command can take a while.
+4. Then rebuild your system: `$ just upgrade <host-name>`
 
 ## References
 
