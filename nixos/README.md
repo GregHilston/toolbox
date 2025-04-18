@@ -64,3 +64,4 @@ stylix.url = "github:danth/stylix/release-24.11";
 - [ ] Add other window managers, like i3 and i3 + KDE
 - [ ] Get nvim copy to clipboard to work. See [here](https://discourse.nixos.org/t/how-to-support-clipboard-for-neovim/9534/3), and [here](https://www.reddit.com/r/neovim/comments/3fricd/easiest_way_to_copy_from_neovim_to_system/)
 - [ ] Get VS Code remote to work with this Nix OS installation. Currently, our remote server fails to be set up.
+- [ ] Install https://github.com/mistricky/codesnap.nvim
