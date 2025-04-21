@@ -1,15 +1,20 @@
 # Deploy to a specific host
-# Usage: $ just deploy host <host name>
+# Usage: $ just deploy <host name>
 deploy host:
   sudo nixos-rebuild switch --flake .#{{host}}
 
+# Deploy to a specific nix-darwin host
+# Usage: $ just deploy-darwin <host name>
+deploy-darwin host:
+  nix run nix-darwin --extra-experimental-features "nix-command flakes" -- switch --flake .#{{host}}
+
 # Upgrade a specific host
-# Usage: $ just deploy host <host name>
+# Usage: $ just upgrade <host name>
 upgrade host:
   sudo nixos-rebuild --upgrade switch --flake .#{{host}}
 
 # Debug deployment to a specific host
-# Usage: $ just debug host <host name>
+# Usage: $ just debug <host name>
 debug host:
   sudo nixos-rebuild switch --flake .#{{host}} --show-trace --verbose
 
