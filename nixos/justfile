@@ -13,6 +13,20 @@ upgrade host:
 debug host:
   sudo nixos-rebuild switch --flake .#{{host}} --show-trace --verbose
 
+# Deploy to a Darwin (macOS) machine
+# Usage: $ just deploy darwin <host name>
+# Example: $ darwin-rebuild switch --flake .#moria
+deploy darwin host:
+  darwin-rebuild switch --flake .#{{host}}
+
+# Upgrade a Darwin machine (rebuild with updated flake inputs)
+upgrade darwin host:
+  nix flake update && darwin-rebuild switch --flake .#{{host}}
+
+# Debug deployment to a Darwin machine
+debug darwin host:
+  darwin-rebuild switch --flake .#{{host}} --show-trace --verbose
+
 # List available hosts (assuming they're in the hosts directory)
 list-hosts:
   @ls hosts/
