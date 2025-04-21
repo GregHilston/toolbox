@@ -33,7 +33,7 @@
       vscode
       hugo
       texstudio
-      godot_4
+      # godot_4
       go
       duckdb
 

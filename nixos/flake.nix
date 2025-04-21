@@ -4,12 +4,14 @@
   inputs = {
     # Nixpkgs
     # TODO consider setting this to "github:nixos/nixpkgs/nixpkgs-unstable"; instead, IE unstable and no version directly mentioned, IE latest
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
     nixos-wsl.url = "github:nix-community/NixOS-WSL/main";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
-    nix-darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-24.11";
-    nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
+    darwin = {
+        url = "github:nix-darwin/nix-darwin/master";
+        inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Home manager
     home-manager = {
@@ -91,6 +93,20 @@
           };
           modules = [
             ./hosts/vms/arm
+            inputs.stylix.nixosModules.stylix
+            inputs.home-manager.nixosModules.home-manager
+            mkHomeManagerModule
+          ];
+        };
+
+	mines = nixpkgs.lib.nixosSystem {
+          system = "aarch64-linux";
+          specialArgs = {
+            inherit inputs vars;
+            outputs = self;
+          };
+          modules = [
+            ./hosts/vms/mines
             inputs.stylix.nixosModules.stylix
             inputs.home-manager.nixosModules.home-manager
             mkHomeManagerModule
