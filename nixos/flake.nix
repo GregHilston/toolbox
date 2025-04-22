@@ -189,8 +189,25 @@
                 homebrew.enable = true;
                 homebrew.global.autoUpdate = false;
                 homebrew.onActivation.cleanup = "zap";
-                homebrew.brews = [ ];
-                homebrew.casks = [ "firefox" ];
+                homebrew.brews = [
+                  
+                ];
+                homebrew.casks = [
+                  "alacritty"
+                  "bartender"
+                  "bitwarden"
+                  "discord"
+                  "docker"
+                  "firefox"
+                  "nvm"
+                  "obsidian"
+                  "postman"
+                  "raycast"
+                  "slack"
+                  "spotify"
+                  "visual-studio-code"
+                  "vlc"
+                ];
             })
 
             # Enable Home Manager integration for macOS
