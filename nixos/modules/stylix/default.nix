@@ -1,10 +1,7 @@
-{ pkgs, ... }: 
-
-let
+{pkgs, ...}: let
   opacity = 0.95;
   fontSize = 11;
-in
-{
+in {
   stylix = {
     enable = true;
     image = ./a-house-in-the-snow.png;
@@ -12,18 +9,25 @@ in
     base16Scheme = "${pkgs.base16-schemes}/share/themes/gruvbox-dark-medium.yaml";
 
     fonts = {
-      monospace = {
-        package = pkgs.nerd-fonts.jetbrains-mono;
-        name = "JetBrainsMono Nerd Font Mono";
+      # Set each font family individually
+      serif = {
+        package = pkgs.dejavu_fonts;
+        name = "DejaVu Serif";
       };
       sansSerif = {
         package = pkgs.dejavu_fonts;
         name = "DejaVu Sans";
       };
-      serif = {
-        package = pkgs.dejavu_fonts;
-        name = "DejaVu Serif";
+      monospace = {
+        # CHANGED: Use the new individual package for JetBrains Mono Nerd Font
+        package = pkgs.nerd-fonts.jetbrains-mono; # This is the corrected line
+        name = "JetBrainsMono Nerd Font Mono";
       };
+      # Optionally, you can add emoji support
+      # emoji = {
+      #   package = pkgs.noto-fonts-emoji;
+      #   name = "Noto Color Emoji";
+      # };
 
       sizes = {
         applications = fontSize;

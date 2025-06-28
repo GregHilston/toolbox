@@ -1,6 +1,9 @@
-{ inputs, vars, pkgs, ... }:
-
 {
+  inputs,
+  vars,
+  pkgs,
+  ...
+}: {
   imports = [
     ../programs/tui
     ../programs/gui
@@ -14,7 +17,7 @@
   };
 
   nixpkgs.overlays = [
-    inputs.nur.overlay
+    inputs.nur.overlays.default
     inputs.nix-vscode-extensions.overlays.default
   ];
 
@@ -22,34 +25,42 @@
   home = {
     username = "${vars.user.name}";
     homeDirectory = "/home/${vars.user.name}";
-    packages = with pkgs; [
-      chromium
-      dmenu
-      ncdu
-      obsidian
-      ollama
-      ripgrep
-      vlc
-      vscode
-      hugo
-      texstudio
-      godot_4
-      go
-      duckdb
+    packages = with pkgs;
+      [
+        chromium
+        dmenu
+        ncdu
+        obsidian
+        ollama
+        ripgrep
+        vlc
+        vscode
+        hugo
+        texstudio
+        godot_4
+        go
+        duckdb
 
-      # fonts
-      nerd-fonts.jetbrains-mono
-      jetbrains-mono
+        # fonts
+        nerd-fonts.jetbrains-mono
+        jetbrains-mono
 
-      # inputs.claude-desktop.packages.${system}.claude-desktop
-    ] ++ (if pkgs.stdenv.hostPlatform.system != "aarch64-linux" then [
-      # ARM does not support every package, so only install these if we're not on an ARM basd architecture
-      bitwarden
-      discord
-      slack
-      spotify
-    ] else []);
+        # inputs.claude-desktop.packages.${system}.claude-desktop
+      ]
+      ++ (
+        if pkgs.stdenv.hostPlatform.system != "aarch64-linux"
+        then [
+          # ARM does not support every package, so only install these if we're not on an ARM basd architecture
+          bitwarden
+          discord
+          slack
+          spotify
+        ]
+        else []
+      );
   };
+
+  services.mako.enable = false;
 
   programs.home-manager.enable = true;
 
