@@ -30,8 +30,8 @@
         };
         search = {
           force = true;
-          default = "google";
-          order = ["google"];
+          default = "Gooogle";
+          order = ["Google"];
           engines = {
             "Nix Packages" = {
               urls = [
@@ -52,15 +52,13 @@
               icon = "''${pkgs.nixos-icons}/share/icons/hicolor/scalable/apps/nix-snowflake.svg";
               definedAliases = ["@np"];
             };
-            "bing".metaData.hidden = true;
-            "google".metaData.alias = "@g"; # builtin engines only support specifying one additional alias
+            "Bing".metaData.hidden = true;
+            "Google".metaData.alias = "@g"; # builtin engines only support specifying one additional alias
           };
         };
 
         # Recall that you have to manually enable these in Firefox on initial install
-        # OLD:extensions = with pkgs.nur.repos.rycee.firefox-addons; [
-        # NEW:
-        extensions.packages = with pkgs.nur.repos.rycee.firefox-addons; [
+        extensions = with pkgs.nur.repos.rycee.firefox-addons; [
           bitwarden
           vimium
           unpaywall

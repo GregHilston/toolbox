@@ -1,6 +1,12 @@
-{ inputs, outputs, lib, config, pkgs, vars, ... }:
-
 {
+  inputs,
+  outputs,
+  lib,
+  config,
+  pkgs,
+  vars,
+  ...
+}: {
   imports = [
     ../../../modules/common
   ];
@@ -11,16 +17,16 @@
   users.users = {
     nixos = {
       isNormalUser = true;
-      extraGroups = [ "wheel" "networkmanager" ];
+      extraGroups = ["wheel" "networkmanager"];
       # Keep nixos user temporarily
     };
     ${vars.user.name} = {
       isNormalUser = true;
-      extraGroups = [ "wheel" "networkmanager" "docker" ];
+      extraGroups = ["wheel" "networkmanager" "docker"];
       initialPassword = "password";
     };
   };
-  
+
   # Override common settings that don't work well in WSL
   services = {
     xserver.enable = lib.mkForce false;
@@ -36,7 +42,6 @@
   # WSL-specific settings
   wsl = {
     enable = true;
-    nativeSystemd = true;
     defaultUser = vars.user.name;
     startMenuLaunchers = true;
     wslConf = {
@@ -55,8 +60,8 @@
     extraSpecialArgs = {
       inherit inputs outputs vars;
     };
-    users.${vars.user.name} = { pkgs, ... }: {
-      imports = [ ../../../modules/home ];
+    users.${vars.user.name} = {pkgs, ...}: {
+      imports = [../../../modules/home];
     };
   };
 }

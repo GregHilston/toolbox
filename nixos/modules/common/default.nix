@@ -1,9 +1,15 @@
-{ inputs, outputs, lib, config, pkgs, vars, ... }:
-
 {
+  inputs,
+  outputs,
+  lib,
+  config,
+  pkgs,
+  vars,
+  ...
+}: {
   imports = [
     inputs.home-manager.nixosModules.home-manager
-    ../../modules/stylix
+    # ../../modules/stylix
   ];
 
   system.autoUpgrade = {
@@ -18,11 +24,11 @@
     users.${vars.user.name} = import ../../modules/home;
   };
 
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.experimental-features = ["nix-command" "flakes"];
 
   nixpkgs = {
     overlays = [
-      inputs.nur.overlay
+      inputs.nur.overlays.default
       inputs.nix-vscode-extensions.overlays.default
     ];
     config = {
@@ -32,7 +38,7 @@
 
   networking.networkmanager.enable = true;
 
-  time.timeZone = vars.system.timeZone; 
+  time.timeZone = vars.system.timeZone;
 
   i18n = {
     defaultLocale = vars.system.locale;
@@ -77,7 +83,7 @@
     initialPassword = "password";
     isNormalUser = true;
     description = "${vars.user.fullName}";
-    extraGroups = [ "networkmanager" "wheel" "input" "docker" ];
+    extraGroups = ["networkmanager" "wheel" "input" "docker"];
     ignoreShellProgramCheck = true;
     shell = pkgs.${vars.user.packages.shell};
   };
