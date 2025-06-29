@@ -21,6 +21,16 @@
     inputs.nix-vscode-extensions.overlays.default
   ];
 
+  stylix.targets = {
+    firefox = {
+      enable = true;
+      profileNames = ["default"];
+    };
+    qt = {
+      enable = false;
+    };
+  };
+
   # User packages. IE not system packages
   home = {
     username = "${userVars.user}";
