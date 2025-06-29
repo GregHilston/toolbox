@@ -6,8 +6,7 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     nixos-wsl.url = "github:nix-community/NixOS-WSL/main";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
-    treefmt-nix.url = "github:numtide/treefmt-nix";
-
+    systems.url = "github:nix-systems/default-linux";
     # Home manager
     home-manager = {
       url = "github:nix-community/home-manager"; # eventually replace with github:nix-community/home-manager/release-25.05
@@ -25,24 +24,24 @@
   outputs = inputs @ {
     self,
     nixpkgs,
-    # nixpkgs-unstable,
+    systems,
     nixos-wsl,
     nixos-hardware,
     home-manager,
-    treefmt-nix,
     ...
   }: let
-    system = "x86-64-linux";
-
+    lib = nixpkgs.lib // home-manager.lib;
+    forEachSystem = f: lib.genAttrs (import systems) (system: f pkgsFor.${system});
+    pkgsFor = lib.genAttrs (import systems) (
+      system:
+        import nixpkgs {
+          inherit system;
+          config = {
+            allowUnfree = true;
+          };
+        }
+    );
     vars = import ./config/vars.nix {inherit (nixpkgs) lib;};
-    # Define pkgs for treefmt
-    pkgs = import inputs.nixpkgs {
-      inherit system;
-      config.allowUnfree = true;
-    };
-
-    # Formatter configuration
-    treefmtEval = treefmt-nix.lib.evalModule pkgs ./lib/treefmt.nix;
 
     # Helper function to create the home-manager module configuration
     mkHomeManagerModule = {config, ...}: {
@@ -54,10 +53,7 @@
     };
   in {
     # Format whole configuration with `nix fmt`
-    formatter.${system} = treefmtEval.config.build.wrapper;
-
-    # # Style check for CI, run with `nix flake check`
-    checks.${system}.style = treefmtEval.config.build.check self;
+    formatter = forEachSystem (pkgs: pkgs.alejandra);
 
     nixosConfigurations = {
       foundation = nixpkgs.lib.nixosSystem {
