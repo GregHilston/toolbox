@@ -33,6 +33,7 @@
     ...
   }: let
     system = "x86-64-linux";
+    user = "ghilston";
 
     vars = import ./config/vars.nix {inherit (nixpkgs) lib;};
     # Define pkgs for treefmt
@@ -63,7 +64,7 @@
       foundation = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = {
-          inherit inputs vars;
+          inherit inputs vars user;
           outputs = self;
         };
         modules = [
@@ -78,7 +79,7 @@
       isengard = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = {
-          inherit inputs vars;
+          inherit inputs vars user;
           outputs = self;
         };
         modules = [
@@ -93,7 +94,7 @@
       vm-x86 = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = {
-          inherit inputs vars;
+          inherit inputs vars user;
           outputs = self;
         };
         modules = [
@@ -107,7 +108,7 @@
       vm-arm = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
         specialArgs = {
-          inherit inputs vars;
+          inherit inputs vars user;
           outputs = self;
         };
         modules = [
