@@ -33,9 +33,19 @@
     ...
   }: let
     system = "x86-64-linux";
-    user = "ghilston";
+    userVars = {
+      email = "Gregory.Hilston@gmail.com";
+      user = "ghilston";
+      fullName = "Gregory.Hilston@gmail.com";
+      term = "alacritty";
+      editor = "nvim";
+      shell = "zsh";
+      dotFiles = "$Home/.dotfiles";
+      timeZone = "America/New_York";
+      locale = "en_US.UTF-8";
+    };
 
-    vars = import ./config/vars.nix {inherit (nixpkgs) lib;};
+    # vars = import ./config/vars.nix {inherit (nixpkgs) lib;};
     # Define pkgs for treefmt
     pkgs = import inputs.nixpkgs {
       inherit system;
@@ -50,7 +60,7 @@
       home-manager = {
         useUserPackages = true;
         backupFileExtension = "backup";
-        users.${vars.user.name} = {};
+        users.${userVars.user} = {};
       };
     };
   in {
@@ -64,7 +74,7 @@
       foundation = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = {
-          inherit inputs vars user;
+          inherit inputs userVars;
           outputs = self;
         };
         modules = [
@@ -79,7 +89,7 @@
       isengard = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = {
-          inherit inputs vars user;
+          inherit inputs userVars;
           outputs = self;
         };
         modules = [
@@ -94,7 +104,7 @@
       vm-x86 = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = {
-          inherit inputs vars user;
+          inherit inputs userVars;
           outputs = self;
         };
         modules = [
@@ -108,7 +118,7 @@
       vm-arm = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
         specialArgs = {
-          inherit inputs vars user;
+          inherit inputs userVars;
           outputs = self;
         };
         modules = [

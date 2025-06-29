@@ -1,10 +1,8 @@
 {
   inputs,
   outputs,
-  lib,
-  config,
   pkgs,
-  vars,
+  userVars,
   ...
 }: {
   imports = [
@@ -19,9 +17,9 @@
 
   home-manager = {
     extraSpecialArgs = {
-      inherit inputs outputs vars;
+      inherit inputs outputs userVars;
     };
-    users.${vars.user.name} = import ../../modules/home;
+    users.${userVars.user} = import ../../modules/home;
   };
 
   nix.settings.experimental-features = ["nix-command" "flakes"];
@@ -38,12 +36,12 @@
 
   networking.networkmanager.enable = true;
 
-  time.timeZone = vars.system.timeZone;
+  time.timeZone = userVars.timeZone;
 
   i18n = {
-    defaultLocale = vars.system.locale;
+    defaultLocale = userVars.locale;
     extraLocaleSettings = {
-      LC_ADDRESS = vars.system.locale;
+      LC_ADDRESS = userVars.locale;
       LC_IDENTIFICATION = "en_US.UTF-8";
       LC_MEASUREMENT = "en_US.UTF-8";
       LC_MONETARY = "en_US.UTF-8";
@@ -79,13 +77,13 @@
 
   security.rtkit.enable = true;
 
-  users.users.${vars.user.name} = {
+  users.users.${userVars.user} = {
     initialPassword = "password";
     isNormalUser = true;
-    description = "${vars.user.fullName}";
+    description = "${userVars.fullName}";
     extraGroups = ["networkmanager" "wheel" "input" "docker"];
     ignoreShellProgramCheck = true;
-    shell = pkgs.${vars.user.packages.shell};
+    shell = pkgs.${userVars.shell};
   };
 
   environment = {
@@ -120,7 +118,7 @@
     ];
 
     sessionVariables = {
-      EDITOR = "nvim";
+      EDITOR = userVars.editor;
     };
   };
 

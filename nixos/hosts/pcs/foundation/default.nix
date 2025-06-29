@@ -4,7 +4,7 @@
   lib,
   config,
   pkgs,
-  vars,
+  userVars,
   ...
 }: {
   imports = [
@@ -20,7 +20,7 @@
       extraGroups = ["wheel" "networkmanager"];
       # Keep nixos user temporarily
     };
-    ${vars.user.name} = {
+    ${userVars.user} = {
       isNormalUser = true;
       extraGroups = ["wheel" "networkmanager" "docker"];
       initialPassword = "password";
@@ -42,7 +42,7 @@
   # WSL-specific settings
   wsl = {
     enable = true;
-    defaultUser = vars.user.name;
+    defaultUser = userVars.user;
     startMenuLaunchers = true;
     wslConf = {
       automount.root = "/mnt";
@@ -58,9 +58,9 @@
   # Configure home-manager for WSL
   home-manager = {
     extraSpecialArgs = {
-      inherit inputs outputs vars;
+      inherit inputs outputs userVars;
     };
-    users.${vars.user.name} = {pkgs, ...}: {
+    users.${userVars.user} = {pkgs, ...}: {
       imports = [../../../modules/home];
     };
   };

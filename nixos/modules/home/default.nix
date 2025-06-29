@@ -1,6 +1,6 @@
 {
   inputs,
-  vars,
+  userVars,
   pkgs,
   ...
 }: {
@@ -23,8 +23,8 @@
 
   # User packages. IE not system packages
   home = {
-    username = "${vars.user.name}";
-    homeDirectory = "/home/${vars.user.name}";
+    username = "${userVars.user}";
+    homeDirectory = "/home/${userVars.user}";
     packages = with pkgs;
       [
         chromium
