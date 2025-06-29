@@ -15,7 +15,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    stylix.url = "github:danth/stylix/release-25.05";
+    stylix.url = "github:danth/stylix";
     stylix.inputs.nixpkgs.follows = "nixpkgs";
 
     nur.url = "github:nix-community/NUR";
@@ -34,6 +34,7 @@
     ...
   }: let
     system = "x86-64-linux";
+
     vars = import ./config/vars.nix {inherit (nixpkgs) lib;};
     # Define pkgs for treefmt
     pkgs = import inputs.nixpkgs {
@@ -60,7 +61,7 @@
     checks.${system}.style = treefmtEval.config.build.check self;
 
     nixosConfigurations = {
-      foundation = nixpkgs-unstable.lib.nixosSystem {
+      foundation = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = {
           inherit inputs vars;
@@ -75,7 +76,7 @@
         ];
       };
 
-      isengard = nixpkgs-unstable.lib.nixosSystem {
+      isengard = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = {
           inherit inputs vars;
