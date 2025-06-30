@@ -60,6 +60,11 @@
       );
   };
 
+  stylix.targets = {
+    firefox.enable = false;
+    qt.enable = false;
+  };
+
   services.mako.enable = false;
 
   programs.home-manager.enable = true;
