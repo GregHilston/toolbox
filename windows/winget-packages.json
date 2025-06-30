@@ -18,6 +18,7 @@
                 { "PackageIdentifier": "Obsidian.Obsidian" },
                 { "PackageIdentifier": "ZeroTier.ZeroTierOne" },
                 { "PackageIdentifier": "Valve.Steam" },
+                { "PackageIdentifier": "EpicGames.EpicGamesLauncher" },
                 { "PackageIdentifier": "OpenJS.NodeJS" },
                 { "PackageIdentifier": "astral-sh.uv" },
                 { "PackageIdentifier": "Sniptool.Sniptool" },
@@ -29,6 +30,7 @@
                 { "PackageIdentifier": "MiKTeX.MiKTeX" },
                 { "PackageIdentifier": "DBBrowserForSQLite.DBBrowserForSQLite" },
                 { "PackageIdentifier": "dbeaver.dbeaver" },
+                { "PackageIdentifier": "Anki.Anki" },
             ],
             "SourceDetails": {
                 "Argument": "https://cdn.winget.microsoft.com/cache",
