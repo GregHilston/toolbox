@@ -44,6 +44,7 @@
         # fonts
         nerd-fonts.jetbrains-mono
         jetbrains-mono
+        inputs.claude-desktop.packages.${system}.claude-desktop
 
         # inputs.claude-desktop.packages.${system}.claude-desktop
       ]
