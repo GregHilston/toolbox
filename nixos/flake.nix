@@ -8,6 +8,11 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     # Use the full default set (includes Darwin)
     systems.url = "github:nix-systems/default";
+    flake-utils.url = "github:numtide/flake-utils";
+    claude-desktop.url = "github:k3d3/claude-desktop-linux-flake";
+    claude-desktop.inputs.nixpkgs.follows = "nixpkgs";
+    claude-desktop.inputs.flake-utils.follows = "flake-utils";
+
     # Home manager
     home-manager = {
       url = "github:nix-community/home-manager";
