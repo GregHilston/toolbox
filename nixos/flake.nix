@@ -6,19 +6,21 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     nixos-wsl.url = "github:nix-community/NixOS-WSL/main";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
-    systems.url = "github:nix-systems/default-linux";
+    # Use the full default set (includes Darwin)
+    systems.url = "github:nix-systems/default";
     # Home manager
     home-manager = {
-      url = "github:nix-community/home-manager"; # eventually replace with github:nix-community/home-manager/release-25.05
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
     stylix.url = "github:danth/stylix";
     stylix.inputs.nixpkgs.follows = "nixpkgs";
-
     nur.url = "github:nix-community/NUR";
-
     nix-vscode-extensions.url = "github:nix-community/nix-vscode-extensions";
+
+    # nix-darwin for macOS support
+    darwin.url = "github:LnL7/nix-darwin";
+    darwin.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = inputs @ {
@@ -28,22 +30,24 @@
     nixos-wsl,
     nixos-hardware,
     home-manager,
+    stylix,
+    darwin,
     ...
   }: let
     lib = nixpkgs.lib // home-manager.lib;
-    forEachSystem = f: lib.genAttrs (import systems) (system: f pkgsFor.${system});
-    pkgsFor = lib.genAttrs (import systems) (
+    # Support all major systems (Linux and Darwin)
+    allSystems = import systems;
+    forEachSystem = f: lib.genAttrs allSystems (system: f pkgsFor.${system});
+    pkgsFor = lib.genAttrs allSystems (
       system:
         import nixpkgs {
           inherit system;
-          config = {
-            allowUnfree = true;
-          };
+          config = {allowUnfree = true;};
         }
     );
     vars = import ./config/vars.nix {inherit (nixpkgs) lib;};
 
-    # Helper function to create the home-manager module configuration
+    # Helper for home-manager module
     mkHomeManagerModule = {config, ...}: {
       home-manager = {
         useUserPackages = true;
@@ -52,7 +56,6 @@
       };
     };
   in {
-    # Format whole configuration with `nix fmt`
     formatter = forEachSystem (pkgs: pkgs.alejandra);
 
     nixosConfigurations = {
@@ -65,8 +68,8 @@
         modules = [
           nixos-wsl.nixosModules.default
           ./hosts/pcs/foundation
-          inputs.stylix.nixosModules.stylix
-          inputs.home-manager.nixosModules.home-manager
+          stylix.nixosModules.stylix
+          home-manager.nixosModules.home-manager
           mkHomeManagerModule
         ];
       };
@@ -80,8 +83,8 @@
         modules = [
           nixos-hardware.nixosModules.lenovo-thinkpad-t420
           ./hosts/pcs/isengard
-          inputs.stylix.nixosModules.stylix
-          inputs.home-manager.nixosModules.home-manager
+          stylix.nixosModules.stylix
+          home-manager.nixosModules.home-manager
           mkHomeManagerModule
         ];
       };
@@ -94,8 +97,8 @@
         };
         modules = [
           ./hosts/vms/x86_64
-          inputs.stylix.nixosModules.stylix
-          inputs.home-manager.nixosModules.home-manager
+          stylix.nixosModules.stylix
+          home-manager.nixosModules.home-manager
           mkHomeManagerModule
         ];
       };
@@ -108,9 +111,30 @@
         };
         modules = [
           ./hosts/vms/arm
-          inputs.stylix.nixosModules.stylix
-          inputs.home-manager.nixosModules.home-manager
+          stylix.nixosModules.stylix
+          home-manager.nixosModules.home-manager
           mkHomeManagerModule
+        ];
+      };
+    };
+
+    # macOS support (Apple Silicon)
+    darwinConfigurations = {
+      mines = darwin.lib.darwinSystem {
+        system = "aarch64-darwin";
+        specialArgs = {
+          inherit inputs vars;
+          outputs = self;
+        };
+        modules = [
+          ./hosts/darwin/mines # You must create this directory and config
+          home-manager.darwinModules.home-manager
+          {
+            home-manager = {
+              useUserPackages = true;
+              users.${vars.user.name} = {};
+            };
+          }
         ];
       };
     };
