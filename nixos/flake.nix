@@ -22,9 +22,9 @@
     flake-utils.inputs.systems.follows = "systems";
     claude-desktop.url = "github:k3d3/claude-desktop-linux-flake";
     claude-desktop.inputs.nixpkgs.follows = "nixpkgs";
-    claude-desktop.inputs.flake-utils.follows = "flake-utils";
+    claude-desktop.inputs.flake-utils.follows = "flake-utils"; # Corrected: should follow 'flake-utils'
 
-    # nix-darwin for macOS support
+    # nix-darwin for macOS support (Keep input if you might use it later, even if no configs defined now)
     darwin.url = "github:LnL7/nix-darwin";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -37,7 +37,7 @@
     nixos-hardware,
     home-manager,
     stylix,
-    darwin,
+    darwin, # Keep this input if you anticipate defining macOS configs later
     ...
   }: let
     lib = nixpkgs.lib // home-manager.lib;
@@ -122,27 +122,25 @@
           mkHomeManagerModule
         ];
       };
-    };
 
-    # macOS support (Apple Silicon)
-    darwinConfigurations = {
-      mines = darwin.lib.darwinSystem {
-        system = "aarch64-darwin";
+      # This is the correct configuration for 'mines' as an ARM NixOS VM
+      mines = nixpkgs.lib.nixosSystem {
+        system = "aarch64-linux"; # Correct system type
         specialArgs = {
           inherit inputs vars;
           outputs = self;
         };
         modules = [
-          ./hosts/darwin/mines # You must create this directory and config
-          home-manager.darwinModules.home-manager
-          {
-            home-manager = {
-              useUserPackages = true;
-              users.${vars.user.name} = {};
-            };
-          }
+          ./hosts/vms/mines # This points to its specific host config
+          stylix.nixosModules.stylix
+          home-manager.nixosModules.home-manager
+          mkHomeManagerModule
         ];
       };
     };
+
+    # The 'darwinConfigurations' block has been removed entirely because
+    # there are no active macOS configurations.
+    # The 'darwin' input is kept in 'inputs' section in case it's used later.
   };
 }
