@@ -45,7 +45,7 @@
         nerd-fonts.jetbrains-mono
         jetbrains-mono
 
-        # inputs.claude-desktop.packages.${system}.claude-desktop
+        inputs.claude-desktop.packages.${system}.claude-desktop
       ]
       ++ (
         if pkgs.stdenv.hostPlatform.system != "aarch64-linux"
@@ -61,6 +61,11 @@
   };
 
   services.mako.enable = false;
+
+  stylix.targets = {
+    firefox.enable = false;
+    qt.enable = false;
+  };
 
   programs.home-manager.enable = true;
 
