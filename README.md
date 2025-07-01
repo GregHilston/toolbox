@@ -2,7 +2,8 @@
 
 ---
 
-My toolbox contains a series of configuration files, helper scripts, and automations to allow me to quickly configure an OSX or Linux environment.
+My toolbox contains a series of configuration files, helper scripts, and
+automations to allow me to quickly configure an OSX or Linux environment.
 
 ## What's In This Repo?
 
@@ -21,7 +22,8 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 
 ## How Do I Use This Repo?
 
-First, you probably want to fork this repo, and take a look at `ansible/variables/`. These files are where you'll be able to configure:
+First, you probably want to fork this repo, and take a look at
+`ansible/variables/`. These files are where you'll be able to configure:
 
 1. Which apt repositories are added
 2. Which apt packages are installed
@@ -36,13 +38,18 @@ Then, it's as easy as:
 $ ./install.sh
 ```
 
-If you're on a barebones system, like alpine linux, use `$ ./bin/bare_bones.sh` fire, to prepare your system for the `install.sh` script.
+If you're on a barebones system, like alpine linux, use `$ ./bin/bare_bones.sh`
+fire, to prepare your system for the `install.sh` script.
 
-And that's it! You can run the `install.sh` script again to upgrade packages, or apply any new changes you've made to the repository.
+And that's it! You can run the `install.sh` script again to upgrade packages, or
+apply any new changes you've made to the repository.
 
 ### How To Run In An Ephemeral Environment
 
-To run this toolbox in an ephemeral environment, I suggest running it in a barebones Docker container. In this repo you'll find the `docker/` directory which house  barebones containers and scripts to assist with this. See `docker/README.md` for further instructions.
+To run this toolbox in an ephemeral environment, I suggest running it in a
+barebones Docker container. In this repo you'll find the `docker/` directory
+which house barebones containers and scripts to assist with this. See
+`docker/README.md` for further instructions.
 
 ## My Application Installation Preferences
 
@@ -52,9 +59,12 @@ Generally, I'll install everything using Brew.
 
 ### Linux
 
-Since Linux has many different ways to install something, from your package manager, snap, flatpak, brew, compile from source, etc...,  I've decided on these preferences for installing software:
+Since Linux has many different ways to install something, from your package
+manager, snap, flatpak, brew, compile from source, etc..., I've decided on these
+preferences for installing software:
 
-1. Via the default package manager. For Debian based distributions this would be `apt`.
+1. Via the default package manager. For Debian based distributions this would be
+   `apt`.
 2. Flatpak (via flathub).
 3. A raw binary. Which we'll store in `~/Apps` and symlink them to `~/bin`.
 4. clone and build
@@ -65,10 +75,17 @@ I've decided against using Snap, due to its widespread criticism.
 
 ### Windows 11
 
-Since we do not do much developing on Windows, and may only use it to SSH into a remote Linux box, we will not be automating this much. Please follow these steps to get the fonts working on your Windows machine.
+Since we do not do much developing on Windows, and may only use it to SSH into a
+remote Linux box, we will not be automating this much. Please follow these steps
+to get the fonts working on your Windows machine.
 
-1. Navigate to [this URL](https://github.com/romkatv/powerlevel10k#manual-font-installation), and download `MesloLGS NF Regular.ttf`, `MesloLGS NF Bold.ttf`, `MesloLGS NF Italic.ttf`, and `MesloLGS NF Bold Italic.ttf`.
-2. For each of the four `.ttf` files, double click them, which opens up a popup showing you sample text in your font. Click the `install` button in the right corner.
+1. Navigate to
+   [this URL](https://github.com/romkatv/powerlevel10k#manual-font-installation),
+   and download `MesloLGS NF Regular.ttf`, `MesloLGS NF Bold.ttf`,
+   `MesloLGS NF Italic.ttf`, and `MesloLGS NF Bold Italic.ttf`.
+2. For each of the four `.ttf` files, double click them, which opens up a popup
+   showing you sample text in your font. Click the `install` button in the right
+   corner.
 
 ![Font Installation](./docs/res/font-installation.png)
 
@@ -100,6 +117,163 @@ Since we do not do much developing on Windows, and may only use it to SSH into a
 
 ## TODO
 
-1. [ ] Look into the `flatpak-warning.txt` that pops up when you install VS Code using this repo
-2. [ ] Consider looking into Ansible roles to simplify some of the custom things we've done here
-3. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
+1. [ ] Look into the `flatpak-warning.txt` that pops up when you install VS Code
+       using this repo
+2. [ ] Consider looking into Ansible roles to simplify some of the custom things
+       we've done here
+3. [ ] Look into using
+       [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of
+       our adhoc throwaway Docker container
+
+---
+
+## Contributers guide
+
+1. Fork and Clone the repo, add the master repository as the upstream:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/toolbox.git
+git remote add upstream https://github.com/GregHilston/toolbox.git
+# Verify Remotes
+git remote -v
+```
+
+Start with a clean master branch:
+
+```bash
+# Switch to main branch (or master if that's what they use)
+git checkout main
+
+# Pull latest changes from upstream
+git pull upstream main
+
+# Push updates to your fork
+git push origin main
+```
+
+2. Create a feature branch
+
+```bash
+git checkout -b fix/syntax-error
+# or
+git checkout -b feature/add-vm-config
+# or
+git checkout -b update/nixpkgs-version
+```
+
+3. Make your Changes
+
+```bash
+# Edit files as needed
+# Test your changes thoroughly (as discussed in previous answer)
+
+# Check syntax and build
+nix flake check --all-systems
+
+# Build specific configurations you modified
+nix build .#nixosConfigurations.foundation.config.system.build.toplevel
+```
+
+4. Commit your Changes
+
+```bash
+# Stage your changes
+git add .
+
+# Or stage specific files
+git add flake.nix hosts/pcs/foundation/
+
+# Commit with descriptive message
+git commit -m "fix: correct btrfs layout configuration for foundation host
+
+- Fixed subvolume mount options
+- Updated filesystem hierarchy
+- Tested on x86_64-linux system"
+```
+
+5. Testing Before Submitting PR
+
+```bash
+# Always test before pushing
+nix flake check --all-systems
+
+# Build all configurations you can
+nix build .#nixosConfigurations.foundation.config.system.build.toplevel
+nix build .#nixosConfigurations.isengard.config.system.build.toplevel
+nix build .#nixosConfigurations.vm-x86.config.system.build.toplevel
+
+# For ARM configs (if you have cross-compilation set up)
+nix build .#nixosConfigurations.vm-arm.config.system.build.toplevel --system aarch64-linux
+```
+
+6. Additional Best Practices
+
+Commit message format, use conventional commits:
+
+```bash
+git commit -m "feat: add new VM configuration for testing"
+git commit -m "fix: resolve btrfs mount options"
+git commit -m "docs: update installation instructions"
+git commit -m "refactor: reorganize host configurations"
+```
+
+Keep your fork updated
+
+```bash
+# Regularly sync your fork
+git checkout master
+git pull upstream master
+git push origin master
+
+# If working on a long-running branch, rebase to stay current
+git checkout your-feature-branch
+git rebase master
+```
+
+Before Submitting PR
+
+```bash
+# Make sure you're up to date
+git checkout master
+git pull upstream master
+
+# Rebase your feature branch
+git checkout your-feature-branch
+git rebase master
+
+# Force push if needed (only to your fork!)
+git push origin your-feature-branch --force-with-lease
+```
+
+- PR Description Template
+
+When creating the PR, include:
+
+- What: Brief description of changes
+
+- Why: Reason for the changes
+
+- Testing: How you tested the changes
+
+- Breaking Changes: Any breaking changes
+
+- Additional Notes: Any other relevant information
+
+Example:
+
+```bash
+## Changes
+- Fixed btrfs subvolume configuration for foundation host
+- Updated mount options for better performance
+
+## Testing
+- Ran `nix flake check --all-systems` ✅
+- Built foundation configuration successfully ✅
+- Tested on similar btrfs setup ✅
+
+## Breaking Changes
+None
+
+## Notes
+This should resolve the boot issues mentioned in issue #123
+```
