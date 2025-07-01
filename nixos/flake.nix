@@ -54,7 +54,7 @@
           config = {allowUnfree = true;};
         }
     );
-    getTreefmtEval = system: treefmt-nix.lib.evalModule pkgsFor.${system} ./lib/treefmt.nix;
+    getTreefmtEval = system: treefmt-nix.lib.evalModule pkgsFor.${system} ./config/treefmt.nix;
 
     vars = import ./config/vars.nix {inherit (nixpkgs) lib;};
 
