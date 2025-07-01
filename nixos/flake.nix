@@ -17,6 +17,10 @@
     stylix.inputs.nixpkgs.follows = "nixpkgs";
     nur.url = "github:nix-community/NUR";
     nix-vscode-extensions.url = "github:nix-community/nix-vscode-extensions";
+    flake-utils.url = "github:numtide/flake-utils";
+    claude-desktop.url = "github:k3d3/claude-desktop-linux-flake";
+    claude-desktop.inputs.nixpkgs.follows = "nixpkgs";
+    claude-desktop.inputs.flake-utils.follows = "flake-utils";
 
     # nix-darwin for macOS support
     darwin.url = "github:LnL7/nix-darwin";

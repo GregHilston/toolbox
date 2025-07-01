@@ -3,10 +3,13 @@
   vars,
   pkgs,
   ...
-}: {
+}: let
+  system = "x86_64-linux";
+in {
   imports = [
     ../programs/tui
     ../programs/gui
+    inputs.claude-desktop.packages.${system}.claude-desktop
   ];
 
   nixpkgs = {
