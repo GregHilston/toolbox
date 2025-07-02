@@ -1,6 +1,4 @@
-{ inputs, outputs, lib, config, pkgs, vars, ... }:
-
-{
+{...}: {
   imports = [
     ./hardware-configuration.nix
     ../../../modules/common
@@ -13,7 +11,7 @@
     device = "/dev/sda";
     useOSProber = true;
   };
-  
+
   powerManagement.powertop.enable = true;
 
   hardware.bluetooth.enable = true; # enables support for Bluetooth

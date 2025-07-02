@@ -1,8 +1,4 @@
-{
-  config,
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   # Enable the Nix daemon for multi-user support
   services.nix-daemon.enable = true;
 

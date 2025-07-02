@@ -59,7 +59,7 @@
     vars = import ./config/vars.nix {inherit (nixpkgs) lib;};
 
     # Helper for home-manager module
-    mkHomeManagerModule = {config, ...}: {
+    mkHomeManagerModule = _: {
       home-manager = {
         useUserPackages = true;
         backupFileExtension = "backup";

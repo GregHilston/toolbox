@@ -2,8 +2,6 @@
   inputs,
   outputs,
   lib,
-  config,
-  pkgs,
   vars,
   ...
 }: {
@@ -60,7 +58,7 @@
     extraSpecialArgs = {
       inherit inputs outputs vars;
     };
-    users.${vars.user.name} = {pkgs, ...}: {
+    users.${vars.user.name} = {...}: {
       imports = [../../../modules/home];
     };
   };
