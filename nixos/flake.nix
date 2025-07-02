@@ -15,6 +15,7 @@
     };
     stylix.url = "github:danth/stylix";
     stylix.inputs.nixpkgs.follows = "nixpkgs";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
     nur.url = "github:nix-community/NUR";
     nix-vscode-extensions.url = "github:nix-community/nix-vscode-extensions";
     flake-utils.url = "github:numtide/flake-utils";
@@ -33,6 +34,7 @@
     self,
     nixpkgs,
     systems,
+    treefmt-nix,
     nixos-wsl,
     nixos-hardware,
     home-manager,
@@ -40,7 +42,8 @@
     darwin,
     ...
   }: let
-    lib = nixpkgs.lib // home-manager.lib;
+    # lib = nixpkgs.lib // home-manager.lib;
+    inherit (nixpkgs) lib;
     # Support all major systems (Linux and Darwin)
     allSystems = import systems;
     forEachSystem = f: lib.genAttrs allSystems (system: f pkgsFor.${system});
@@ -51,10 +54,12 @@
           config = {allowUnfree = true;};
         }
     );
+    getTreefmtEval = system: treefmt-nix.lib.evalModule pkgsFor.${system} ./config/treefmt.nix;
+
     vars = import ./config/vars.nix {inherit (nixpkgs) lib;};
 
     # Helper for home-manager module
-    mkHomeManagerModule = {config, ...}: {
+    mkHomeManagerModule = _: {
       home-manager = {
         useUserPackages = true;
         backupFileExtension = "backup";
@@ -62,7 +67,17 @@
       };
     };
   in {
-    formatter = forEachSystem (pkgs: pkgs.alejandra);
+    # formatter = forEachSystem (pkgs: pkgs.alejandra);
+    # Formatter for nix fmt
+    formatter = forEachSystem (pkgs: (getTreefmtEval pkgs.system).config.build.wrapper);
+
+    # Style check for CI
+    # This creates checks.x86_64-linux.style etc.
+    checks = forEachSystem (pkgs: {
+      style = (getTreefmtEval pkgs.system).config.build.check self;
+      # You can also expose specific custom checks like this:
+      # no-todos = (getTreefmtEval pkgs.system).config.checks.no-todos.check self;
+    });
 
     nixosConfigurations = {
       foundation = nixpkgs.lib.nixosSystem {

@@ -1,11 +1,7 @@
 # based on these two references:
 # 1. https://github.com/namishh/crystal/blob/main/home/namish/conf/browsers/firefox/default.nix
 # 2. https://github.com/gvolpe/nix-config/blob/master/home/programs/firefox/default.nix
-{
-  config,
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   programs.firefox = {
     enable = true;
     profiles = {

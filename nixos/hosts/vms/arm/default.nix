@@ -1,6 +1,4 @@
-{ inputs, outputs, lib, config, pkgs, vars, ... }:
-
-{
+{...}: {
   imports = [
     ./hardware-configuration.nix
     ../../../modules/common
@@ -17,7 +15,7 @@
 
   services.openssh = {
     enable = true;
-    ports = [ 22 ];
+    ports = [22];
     settings = {
       PasswordAuthentication = true;
       AllowUsers = null; # Allows all users by default. Can be [ "user1" "user2" ]

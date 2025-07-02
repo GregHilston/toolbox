@@ -1,9 +1,7 @@
-{ pkgs, inputs, ... }:
-
-{
-    programs.git = {
-      enable = true;
-      userName  = "GregHilston";
-      userEmail = "Gregory.Hilston@gmail.com";
-    };
+_: {
+  programs.git = {
+    enable = true;
+    userName = "GregHilston";
+    userEmail = "Gregory.Hilston@gmail.com";
+  };
 }
