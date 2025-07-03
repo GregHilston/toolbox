@@ -1,12 +1,28 @@
 # nixos/hosts/vms/mines/default.nix
 {lib, ...}: {
-  # Import the generic ARM VM configuration as a base.
-  # This pulls in all settings from nixos/hosts/vms/arm/default.nix,
-  # including its 'hardware-configuration.nix' and other common VM services.
+  # Imports your common/default.nix to share settings
   imports = [
-    ../arm # This refers to nixos/hosts/vms/arm/default.nix
+    ../../../modules/common
+    # run `sudo nixos-generate-config --show-hardware-config > hardware-configuration.nix` to generate
+    ./hardware-configuration.nix
   ];
 
+  # Add these kernel modules for ARM virtualization
+  boot.initrd.availableKernelModules = [
+    "virtio_pci" # Virtio PCI devices
+    "virtio_blk" # Block storage (disks)
+    "virtio_net" # Network interfaces
+    "virtio_mmio" # Memory-mapped I/O
+    "ext4" # Root filesystem support
+    "nvme" # If using NVMe storage
+  ];
+
+  # Ensure virtio modules are included in initrd
+  boot.initrd.kernelModules = [
+    "virtio_pci"
+    "virtio_blk"
+    "virtio_net"
+  ];
   # Override the hostname from "nixos-vm" (set in ./arm) to "mines".
   networking.hostName = lib.mkDefault "mines";
 
