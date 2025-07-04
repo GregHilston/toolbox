@@ -22,7 +22,7 @@
     flake-utils.inputs.systems.follows = "systems";
     claude-desktop.url = "github:k3d3/claude-desktop-linux-flake";
     claude-desktop.inputs.nixpkgs.follows = "nixpkgs";
-    claude-desktop.inputs.flake-utils.follows = "flake-utils"; # Corrected: should follow 'flake-utils'
+    claude-desktop.inputs.flake-utils.follows = "flake-utils";
 
     # nix-darwin for macOS support (Keep input if you might use it later, even if no configs defined now)
     darwin.url = "github:LnL7/nix-darwin";
