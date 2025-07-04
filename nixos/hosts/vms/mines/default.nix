@@ -7,6 +7,10 @@
     ./hardware-configuration.nix
   ];
 
+  # Use the systemd-boot EFI boot loader.
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
+
   # Add these kernel modules for ARM virtualization
   boot.initrd.availableKernelModules = [
     "virtio_pci" # Virtio PCI devices
@@ -23,7 +27,7 @@
     "virtio_blk"
     "virtio_net"
   ];
-  # Override the hostname from "nixos-vm" (set in ./arm) to "mines".
+  # Override the hostname from "nixos-vm" to "mines".
   networking.hostName = lib.mkDefault "mines";
 
   # Add any other specific configurations for 'mines' here if it needs
