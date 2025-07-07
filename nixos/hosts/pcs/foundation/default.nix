@@ -9,6 +9,7 @@
 }: {
   imports = [
     ../../../modules/common
+    ./docker-compose.nix
   ];
 
   networking.hostName = "foundation";
@@ -37,7 +38,8 @@
 
   # Disable unnecessary services for WSL
   security.rtkit.enable = lib.mkOverride 900 false;
-  virtualisation.docker.enable = true;
+  # Enable/Disable custom docker-compose module
+  docker-compose.enable = true;
 
   # WSL-specific settings
   wsl = {
