@@ -39,26 +39,25 @@
           default = pkgs.mkShell {
             packages = commonTools;
             shellHook = ''
-               export SHELL=$(which zsh)
+              export SHELL=$(which zsh)
               if [ ! -d "$HOME/.oh-my-zsh" ]; then
                 echo "Installing Oh My Zsh..."
                 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
               else
                 echo "Oh My Zsh is already installed."
               fi
-              # Simple Docker check
               if ! docker info >/dev/null 2>&1; then
                 echo "⚠️  Docker daemon not running (required for docker-compose)"
               fi
-                if [ -d "$PWD/dotfiles" ]; then
-                  echo "Applying dotfiles with stow..."
-                  stow -d "$PWD/dotfiles" -t "$HOME" * || echo "Warning: stow failed"
-                fi
-                if [ -z "$DIRENV_IN_ENVRC" ]; then
-                  exec zsh
-                fi
-                echo " 🛠️ Welcome to your Nix dev environment!"
-                echo "Tools available: zsh, git, stow, docker, flatpak, curl, wget, direnv, nix-direnv, nixfmt"
+              if [ -d "$PWD/dotfiles" ]; then
+                echo "Applying dotfiles with stow..."
+                stow -d "$PWD/dotfiles" -t "$HOME" * || echo "Warning: stow failed"
+              fi
+              echo " ⚒️ Welcome to your Nix dev environment! ⚒️"
+              echo "🛠️ Tools available: zsh, git, stow, docker, flatpak, curl, wget, direnv, nix-direnv, nixfmt 🛠️"
+              if [ -z "$DIRENV_IN_ENVRC" ]; then
+                exec zsh
+              fi
             '';
           };
 
@@ -73,7 +72,8 @@
                 pkgs.gofumpt
               ];
             shellHook = ''
-              echo "🐹 Golang dev environment ready!"
+              echo "🐹 Golang dev environment ready! 🐹"
+              echo "🛠️ Tools available: go, gopls, gotools, gofumpt 🛠️"
             '';
           };
 
@@ -86,7 +86,8 @@
                 pkgs.bundler
               ];
             shellHook = ''
-              echo "💎 Ruby dev environment ready!"
+              echo "💎 Ruby dev environment ready! 💎"
+              echo "🛠️ Tools available: ruby, bundler 🛠️"
             '';
           };
 
@@ -100,7 +101,8 @@
                 pkgs.typescript
               ];
             shellHook = ''
-              echo "🟦 TypeScript dev environment ready!"
+              echo "🟦 TypeScript dev environment ready! 🟦"
+              echo "🛠️ Tools available: nodejs, yarn, typescript 🛠️"
             '';
           };
         };
