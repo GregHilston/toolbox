@@ -9,6 +9,7 @@
 }: {
   imports = [
     ../../../modules/common
+    ./nvidia_drivers.nix
   ];
 
   networking.hostName = "foundation";
@@ -26,6 +27,9 @@
       initialPassword = "password";
     };
   };
+
+  # Nvidia Drivers Enable/Disable
+  drivers.nvidia.enable = true;
 
   # Override common settings that don't work well in WSL
   services = {
