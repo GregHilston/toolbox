@@ -59,7 +59,15 @@
 
   programs.nix-ld.enable = true;
 
-  virtualisation.docker.enable = true;
+  # Docker-Compose
+  virtualisation = {
+    libvirtd.enable = false;
+    docker.enable = true;
+    podman.enable = false;
+  };
+  programs = {
+    virt-manager.enable = false;
+  };
 
   services = {
     xserver.enable = true;
@@ -119,6 +127,7 @@
       pandoc
       xclip
       gnumake
+      docker-compose
     ];
 
     sessionVariables = {
