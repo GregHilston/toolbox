@@ -3,5 +3,6 @@
     ./git
     ./neovim
     ./zsh
+    ./nh.nix
   ];
 }
