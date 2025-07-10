@@ -1,5 +1,4 @@
-{ lib, ... }:
-rec {
+{lib, ...}: rec {
   user = {
     name = "ghilston";
     fullName = "Greg Hilston";
@@ -7,7 +6,7 @@ rec {
     packages = {
       terminal = "alacritty";
       editor = "nvim";
-      shell = "zsh"; 
+      shell = "zsh";
     };
   };
 
@@ -23,7 +22,7 @@ rec {
     locale = "en_US.UTF-8";
     stateVersion = "24.05";
   };
-  
+
   networking = {
     domain = "local";
   };
