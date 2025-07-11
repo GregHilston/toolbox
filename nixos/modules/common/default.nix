@@ -74,6 +74,9 @@
     displayManager.sddm.enable = true;
     desktopManager.plasma6.enable = true;
 
+    # Add sway to SDDM
+    displayManager.sessionPackages = [pkgs.sway];
+
     xserver.xkb = {
       layout = "us";
       variant = "";
