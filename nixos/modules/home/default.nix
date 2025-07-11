@@ -66,6 +66,9 @@
     qt.enable = false;
   };
 
+  # Enable/Disable the nh module
+  custom.nh.enable = true;
+
   services.mako.enable = false;
 
   programs.home-manager.enable = true;
