@@ -59,7 +59,10 @@
 
   programs.nix-ld.enable = true;
 
-  virtualisation.docker.enable = true;
+  virtualisation = {
+    docker.enable = true;
+    vmware.guest.enable = true;
+  };
 
   services = {
     xserver.enable = true;
