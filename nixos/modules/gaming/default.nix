@@ -1,8 +1,10 @@
-{ config, pkgs, ... }:
-let
-  user = "ghilston"; # TODO have this get passed in somehow
-in
 {
+  config,
+  pkgs,
+  ...
+}: let
+  user = "ghilston"; # TODO have this get passed in somehow
+in {
   # hardware.graphics = {
   #   enable = true;
   #   enable32Bit = true;
@@ -42,8 +44,8 @@ in
     # programs.gamemode.enable = true;
   };
 }
-
 # Can prepend one of the following launch options to any steam game
 # gamemoderun %command%
 # mangohud %command%
 # gamescope %command%
+
