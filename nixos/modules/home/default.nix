@@ -66,6 +66,12 @@
     qt.enable = false;
   };
 
+  # Enable/Disable the nh module
+  custom.nh = {
+    enable = true;
+    flake = "${builtins.getEnv "HOME"}/toolbox/nixos";
+  };
+
   services.mako.enable = false;
 
   programs.home-manager.enable = true;
