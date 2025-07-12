@@ -64,6 +64,7 @@
     libvirtd.enable = false;
     docker.enable = true;
     podman.enable = false;
+    vmware.guest.enable = true;
   };
   programs = {
     virt-manager.enable = false;
