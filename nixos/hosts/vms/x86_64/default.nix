@@ -10,6 +10,7 @@
   imports = [
     ./hardware-configuration.nix
     ../../../modules/common
+    ./steam.nix
   ];
 
   networking.hostName = "nixos-vm";
@@ -19,6 +20,8 @@
     device = "/dev/sda"; # Typical for VMs
     useOSProber = false; # Usually not needed in VMs
   };
+
+  gaming.enable = true;
 
   services.spice-vdagentd.enable = true;
   services.qemuGuest.enable = true;
