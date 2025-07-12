@@ -37,7 +37,6 @@
 
   # Disable unnecessary services for WSL
   security.rtkit.enable = lib.mkOverride 900 false;
-  virtualisation.docker.enable = true;
 
   # WSL-specific settings
   wsl = {
