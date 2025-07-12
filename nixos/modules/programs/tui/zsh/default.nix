@@ -61,6 +61,12 @@
       cat = "bat";
       # Copies a file's contents into the system's clipboard.
       clip = "xclip -sel clip <";
+      # nix garbage collect
+      ncg = "nix-collect-garbage --delete-older-than 3d && sudo nix-collect-garbage -d && sudo /run/current-system/bin/switch-to-configuration boot";
+      nc = "nix flake check";
+      nt = "nix flake test";
+      opts = "man home-configuration.nix";
+      cleanup = "nh clean all";
     };
     history.size = 10000;
     history.path = "/home/${vars.user.name}/.zsh_history";
