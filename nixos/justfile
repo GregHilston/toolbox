@@ -1,5 +1,5 @@
 set shell := ["zsh", "-cu"]
-flake_path := "~/Git/toolbox"
+flake_path := "~/Git/toolbox/nixos"
 
 # Deploy to a specific host
 # Usage: $ just deploy host <host name>
@@ -45,19 +45,19 @@ upp:
 # The flake_path defaults to the `~/Git/toolbox`
 # Usage: Override the path with `just fr <hostname> flake_path=.` or `just fr <hostname> flake_path=~/toolbox/nixos`
 # Usage: `just fr <hostname>`
-fr host: # Default to current directory
+fr host flake_path=flake_path: # Default to current directory
   nh os switch --hostname {{host}} {{flake_path}}
 
 # Test rebuild
 # The host argument is required.
 # The flake_path defaults to `~/Git/toolbox`
 # Usage: `just ft <hostname>`
-ft host: # Default to current directory
+ft host flake_path=flake_path: # Default to current directory
   nh os test --hostname {{host}} {{flake_path}}
 
 # Update and Rebuild Flake
 # Usage: `just fu <hostname>` flake_path defaults to the cwd
-fu host:
+fu host flake_path=flake_path:
     nh os switch --hostname {{host}} --update {{flake_path}}
 
 history:
