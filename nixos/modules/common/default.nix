@@ -1,12 +1,10 @@
 {
   inputs,
   outputs,
-  lib,
-  config,
   pkgs,
   vars,
   ...
-} @ args:
+}:
 # Optional: give a name to the whole argument set
 {
   imports = [
