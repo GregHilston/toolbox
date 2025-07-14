@@ -2,7 +2,11 @@
   mod = "Mod4";
   system = "x86_64-linux";
 in {
-  imports = [./keybinds.nix ./kanshi.nix ./fuzzel.nix];
+  imports = [
+    ./keybinds.nix
+    ./kanshi.nix
+    ./fuzzel.nix
+  ];
 
   ghilston.opt.services.kanshi.enable = true; # Enables the kanshi service
 
@@ -76,5 +80,6 @@ in {
     yad
     findutils
     wtype
+    yad
   ];
 }
