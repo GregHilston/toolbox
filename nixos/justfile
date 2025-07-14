@@ -43,7 +43,7 @@ upp:
 # Rebuild
 # The host argument is required.
 # The flake_path defaults to the `~/Git/toolbox`
-# Usage: Override the path with `just fr <hostname> flake_path=.` or `just fr <hostname> flake_path=~/toolbox/nixos`
+# Usage: Override the path with `just fr <hostname> .` or `just fr <hostname> ~/toolbox/nixos`
 # Usage: `just fr <hostname>`
 fr host flake_path=flake_path: # Default to current directory
   nh os switch --hostname {{host}} {{flake_path}}
@@ -56,7 +56,8 @@ ft host flake_path=flake_path: # Default to current directory
   nh os test --hostname {{host}} {{flake_path}}
 
 # Update and Rebuild Flake
-# Usage: `just fu <hostname>` flake_path defaults to the cwd
+# Usage: `just fu <hostname>`
+# `just fu <hostname> .` to override the path
 fu host flake_path=flake_path:
     nh os switch --hostname {{host}} --update {{flake_path}}
 
