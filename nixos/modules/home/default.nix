@@ -67,9 +67,12 @@
   };
 
   # Enable/Disable the nh module
-  custom.nh = {
-    enable = true;
-    flake = "${builtins.getEnv "HOME"}/toolbox/nixos";
+  custom = {
+    nh = {
+      enable = true;
+      flake = "${builtins.getEnv "HOME"}/toolbox/nixos";
+    };
+    yazi.enable = true;
   };
 
   services.mako.enable = false;

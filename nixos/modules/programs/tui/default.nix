@@ -4,5 +4,6 @@
     ./neovim
     ./zsh
     ./nh.nix
+    ./yazi.nix
   ];
 }
