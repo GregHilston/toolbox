@@ -1,4 +1,9 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}: {
   programs.vscode = {
     enable = true;
     package = pkgs.vscode;
@@ -58,6 +63,7 @@
           "<C-n>" = false;
           "<C-b>" = false;
         };
+        # "github.copilot.advanced.completionModel" = "gpt-4";
       };
 
       keybindings = [
