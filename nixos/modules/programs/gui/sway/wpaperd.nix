@@ -24,7 +24,7 @@
     '';
     ".config/wpaperd/config.toml".text = ''
       [default]
-       path = ./Wallpapers/"
+       path = "./Wallpapers/"
        duration = "30m"
        transition-time = 600
     '';
