@@ -15,7 +15,7 @@ in {
     checkConfig = false;
     config = rec {
       modifier = mod;
-      terminal = "${pkgs.ghostty}/bin/ghostty";
+      terminal = "${pkgs.alacritty}/bin/alacritty";
       startup = [{command = "firefox";}];
       floating.border = 0;
       window.border = 0;
@@ -37,7 +37,7 @@ in {
       exec wl-paste --type image --watch cliphist store
 
       # output DP-1 {
-      #   # bg /home/jr/Pictures/Wallpapers/mountains1.jpg fill
+      #   # bg /home/ghilston/Pictures/Wallpapers/mountains1.jpg fill
       #   mode 3840x2160@65Hz
       #   scale 1.5
       #   pos 0 0

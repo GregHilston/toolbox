@@ -3,7 +3,7 @@
     enable = true;
     settings = {
       main = {
-        terminal = "${pkgs.ghostty}/bin/ghostty";
+        terminal = "${pkgs.alacritty}/bin/alacritty";
       };
     };
   };
