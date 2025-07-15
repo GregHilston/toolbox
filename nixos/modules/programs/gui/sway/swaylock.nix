@@ -1,8 +1,4 @@
-{
-  pkgs,
-  lib,
-  ...
-}: {
+{pkgs, ...}: {
   programs.swaylock = {
     enable = true;
     package = pkgs.swaylock-effects;
@@ -10,13 +6,11 @@
     settings = {
       screenshots = true;
       daemonize = true;
-      ignore-empty-password = true;
+      # Makes it so the circle doesn't show up looking for your password
+      # ignore-empty-password = true;
       clock = true;
       indicator = true;
       effect-blur = "10x5";
-      effect-vignette = "0.5:1";
     };
   };
-
-  # catppuccin.swaylock.enable = false;
 }

@@ -91,6 +91,8 @@
   };
 
   security.rtkit.enable = true;
+  # Needed for swaylock to accept password
+  security.pam.services.swaylock = {};
 
   users.users.${vars.user.name} = {
     initialPassword = "password";
