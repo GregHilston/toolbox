@@ -14,7 +14,7 @@ in {
     };
     flake = lib.mkOption {
       type = lib.types.str;
-      default = "${builtins.getEnv "HOME"}/toolbox/nixos";
+      default = "${builtins.getEnv "HOME"}/Git/toolbox/nixos";
       description = "Path to the flake.nix file.";
     };
   };
