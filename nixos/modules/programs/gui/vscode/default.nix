@@ -17,6 +17,7 @@
           # tools
           vscodevim.vim
           vspacecode.whichkey
+          rooveterinaryinc.roo-cline
 
           # languages
           golang.go
@@ -42,12 +43,6 @@
             publisher = "GitHub";
             version = "1.270.1373";
             sha256 = "sha256-5HlZKJQBdzXBjWki5owYD9vMo72A/6ukoDNgzIIaJt8=";
-          }
-          {
-            name = "roo-cline";
-            publisher = "RooVeterinaryInc";
-            version = "3.3.19";
-            sha256 = "sha256-4IA9r6yJCn7pJqsCd+WvoEMfjp2K3FvzbTudCjFiqKg=";
           }
         ];
 
