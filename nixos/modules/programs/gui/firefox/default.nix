@@ -73,7 +73,7 @@
           re-enable-right-click
           don-t-fuck-with-paste
 
-          enhancer-for-youtube
+          # enhancer-for-youtube
           sponsorblock
           return-youtube-dislikes
 
