@@ -74,6 +74,9 @@
     displayManager.sddm.enable = true;
     desktopManager.plasma6.enable = true;
 
+    # Add sway to SDDM
+    displayManager.sessionPackages = [pkgs.sway];
+
     xserver.xkb = {
       layout = "us";
       variant = "";
@@ -88,6 +91,8 @@
   };
 
   security.rtkit.enable = true;
+  # Needed for swaylock to accept password
+  security.pam.services.swaylock = {};
 
   users.users.${vars.user.name} = {
     initialPassword = "password";
