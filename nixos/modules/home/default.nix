@@ -2,8 +2,11 @@
   inputs,
   vars,
   pkgs,
+  lib,
   ...
-}: {
+}: let
+  configPath = "/home/ghilston/vscode-config";
+in {
   imports = [
     ../programs/tui
     ../programs/gui
@@ -20,6 +23,17 @@
     inputs.nur.overlays.default
     inputs.nix-vscode-extensions.overlays.default
   ];
+
+  # Symlink settings, keybindings, and extensions
+  home.file.".config/Code/User/settings.json".source =
+    lib.mkForce (lib.file.mkOutOfStoreSymlink "${configPath}/settings.json");
+  # Keybindings
+  home.file.".config/Code/User/keybindings.json".source =
+    lib.mkForce (lib.file.mkOutOfStoreSymlink "${configPath}/keybindings.json");
+
+  # Optionally, manage extensions with a JSON file
+  home.file.".config/Code/User/extensions.json".source =
+    lib.mkForce (lib.file.mkOutOfStoreSymlink "${configPath}/extensions.json");
 
   # User packages. IE not system packages
   home = {
