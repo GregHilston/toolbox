@@ -100,3 +100,15 @@ The project uses `just` (alternative to Make) for common operations:
 - Cleaned up empty common.nix files
 
 This configuration emphasizes modularity, maintainability, and reproducibility across different hardware platforms and use cases.
+
+## Reference Repositories
+
+  Local clones of NixOS configuration references are available in `~/Git/nixos-references/`:
+  - `mitchellh-nixos-config`: Mitchell Hashimoto's NixOS VM setup (primary inspiration)
+  - `dustinlyons-nixos-config`: macOS-focused Nix config with excellent documentation
+  - `fryuni-config-files`: Module and repository organization reference
+  - `gaetanlepage-nix-config`: GUI/TUI program separation patterns
+  - `hans-chrstn-dotfiles`: Per-program configuration examples
+  - `alexnabokikh-nix-config`: Additional configuration patterns
+
+  These can be searched for patterns, ideas, and implementation examples.
