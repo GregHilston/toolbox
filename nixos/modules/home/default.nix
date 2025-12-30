@@ -34,9 +34,8 @@
         ollama
         ripgrep
         vlc
-        vscode
         hugo
-        texstudio
+        # texstudio
         godot_4
         go
         duckdb
@@ -44,7 +43,7 @@
         # fonts
         nerd-fonts.jetbrains-mono
         jetbrains-mono
-        inputs.claude-desktop.packages.${system}.claude-desktop
+        # inputs.claude-desktop.packages.${system}.claude-desktop
 
         # inputs.claude-desktop.packages.${system}.claude-desktop
       ]
