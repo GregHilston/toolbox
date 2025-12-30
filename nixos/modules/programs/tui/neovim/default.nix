@@ -19,7 +19,7 @@
       # Language Servers (LSP)
       erlang_26
       elixir
-      elixir_ls
+      elixir-ls
       lua-language-server
       nil
       nixd
