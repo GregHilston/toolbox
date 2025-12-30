@@ -33,9 +33,10 @@
   # Override the hostname from "nixos-vm" to "mines".
   networking.hostName = lib.mkDefault "mines";
 
-  # Add any other specific configurations for 'mines' here if it needs
-  # anything truly unique or different compared to the generic ARM VM.
-  # For example:
-  # services.something-unique-to-mines.enable = true;
-  # environment.systemPackages = with pkgs; [ specific-tool ];
+  # VMware Fusion specific packages
+  environment.systemPackages = with pkgs; [
+    # wl-clipboard: Required for Wayland clipboard integration with VMware Fusion
+    # Enables proper clipboard sync between Alacritty terminal and macOS host
+    wl-clipboard
+  ];
 }

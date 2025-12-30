@@ -129,9 +129,6 @@
       python3
       pandoc
       xclip
-      # wl-clipboard: Required for Wayland clipboard integration with VMware Fusion
-      # Enables proper clipboard sync between Alacritty terminal and macOS host
-      wl-clipboard
       gnumake
       docker-compose
     ];
