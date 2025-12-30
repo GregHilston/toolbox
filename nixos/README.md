@@ -14,6 +14,33 @@ I use [just](https://github.com/casey/just), a tool similar to Make, to help mak
 
 See `flake.nix` for machine names, these are based off of `hosts/`.
 
+## NixOS in a VM
+
+### Boot Drive Space Management
+
+The boot partition (`/boot`) in our NixOS VM is only 512MB. This can fill up quickly with multiple NixOS generations, preventing system rebuilds and updates.
+
+**To check boot space usage:**
+```bash
+df -h /boot
+```
+
+**To free up space:**
+
+Option 1 - Remove old generations (keeps last 7 days):
+```bash
+sudo nix-collect-garbage --delete-older-than 7d
+sudo nixos-rebuild boot
+```
+
+Option 2 - Aggressive cleanup (keeps only current generation):
+```bash
+sudo nix-collect-garbage -d
+sudo nixos-rebuild boot
+```
+
+**Alternative:** You can expand the boot partition size using GParted from a NixOS live ISO, but the cleanup commands above are simpler and usually sufficient.
+
 ## NixOS Pattern
 
 1. Our usage of Just will leverage a `--flake` argument, passed by the CLI as an argument, indicating what machine we'll be building and deploying by pointing to a specific section in `flake.nix`.
