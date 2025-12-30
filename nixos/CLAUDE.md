@@ -4,10 +4,9 @@
 
 This is a personal NixOS configuration repository by Greg Hilston (ghilston) that manages system configurations for multiple machines using Nix Flakes. The repository follows a modular architecture for maintaining NixOS configurations across different hosts including physical machines (PCs) and virtual machines (VMs).
 
-It was inspired by Mitchell Hashimoto's usage of NixOS in a VM running on a Macbook Pro laptop. He did this because he got the battery life and quality of a Mac, but the flexibility of Linux. Some links about his usage of this are:
+It was inspired by Mitchell Hashimoto's usage of NixOS in a VM running on a Macbook Pro laptop. He did this because he got the battery life and quality of a Mac, but the flexibility of Linux.
 
-- https://github.com/mitchellh/nixos-config
-- https://www.youtube.com/watch%3Fv%3DubDMLoWz76U
+For references to websites and GitHub repositories on using a NixOS VM for development, see the **NixOS VM Development** section in [README.md](README.md#nixos-vm-development).
 
 ## Repository Structure
 

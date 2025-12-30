@@ -98,6 +98,15 @@ stylix.url = "github:danth/stylix/release-24.11";
 
 ## References
 
+### NixOS VM Development
+
+- https://github.com/mitchellh/nixos-config
+- https://www.youtube.com/watch?v=ubDMLoWz76U
+- https://www.joshkasuboski.com/posts/nix-dev-environment/
+- https://nix.dev/tutorials/nixos/nixos-configuration-on-vm.html
+
+### General NixOS References
+
 - [krisztian fekete write's some NixOS tips and organization of your repo](https://krisztianfekete.org/nine-months-of-nixos/)
 - [Hashicorp's Co-Founder Micthell Hashimoto's repo that inspired me to look into development in a VM, using Nix OS](https://github.com/mitchellh/nixos-config?tab=readme-ov-file#how-i-work)
 - [Great general purpose Nix Config for macOS with a great README.md](https://github.com/dustinlyons/nixos-config?tab=readme-ov-file#nixos-components). I learned about it from [this Reddit post](https://www.reddit.com/r/Nix/comments/1cv1vq8/why_would_someone_install_nix_on_a_mac_os/l4mus6n/), which how he uses it and why its a benefit.
@@ -116,7 +125,6 @@ stylix.url = "github:danth/stylix/release-24.11";
 
 ## TODO
 
-- [ ] Add other window managers, like i3 and i3 + KDE
 - [ ] Get nvim copy to clipboard to work. See [here](https://discourse.nixos.org/t/how-to-support-clipboard-for-neovim/9534/3), and [here](https://www.reddit.com/r/neovim/comments/3fricd/easiest_way_to_copy_from_neovim_to_system/)
 - [ ] Get VS Code remote to work with this Nix OS installation. Currently, our remote server fails to be set up.
 - [ ] Install https://github.com/mistricky/codesnap.nvim
