@@ -1,3 +1,19 @@
+# VS Code Configuration
+#
+# This module serves two purposes:
+# 1. Manages VS Code installation and extensions on bare metal hosts (foundation, isengard)
+# 2. Acts as reference documentation for extension list on VM hosts (mines, vm-x86, vm-arm)
+#
+# For VM hosts running on macOS:
+# - VS Code runs on the macOS host with extensions managed there
+# - Connects to NixOS VM via Remote-SSH extension
+# - This extension list serves as reference for what to install
+# - nix-ld (enabled in common/default.nix) allows VS Code Server to run
+#
+# For bare metal hosts:
+# - VS Code is fully managed by NixOS using this configuration
+# - Extensions are declaratively installed from this list
+#
 {pkgs, ...}: {
   programs.vscode = {
     enable = true;

@@ -63,4 +63,26 @@
     # Reference: Mitchell Hashimoto's vm-shared.nix configuration
     gtkmm3
   ];
+
+  # Disable NixOS-managed VS Code on this VM
+  # VS Code runs on the macOS host and connects to this VM via Remote-SSH
+  #
+  # Architecture:
+  # ┌─────────────────────────┐
+  # │   macOS (Host)          │
+  # │  VS Code (GUI app)      │ ← Extensions managed here normally
+  # │  + Remote-SSH extension │
+  # └────────────┬────────────┘
+  #              │ SSH Connection
+  #              ▼
+  # ┌─────────────────────────┐
+  # │   NixOS VM (Guest)      │
+  # │  VS Code Server         │ ← Auto-installed by VS Code
+  # │  (runs in background)   │
+  # │  Your code, git, etc.   │
+  # └─────────────────────────┘
+  #
+  # nix-ld is already enabled in common/default.nix to support VS Code Server
+  # See modules/programs/gui/vscode/default.nix for extension reference list
+  programs.vscode.enable = lib.mkForce false;
 }
