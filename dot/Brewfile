@@ -58,6 +58,8 @@ brew "steampipe"
 brew "yarn"
 brew "patat-bin"
 brew "graphviz"
+brew "act"
+brew "bruno"
 
 # GUI applications
 cask "google-drive"
@@ -103,6 +105,8 @@ cask "alfred"
 cask "bartender"
 cask "brewfile"
 cask "dash"
+cask "etats"
+cask "1password"
 
 # Applications not on Brew, but on the Mac App Store
 mas "Amphetamine", id:937984704
