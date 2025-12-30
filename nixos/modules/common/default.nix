@@ -57,6 +57,9 @@
     };
   };
 
+  # Allows using nix-ld to run dynamically linked ELF binaries
+  # from Nix store without needing to build a fully static binary.
+  # For example, this will allow VSCode server to run properly.
   programs.nix-ld.enable = true;
 
   # Docker-Compose

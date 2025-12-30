@@ -1,7 +1,7 @@
 {pkgs, ...}: {
   programs.vscode = {
     enable = true;
-    package = pkgs.vscode;
+    package = pkgs.vscode-fhs;
     mutableExtensionsDir = false;
 
     profiles.default = {
@@ -40,14 +40,14 @@
           {
             name = "copilot";
             publisher = "GitHub";
-            version = "1.270.1373";
-            sha256 = "sha256-5HlZKJQBdzXBjWki5owYD9vMo72A/6ukoDNgzIIaJt8=";
+            version = "1.322.0";
+            sha256 = "sha256-PekZQeRqpCSSVQe+AA0XLAwC3K0LGtRMbfnN7MxfmGA=";
           }
           {
             name = "roo-cline";
             publisher = "RooVeterinaryInc";
-            version = "3.3.19";
-            sha256 = "sha256-4IA9r6yJCn7pJqsCd+WvoEMfjp2K3FvzbTudCjFiqKg=";
+            version = "3.17.1";
+            sha256 = "sha256-gfzn0KulOHUKcG3LNF7+g7VwkDHR4BYsmq730Uuv2ZU=";
           }
         ];
 
