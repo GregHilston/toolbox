@@ -19,10 +19,8 @@
   # This dramatically improves rendering performance and enables GPU acceleration
   # in the VM, resulting in smoother mouse movement and better graphics performance.
   # Reference: https://github.com/mitchellh/nixos-config/commit/62b0e17fd6b422aa89115681f3cb43cd5711a898
-  hardware.graphics = {
-    enable = true;
-    enable32Bit = true; # Support for 32-bit applications if needed
-  };
+  # Note: enable32Bit is not available on aarch64 systems
+  hardware.graphics.enable = true;
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
