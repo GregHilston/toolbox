@@ -1,5 +1,9 @@
 # nixos/hosts/vms/mines/default.nix
-{lib, ...}: {
+{
+  lib,
+  pkgs,
+  ...
+}: {
   # Imports your common/default.nix to share settings
   imports = [
     ../../../modules/common
@@ -10,9 +14,25 @@
   # VMWare Tools
   virtualisation.vmware.guest.enable = true;
 
+  # Hardware Graphics Acceleration for VMware Fusion
+  # Enables 3D acceleration using Mesa's SVGA driver (vmwgfx module)
+  # This dramatically improves rendering performance and enables GPU acceleration
+  # in the VM, resulting in smoother mouse movement and better graphics performance.
+  # Reference: https://github.com/mitchellh/nixos-config/commit/62b0e17fd6b422aa89115681f3cb43cd5711a898
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true; # Support for 32-bit applications if needed
+  };
+
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+
+  # VMware graphics kernel module
+  # The vmwgfx module provides the VMware SVGA display driver needed for
+  # hardware-accelerated 3D graphics in VMware Fusion. This is critical for
+  # proper graphics performance on both x86_64 and aarch64 platforms.
+  boot.kernelModules = ["vmwgfx"];
 
   # Add these kernel modules for ARM virtualization
   boot.initrd.availableKernelModules = [
@@ -38,5 +58,11 @@
     # wl-clipboard: Required for Wayland clipboard integration with VMware Fusion
     # Enables proper clipboard sync between Alacritty terminal and macOS host
     wl-clipboard
+
+    # gtkmm3: Required for VMware user tools clipboard on aarch64
+    # Without this, clipboard integration between the VM and macOS host may not
+    # function properly on ARM-based systems (Apple Silicon).
+    # Reference: Mitchell Hashimoto's vm-shared.nix configuration
+    gtkmm3
   ];
 }
