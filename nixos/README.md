@@ -41,6 +41,34 @@ sudo nixos-rebuild boot
 
 **Alternative:** You can expand the boot partition size using GParted from a NixOS live ISO, but the cleanup commands above are simpler and usually sufficient.
 
+### Copy and Paste in VMware Fusion
+
+#### Within the NixOS VM
+- **GUI Applications (VS Code, etc.)**: `Ctrl+C` to copy, `Ctrl+V` to paste
+- **Alacritty Terminal**: `Ctrl+Shift+C` to copy, `Ctrl+Shift+V` to paste
+
+#### Between macOS Host and NixOS VM
+
+**Mac → NixOS VM:**
+- Copy on Mac: `Cmd+C`
+- Paste in VM GUI apps: `Ctrl+V`
+- Paste in VM terminal: `Ctrl+Shift+V`
+
+**NixOS VM → Mac:**
+- Copy in VM GUI apps: `Ctrl+C`
+- Copy in VM terminal: `Ctrl+Shift+C` (requires `wl-clipboard` package)
+- Paste on Mac: `Cmd+V`
+
+**Prerequisites:**
+- VMware Tools must be installed (included in this configuration)
+- `wl-clipboard` package required for Wayland clipboard sync (included in this configuration)
+- VMware Fusion clipboard sharing must be enabled in VM settings
+
+**Troubleshooting:**
+- If terminal copy doesn't sync to Mac, ensure text is properly selected before copying
+- Restart VM if clipboard sync stops working
+- Check VMware Fusion VM Settings → Sharing → Enable clipboard sharing
+
 ## NixOS Pattern
 
 1. Our usage of Just will leverage a `--flake` argument, passed by the CLI as an argument, indicating what machine we'll be building and deploying by pointing to a specific section in `flake.nix`.
