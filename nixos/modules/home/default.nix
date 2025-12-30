@@ -43,9 +43,8 @@
         # fonts
         nerd-fonts.jetbrains-mono
         jetbrains-mono
-        # inputs.claude-desktop.packages.${system}.claude-desktop
-
-        # inputs.claude-desktop.packages.${system}.claude-desktop
+        inputs.claude-desktop.packages.${pkgs.stdenv.hostPlatform.system}.claude-desktop
+        claude-code
       ]
       ++ (
         if pkgs.stdenv.hostPlatform.system != "aarch64-linux"
