@@ -4,6 +4,49 @@
 
 We have a pre configured shell available, with all the required tooling. Simply run `$ nix-shell` and you have everything set up. This is powered by our `shell.nix` file, and is useful on a freshly installed NixOS machine.
 
+## Modern Shell Tools
+
+Our configuration includes modern CLI tools for better productivity:
+
+### Starship Prompt
+A fast, customizable shell prompt showing git status, nix-shell context, and directory info.
+- Automatically shows git branch and status
+- Indicates when in a nix-shell
+- Clean, minimal design
+
+### Zoxide
+Smart directory jumping that learns your habits.
+```bash
+z <partial-path>  # Jump to most frecent matching directory
+zi                # Interactive selection with fzf
+```
+
+### fzf
+Interactive fuzzy finder for files, history, and directories.
+- **Ctrl+R**: Search command history
+- **Ctrl+T**: Search and insert files/directories
+- **Alt+C**: cd into directory
+
+### Eza
+Modern `ls` replacement with colors, icons, and git integration.
+```bash
+ls      # List files with icons and colors
+ll      # Long listing format
+la      # Show all files including hidden
+lt      # Tree view
+lla     # Long listing with all files
+```
+
+### Git Aliases
+Useful git shortcuts:
+```bash
+git st        # status
+git co        # checkout
+git br        # branch
+git lg        # pretty graph log
+git cleanup   # remove merged branches
+```
+
 ## Useful Commands
 
 I use [just](https://github.com/casey/just), a tool similar to Make, to help make commands more easily runnable. To install it, see [this documentation](https://github.com/casey/just?tab=readme-ov-file#packages). This is all powered by our `justfile`.
