@@ -16,6 +16,28 @@ See `flake.nix` for machine names, these are based off of `hosts/`.
 
 ## NixOS in a VM
 
+### Host Filesystem Sharing (Mines VM)
+
+The Mines VM has read-write access to the entire macOS filesystem at `/host`:
+
+**Access macOS files from the VM:**
+```bash
+# View macOS Downloads
+ls /host/ghilston/Downloads
+
+# Edit a file on macOS
+nvim /host/ghilston/Documents/myfile.txt
+
+# Work on macOS projects from the VM
+cd /host/ghilston/Projects/myproject
+```
+
+**Features:**
+- Full read-write access with `umask=22` (new files readable by group/others, writable by owner)
+- Changes visible immediately on both macOS and VM
+- Powered by VMware's vmhgfs-fuse filesystem driver
+- Based on Mitchell Hashimoto's configuration pattern
+
 ### Boot Drive Space Management
 
 The boot partition (`/boot`) in our NixOS VM is only 512MB. This can fill up quickly with multiple NixOS generations, preventing system rebuilds and updates.

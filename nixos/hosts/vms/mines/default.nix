@@ -14,6 +14,26 @@
   # VMWare Tools
   virtualisation.vmware.guest.enable = true;
 
+  # Setup qemu so we can run x86_64 binaries on aarch64
+  # Reference: mitchellh-nixos-config/machines/vm-aarch64.nix:8
+  boot.binfmt.emulatedSystems = ["x86_64-linux"];
+
+  # Share macOS host filesystem at /host
+  # Provides read-write access to entire macOS filesystem with umask=22
+  # Reference: mitchellh-nixos-config/machines/vm-aarch64.nix:21-32
+  fileSystems."/host" = {
+    fsType = "fuse./run/current-system/sw/bin/vmhgfs-fuse";
+    device = ".host:/";
+    options = [
+      "umask=22" # New files readable by group/others, writable by owner only
+      "uid=1000" # Files owned by ghilston user
+      "gid=1000" # Files owned by ghilston group
+      "allow_other" # Allow other users to access
+      "auto_unmount" # Auto-unmount on failure
+      "defaults"
+    ];
+  };
+
   # Enable SSH for Remote-SSH connections from macOS VS Code
   services.openssh = {
     enable = true;
@@ -39,30 +59,29 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  # Fix boot console mode for VMware/Parallels compatibility
+  # Prevents "error switching console mode" on boot
+  # Reference: mitchellh-nixos-config/machines/vm-shared.nix:41
+  boot.loader.systemd-boot.consoleMode = "0";
+
   # VMware graphics kernel module
   # The vmwgfx module provides the VMware SVGA display driver needed for
   # hardware-accelerated 3D graphics in VMware Fusion. This is critical for
   # proper graphics performance on both x86_64 and aarch64 platforms.
   boot.kernelModules = ["vmwgfx"];
 
-  # Add these kernel modules for ARM virtualization
-  boot.initrd.availableKernelModules = [
-    # "virtio_pci" # Virtio PCI devices
-    # "virtio_blk" # Block storage (disks)
-    # "virtio_net" # Network interfaces
-    # "virtio_mmio" # Memory-mapped I/O
-    "ext4" # Root filesystem support
-    # "nvme" # If using NVMe storage
-  ];
-
-  # Ensure virtio modules are included in initrd
-  # boot.initrd.kernelModules = [
-  #   "virtio_pci"
-  #   "virtio_blk"
-  #   "virtio_net"
-  # ];
   # Override the hostname from "nixos-vm" to "mines".
   networking.hostName = lib.mkDefault "mines";
+
+  # Disable firewall for VM NAT networking
+  # Safe for VM with NAT, easier for web app testing
+  # Reference: mitchellh-nixos-config/machines/vm-shared.nix:148-149
+  networking.firewall.enable = false;
+
+  # Passwordless sudo for VM development workflow
+  # Safe for VM-only environment, reduces development friction
+  # Reference: mitchellh-nixos-config/machines/vm-shared.nix:54-55
+  security.sudo.wheelNeedsPassword = false;
 
   # VMware Fusion specific packages
   environment.systemPackages = with pkgs; [

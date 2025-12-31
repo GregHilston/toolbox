@@ -1,5 +1,6 @@
 {...}: {
   imports = [
+    ./direnv
     ./git
     ./neovim
     ./zsh
