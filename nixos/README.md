@@ -47,6 +47,30 @@ git lg        # pretty graph log
 git cleanup   # remove merged branches
 ```
 
+### Tmux
+Enhanced terminal multiplexer with vim-aware navigation.
+
+**Basic Usage:**
+```bash
+tmux          # Start new session
+tmux ls       # List sessions
+tmux attach   # Attach to last session
+```
+
+**Key Bindings:** (Prefix is `Ctrl+b` by default)
+- **Prefix + |**: Split pane vertically
+- **Prefix + -**: Split pane horizontally
+- **Prefix + r**: Reload tmux config
+- **Ctrl+h/j/k/l**: Navigate between panes (works with vim!)
+- **Shift+Arrow**: Resize current pane
+
+**Features:**
+- Vi mode in copy mode (Prefix + [ to enter)
+- Mouse support (scroll, select panes, resize)
+- 10,000 line scrollback history
+- 256 color support
+- Seamless vim/tmux navigation
+
 ## Useful Commands
 
 I use [just](https://github.com/casey/just), a tool similar to Make, to help make commands more easily runnable. To install it, see [this documentation](https://github.com/casey/just?tab=readme-ov-file#packages). This is all powered by our `justfile`.
