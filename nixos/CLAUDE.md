@@ -28,7 +28,12 @@ For references to websites and GitHub repositories on using a NixOS VM for devel
 - **isengard**: x86_64-linux ThinkPad T420 with hardware-specific modules
 - **vm-x86**: x86_64-linux virtual machine
 - **vm-arm**: aarch64-linux virtual machine
-- **mines**: aarch64-linux virtual machine configuration (specifically runs on a M4 Max Macbook pro (IE arm CPU))
+- **mines**: aarch64-linux virtual machine configuration (runs on M4 Max MacBook Pro via VMware Fusion)
+  - Host filesystem sharing: macOS filesystem accessible at `/host` (read-write)
+  - x86_64 emulation: Can run x86_64 binaries on ARM via QEMU
+  - Passwordless sudo: Enabled for VM development workflow
+  - Firewall: Disabled for easier port access (safe in NAT VM)
+  - VS Code Remote-SSH: Runs on macOS host, connects to VM
 
 ## Build and Deploy Commands
 
@@ -69,6 +74,7 @@ The project uses `just` (alternative to Make) for common operations:
 - Custom Neovim configuration with LazyVim
 - VS Code integration with nix-vscode-extensions
 - Git configuration management
+- direnv for automatic project environment loading
 
 ## Testing and Linting
 
@@ -83,6 +89,39 @@ The project uses `just` (alternative to Make) for common operations:
 3. **New host setup**: Create new directory in `hosts/` with `default.nix` and `hardware-configuration.nix`
 4. **Updates**: Run `just up` to update flake inputs, then `just fu <host>` to rebuild
 
+## Mines VM Specific Features
+
+### Host Filesystem Sharing
+The entire macOS filesystem is accessible at `/host` with read-write access:
+- Access Downloads: `ls /host/Users/$USER/Downloads`
+- Edit macOS files: `nvim /host/Users/$USER/Documents/file.txt`
+- Share projects: Work on files in `/host` and see changes immediately on macOS
+- umask=22: New files created are readable by group/others, writable by owner only
+
+### x86_64 Emulation
+Run x86_64 binaries on ARM when needed:
+- Automatic via QEMU user mode emulation
+- Useful for npm packages or proprietary tools that only ship x86_64 binaries
+- Some performance overhead, but generally transparent
+
+### direnv Usage
+Automatically load project environments:
+1. Create `.envrc` file in project directory
+2. Run `direnv allow` to trust the file
+3. direnv automatically loads/unloads environment when entering/leaving directory
+4. Works seamlessly with nix-shell and flake.nix
+
+Example `.envrc` for Nix project:
+```bash
+use flake
+```
+
+### Development Workflow
+- **No sudo password**: Run `sudo` commands without password prompt
+- **No firewall**: All ports accessible for web app testing
+- **VS Code Remote-SSH**: VS Code on macOS connects to VM seamlessly
+- **Clipboard integration**: Copy/paste between VM and macOS works out of the box
+
 ## File Locations for Common Tasks
 
 - User packages: modules/home/default.nix
@@ -93,6 +132,14 @@ The project uses `just` (alternative to Make) for common operations:
 
 ## Recent Changes
 
+- **Mines VM improvements** (based on mitchellh-nixos-config patterns):
+  - Added host filesystem sharing at `/host` for macOS integration
+  - Enabled x86_64 binary emulation on aarch64
+  - Fixed boot console mode to eliminate boot errors
+  - Disabled firewall for easier development (safe in NAT VM)
+  - Enabled passwordless sudo for development workflow
+  - Cleaned up commented virtio kernel modules
+- Added direnv module for automatic project environment loading
 - Added nh build tool for faster rebuilds
 - Integrated yazi file explorer
 - Updated justfile with flake_path parameter
