@@ -25,6 +25,11 @@
     terminal = "screen-256color";
 
     extraConfig = ''
+      # Enable true color and proper terminal capabilities
+      set -g default-terminal "tmux-256color"
+      set -ga terminal-overrides ",*256col*:Tc"
+      set -ga terminal-overrides ",xterm-256color:RGB"
+
       # Better split keybindings (more intuitive)
       # | for vertical split, - for horizontal split
       unbind '"'
@@ -55,11 +60,12 @@
       # Reload config with prefix + r
       bind r source-file ~/.config/tmux/tmux.conf \; display "Config reloaded!"
 
-      # Better colors
-      set -ga terminal-overrides ",xterm-256color:RGB"
-
       # Enable focus events (needed for some vim plugins)
       set -g focus-events on
+
+      # Undercurl support (for zsh-autosuggestions styling)
+      set -as terminal-overrides ',*:Smulx=\E[4::%p1%dm'
+      set -as terminal-overrides ',*:Setulc=\E[58::2::%p1%{65536}%/%d::%p1%{256}%/%{255}%&%d::%p1%{255}%&%d%;m'
     '';
   };
 }
