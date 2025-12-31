@@ -79,8 +79,10 @@ tmux attach   # Attach to last session
 - Vi mode in copy mode (Prefix + [ to enter)
 - Mouse support (scroll, select panes, resize)
 - 10,000 line scrollback history
-- 256 color support
+- True color support (256+ colors)
 - Seamless vim/tmux navigation
+
+**Note about VS Code:** VS Code's terminal IntelliSense (smart autocomplete) doesn't work inside tmux because VS Code can't inject its shell integration into tmux panes. For the best VS Code experience, use its integrated terminal directly. Use tmux for persistent sessions and long-running processes.
 
 ## Useful Commands
 
