@@ -6,6 +6,16 @@
   programs.zsh = {
     enable = true;
     enableCompletion = true;
+
+    # Enable VS Code shell integration (works in tmux too)
+    initExtra = ''
+      # Check for VS Code via Remote-SSH (VSCODE_IPC_HOOK_CLI) or native terminal (TERM_PROGRAM)
+      if [[ -n "$VSCODE_IPC_HOOK_CLI" ]] || [[ "$TERM_PROGRAM" == "vscode" ]]; then
+        if command -v code &> /dev/null; then
+          . "$(code --locate-shell-integration-path zsh 2>/dev/null)" 2>/dev/null || true
+        fi
+      fi
+    '';
     # syntaxHighlighting.enable = true;
     zplug = {
       enable = true;

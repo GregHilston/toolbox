@@ -82,7 +82,12 @@ tmux attach   # Attach to last session
 - True color support (256+ colors)
 - Seamless vim/tmux navigation
 
-**Note about VS Code:** VS Code's terminal IntelliSense (smart autocomplete) doesn't work inside tmux because VS Code can't inject its shell integration into tmux panes. For the best VS Code experience, use its integrated terminal directly. Use tmux for persistent sessions and long-running processes.
+**Note about VS Code:** VS Code's command suggestions UI (the autocomplete with star/favorite button) **does not work inside tmux**. This is a VS Code GUI feature that requires direct terminal control. When tmux runs, VS Code can't overlay its suggestion UI on tmux panes.
+
+**Recommendation:** Use VS Code's integrated terminal (without tmux) for interactive work to get all autocomplete features. Use tmux only when you need:
+- Persistent sessions that survive SSH disconnects
+- Shared terminal sessions
+- Long-running background processes
 
 ## Useful Commands
 
