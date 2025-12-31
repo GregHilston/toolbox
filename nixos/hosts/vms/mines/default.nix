@@ -14,6 +14,19 @@
   # VMWare Tools
   virtualisation.vmware.guest.enable = true;
 
+  # Enable SSH for Remote-SSH connections from macOS VS Code
+  services.openssh = {
+    enable = true;
+    ports = [22];
+    settings = {
+      PasswordAuthentication = true;
+      AllowUsers = null; # Allows all users by default
+      UseDns = true;
+      X11Forwarding = false;
+      PermitRootLogin = "prohibit-password";
+    };
+  };
+
   # Hardware Graphics Acceleration for VMware Fusion
   # Enables 3D acceleration using Mesa's SVGA driver (vmwgfx module)
   # This dramatically improves rendering performance and enables GPU acceleration
