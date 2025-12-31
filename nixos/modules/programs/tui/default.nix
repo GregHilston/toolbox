@@ -6,6 +6,7 @@
     ./git
     ./neovim
     ./starship
+    ./tmux
     ./zoxide
     ./zsh
     ./nh.nix
