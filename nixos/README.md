@@ -15,11 +15,22 @@ A fast, customizable shell prompt showing git status, nix-shell context, and dir
 - Clean, minimal design
 
 ### Zoxide
-Smart directory jumping that learns your habits.
+Smart directory jumping that learns your habits. **Use `z` instead of `cd`!**
+
 ```bash
-z <partial-path>  # Jump to most frecent matching directory
-zi                # Interactive selection with fzf
+z projects        # Jump to any directory matching "projects"
+z nix            # Jump to your most-used directory with "nix" in the path
+zi               # Interactive fuzzy selection with fzf
+
+# Still works if you really need it
+builtin cd /path  # Traditional cd
 ```
+
+**Why use `z`?**
+- **Learns your habits**: Tracks which directories you visit most
+- **Frecency algorithm**: Combines frequency + recency
+- **Partial matches**: Type less, get there faster
+- **No full paths needed**: `z proj` might jump to `~/work/myproject`
 
 ### fzf
 Interactive fuzzy finder for files, history, and directories.

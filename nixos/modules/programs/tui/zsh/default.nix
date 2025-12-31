@@ -56,7 +56,7 @@
       c = "clear";
       cs = "sudo nix-store --gc";
       lg = "lazygit";
-      ll = "ls -l";
+      # ll provided by eza integration
       gitCommitUndo = "git reset --soft HEAD\\^";
       cat = "bat";
       # Copies a file's contents into the system's clipboard.
@@ -67,6 +67,9 @@
       nt = "nix flake test";
       opts = "man home-configuration.nix";
       cleanup = "nh clean all";
+
+      # Remind to use modern alternatives
+      cd = "echo '💡 Tip: Use \"z\" for smart directory jumping! (or use \"builtin cd\" for traditional cd)' && builtin cd";
     };
     history.size = 10000;
     history.path = "/home/${vars.user.name}/.zsh_history";

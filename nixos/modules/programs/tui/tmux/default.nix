@@ -1,7 +1,10 @@
 # nixos/modules/programs/tui/tmux/default.nix
-{config, lib, ...}: {
+{config, lib, pkgs, ...}: {
   programs.tmux = {
     enable = true;
+
+    # Use zsh as the default shell in tmux
+    shell = "${pkgs.zsh}/bin/zsh";
 
     # Start window and pane numbering at 1 instead of 0
     baseIndex = 1;
