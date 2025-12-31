@@ -1,6 +1,7 @@
 {...}: {
   imports = [
     ./direnv
+    ./fzf
     ./git
     ./neovim
     ./starship
