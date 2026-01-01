@@ -101,9 +101,17 @@ See `flake.nix` for machine names, these are based off of `hosts/`.
 
 ## NixOS in a VM
 
-### Host Filesystem Sharing (Mines VM)
+### VM Filesystem Sharing
 
-The Mines VM has read-write access to the entire macOS filesystem at `/host`:
+This project uses bidirectional filesystem sharing between macOS host and NixOS VMs for development.
+
+#### macOS Host → NixOS VM (Access Mac files from VM)
+
+**Method:** virtiofs (VMware shared folders)
+**Mount Point:** `/host` in NixOS VM
+**Source:** macOS home directory
+
+VMware Fusion automatically shares the macOS filesystem with the VM using virtiofs. NixOS mounts it at `/host`.
 
 **Access macOS files from the VM:**
 ```bash
@@ -119,9 +127,52 @@ cd /host/ghilston/Projects/myproject
 
 **Features:**
 - Full read-write access with `umask=22` (new files readable by group/others, writable by owner)
+- High performance (kernel-level filesystem)
 - Changes visible immediately on both macOS and VM
-- Powered by VMware's vmhgfs-fuse filesystem driver
-- Based on Mitchell Hashimoto's configuration pattern
+- Configured in [hosts/vms/mines/default.nix:24-35](hosts/vms/mines/default.nix#L24-L35)
+
+#### NixOS VM → macOS Host (Access VM files from Mac)
+
+**Method:** NFS (Network File System)
+**Mount Point:** `/System/Volumes/Data/vm/mines` on macOS (symlinked to `~/mines` for convenience)
+**Source:** `/home/ghilston` in NixOS VM
+
+**Setup:**
+
+1. Ensure NFS server is configured in NixOS VM (already configured in [hosts/vms/mines/default.nix:83-88](hosts/vms/mines/default.nix#L83-L88)):
+   ```nix
+   services.nfs.server = {
+     enable = true;
+     exports = ''
+       /home/ghilston *(rw,sync,no_subtree_check,all_squash,anonuid=1000,anongid=1000,insecure)
+     '';
+   };
+   ```
+   Note: The `insecure` option is required for macOS NFS clients.
+
+2. Deploy the NixOS configuration:
+   ```bash
+   just fr mines
+   ```
+
+3. Run the setup script on macOS (one-time setup):
+   ```bash
+   ./scripts/setup-nfs-mount.sh
+   ```
+
+4. **Reboot your Mac** (required once for `/vm` to be created via synthetic.conf)
+
+5. Run the setup script again after reboot to complete NFS configuration
+
+**Usage:**
+- Access VM files at `~/mines` (convenient symlink)
+- Or use full path: `/System/Volumes/Data/vm/mines`
+- Auto-mounts on first access (e.g., `ls ~/mines`)
+- Auto-unmounts when idle
+- Survives reboots of both host and guest
+- Works in all macOS apps (Finder, VSCode, Bruno, etc.)
+
+**Note:** If VM IP changes, re-run `./scripts/setup-nfs-mount.sh` to update the configuration. For zero-maintenance operation, configure a static IP for your VM.
 
 ### Boot Drive Space Management
 
