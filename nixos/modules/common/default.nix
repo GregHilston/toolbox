@@ -131,6 +131,11 @@
       xclip
       gnumake
       docker-compose
+
+      # Modern CLI tools
+      btop # Modern replacement for htop with graphs and better UI
+      gh # GitHub CLI for PRs, issues, and repo management
+      yq-go # YAML processor (jq for YAML files)
     ];
 
     sessionVariables = {

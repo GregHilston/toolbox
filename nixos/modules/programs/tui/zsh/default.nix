@@ -78,6 +78,23 @@
       opts = "man home-configuration.nix";
       cleanup = "nh clean all";
 
+      # Modern tool replacements
+      htop = "btop"; # Use btop with htop command (muscle memory)
+
+      # GitHub CLI shortcuts
+      ghpr = "gh pr view --web"; # Open current PR in browser
+      ghprc = "gh pr create --web"; # Create new PR via web interface
+      ghprl = "gh pr list"; # List PRs for current repo
+      ghis = "gh issue view --web"; # Open current issue in browser
+      ghisc = "gh issue create --web"; # Create new issue via web interface
+      ghisl = "gh issue list"; # List issues for current repo
+      ghrepo = "gh repo view --web"; # Open repo in browser
+
+      # Git diff shortcuts (delta is auto-configured as git pager)
+      gdiff = "git diff"; # Quick diff with delta
+      gshow = "git show"; # Show commit with delta
+      glog = "git log -p"; # Log with patches (uses delta)
+
       # Remind to use modern alternatives
       cd = "echo '💡 Tip: Use \"z\" for smart directory jumping! (or use \"builtin cd\" for traditional cd)' && builtin cd";
     };
