@@ -227,6 +227,39 @@ sudo nixos-rebuild boot
 - Restart VM if clipboard sync stops working
 - Check VMware Fusion VM Settings → Sharing → Enable clipboard sharing
 
+### VS Code Remote-SSH Setup
+
+VS Code runs on macOS as a client and connects to the NixOS VM via SSH. The VS Code GUI runs on the host while VS Code Server runs automatically in the VM.
+
+**Setup:**
+
+1. Add your SSH public key (`~/.ssh/id_rsa.pub`) to [modules/common/default.nix](modules/common/default.nix#L102-L104):
+   ```nix
+   users.users.${vars.user.name} = {
+     openssh.authorizedKeys.keys = [
+       "ssh-rsa AAAAB3Nza... your-public-key-here"
+     ];
+   };
+   ```
+
+2. Deploy configuration: `just fr mines`
+
+3. Configure `~/.ssh/config` with your VM details:
+   ```ssh-config
+   Host <vm-name>
+       HostName <vm-ip>
+       User <username>
+       IdentityFile ~/.ssh/id_rsa
+       IdentitiesOnly yes
+       ForwardAgent yes
+   ```
+
+4. Install "Remote - SSH" extension in VS Code on macOS
+
+5. Connect via `Cmd+Shift+P` → "Remote-SSH: Connect to Host"
+
+**Why:** Combines macOS hardware/battery with Linux development environment. VS Code is disabled in the VM config ([hosts/vms/mines/default.nix:128](hosts/vms/mines/default.nix#L128)) since it runs on the macOS host.
+
 ## NixOS Pattern
 
 1. Our usage of Just will leverage a `--flake` argument, passed by the CLI as an argument, indicating what machine we'll be building and deploying by pointing to a specific section in `flake.nix`.
