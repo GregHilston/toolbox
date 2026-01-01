@@ -137,6 +137,7 @@
 
       # Modern CLI tools
       btop # Modern replacement for htop with graphs and better UI
+      bruno-cli # CLI for Bruno API client
       gh # GitHub CLI for PRs, issues, and repo management
       yq-go # YAML processor (jq for YAML files)
     ];
