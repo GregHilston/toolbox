@@ -78,6 +78,15 @@
   # Reference: mitchellh-nixos-config/machines/vm-shared.nix:148-149
   networking.firewall.enable = false;
 
+  # NFS server to share VM filesystem with macOS host
+  # Enables performant filesystem access from macOS apps (Bruno, Finder, etc.)
+  services.nfs.server = {
+    enable = true;
+    exports = ''
+      /home/ghilston *(rw,sync,no_subtree_check,all_squash,anonuid=1000,anongid=1000,insecure)
+    '';
+  };
+
   # Passwordless sudo for VM development workflow
   # Safe for VM-only environment, reduces development friction
   # Reference: mitchellh-nixos-config/machines/vm-shared.nix:54-55
