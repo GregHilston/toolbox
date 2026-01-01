@@ -256,6 +256,19 @@ stylix.url = "github:danth/stylix/release-24.11";
 
 ## References
 
+### Command For Git Repositories
+
+```bash
+$ mkdir -p ~/nixos-references
+$ cd ~/Git/nixos-references
+$ git clone https://github.com/mitchellh/nixos-config.git mitchellh-nixos-config
+  git clone https://github.com/dustinlyons/nixos-config.git dustinlyons-nixos-config
+  git clone https://github.com/Fryuni/config-files.git fryuni-config-files
+  git clone https://github.com/GaetanLepage/nix-config.git gaetanlepage-nix-config
+  git clone https://github.com/hans-chrstn/.dotfiles.git hans-chrstn-dotfiles
+  git clone https://github.com/AlexNabokikh/nix-config.git alexnabokikh-nix-config
+```
+
 ### NixOS VM Development
 
 - https://github.com/mitchellh/nixos-config
