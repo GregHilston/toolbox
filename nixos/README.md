@@ -89,6 +89,78 @@ tmux attach   # Attach to last session
 - Shared terminal sessions
 - Long-running background processes
 
+## Per-Project Development Environments
+
+We use `direnv` + Nix flakes for automatic, isolated development environments.
+
+### How It Works
+
+When you enter a project directory with a `flake.nix` and `.envrc`, direnv automatically loads the project's tools (Python, Node.js, Go, etc.). When you leave, it unloads them.
+
+### Setup a New Project
+
+#### Python Project
+```bash
+# Create project
+mkdir my-python-project && cd my-python-project
+
+# Create flake.nix
+cat > flake.nix << 'EOF'
+{
+  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  outputs = { nixpkgs, ... }: {
+    devShells.aarch64-linux.default = nixpkgs.legacyPackages.aarch64-linux.mkShell {
+      packages = with nixpkgs.legacyPackages.aarch64-linux; [
+        python312
+        python312Packages.pip
+      ];
+    };
+  };
+}
+EOF
+
+# Enable direnv
+echo "use flake" > .envrc
+direnv allow
+
+# Python is now available!
+python --version
+```
+
+#### TypeScript/JavaScript Project
+```bash
+mkdir my-ts-project && cd my-ts-project
+
+# Create flake.nix
+cat > flake.nix << 'EOF'
+{
+  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  outputs = { nixpkgs, ... }: {
+    devShells.aarch64-linux.default = nixpkgs.legacyPackages.aarch64-linux.mkShell {
+      packages = with nixpkgs.legacyPackages.aarch64-linux; [
+        nodejs_22
+        yarn
+      ];
+    };
+  };
+}
+EOF
+
+echo "use flake" > .envrc
+direnv allow
+
+# Node.js is now available!
+node --version
+```
+
+**Note:** Change `aarch64-linux` to `x86_64-linux` if not on ARM.
+
+**Benefits:**
+- No global package installation
+- Each project has isolated dependencies
+- Auto-loads when you `cd` into the project
+- Works with VS Code (install `mkhl.direnv` extension)
+
 ## Useful Commands
 
 I use [just](https://github.com/casey/just), a tool similar to Make, to help make commands more easily runnable. To install it, see [this documentation](https://github.com/casey/just?tab=readme-ov-file#packages). This is all powered by our `justfile`.
