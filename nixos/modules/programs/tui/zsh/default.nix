@@ -8,7 +8,7 @@
     enableCompletion = true;
 
     # Enable VS Code shell integration (works in tmux too)
-    initExtra = ''
+    initContent = ''
       # Check for VS Code via Remote-SSH (VSCODE_IPC_HOOK_CLI) or native terminal (TERM_PROGRAM)
       if [[ -n "$VSCODE_IPC_HOOK_CLI" ]] || [[ "$TERM_PROGRAM" == "vscode" ]]; then
         if command -v code &> /dev/null; then
