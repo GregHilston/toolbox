@@ -70,6 +70,15 @@
   };
   programs = {
     virt-manager.enable = false;
+
+    # 1Password system integration
+    # Enables CLI integration and browser extension support
+    # Browser integration automatically works for Firefox, Chrome, and Brave
+    _1password.enable = true;
+    _1password-gui = {
+      enable = true;
+      polkitPolicyOwners = [vars.user.name];
+    };
   };
 
   services = {

@@ -61,7 +61,7 @@
         # OLD:extensions = with pkgs.nur.repos.rycee.firefox-addons; [
         # NEW:
         extensions.packages = with pkgs.nur.repos.rycee.firefox-addons; [
-          bitwarden
+          bitwarden-desktop
           vimium
           unpaywall
           link-cleaner
