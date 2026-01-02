@@ -171,6 +171,66 @@ I use [just](https://github.com/casey/just), a tool similar to Make, to help mak
 
 See `flake.nix` for machine names, these are based off of `hosts/`.
 
+## NixOS in WSL (Windows Subsystem for Linux)
+
+### Initial Setup (Foundation)
+
+If you need to install NixOS WSL from scratch:
+
+1. **Download NixOS WSL** (in PowerShell):
+   ```powershell
+   Invoke-WebRequest -Uri https://github.com/nix-community/NixOS-WSL/releases/download/2405.5.4/nixos-wsl.tar.gz -OutFile nixos-wsl.tar.gz
+   ```
+
+2. **Import into WSL**:
+   ```powershell
+   wsl --import NixOS $env:USERPROFILE\NixOS nixos-wsl.tar.gz
+   wsl --set-default NixOS
+   ```
+
+3. **Start WSL and deploy configuration**:
+   ```powershell
+   wsl -d NixOS
+   ```
+
+   Once inside (you'll be the `nixos` user):
+   ```bash
+   # Install git temporarily (not in base install)
+   nix-shell -p git
+
+   # Clone your config
+   git clone https://github.com/GregHilston/toolbox ~/Git/toolbox
+   cd ~/Git/toolbox/nixos
+
+   # Deploy the foundation configuration
+   # This will create your ghilston user and set everything up
+   sudo nixos-rebuild switch --flake .#foundation
+
+   # Exit both nix-shell and WSL
+   exit
+   exit
+   ```
+
+4. **Restart WSL** (in PowerShell):
+   ```powershell
+   wsl --shutdown
+   wsl
+   ```
+
+   You should now be logged in as `ghilston` user with your full configuration!
+
+### VS Code Remote-WSL Setup
+
+**Option 1: Remote-WSL Extension (Recommended)**
+- Install the [Remote-WSL](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl) extension in VS Code on Windows
+- Click the remote indicator in bottom-left corner → "Connect to WSL"
+- VS Code automatically connects using native WSL integration
+- **No SSH needed** - Microsoft's native approach
+
+**Option 2: Remote-SSH Extension**
+- Would require SSH service configuration (not currently enabled on foundation)
+- Less common for WSL, but possible if needed
+
 ## NixOS in a VM
 
 ### VM Filesystem Sharing
