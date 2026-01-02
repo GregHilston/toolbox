@@ -69,8 +69,8 @@
       # ll provided by eza integration
       gitCommitUndo = "git reset --soft HEAD\\^";
       cat = "bat";
-      # Copies a file's contents into the system's clipboard.
-      clip = "xclip -sel clip <";
+      # Clipboard: uses xclip if available (GUI systems), otherwise suggests alternatives
+      clip = "if command -v xclip &> /dev/null; then xclip -sel clip <; else echo 'xclip not available. On WSL use clip.exe, on Wayland use wl-copy'; fi";
       # nix garbage collect
       ncg = "nix-collect-garbage --delete-older-than 3d && sudo nix-collect-garbage -d && sudo /run/current-system/bin/switch-to-configuration boot";
       nc = "nix flake check";

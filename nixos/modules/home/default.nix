@@ -34,29 +34,34 @@ in {
     homeDirectory = "/home/${vars.user.name}";
     packages = with pkgs;
       [
-        chromium
-        dmenu
+        # TUI/CLI tools (always installed)
         ncdu
-        obsidian
         ollama
         ripgrep
-        vlc
         hugo
-        # texstudio
-        godot_4
         go
         duckdb
+        claude-code
+      ]
+      ++ lib.optionals enableGui [
+        # GUI applications (only on non-WSL systems)
+        chromium
+        dmenu
+        obsidian
+        vlc
+        godot_4
+        xclip # X11 clipboard utility
+        # texstudio
 
-        # fonts
+        # Fonts (needed for GUI)
         nerd-fonts.jetbrains-mono
         jetbrains-mono
         inputs.claude-desktop.packages.${pkgs.stdenv.hostPlatform.system}.claude-desktop
-        claude-code
       ]
       ++ (
-        if pkgs.stdenv.hostPlatform.system != "aarch64-linux"
+        if (pkgs.stdenv.hostPlatform.system != "aarch64-linux") && enableGui
         then [
-          # ARM does not support every package, so only install these if we're not on an ARM basd architecture
+          # x86_64 GUI apps (not on ARM, not on WSL)
           bitwarden-desktop
           discord
           slack

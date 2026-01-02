@@ -53,9 +53,10 @@
     };
   };
 
-  # Disable Stylix desktop-related targets
+  # Disable Stylix desktop-related targets for WSL
   stylix = {
     targets.console.enable = false;
+    targets.plymouth.enable = false; # WSL has no boot splash screen
   };
 
   # Configure home-manager for WSL
