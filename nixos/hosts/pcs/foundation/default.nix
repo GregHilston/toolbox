@@ -35,6 +35,10 @@
     pipewire.enable = lib.mkForce false;
   };
 
+  # Disable GUI programs that don't work in WSL
+  programs._1password.enable = lib.mkForce false;
+  programs._1password-gui.enable = lib.mkForce false;
+
   # Disable unnecessary services for WSL
   security.rtkit.enable = lib.mkOverride 900 false;
 
@@ -57,7 +61,11 @@
   # Configure home-manager for WSL
   home-manager = {
     extraSpecialArgs = {
-      inherit inputs outputs vars;
+      inherit inputs outputs;
+      # Override vars to disable GUI for WSL
+      vars = vars // {
+        enableGui = false;
+      };
     };
     users.${vars.user.name} = {pkgs, ...}: {
       imports = [../../../modules/home];
