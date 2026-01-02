@@ -35,6 +35,9 @@
     pipewire.enable = lib.mkForce false;
   };
 
+  # Disable networking services unnecessary in WSL
+  networking.wireless.enable = lib.mkForce false; # Disables wpa_supplicant
+
   # Disable GUI programs that don't work in WSL
   programs._1password.enable = lib.mkForce false;
   programs._1password-gui.enable = lib.mkForce false;
