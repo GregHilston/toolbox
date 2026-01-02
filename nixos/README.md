@@ -231,7 +231,26 @@ If you need to install NixOS WSL from scratch:
 - Would require SSH service configuration (not currently enabled on foundation)
 - Less common for WSL, but possible if needed
 
-### Troubleshooting: Nuclear Option (Complete Reinstall)
+### Troubleshooting
+
+#### Common Issues
+
+**Error: `Catastrophic failure Error code: Wsl/Service/E_UNEXPECTED`**
+
+This indicates WSL service corruption, not a NixOS config issue. Fix:
+
+```powershell
+# In PowerShell as Administrator
+wsl --update
+wsl --shutdown
+# Wait 15 seconds, then: wsl
+```
+
+**Error: `wpa_supplicant.service failed (Result: exit-code)`**
+
+WSL tried to start WiFi management, which doesn't exist in WSL. Already disabled in foundation config via `networking.wireless.enable = lib.mkForce false;`.
+
+#### Nuclear Option (Complete Reinstall)
 
 If your WSL instance is broken and you need to start completely fresh:
 
