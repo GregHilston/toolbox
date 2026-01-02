@@ -231,6 +231,32 @@ If you need to install NixOS WSL from scratch:
 - Would require SSH service configuration (not currently enabled on foundation)
 - Less common for WSL, but possible if needed
 
+### Troubleshooting: Nuclear Option (Complete Reinstall)
+
+If your WSL instance is broken and you need to start completely fresh:
+
+**⚠️ WARNING: This will delete ALL data in your WSL instance!**
+
+1. **Backup important data** (in PowerShell):
+   ```powershell
+   # Check what's in your home directory first
+   ls \\wsl$\NixOS\home\ghilston\
+
+   # Copy anything important to Windows
+   Copy-Item -Recurse \\wsl$\NixOS\home\ghilston\important-folder C:\Backup\
+   ```
+
+2. **Unregister the broken WSL instance**:
+   ```powershell
+   # Check current WSL distributions
+   wsl --list --verbose
+
+   # Unregister NixOS (this deletes everything!)
+   wsl --unregister NixOS
+   ```
+
+3. **Follow the Initial Setup steps above** to reinstall from scratch
+
 ## NixOS in a VM
 
 ### VM Filesystem Sharing
