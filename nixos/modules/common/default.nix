@@ -140,9 +140,10 @@
       fd
       python3
       pandoc
-      xclip
       gnumake
       docker-compose
+      # Note: xclip moved to home.packages with enableGui conditional
+      # This allows GUI systems to have clipboard while WSL doesn't
 
       # Modern CLI tools
       btop # Modern replacement for htop with graphs and better UI
