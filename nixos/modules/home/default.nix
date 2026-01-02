@@ -2,12 +2,19 @@
   inputs,
   vars,
   pkgs,
+  lib,
   ...
-}: {
-  imports = [
-    ../programs/tui
-    ../programs/gui
-  ];
+}: let
+  # Default to GUI enabled if not specified
+  enableGui = vars.enableGui or true;
+in {
+  imports =
+    [
+      ../programs/tui
+    ]
+    ++ lib.optionals enableGui [
+      ../programs/gui
+    ];
 
   nixpkgs = {
     config = {
