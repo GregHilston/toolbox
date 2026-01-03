@@ -61,6 +61,17 @@
         users.${vars.user.name} = {};
       };
     };
+    caches = {
+      nix.settings = {
+        builders-use-substitutes = true;
+        substituters = [
+          "https://cache.nixos.org"
+        ];
+        trusted-public-keys = [
+          "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+        ];
+      };
+    };
   in {
     formatter = forEachSystem (pkgs: pkgs.alejandra);
 
@@ -77,6 +88,7 @@
           stylix.nixosModules.stylix
           home-manager.nixosModules.home-manager
           mkHomeManagerModule
+          caches
         ];
       };
 
@@ -92,6 +104,7 @@
           stylix.nixosModules.stylix
           home-manager.nixosModules.home-manager
           mkHomeManagerModule
+          caches
         ];
       };
 
@@ -106,6 +119,7 @@
           stylix.nixosModules.stylix
           home-manager.nixosModules.home-manager
           mkHomeManagerModule
+          caches
         ];
       };
 
@@ -120,6 +134,7 @@
           stylix.nixosModules.stylix
           home-manager.nixosModules.home-manager
           mkHomeManagerModule
+          caches
         ];
       };
 
@@ -135,6 +150,7 @@
           stylix.nixosModules.stylix
           home-manager.nixosModules.home-manager
           mkHomeManagerModule
+          caches
         ];
       };
     };
