@@ -57,6 +57,12 @@
         "git"
         "docker"
       ];
+      # Fix: Set ZSH variable so oh-my-zsh.sh can be sourced correctly
+      # This is needed when using zplug alongside oh-my-zsh
+      # This allows aliases like `$ gst` to work...
+      extraConfig = ''
+        export ZSH="${pkgs.oh-my-zsh}/share/oh-my-zsh"
+      '';
     };
 
     shellAliases = {
