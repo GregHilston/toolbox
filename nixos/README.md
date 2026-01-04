@@ -4,6 +4,18 @@
 
 We have a pre configured shell available, with all the required tooling. Simply run `$ nix-shell` and you have everything set up. This is powered by our `shell.nix` file, and is useful on a freshly installed NixOS machine.
 
+## Claude Code Best Practices
+
+This project follows [Boris's recommended patterns](https://www.reddit.com/r/ClaudeAI/comments/1q2c0ne/claude_code_creator_boris_shares_his_setup_with/) for Claude Code usage:
+
+1. **Minimal CLAUDE.md** - Contains only common mistakes and essential info, not encyclopedic documentation
+2. **Slash commands for workflows** - Use `/test-config`, `/deploy-config`, `/verify`, `/commit` for repeated tasks
+3. **Pre-approved bash commands** - Common NixOS commands (nix, just, git) pre-approved in [.claude/settings.json](.claude/settings.json)
+4. **Auto-formatting hook** - Nix files automatically formatted after editing via PostToolUse hook
+5. **Verification before deployment** - Always run `/verify <host>` before committing changes
+
+See [CLAUDE.md](CLAUDE.md) for the assistant guide optimized for Claude Code.
+
 ## Modern Shell Tools
 
 Our configuration includes modern CLI tools for better productivity:
