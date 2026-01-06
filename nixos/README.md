@@ -449,6 +449,27 @@ VS Code runs on macOS as a client and connects to the NixOS VM via SSH. The VS C
 
 **Why:** Combines macOS hardware/battery with Linux development environment. VS Code is disabled in the VM config ([hosts/vms/mines/default.nix:128](hosts/vms/mines/default.nix#L128)) since it runs on the macOS host.
 
+## When Running A Nix OS VM: When to Use NixOS vs Native OS Applications
+
+Following Mitchell Hashimoto's approach, we use NixOS VMs for development work while keeping personal productivity apps on the native OS (macOS/Windows).
+
+**Use NixOS (VM/WSL) for:**
+- Development tools (editors, compilers, runtimes)
+- CLI/TUI applications
+- Tools requiring reproducible environments
+- Anything needing declarative configuration
+
+**Use Native OS (macOS/Windows) for:**
+- Document editors (Obsidian, etc)
+- Media consumption and communication apps
+- Apps needing deep OS integration
+- Apps where performance/battery matters
+- Proprietary apps without good Linux alternatives
+
+**Example:** Obsidian runs as a native macOS/Windows app pointing to notes on the host OS. The NixOS VM *could* access these files (via `/host` or `/mnt/c/`), but there's no benefit to running Obsidian in the VM.
+
+**Bare Metal (isengard):** Run everything in NixOS - it's your primary OS.
+
 ## NixOS Pattern
 
 1. Our usage of Just will leverage a `--flake` argument, passed by the CLI as an argument, indicating what machine we'll be building and deploying by pointing to a specific section in `flake.nix`.
