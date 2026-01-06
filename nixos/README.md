@@ -416,6 +416,26 @@ sudo nixos-rebuild boot
 - Restart VM if clipboard sync stops working
 - Check VMware Fusion VM Settings → Sharing → Enable clipboard sharing
 
+### Resizing VM Disk (Proxmox)
+
+After resizing a disk in the Proxmox UI, you need to expand the partition and filesystem from within NixOS:
+
+```bash
+# Resize the partition (adjust /dev/sda and partition number as needed)
+nix-shell -p parted --run "sudo parted /dev/sda resizepart 1 100%"
+
+# Resize the filesystem (check type with: lsblk -f)
+# For ext4:
+sudo resize2fs /dev/sda1
+# For btrfs:
+sudo btrfs filesystem resize max /
+
+# Verify
+df -h
+```
+
+No reboot required.
+
 ### VS Code Remote-SSH Setup
 
 VS Code runs on macOS as a client and connects to the NixOS VM via SSH. The VS Code GUI runs on the host while VS Code Server runs automatically in the VM.
