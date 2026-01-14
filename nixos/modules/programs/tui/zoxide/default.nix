@@ -1,5 +1,9 @@
 # nixos/modules/programs/tui/zoxide/default.nix
-{config, lib, ...}: {
+{
+  config,
+  lib,
+  ...
+}: {
   programs.zoxide = {
     enable = true;
     enableZshIntegration = true;

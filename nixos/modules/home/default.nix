@@ -28,6 +28,12 @@ in {
     inputs.nix-vscode-extensions.overlays.default
   ];
 
+  # Disable KDE Plasma animations for a snappier feel
+  xdg.configFile."kdeglobals".text = lib.mkIf enableGui ''
+    [KDE]
+    AnimationDurationFactor=0
+  '';
+
   # User packages. IE not system packages
   home = {
     username = "${vars.user.name}";

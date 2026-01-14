@@ -1,5 +1,9 @@
 # nixos/modules/programs/tui/fzf/default.nix
-{config, lib, ...}: {
+{
+  config,
+  lib,
+  ...
+}: {
   programs.fzf = {
     enable = true;
     enableZshIntegration = true;
