@@ -73,7 +73,7 @@
         };
         modules = [
           nixos-wsl.nixosModules.default
-          ./hosts/pcs/foundation
+          ./hosts/vms/foundation
           stylix.nixosModules.stylix
           home-manager.nixosModules.home-manager
           mkHomeManagerModule
@@ -95,28 +95,14 @@
         ];
       };
 
-      vm-x86 = nixpkgs.lib.nixosSystem {
+      home-lab = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = {
           inherit inputs vars;
           outputs = self;
         };
         modules = [
-          ./hosts/vms/x86_64
-          stylix.nixosModules.stylix
-          home-manager.nixosModules.home-manager
-          mkHomeManagerModule
-        ];
-      };
-
-      vm-arm = nixpkgs.lib.nixosSystem {
-        system = "aarch64-linux";
-        specialArgs = {
-          inherit inputs vars;
-          outputs = self;
-        };
-        modules = [
-          ./hosts/vms/arm
+          ./hosts/vms/home-lab
           stylix.nixosModules.stylix
           home-manager.nixosModules.home-manager
           mkHomeManagerModule
