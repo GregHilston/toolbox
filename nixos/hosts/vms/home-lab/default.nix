@@ -13,7 +13,7 @@
     ./steam.nix
   ];
 
-  networking.hostName = "nixos-vm";
+  networking.hostName = "home-lab";
 
   boot.loader.grub = {
     enable = true;
