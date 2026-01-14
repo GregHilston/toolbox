@@ -67,9 +67,11 @@
     extraSpecialArgs = {
       inherit inputs outputs;
       # Override vars to disable GUI for WSL
-      vars = vars // {
-        enableGui = false;
-      };
+      vars =
+        vars
+        // {
+          enableGui = false;
+        };
     };
     users.${vars.user.name} = {pkgs, ...}: {
       imports = [../../../modules/home];

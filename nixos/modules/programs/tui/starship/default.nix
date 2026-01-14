@@ -1,5 +1,9 @@
 # nixos/modules/programs/tui/starship/default.nix
-{config, lib, ...}: {
+{
+  config,
+  lib,
+  ...
+}: {
   programs.starship = {
     enable = true;
     enableZshIntegration = true;
