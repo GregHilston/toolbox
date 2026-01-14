@@ -1,10 +1,10 @@
 # NixOS Configuration Assistant
 
 ## Available Hosts
-- **foundation** (x86_64 WSL)
+- **foundation** (x86_64 WSL VM)
 - **isengard** (x86_64 ThinkPad T420)
 - **mines** (aarch64 VM on M4 Mac via VMware Fusion)
-- **vm-x86**, **vm-arm** (VMs)
+- **home-lab** (x86_64 VM)
 
 ## Common Mistakes to Avoid
 
