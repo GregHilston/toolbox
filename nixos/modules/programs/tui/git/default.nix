@@ -1,6 +1,7 @@
 {
   pkgs,
   inputs,
+  vars,
   ...
 }: {
   programs.git = {
@@ -8,8 +9,8 @@
 
     settings = {
       user = {
-        name = "GregHilston";
-        email = "Gregory.Hilston@gmail.com";
+        name = vars.user.fullName;
+        email = vars.user.email;
       };
 
       alias = {

@@ -91,7 +91,7 @@ in {
   custom = {
     nh = {
       enable = true;
-      flake = "${builtins.getEnv "HOME"}/toolbox/nixos";
+      flake = vars.paths.nixosFlake;
     };
     yazi.enable = true;
   };

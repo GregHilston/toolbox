@@ -2,6 +2,7 @@
   lib,
   config,
   pkgs,
+  vars,
   ...
 }: let
   cfg = config.custom.nh;
@@ -14,7 +15,7 @@ in {
     };
     flake = lib.mkOption {
       type = lib.types.str;
-      default = "${builtins.getEnv "HOME"}/Git/toolbox/nixos";
+      default = vars.paths.nixosFlake;
       description = "Path to the flake.nix file.";
     };
   };

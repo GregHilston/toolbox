@@ -15,6 +15,7 @@
     configHome = "$HOME/.config";
     dataHome = "$HOME/.local/share";
     cacheHome = "$HOME/.cache";
+    nixosFlake = "$HOME/Git/toolbox/nixos";
   };
 
   system = {
