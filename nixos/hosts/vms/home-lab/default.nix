@@ -10,7 +10,7 @@
   imports = [
     ./hardware-configuration.nix
     ../../../modules/common
-    ./steam.nix
+    ./gaming.nix
   ];
 
   networking.hostName = "home-lab";
