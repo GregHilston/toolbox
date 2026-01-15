@@ -16,9 +16,9 @@ upgrade host:
 debug host:
   sudo nixos-rebuild switch --flake .#{{host}} --show-trace --verbose
 
-# List available hosts (assuming they're in the hosts directory)
+# List available hosts
 list-hosts:
-  @ls hosts/
+  @find hosts -mindepth 2 -maxdepth 2 -type d -exec basename {} \;
 
 # List past NixOS generations
 list-generations:
@@ -26,7 +26,7 @@ list-generations:
 
 # Delete specific generations
 delete-specific-generations generations:
-  nix-collect-garbage --delete-generations #{{generations}}
+  nix-collect-garbage --delete-generations {{generations}}
 
 # Delete all old generations. Can remove sudo to remove not remove system packages
 delete-all-old-generations:
@@ -36,7 +36,7 @@ up:
   nix flake update
 
 # Update specific input
-# usage: make upp i=home-manager
+# usage: just upp i=home-manager
 upp:
   nix flake update $(i)
 
