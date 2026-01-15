@@ -556,7 +556,3 @@ $ git clone https://github.com/mitchellh/nixos-config.git mitchellh-nixos-config
   - [compare two fonts](https://www.pairandcompare.net/)
 - [Ricing guide with Stylix](https://journix.dev/posts/ricing-linux-has-never-been-easier-nixos-and-stylix/)
 - [Great wallpapers](https://github.com/dharmx/walls/tree/main)
-
-## TODO
-
-- 

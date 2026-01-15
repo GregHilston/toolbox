@@ -16,7 +16,6 @@ in {
 
   config = lib.mkIf config.custom.yazi.enable {
     programs.yazi = {
-      # package = inputs.yazi.packages.${pkgs.system}.yazi;
       enable = true;
       shellWrapperName = "y";
       settings = {
