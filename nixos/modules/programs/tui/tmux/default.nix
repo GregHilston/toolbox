@@ -1,10 +1,5 @@
 # nixos/modules/programs/tui/tmux/default.nix
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   programs.tmux = {
     enable = true;
 

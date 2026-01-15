@@ -1,16 +1,9 @@
-{
-  inputs,
-  outputs,
-  lib,
-  config,
-  pkgs,
-  vars,
-  ...
-}: {
+{...}: {
   imports = [
     ./hardware-configuration.nix
     ../../../modules/common
-    ./gaming.nix
+    ../../../modules/services/ssh.nix
+    ../../../modules/services/gaming.nix
   ];
 
   networking.hostName = "home-lab";
@@ -25,16 +18,5 @@
 
   services.spice-vdagentd.enable = true;
   services.qemuGuest.enable = true;
-
-  services.openssh = {
-    enable = true;
-    ports = [22];
-    settings = {
-      PasswordAuthentication = true;
-      AllowUsers = null; # Allows all users by default. Can be [ "user1" "user2" ]
-      UseDns = true;
-      X11Forwarding = false;
-      PermitRootLogin = "prohibit-password"; # "yes", "without-password", "prohibit-password", "forced-commands-only", "no"
-    };
-  };
+  services.ssh.enable = true;
 }
