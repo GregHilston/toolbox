@@ -1,12 +1,4 @@
-{
-  inputs,
-  outputs,
-  lib,
-  config,
-  pkgs,
-  vars,
-  ...
-}: {
+{lib, ...}: {
   imports = [
     ./hardware-configuration.nix
     ../../../modules/common
@@ -19,6 +11,9 @@
     device = "/dev/sda";
     useOSProber = true;
   };
+
+  # Disable auto-reboot for laptop - updates download but reboot manually when convenient
+  system.autoUpgrade.allowReboot = lib.mkForce false;
 
   powerManagement.powertop.enable = true;
 
