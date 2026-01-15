@@ -2,11 +2,13 @@
 {
   lib,
   pkgs,
+  vars,
   ...
 }: {
   # Imports your common/default.nix to share settings
   imports = [
     ../../../modules/common
+    ../../../modules/services/ssh.nix
     # run `sudo nixos-generate-config --show-hardware-config > hardware-configuration.nix` to generate
     ./hardware-configuration.nix
   ];
@@ -35,17 +37,7 @@
   };
 
   # Enable SSH for Remote-SSH connections from macOS VS Code
-  services.openssh = {
-    enable = true;
-    ports = [22];
-    settings = {
-      PasswordAuthentication = true;
-      AllowUsers = null; # Allows all users by default
-      UseDns = true;
-      X11Forwarding = false;
-      PermitRootLogin = "prohibit-password";
-    };
-  };
+  services.ssh.enable = true;
 
   # Hardware Graphics Acceleration for VMware Fusion
   # Enables 3D acceleration using Mesa's SVGA driver (vmwgfx module)
@@ -83,7 +75,7 @@
   services.nfs.server = {
     enable = true;
     exports = ''
-      /home/ghilston *(rw,sync,no_subtree_check,all_squash,anonuid=1000,anongid=1000,insecure)
+      /home/${vars.user.name} *(rw,sync,no_subtree_check,all_squash,anonuid=1000,anongid=1000,insecure)
     '';
   };
 
