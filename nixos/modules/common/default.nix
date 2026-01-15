@@ -46,14 +46,14 @@
     defaultLocale = vars.system.locale;
     extraLocaleSettings = {
       LC_ADDRESS = vars.system.locale;
-      LC_IDENTIFICATION = "en_US.UTF-8";
-      LC_MEASUREMENT = "en_US.UTF-8";
-      LC_MONETARY = "en_US.UTF-8";
-      LC_NAME = "en_US.UTF-8";
-      LC_NUMERIC = "en_US.UTF-8";
-      LC_PAPER = "en_US.UTF-8";
-      LC_TELEPHONE = "en_US.UTF-8";
-      LC_TIME = "en_US.UTF-8";
+      LC_IDENTIFICATION = vars.system.locale;
+      LC_MEASUREMENT = vars.system.locale;
+      LC_MONETARY = vars.system.locale;
+      LC_NAME = vars.system.locale;
+      LC_NUMERIC = vars.system.locale;
+      LC_PAPER = vars.system.locale;
+      LC_TELEPHONE = vars.system.locale;
+      LC_TIME = vars.system.locale;
     };
   };
 
