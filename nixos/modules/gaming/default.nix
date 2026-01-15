@@ -1,10 +1,9 @@
 {
   config,
   pkgs,
+  vars,
   ...
-}: let
-  user = "ghilston"; # TODO have this get passed in somehow
-in {
+}: {
   # hardware.graphics = {
   #   enable = true;
   #   enable32Bit = true;
@@ -26,7 +25,7 @@ in {
     dedicatedServer.openFirewall = true; # Open ports in the firewall for Source Dedicated Server
   };
 
-  home-manager.users.${user} = {
+  home-manager.users.${vars.user.name} = {
     home.stateVersion = "24.05";
 
     home.packages = with pkgs; [
