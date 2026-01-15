@@ -16,19 +16,9 @@
         fi
       fi
     '';
-    # syntaxHighlighting.enable = true;
     zplug = {
       enable = true;
       plugins = [
-        # Fast jump around
-        # { name = "agkozak/zsh-z"; }
-
-        # A collection of utility functions for Zsh
-        # { name = "belak/zsh-utils"; }
-
-        # Adds vi mode to Zsh, allowing modal editing
-        # { name = "jeffreytse/zsh-vi-mode"; }
-
         # Suggests commands as you type based on history and completions
         {name = "zsh-users/zsh-autosuggestions";}
 
@@ -43,12 +33,6 @@
 
         # Auto-pairing of quotes, brackets, etc.
         {name = "hlissner/zsh-autopair";}
-
-        # Directory listings with colors
-        # { name = "supercrabtree/k"; }
-
-        # Visual mode for Zsh
-        # { name = "b4b4r07/zsh-vimode-visual"; }
       ];
     };
     oh-my-zsh = {
