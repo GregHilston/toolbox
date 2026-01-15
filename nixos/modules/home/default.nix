@@ -29,10 +29,15 @@ in {
   ];
 
   # Disable KDE Plasma animations for a snappier feel
-  xdg.configFile."kdeglobals".text = lib.mkIf enableGui ''
-    [KDE]
-    AnimationDurationFactor=0
-  '';
+  # Only set this on GUI-enabled systems to avoid evaluation errors on WSL/headless hosts
+  # When enableGui is false, lib.mkIf returns an empty set, which causes NixOS to complain
+  # about the kdeglobals.source attribute being accessed but not defined
+  xdg.configFile = lib.mkIf enableGui {
+    "kdeglobals".text = ''
+      [KDE]
+      AnimationDurationFactor=0
+    '';
+  };
 
   # User packages. IE not system packages
   home = {
