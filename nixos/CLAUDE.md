@@ -42,4 +42,21 @@ ALWAYS test before deploying:
 
 Use `/verify <host>` before committing. Test builds catch 90% of issues.
 
+## Dev Container Validation
+
+A Docker dev container is available for validating configs without a NixOS host:
+
+```bash
+# Build image (one-time, from nixos/.devcontainer/)
+docker build -t nixos-devcontainer .
+
+# Validate all configs
+docker run --rm -v /path/to/nixos:/workspaces/nixos nixos-devcontainer just validate
+```
+
+**What it can do:** `nix flake check`, dry-run builds, catch config errors
+**What it cannot do:** `nixos-rebuild switch`, test services, hardware-specific behavior
+
+See [.devcontainer/README.md](.devcontainer/README.md) for details.
+
 If needed, see [README.md](README.md) for detailed documentation on repository structure, VM setup, and development workflows.
