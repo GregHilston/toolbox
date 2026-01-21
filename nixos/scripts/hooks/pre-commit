@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Pre-commit hook: Format Nix files
+# Install with: ./nixos/scripts/install-hooks.sh
+
+set -e
+
+# Only run if we have staged nix files in the nixos directory
+STAGED_NIX_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^nixos/.*\.nix$' || true)
+
+if [ -z "$STAGED_NIX_FILES" ]; then
+    exit 0
+fi
+
+echo "Running nix fmt on staged files..."
+
+# Change to nixos directory for formatting
+cd "$(git rev-parse --show-toplevel)/nixos"
+
+# Check if nix is available
+if ! command -v nix &> /dev/null; then
+    echo "Warning: nix not found, skipping format check"
+    exit 0
+fi
+
+# Run formatter and check for changes
+nix fmt . 2>/dev/null
+
+# Check if any staged files were modified by the formatter
+REFORMATTED=false
+for file in $STAGED_NIX_FILES; do
+    # Get the file path relative to repo root
+    FULL_PATH="$(git rev-parse --show-toplevel)/$file"
+    if [ -f "$FULL_PATH" ]; then
+        # Check if file has unstaged changes (meaning formatter modified it)
+        if ! git diff --quiet "$FULL_PATH" 2>/dev/null; then
+            echo "Reformatted: $file"
+            REFORMATTED=true
+        fi
+    fi
+done
+
+if [ "$REFORMATTED" = true ]; then
+    echo ""
+    echo "Some files were reformatted. Please review and re-stage the changes:"
+    echo "  git add -p nixos/"
+    echo "  git commit"
+    exit 1
+fi
+
+echo "All Nix files formatted correctly."

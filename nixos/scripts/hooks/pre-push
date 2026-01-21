@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Pre-push hook: Validate all NixOS configurations using the dev container
+# Install with: ./nixos/scripts/install-hooks.sh
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NIXOS_DIR="$REPO_ROOT/nixos"
+
+# Check if Docker is available
+if ! command -v docker &> /dev/null; then
+    echo "Warning: Docker not found, skipping NixOS validation"
+    echo "Install Docker to enable pre-push validation"
+    exit 0
+fi
+
+# Check if Docker daemon is running
+if ! docker info &> /dev/null 2>&1; then
+    echo "Warning: Docker daemon not running, skipping NixOS validation"
+    exit 0
+fi
+
+echo "=========================================="
+echo "Pre-push: Validating NixOS configurations"
+echo "=========================================="
+
+# Check if the devcontainer image exists, build if not
+IMAGE_NAME="nixos-devcontainer"
+if ! docker image inspect "$IMAGE_NAME" &> /dev/null; then
+    echo "Building devcontainer image (first time only)..."
+    docker build -t "$IMAGE_NAME" "$NIXOS_DIR/.devcontainer" || {
+        echo "Warning: Failed to build devcontainer image, skipping validation"
+        exit 0
+    }
+fi
+
+# Run validation in the container
+echo "Running validation..."
+if docker run --rm -v "$NIXOS_DIR:/workspaces/nixos" "$IMAGE_NAME" just validate; then
+    echo ""
+    echo "All NixOS configurations validated successfully!"
+    exit 0
+else
+    echo ""
+    echo "=========================================="
+    echo "ERROR: NixOS configuration validation failed!"
+    echo "=========================================="
+    echo ""
+    echo "Fix the issues above before pushing."
+    echo "To skip this check (not recommended): git push --no-verify"
+    exit 1
+fi
