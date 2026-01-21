@@ -75,6 +75,9 @@
     };
     users.${vars.user.name} = {pkgs, ...}: {
       imports = [../../../modules/home];
+
+      # Disable KDE stylix target for WSL (avoids kdeglobals errors)
+      stylix.targets.kde.enable = false;
     };
   };
 }
