@@ -1,0 +1,17 @@
+{
+  "name": "NixOS Config Dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "workspaceFolder": "/workspaces/nixos",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/nixos,type=bind",
+  "postCreateCommand": "git config --global --add safe.directory /workspaces/nixos",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "jnoortheen.nix-ide",
+        "mkhl.direnv"
+      ]
+    }
+  }
+}
