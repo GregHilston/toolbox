@@ -1,5 +1,46 @@
 # NixOS
 
+## Dev Container for Config Validation
+
+A Docker-based dev container is available for testing NixOS configurations without affecting your host system. This is useful for:
+- Validating config changes before deploying to real machines
+- Developing on macOS/Windows without a NixOS host
+- CI/CD pipelines that need to validate configs
+- Allowing Claude Code to run validation checks autonomously
+
+### What It Can Do
+- `nix flake check` - Validate flake syntax and evaluate all outputs
+- `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run` - Build full system closure
+- `nix eval` - Evaluate specific configuration values
+- `nix develop ./dev#<lang>` - Enter language-specific dev shells (golang, typescript, ruby)
+- Catch module import errors, type mismatches, missing dependencies
+
+### What It Cannot Do
+- `nixos-rebuild switch` (needs real NixOS system)
+- Test actual service startup (systemd)
+- Test hardware-specific behavior
+
+### Usage
+
+**VS Code:**
+1. Open the `nixos/` folder in VS Code
+2. Click "Reopen in Container" when prompted (or Cmd+Shift+P → "Dev Containers: Reopen in Container")
+3. Run `just validate` to check all configs
+
+**CLI (Docker directly):**
+```bash
+# Build the image (one-time)
+cd nixos/.devcontainer && docker build -t nixos-devcontainer .
+
+# Run validation
+docker run --rm -v /path/to/nixos:/workspaces/nixos nixos-devcontainer just validate
+
+# Or run specific commands
+docker run --rm -v /path/to/nixos:/workspaces/nixos nixos-devcontainer nix flake check
+```
+
+See [.devcontainer/README.md](.devcontainer/README.md) for more details.
+
 ## Pre Configured Shell
 
 We have a pre configured shell available, with all the required tooling. Simply run `$ nix-shell` and you have everything set up. This is powered by our `shell.nix` file, and is useful on a freshly installed NixOS machine.
