@@ -73,3 +73,16 @@ clean:
 gc:
   # garbage collect all unused nix store entries
   sudo nix-collect-garbage --delete-old
+
+# Validate all NixOS configurations (run in devcontainer or any Nix environment)
+validate:
+  nix flake check
+  @echo "Building foundation..."
+  nix build .#nixosConfigurations.foundation.config.system.build.toplevel --dry-run
+  @echo "Building isengard..."
+  nix build .#nixosConfigurations.isengard.config.system.build.toplevel --dry-run
+  @echo "Building mines..."
+  nix build .#nixosConfigurations.mines.config.system.build.toplevel --dry-run
+  @echo "Building home-lab..."
+  nix build .#nixosConfigurations.home-lab.config.system.build.toplevel --dry-run
+  @echo "All configurations valid!"
