@@ -1,0 +1,53 @@
+name: Validate NixOS Configurations
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "nixos/**"
+  pull_request:
+    paths:
+      - "nixos/**"
+
+jobs:
+  validate:
+    name: Validate NixOS configurations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Run flake check
+        working-directory: nixos
+        run: nix flake check
+
+      - name: Validate foundation
+        working-directory: nixos
+        run: |
+          echo "Building foundation..."
+          nix build .#nixosConfigurations.foundation.config.system.build.toplevel --dry-run
+
+      - name: Validate isengard
+        working-directory: nixos
+        run: |
+          echo "Building isengard..."
+          nix build .#nixosConfigurations.isengard.config.system.build.toplevel --dry-run
+
+      - name: Validate mines
+        working-directory: nixos
+        run: |
+          echo "Building mines..."
+          nix build .#nixosConfigurations.mines.config.system.build.toplevel --dry-run
+
+      - name: Validate home-lab
+        working-directory: nixos
+        run: |
+          echo "Building home-lab..."
+          nix build .#nixosConfigurations.home-lab.config.system.build.toplevel --dry-run
