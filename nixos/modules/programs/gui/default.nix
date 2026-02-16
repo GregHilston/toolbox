@@ -3,5 +3,6 @@
     ./alacritty
     ./firefox
     ./vscode
+    ./sway
   ];
 }
