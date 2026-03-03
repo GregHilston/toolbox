@@ -1,5 +1,6 @@
 {...}: {
   imports = [
+    ./atuin
     ./direnv
     ./eza
     ./fzf
