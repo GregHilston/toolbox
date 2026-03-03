@@ -19,6 +19,9 @@
 ## Verification Workflow
 
 ALWAYS test before deploying:
+
+Be sure to select the host, and only the host we're working with. IE if we're developing on the mines host, do not attempt to run `$ just ft home-lab` or `$ just fr home-lab`:
+
 1. Format: `nix fmt .`
 2. Test build: `just ft <host>`
 3. Deploy: `just fr <host>`
