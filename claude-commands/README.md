@@ -4,7 +4,19 @@ This directory contains reusable custom commands that can be used across project
 
 ## Setup
 
-To use these commands, symlink this directory to `~/.claude/commands`:
+To use these commands, either 
+
+symlink each command individually to retain existing claude commands not from this repo:
+
+```bash
+mkdir -p ~/.claude/commands
+for f in ~/Git/toolbox/claude-commands/*.md do
+    [ "$(basename "$f")" = "README.md" ] && continue
+    ln -sf "$f" ~/.claude/commands/
+done
+```
+
+or this whole directory to `~/.claude/commands`, to only use commands from this repo:
 
 ```bash
 # Symlink it to where Claude Code looks
