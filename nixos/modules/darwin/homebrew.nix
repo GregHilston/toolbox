@@ -8,6 +8,10 @@
       upgrade = true;
     };
 
+    taps = [
+      "nikitabobko/tap" # AeroSpace
+    ];
+
     casks = [
       # Core
       "1password"
