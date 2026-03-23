@@ -125,8 +125,18 @@
       };
     };
 
-    # The 'darwinConfigurations' block has been removed entirely because
-    # there are no active macOS configurations.
-    # The 'darwin' input is kept in 'inputs' section in case it's used later.
+    darwinConfigurations = {
+      dungeon = darwin.lib.darwinSystem {
+        system = "aarch64-darwin";
+        specialArgs = {
+          inherit inputs vars;
+          outputs = self;
+        };
+        modules = [
+          ./hosts/macs/dungeon
+          home-manager.darwinModules.home-manager
+        ];
+      };
+    };
   };
 }

@@ -1,6 +1,7 @@
 {
   vars,
   pkgs,
+  config,
   ...
 }: {
   programs.zsh = {
@@ -60,9 +61,15 @@
       gitCommitUndo = "git reset --soft HEAD\\^";
       cat = "bat";
       # Clipboard: uses xclip if available (GUI systems), otherwise suggests alternatives
-      clip = "if command -v xclip &> /dev/null; then xclip -sel clip <; else echo 'xclip not available. On WSL use clip.exe, on Wayland use wl-copy'; fi";
+      clip =
+        if pkgs.stdenv.isDarwin
+        then "pbcopy <"
+        else "if command -v xclip &> /dev/null; then xclip -sel clip <; else echo 'xclip not available. On WSL use clip.exe, on Wayland use wl-copy'; fi";
       # nix garbage collect
-      ncg = "nix-collect-garbage --delete-older-than 3d && sudo nix-collect-garbage -d && sudo /run/current-system/bin/switch-to-configuration boot";
+      ncg =
+        if pkgs.stdenv.isDarwin
+        then "nix-collect-garbage --delete-older-than 3d && sudo nix-collect-garbage -d"
+        else "nix-collect-garbage --delete-older-than 3d && sudo nix-collect-garbage -d && sudo /run/current-system/bin/switch-to-configuration boot";
       nc = "nix flake check";
       nt = "nix flake test";
       opts = "man home-configuration.nix";
@@ -89,6 +96,6 @@
       cd = "echo '💡 Tip: Use \"z\" for smart directory jumping! (or use \"builtin cd\" for traditional cd)' && builtin cd";
     };
     history.size = 10000;
-    history.path = "/home/${vars.user.name}/.zsh_history";
+    history.path = "${config.home.homeDirectory}/.zsh_history";
   };
 }

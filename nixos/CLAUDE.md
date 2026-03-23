@@ -5,6 +5,7 @@
 - **isengard** (x86_64 ThinkPad T420)
 - **mines** (aarch64 VM on M4 Mac via VMware Fusion)
 - **home-lab** (x86_64 VM)
+- **dungeon** (aarch64-darwin MacBook Pro 16" M3 Pro — nix-darwin)
 
 ## Common Mistakes to Avoid
 
@@ -12,7 +13,7 @@
 2. **Testing before deploy**: NEVER skip `just ft <host>` before `just fr <host>`
 3. **Hardware configs**: Never edit `hardware-configuration.nix` files - they're auto-generated
 4. **Flake updates**: After updating flake.lock, always test build before deploying
-5. **Architecture mismatch**: Check host architecture (x86_64-linux vs aarch64-linux) matches the config
+5. **Architecture mismatch**: Check host architecture (x86_64-linux vs aarch64-linux vs aarch64-darwin) matches the config
 6. **Home Manager**: User packages go in `modules/home/default.nix`, not system packages
 7. **WSL specifics**: foundation host needs `wsl.enable = true` and related WSL config
 
@@ -22,9 +23,15 @@ ALWAYS test before deploying:
 
 Be sure to select the host, and only the host we're working with. IE if we're developing on the mines host, do not attempt to run `$ just ft home-lab` or `$ just fr home-lab`:
 
+### NixOS hosts
 1. Format: `nix fmt .`
 2. Test build: `just ft <host>`
 3. Deploy: `just fr <host>`
+
+### Darwin hosts (dungeon)
+1. Format: `nix fmt .`
+2. Test build: `just dt <host>`
+3. Deploy: `just dr <host>`
 
 ## Quick Commands
 
@@ -39,6 +46,9 @@ Be sure to select the host, and only the host we're working with. IE if we're de
 - GUI apps: [modules/programs/gui/](modules/programs/gui/)
 - TUI apps: [modules/programs/tui/](modules/programs/tui/)
 - System packages: [modules/common/default.nix](modules/common/default.nix)
+- Darwin system config: [modules/darwin/common.nix](modules/darwin/common.nix)
+- Darwin Homebrew casks: [modules/darwin/homebrew.nix](modules/darwin/homebrew.nix)
+- Darwin home-manager: [modules/darwin/home.nix](modules/darwin/home.nix)
 - Host configs: `hosts/<type>/<hostname>/default.nix`
 
 ## Testing
