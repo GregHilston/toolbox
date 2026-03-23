@@ -8,14 +8,13 @@
       upgrade = true;
     };
 
-    taps = [
-      "nikitabobko/tap" # AeroSpace
-    ];
+    # TODO: add back aerospace once brew bundle tap issue is resolved
+    # taps = [
+    #   "nikitabobko/tap" # AeroSpace
+    # ];
 
     casks = [
       # Core
-      "1password"
-      "alacritty"
       "ghostty"
       "firefox"
       "google-chrome"
@@ -24,7 +23,6 @@
       # Communication
       "discord"
       "slack"
-      "microsoft-onenote"
 
       # Media
       "spotify"
@@ -36,7 +34,6 @@
       "docker"
       "dbeaver-community"
       "db-browser-for-sqlite"
-      "postman"
       "ngrok"
 
       # Productivity
@@ -44,7 +41,7 @@
       "raycast"
       "stats"
       "bartender"
-      "aerospace"
+      # "aerospace" # Requires nikitabobko/tap - install manually for now
 
       # AI
       "claude"
@@ -53,7 +50,6 @@
 
       # Other
       "bitwarden"
-      "anki"
       "flux"
       "steam"
       "godot"

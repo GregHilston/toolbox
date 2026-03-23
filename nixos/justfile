@@ -97,4 +97,6 @@ validate:
   nix build .#nixosConfigurations.home-lab.config.system.build.toplevel --dry-run
   @echo "Building dungeon (darwin)..."
   nix build .#darwinConfigurations.dungeon.system --dry-run
+  @echo "Building moria (darwin)..."
+  nix build .#darwinConfigurations.moria.system --dry-run
   @echo "All configurations valid!"

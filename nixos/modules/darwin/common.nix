@@ -75,6 +75,15 @@
       show-recents = false;
       mru-spaces = false;
       minimize-to-application = true;
+      persistent-apps = [
+        "/System/Applications/Finder.app"
+        "/Applications/Firefox.app"
+        "/Applications/Ghostty.app"
+        "/Applications/Slack.app"
+        "/Applications/Obsidian.app"
+        "/Applications/Visual Studio Code.app"
+        "/Applications/Bruno.app"
+      ];
     };
 
     finder = {
@@ -92,6 +101,7 @@
       KeyRepeat = 2;
       NSAutomaticCapitalizationEnabled = false;
       NSAutomaticSpellingCorrectionEnabled = false;
+      "com.apple.swipescrolldirection" = false; # Disable natural scrolling
     };
 
     trackpad = {

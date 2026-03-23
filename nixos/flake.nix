@@ -137,6 +137,18 @@
           home-manager.darwinModules.home-manager
         ];
       };
+
+      moria = darwin.lib.darwinSystem {
+        system = "aarch64-darwin";
+        specialArgs = {
+          inherit inputs vars;
+          outputs = self;
+        };
+        modules = [
+          ./hosts/macs/moria
+          home-manager.darwinModules.home-manager
+        ];
+      };
     };
   };
 }
