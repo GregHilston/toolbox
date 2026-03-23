@@ -4,8 +4,8 @@
   pkgs,
   ...
 }: {
-  # Nix settings
-  nix.settings.experimental-features = ["nix-command" "flakes"];
+  # Let Determinate manage the Nix daemon; disable nix-darwin's nix management
+  nix.enable = false;
 
   nixpkgs = {
     overlays = [
