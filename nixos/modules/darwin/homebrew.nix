@@ -4,14 +4,13 @@
 
     onActivation = {
       autoUpdate = true;
-      cleanup = "zap";
+      cleanup = "check";
       upgrade = true;
     };
 
-    # TODO: add back aerospace once brew bundle tap issue is resolved
-    # taps = [
-    #   "nikitabobko/tap" # AeroSpace
-    # ];
+    taps = [
+      "nikitabobko/tap" # AeroSpace
+    ];
 
     casks = [
       # Core
@@ -41,7 +40,7 @@
       "raycast"
       "stats"
       "bartender"
-      # "aerospace" # Requires nikitabobko/tap - install manually for now
+      "aerospace"
 
       # AI
       "claude"
