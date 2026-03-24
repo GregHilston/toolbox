@@ -74,7 +74,17 @@ gc:
   # garbage collect all unused nix store entries
   sudo nix-collect-garbage --delete-old
 
-# Validate all NixOS configurations (run in devcontainer or any Nix environment)
+# Darwin rebuild (macOS)
+# Usage: `just dr <hostname>`
+dr host flake_path=flake_path:
+  darwin-rebuild switch --flake {{flake_path}}#{{host}}
+
+# Darwin test (macOS)
+# Usage: `just dt <hostname>`
+dt host flake_path=flake_path:
+  darwin-rebuild check --flake {{flake_path}}#{{host}}
+
+# Validate all configurations (run in devcontainer or any Nix environment)
 validate:
   nix flake check
   @echo "Building foundation..."
@@ -85,4 +95,8 @@ validate:
   nix build .#nixosConfigurations.mines.config.system.build.toplevel --dry-run
   @echo "Building home-lab..."
   nix build .#nixosConfigurations.home-lab.config.system.build.toplevel --dry-run
+  @echo "Building dungeon (darwin)..."
+  nix build .#darwinConfigurations.dungeon.system --dry-run
+  @echo "Building moria (darwin)..."
+  nix build .#darwinConfigurations.moria.system --dry-run
   @echo "All configurations valid!"
