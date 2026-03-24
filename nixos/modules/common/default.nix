@@ -134,6 +134,7 @@
       tree
       ncdu
       just
+      stow
       gcc
       lazygit
       ripgrep

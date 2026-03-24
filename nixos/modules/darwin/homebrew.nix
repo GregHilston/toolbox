@@ -12,6 +12,10 @@
       "nikitabobko/tap" # AeroSpace
     ];
 
+    brews = [
+      "stow"
+    ];
+
     casks = [
       # Core
       "ghostty"
