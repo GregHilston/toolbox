@@ -40,3 +40,6 @@ dot/vim/plugged
 # git submodules
 dot/oh-my-zsh
 dot/vim/bundle/Vundle.vim
+
+# nix build output
+result
