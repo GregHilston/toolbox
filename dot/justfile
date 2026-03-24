@@ -1,0 +1,64 @@
+set shell := ["zsh", "-cu"]
+
+# The target directory for stow (home directory)
+target := env("HOME")
+
+# Stow a single package
+# Usage: just stow aerospace
+stow package:
+    stow -v -t {{target}} {{package}}
+
+# Unstow a single package
+# Usage: just unstow aerospace
+unstow package:
+    stow -v -D -t {{target}} {{package}}
+
+# Restow (unstow then stow) a single package — useful after reorganizing
+# Usage: just restow aerospace
+restow package:
+    stow -v -R -t {{target}} {{package}}
+
+# Stow all packages
+stow-all:
+    #!/usr/bin/env zsh
+    set -eu
+    for pkg in */; do
+        pkg="${pkg%/}"
+        echo "Stowing $pkg..."
+        stow -v -t {{target}} "$pkg"
+    done
+
+# Unstow all packages
+unstow-all:
+    #!/usr/bin/env zsh
+    set -eu
+    for pkg in */; do
+        pkg="${pkg%/}"
+        echo "Unstowing $pkg..."
+        stow -v -D -t {{target}} "$pkg"
+    done
+
+# Restow all packages
+restow-all:
+    #!/usr/bin/env zsh
+    set -eu
+    for pkg in */; do
+        pkg="${pkg%/}"
+        echo "Restowing $pkg..."
+        stow -v -R -t {{target}} "$pkg"
+    done
+
+# List all available stow packages
+list:
+    @ls -d */ 2>/dev/null | sed 's|/||'
+
+# Dry-run stow for a package (shows what would happen)
+# Usage: just dry-run aerospace
+dry-run package:
+    stow -v -n -t {{target}} {{package}}
+
+# Build i3-gaps config for the current host, then stow it
+# Usage: just build-i3-gaps
+build-i3-gaps:
+    bash i3-gaps-pkg/src/build-i3-config.sh
+    stow -v -t {{target}} i3-gaps-pkg

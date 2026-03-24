@@ -15,7 +15,7 @@ dots/
 bin/mail_ip/gmail_password.conf.personal
 
 backup
-dot/vim/.*
+dot/vim-pkg/.vim/.*
 
 .vim
 .vimrc
@@ -35,11 +35,11 @@ dot/env/dyn.env
 private/
 fonts/
 lib/fonts
-dot/vim/plugged
+dot/vim-pkg/.vim/plugged
 
 # git submodules
 dot/oh-my-zsh
-dot/vim/bundle/Vundle.vim
+dot/vim-pkg/.vim/bundle/Vundle.vim
 
 # nix build output
 result
