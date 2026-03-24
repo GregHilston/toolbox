@@ -77,12 +77,14 @@ gc:
 # Darwin rebuild (macOS)
 # Usage: `just dr <hostname>`
 dr host flake_path=flake_path:
-  darwin-rebuild switch --flake {{flake_path}}#{{host}}
+  sudo darwin-rebuild switch --flake {{flake_path}}#{{host}}
+  @echo ""
+  @echo "Tip: Run 'just checklist' for post-deploy setup tasks"
 
 # Darwin test (macOS)
 # Usage: `just dt <hostname>`
 dt host flake_path=flake_path:
-  darwin-rebuild check --flake {{flake_path}}#{{host}}
+  sudo darwin-rebuild check --flake {{flake_path}}#{{host}}
 
 # Validate all configurations (run in devcontainer or any Nix environment)
 validate:
@@ -100,3 +102,8 @@ validate:
   @echo "Building moria (darwin)..."
   nix build .#darwinConfigurations.moria.system --dry-run
   @echo "All configurations valid!"
+
+# Show post-deploy checklist for Darwin/macOS setup
+# Usage: `just checklist`
+checklist:
+  @cat docs/darwin-post-deploy.md
