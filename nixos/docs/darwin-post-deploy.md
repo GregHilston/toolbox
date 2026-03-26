@@ -15,13 +15,12 @@ Run these tasks after initial deployment on a new Mac.
 - [ ] **Discord** - Sign in
 - [ ] **Spotify** - Sign in
 - [ ] **Claude** - Sign in
-- [ ] **Obsidian** - Sign in (if using Obsidian Sync)
 
 ## Repositories
 - [ ] Clone notes repo: `git clone git@github.com:<user>/notes.git ~/Notes`
 - [ ] Clone other personal repos as needed
 
-## Optional
-- [ ] Configure Raycast preferences
-- [ ] Set up AeroSpace tiling (if using)
+## Launch Applications
+
+- [ ] Set up AeroSpace tiling
 - [ ] Configure Bartender menu bar layout
