@@ -7,59 +7,18 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 ## What's In This Repo?
 
 ```bash
-├── ansible/                                # Ansible playbooks for automation.
 ├── bin/                                    # Helper scripts. Should be added to $PATH for user convenience.
-├── docker/                                 # Contains all scripts related to using Docker to easily test out this toolbox in a throwaway environment.
 ├── docs/                                   # Additional documentation that supplements this `README.md`
 ├── dot/                                    # Dotfiles to configure a slew of programs and environments.
+├── nixos/                                  # NixOS and nix-darwin configurations for all hosts.
 ├── secret/                                 # Secrets, such as passwords. Purposefully ignored by Git, and populated on each individual machine.
-├── bootstrap.sh                            # Optional precursor to install.sh for barebones systems, which prepares an environment for install.sh to be ran.
 ├── Brewfile                                # Describes which programs to install with Brew.
-├── install.sh                              # Main entrypoint to leverage this Toolbox to configure an environment just the way I like it.
 ├── README.md                               # This documentation.
 ```
 
 ## How Do I Use This Repo?
 
-First, you probably want to fork this repo, and take a look at `ansible/variables/`. These files are where you'll be able to configure:
-
-1. Which apt repositories are added
-2. Which apt packages are installed
-3. Which flatpak repositories are added
-4. Which flatpak packages are installed
-5. Which directories are created for dot files to live in
-6. Where we symbolically link dot files to
-
-Then, it's as easy as:
-
-```bash
-$ ./install.sh
-```
-
-If you're on a barebones system, like alpine linux, use `$ ./bin/bare_bones.sh` fire, to prepare your system for the `install.sh` script.
-
-And that's it! You can run the `install.sh` script again to upgrade packages, or apply any new changes you've made to the repository.
-
-### How To Run In An Ephemeral Environment
-
-To run this toolbox in an ephemeral environment, I suggest running it in a barebones Docker container. In this repo you'll find the `docker/` directory which house  barebones containers and scripts to assist with this. See `docker/README.md` for further instructions.
-
-## My Application Installation Preferences
-
-### OSX
-
-Generally, I'll install everything using Brew.
-
-### Linux
-
-Since Linux has many different ways to install something, from your package manager, snap, flatpak, brew, compile from source, etc...,  I've decided on these preferences for installing software:
-
-1. Via the default package manager. For Debian based distributions this would be `apt`.
-2. Flatpak (via flathub).
-3. A raw binary. Which we'll store in `~/Apps` and symlink them to `~/bin`.
-4. clone and build
-
-I've decided against using Snap, due to its widespread criticism.
+See the [nixos/](nixos/) directory for NixOS and nix-darwin host configurations. Each host is managed declaratively via Nix flakes.
 
 ## Setting Terminal Font
 
@@ -93,13 +52,3 @@ Since we do not do much developing on Windows, and may only use it to SSH into a
 7. Select `MesloLGS NF` from the `Font face` dropdown. <sup>7</sup>
 
 ![Font Face](./docs/res/font-face.png)
-
-## References
-
-1. https://www.lorenzobettini.it/2023/07/my-ansible-role-for-oh-my-zsh-and-other-cli-programs/
-
-## TODO
-
-1. [ ] Look into the `flatpak-warning.txt` that pops up when you install VS Code using this repo
-2. [ ] Consider looking into Ansible roles to simplify some of the custom things we've done here
-3. [ ] Look into using [Molecule](https://ansible.readthedocs.io/projects/molecule/), instead of our adhoc throwaway Docker container
