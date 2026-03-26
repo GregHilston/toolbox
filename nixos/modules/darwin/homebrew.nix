@@ -52,7 +52,7 @@
       "draw-things"
 
       # Other
-      "bitwarden"
+      "1password"
       "flux"
       "steam"
       "godot"
