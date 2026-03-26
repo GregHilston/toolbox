@@ -1,8 +1,7 @@
 # Development Environment with Nix Flakes
 
-A multi-language development environment using Nix flakes as a replacement for
-Ansible provisioning. Includes shared tooling and language-specific shells for
-Go, TypeScript, and Ruby development.
+A multi-language development environment using Nix flakes. Includes shared
+tooling and language-specific shells for Go, TypeScript, and Ruby development.
 
 | Environment | Command                    | Additional Tools                    | Use Case                                |
 | ----------- | -------------------------- | ----------------------------------- | --------------------------------------- |

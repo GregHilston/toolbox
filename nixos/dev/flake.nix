@@ -1,5 +1,5 @@
 {
-  description = "DevShell replacing Ansible provisioning, with multi-language support";
+  description = "DevShell with multi-language support";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
