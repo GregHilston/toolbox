@@ -1,27 +1,48 @@
-"""
-Based on the official Push Over documentation
-https://support.pushover.net/i44-example-code-and-pushover-libraries
-"""
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "requests",
+#     "loguru",
+# ]
+# ///
+"""Send a push notification via the Pushover API"""
+
 import argparse
+import os
 
-from utils import send_pushover_notification
+import requests
+from loguru import logger
 
-def parse_args() -> dict[str, any]:
-    """Parse arguments
 
-    Returns:
-        parsed arguments
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--message",
-        "-m",
-        type=str,
+def send_pushover_notification(
+    message: str = "Hello World",
+    pushover_user_key: str | None = None,
+    pushover_work_api_key: str | None = None,
+):
+    if not pushover_user_key:
+        key = "PUSHOVER_USER_KEY"
+        logger.warning(f"pushover_user_key not provided, falling back to ${key}")
+        pushover_user_key = os.environ[key]
+
+    if not pushover_work_api_key:
+        key = "PUSHOVER_WORK_API_KEY"
+        logger.warning(f"pushover_work_api_key not provided, falling back to ${key}")
+        pushover_work_api_key = os.environ[key]
+
+    return requests.post(
+        "https://api.pushover.net/1/messages.json",
+        data={
+            "user": pushover_user_key,
+            "token": pushover_work_api_key,
+            "message": message,
+        },
     )
-    return vars(parser.parse_args())
+
 
 if __name__ == "__main__":
-    args = parse_args()
+    parser = argparse.ArgumentParser(description="Send a Pushover notification")
+    parser.add_argument("--message", "-m", type=str, required=True)
+    args = parser.parse_args()
 
-    response = send_pushover_notification(args["message"])
+    response = send_pushover_notification(args.message)
     print(response)
