@@ -117,6 +117,14 @@
   # Timezone
   time.timeZone = vars.system.timeZone;
 
+  # Post-activation reminder for manual setup steps
+  system.activationScripts.postActivation.text = ''
+    echo ""
+    echo "NOTE: There are manual steps that may need to be applied for an initial setup."
+    echo "      See nixos/modules/darwin/README.md"
+    echo ""
+  '';
+
   # nix-darwin state version
   system.stateVersion = 6;
 }
