@@ -2,13 +2,10 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# Creates a timer for N seconds, leveraging text to speech for communication
+# Start a timer for N minutes with text-to-speech announcements
 
-seconds = $1
+minutes="${1:?Usage: timer.sh <minutes>}"
 
-settimer() {
-    say --voice karen "timer started"
-    sleep $(echo "$seconds * 60" | bc)
-    say --voice karen "timer done"
-}
-settimer $1
+say --voice karen "timer started"
+sleep $(echo "$minutes * 60" | bc)
+say --voice karen "timer done"
