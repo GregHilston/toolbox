@@ -109,6 +109,10 @@
       TrackpadRightClick = true;
       TrackpadThreeFingerDrag = true;
     };
+
+    screencapture = {
+      location = "/Users/${vars.user.name}/Pictures/screenshots";
+    };
   };
 
   # Touch ID for sudo
@@ -116,6 +120,11 @@
 
   # Timezone
   time.timeZone = vars.system.timeZone;
+
+  # Ensure screenshot directory exists
+  system.activationScripts.preActivation.text = ''
+    mkdir -p /Users/${vars.user.name}/Pictures/screenshots
+  '';
 
   # Post-activation reminder for manual setup steps
   system.activationScripts.postActivation.text = ''
