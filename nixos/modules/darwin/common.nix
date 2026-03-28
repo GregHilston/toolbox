@@ -115,6 +115,9 @@
     };
   };
 
+  # Power management - display sleep timeout (in minutes)
+  power.sleep.display = 5;
+
   # Touch ID for sudo
   security.pam.services.sudo_local.touchIdAuth = true;
 
