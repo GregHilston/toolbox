@@ -35,6 +35,7 @@
       # Dev
       "bruno"
       "docker"
+      "orbstack"
       "dbeaver-community"
       "db-browser-for-sqlite"
       "ngrok"
