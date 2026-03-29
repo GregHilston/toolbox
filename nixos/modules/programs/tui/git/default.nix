@@ -4,6 +4,10 @@
   vars,
   ...
 }: {
+  home.packages = with pkgs; [
+    difftastic # Structural diff tool - used as git's external diff
+  ];
+
   programs.git = {
     enable = true;
 
@@ -12,6 +16,9 @@
         name = vars.user.fullName;
         email = vars.user.email;
       };
+
+      # Use difftastic for all diffs
+      diff.external = "difft";
 
       alias = {
         # Quick shortcuts
@@ -31,6 +38,10 @@
 
         # Repository root
         root = "rev-parse --show-toplevel";
+
+        # Difftastic-powered log and show
+        dlog = "log --ext-diff -p";
+        dshow = "show --ext-diff";
       };
     };
   };
