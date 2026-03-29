@@ -87,10 +87,10 @@
       ghisl = "gh issue list"; # List issues for current repo
       ghrepo = "gh repo view --web"; # Open repo in browser
 
-      # Git diff shortcuts (delta is auto-configured as git pager)
-      gdiff = "git diff"; # Quick diff with delta
-      gshow = "git show"; # Show commit with delta
-      glog = "git log -p"; # Log with patches (uses delta)
+      # Git diff shortcuts (difftastic for structural diffs, delta for paging)
+      gdiff = "git diff"; # Quick diff with difftastic
+      gshow = "git show --ext-diff"; # Show commit with difftastic
+      glog = "git log --ext-diff -p"; # Log with patches (uses difftastic)
 
       # Remind to use modern alternatives
       cd = "echo '💡 Tip: Use \"z\" for smart directory jumping! (or use \"builtin cd\" for traditional cd)' && builtin cd";
