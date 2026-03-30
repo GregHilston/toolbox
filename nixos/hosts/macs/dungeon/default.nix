@@ -1,4 +1,4 @@
-{vars, ...}: {
+{vars, lib, ...}: {
   imports = [
     ../../../modules/darwin/common.nix
     ../../../modules/darwin/homebrew.nix
@@ -6,6 +6,20 @@
   ];
 
   networking.hostName = "dungeon";
+
+  # Server mode - prevent sleep when lid is closed
+  power.sleep.computer = "never";
+  power.sleep.display = lib.mkForce "never";
+
+  # LaunchDaemon that continuously prevents sleep (including lid-close).
+  # NOTE: Must be plugged into a power source to stay awake with lid closed.
+  launchd.daemons.prevent-sleep = {
+    command = "/usr/bin/caffeinate -s";
+    serviceConfig = {
+      KeepAlive = true;
+      RunAtLoad = true;
+    };
+  };
 
   # Auto-clone or pull the home-lab repo (requires SSH keys configured for GitHub)
   system.activationScripts.cloneHomeLab.text = ''
