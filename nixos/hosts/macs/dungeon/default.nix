@@ -1,4 +1,8 @@
-{vars, lib, ...}: {
+{
+  vars,
+  lib,
+  ...
+}: {
   imports = [
     ../../../modules/darwin/common.nix
     ../../../modules/darwin/homebrew.nix
@@ -6,6 +10,9 @@
   ];
 
   networking.hostName = "dungeon";
+
+  # Enable SSH (Remote Login) for remote access
+  services.openssh.enable = true;
 
   # Server mode - prevent sleep when lid is closed
   power.sleep.computer = "never";
