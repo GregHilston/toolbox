@@ -52,6 +52,9 @@
       "lm-studio"
       "draw-things"
 
+      # Networking
+      "tailscale"
+
       # Other
       "1password"
       "flux"
