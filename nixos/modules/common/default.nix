@@ -147,6 +147,7 @@
       # This allows GUI systems to have clipboard while WSL doesn't
 
       # Modern CLI tools
+      direnv # Directory-based environment switcher (system-wide for GUI app access)
       btop # Modern replacement for htop with graphs and better UI
       bruno-cli # CLI for Bruno API client
       gh # GitHub CLI for PRs, issues, and repo management

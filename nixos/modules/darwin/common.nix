@@ -57,6 +57,7 @@
       docker-compose
 
       # Modern CLI tools
+      direnv # Directory-based environment switcher (system-wide for GUI app access)
       btop
       bruno-cli
       gh
