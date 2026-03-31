@@ -106,7 +106,8 @@
       # -o soft: return errors on timeout rather than hanging indefinitely
       # -o intr: allow signals to interrupt hung operations
       # -o rw: read-write access for backup writes
-      /sbin/mount -t nfs -o resvport,soft,intr,rw "$NFS_SERVER:$NFS_PATH" "$MOUNT_POINT"
+      # -o nolock: skip NFS locking — Fob doesn't run rpc.statd, and Kopia handles its own consistency
+      /sbin/mount -t nfs -o resvport,soft,intr,rw,nolock "$NFS_SERVER:$NFS_PATH" "$MOUNT_POINT"
     '';
     serviceConfig = {
       RunAtLoad = true;
