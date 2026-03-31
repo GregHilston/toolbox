@@ -35,7 +35,7 @@
       };
       "fob" = {
         hostname = vars.networking.hosts.fob.tailscale;
-        user = vars.user.name;
+        user = pi;
         identityFile = "~/.ssh/id_rsa";
       };
       "*" = {
