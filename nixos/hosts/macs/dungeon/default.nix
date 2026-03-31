@@ -29,12 +29,11 @@
   };
 
   # Ensure the home-lab-config directory exists
-  system.activationScripts.createHomeLabConfigDir.text = ''
-    sudo -u "${vars.user.name}" mkdir -p "/Users/${vars.user.name}/home-lab-config"
-  '';
-
   # Auto-clone or pull the home-lab repo (requires SSH keys configured for GitHub)
-  system.activationScripts.cloneHomeLab.text = ''
+  # NOTE: Uses postActivation (not custom names) because nix-darwin only runs well-known activation script names.
+  system.activationScripts.postActivation.text = lib.mkBefore ''
+    sudo -u "${vars.user.name}" mkdir -p "/Users/${vars.user.name}/home-lab-config"
+
     USER="${vars.user.name}"
     REPO_DIR="/Users/$USER/Git/home-lab"
     sudo -u "$USER" mkdir -p "/Users/$USER/Git"
