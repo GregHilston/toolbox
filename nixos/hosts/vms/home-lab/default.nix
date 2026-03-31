@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  vars,
+  ...
+}: {
   imports = [
     ./hardware-configuration.nix
     ../../../modules/common
@@ -38,42 +42,42 @@
   fileSystems = {
     # Main data share (TRaSH Guides structure: books, movies, music, tv, comics)
     "/mnt/data" = {
-      device = "192.168.1.2:/mnt/user/data";
+      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/data";
       fsType = "nfs";
       options = ["x-systemd.automount" "noauto" "x-systemd.idle-timeout=600"];
     };
 
     # Media share
     "/mnt/media" = {
-      device = "192.168.1.2:/mnt/user/media";
+      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/media";
       fsType = "nfs";
       options = ["x-systemd.automount" "noauto" "x-systemd.idle-timeout=600"];
     };
 
     # YouTube downloads
     "/mnt/youtube-dl" = {
-      device = "192.168.1.2:/mnt/user/youtube-dl";
+      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/youtube-dl";
       fsType = "nfs";
       options = ["x-systemd.automount" "noauto" "x-systemd.idle-timeout=600"];
     };
 
     # Nextcloud data (separate from container config)
     "/nextcloud-data" = {
-      device = "192.168.1.2:/mnt/user/nextcloud_data";
+      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/nextcloud_data";
       fsType = "nfs";
       options = ["x-systemd.automount" "noauto" "x-systemd.idle-timeout=600"];
     };
 
     # Backup share on Unraid
     "/unraid-backup" = {
-      device = "192.168.1.2:/mnt/user/backup";
+      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/backup";
       fsType = "nfs";
       options = ["x-systemd.automount" "noauto" "x-systemd.idle-timeout=600"];
     };
 
     # Webcam storage
     "/webcam" = {
-      device = "192.168.1.2:/mnt/user/webcam";
+      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/webcam";
       fsType = "nfs";
       options = ["x-systemd.automount" "noauto" "x-systemd.idle-timeout=600"];
     };
