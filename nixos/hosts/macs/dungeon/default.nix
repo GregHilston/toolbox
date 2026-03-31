@@ -58,10 +58,12 @@
 
       # Mount the NFS share
       # -o resvport: required on macOS for NFS (uses privileged source port)
+      # -o vers=3: Unraid exports NFSv3 — macOS defaults to v4 which hangs
+      # -o nolock: skip NFS locking — Unraid uses local_lock=none, and rpc.statd isn't available
       # -o soft: return errors on timeout rather than hanging indefinitely
       # -o intr: allow signals to interrupt hung operations
       # -o rw: read-write access for Docker container bind mounts
-      /sbin/mount -t nfs -o resvport,soft,intr,rw "$NFS_SERVER:$NFS_PATH" "$MOUNT_POINT"
+      /sbin/mount -t nfs -o resvport,vers=3,nolock,soft,intr,rw "$NFS_SERVER:$NFS_PATH" "$MOUNT_POINT"
     '';
     serviceConfig = {
       RunAtLoad = true;
@@ -103,11 +105,12 @@
 
       # Mount the NFS share
       # -o resvport: required on macOS for NFS (uses privileged source port)
+      # -o vers=3: use NFSv3 explicitly — macOS defaults to v4 which can hang
+      # -o nolock: skip NFS locking — Fob doesn't run rpc.statd, and Kopia handles its own consistency
       # -o soft: return errors on timeout rather than hanging indefinitely
       # -o intr: allow signals to interrupt hung operations
       # -o rw: read-write access for backup writes
-      # -o nolock: skip NFS locking — Fob doesn't run rpc.statd, and Kopia handles its own consistency
-      /sbin/mount -t nfs -o resvport,soft,intr,rw,nolock "$NFS_SERVER:$NFS_PATH" "$MOUNT_POINT"
+      /sbin/mount -t nfs -o resvport,vers=3,nolock,soft,intr,rw "$NFS_SERVER:$NFS_PATH" "$MOUNT_POINT"
     '';
     serviceConfig = {
       RunAtLoad = true;
