@@ -16,6 +16,8 @@
 5. **Architecture mismatch**: Check host architecture (x86_64-linux vs aarch64-linux vs aarch64-darwin) matches the config
 6. **Home Manager**: User packages go in `modules/home/default.nix`, not system packages
 7. **WSL specifics**: foundation host needs `wsl.enable = true` and related WSL config
+8. **No hardcoded IPs**: Never put IP addresses directly in host configs or modules. All host IPs are defined in `config/vars.nix` under `networking.hosts`. Reference them as `vars.networking.hosts.<name>.lan` or `vars.networking.hosts.<name>.tailscale`. If a new host or IP is needed, add it to `vars.nix` first.
+9. **SSH config**: SSH client matchBlocks are managed centrally in `modules/programs/tui/ssh.nix` using vars. Do not add SSH host entries in individual host configs.
 
 ## Verification Workflow
 
@@ -49,6 +51,8 @@ Be sure to select the host, and only the host we're working with. IE if we're de
 - Darwin system config: [modules/darwin/common.nix](modules/darwin/common.nix)
 - Darwin Homebrew casks: [modules/darwin/homebrew.nix](modules/darwin/homebrew.nix)
 - Darwin home-manager: [modules/darwin/home.nix](modules/darwin/home.nix)
+- Host IPs / networking vars: [config/vars.nix](config/vars.nix) (`networking.hosts`)
+- SSH client config: [modules/programs/tui/ssh.nix](modules/programs/tui/ssh.nix)
 - Host configs: `hosts/<type>/<hostname>/default.nix`
 
 ## Testing
