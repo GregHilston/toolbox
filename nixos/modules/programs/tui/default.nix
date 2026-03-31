@@ -11,6 +11,7 @@
     ./zoxide
     ./zsh
     ./nh.nix
+    ./ssh.nix
     ./yazi.nix
   ];
 }
