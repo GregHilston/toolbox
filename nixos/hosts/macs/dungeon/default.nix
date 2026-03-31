@@ -85,7 +85,7 @@
     script = ''
       MOUNT_POINT="/Volumes/fob-backup"
       NFS_SERVER="${vars.networking.hosts.fob.tailscale}"
-      NFS_PATH="/mnt/mothership/backup-from-cisco"
+      NFS_PATH="/mnt/mothership"
 
       # Create mount point if it doesn't exist
       /bin/mkdir -p "$MOUNT_POINT"
