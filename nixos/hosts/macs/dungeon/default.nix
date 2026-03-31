@@ -28,6 +28,11 @@
     };
   };
 
+  # Ensure the home-lab-config directory exists
+  system.activationScripts.createHomeLabConfigDir.text = ''
+    sudo -u "${vars.user.name}" mkdir -p "/Users/${vars.user.name}/home-lab-config"
+  '';
+
   # Auto-clone or pull the home-lab repo (requires SSH keys configured for GitHub)
   system.activationScripts.cloneHomeLab.text = ''
     USER="${vars.user.name}"
