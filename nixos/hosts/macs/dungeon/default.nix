@@ -31,21 +31,27 @@
   # Ensure the home-lab-config directory exists
   # Auto-clone or pull the home-lab repo (requires SSH keys configured for GitHub)
   # NOTE: Uses postActivation (not custom names) because nix-darwin only runs well-known activation script names.
+  # NOTE: sudo -H sets HOME to the target user's home dir (otherwise HOME stays as /var/root
+  #       and SSH can't find keys in ~/.ssh)
   system.activationScripts.postActivation.text = lib.mkBefore ''
-    sudo -u "${vars.user.name}" mkdir -p "/Users/${vars.user.name}/home-lab-config"
+    set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
+
+    sudo -H -u "${vars.user.name}" mkdir -p "/Users/${vars.user.name}/home-lab-config"
 
     USER="${vars.user.name}"
     REPO_DIR="/Users/$USER/Git/home-lab"
-    sudo -u "$USER" mkdir -p "/Users/$USER/Git"
+    sudo -H -u "$USER" mkdir -p "/Users/$USER/Git"
 
     # Test SSH access to GitHub before attempting git operations
-    if sudo -u "$USER" ssh -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+    # NOTE: ssh -T returns exit code 1 even on success, so we use || true and check output
+    SSH_OUTPUT=$(sudo -H -u "$USER" ssh -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1 || true)
+    if echo "$SSH_OUTPUT" | grep -q "successfully authenticated"; then
       if [ ! -d "$REPO_DIR/.git" ]; then
         echo "Cloning home-lab repo..."
-        sudo -u "$USER" git clone git@github.com:GregHilston/home-lab.git "$REPO_DIR"
+        sudo -H -u "$USER" git clone git@github.com:GregHilston/home-lab.git "$REPO_DIR"
       else
         echo "Pulling latest home-lab changes..."
-        sudo -u "$USER" git -C "$REPO_DIR" pull --ff-only
+        sudo -H -u "$USER" git -C "$REPO_DIR" pull --ff-only
       fi
     else
       echo ""
