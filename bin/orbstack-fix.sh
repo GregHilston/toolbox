@@ -2,11 +2,23 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# Diagnose and fix a hung OrbStack Docker daemon
+# Diagnose and fix a hung OrbStack Docker daemon.
+#
+# Common cause: macOS clamshell sleep suspends the OrbStack VM, and on wake
+# the Docker socket either disappears or the daemon hangs indefinitely.
+#
+# This script:
+#   1. Checks if Docker is responsive (quick path — exits if healthy)
+#   2. Force-kills ALL OrbStack processes (including Helper) with SIGKILL
+#   3. Waits for processes to fully exit
+#   4. Relaunches OrbStack and waits for the Docker socket + daemon to be ready
 
-TIMEOUT_SECONDS=5
+DOCKER_TIMEOUT=5
+KILL_WAIT=5
+STARTUP_WAIT=20
+DOCKER_SOCKET="$HOME/.orbstack/run/docker.sock"
 
-# Portable timeout function for macOS
+# Portable timeout function for macOS (no coreutils `timeout` needed)
 check_docker() {
     docker ps &>/dev/null &
     local pid=$!
@@ -14,7 +26,7 @@ check_docker() {
     while kill -0 "$pid" 2>/dev/null; do
         sleep 1
         ((count++))
-        if ((count >= TIMEOUT_SECONDS)); then
+        if ((count >= DOCKER_TIMEOUT)); then
             kill "$pid" 2>/dev/null || true
             return 1
         fi
@@ -31,30 +43,59 @@ fi
 
 echo "Docker is not responding. Checking OrbStack status..."
 
-if ! pgrep -q OrbStack; then
+if ! pgrep -i -q orbstack; then
     echo "OrbStack is not running. Starting it..."
     open -a OrbStack
-    sleep 5
-    echo "OrbStack started."
-    exit 0
+    sleep "$STARTUP_WAIT"
+    if check_docker; then
+        echo "OrbStack started. Docker is responsive."
+        exit 0
+    else
+        echo "OrbStack started but Docker is still not responding."
+        exit 1
+    fi
 fi
 
 echo "OrbStack is running but Docker is hung."
-echo "Force-killing OrbStack..."
+echo "Force-killing all OrbStack processes (SIGKILL)..."
 
-killall OrbStack || true
-sleep 2
+# SIGKILL all OrbStack-related processes — SIGTERM isn't enough when the VM is wedged
+pkill -9 -i orbstack 2>/dev/null || true
+
+echo "Waiting ${KILL_WAIT}s for processes to exit..."
+sleep "$KILL_WAIT"
+
+# Verify everything is dead
+if pgrep -i -q orbstack; then
+    echo "WARNING: Some OrbStack processes survived. Attempting another kill..."
+    pkill -9 -i orbstack 2>/dev/null || true
+    sleep 3
+fi
+
+# Clean up stale socket if it exists (OrbStack recreates it on start)
+if [ -e "$DOCKER_SOCKET" ]; then
+    echo "Removing stale Docker socket..."
+    rm -f "$DOCKER_SOCKET"
+fi
 
 echo "Restarting OrbStack..."
 open -a OrbStack
 
-echo "Waiting for OrbStack to initialize..."
-sleep 5
+echo "Waiting ${STARTUP_WAIT}s for OrbStack to initialize..."
+sleep "$STARTUP_WAIT"
+
+# Check for socket first — if it doesn't exist, Docker can't respond
+if [ ! -e "$DOCKER_SOCKET" ]; then
+    echo "Docker socket not yet created. Waiting another ${STARTUP_WAIT}s..."
+    sleep "$STARTUP_WAIT"
+fi
 
 echo "Checking if Docker is responsive..."
 if check_docker; then
     echo "Success! Docker is now responsive."
 else
-    echo "Docker is still not responding. You may need to wait longer or investigate further."
+    echo "Docker is still not responding after restart."
+    echo ""
+    echo "Try rebooting: sudo reboot"
     exit 1
 fi
