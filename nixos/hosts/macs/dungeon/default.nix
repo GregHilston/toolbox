@@ -20,8 +20,15 @@
 
   # LaunchDaemon that continuously prevents sleep (including lid-close).
   # NOTE: Must be plugged into a power source to stay awake with lid closed.
+  #
+  # caffeinate flags:
+  #   -s  prevent system (idle) sleep while on AC power
+  #   -d  prevent display sleep — critical for clamshell (lid-closed) mode because
+  #       macOS treats lid-close as a display sleep event that cascades into full
+  #       system sleep; blocking it keeps OrbStack and Docker alive
+  #   -i  prevent idle sleep regardless of power source
   launchd.daemons.prevent-sleep = {
-    command = "/usr/bin/caffeinate -s";
+    command = "/usr/bin/caffeinate -sdi";
     serviceConfig = {
       KeepAlive = true;
       RunAtLoad = true;
