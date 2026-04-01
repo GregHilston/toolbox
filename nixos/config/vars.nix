@@ -24,6 +24,13 @@
     stateVersion = "24.05";
   };
 
+  services = {
+    healthchecks = {
+      pingUrl = "https://hc-ping.com/5a471311-5c65-456c-82da-47600e20f1b1";
+      intervalSeconds = 300; # 5 minutes
+    };
+  };
+
   networking = {
     domain = "local";
     hosts = {

@@ -123,6 +123,23 @@
     };
   };
 
+  # Healthchecks.io ping — signals that dungeon is alive and has network.
+  # If this stops, healthchecks.io sends an alert (power outage, network down, etc.)
+  launchd.daemons.healthcheck-ping = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/usr/bin/curl"
+        "-fsS"
+        "--retry"
+        "3"
+        vars.services.healthchecks.pingUrl
+      ];
+      StartInterval = vars.services.healthchecks.intervalSeconds;
+      StandardOutPath = "/var/log/healthcheck-ping.log";
+      StandardErrorPath = "/var/log/healthcheck-ping.log";
+    };
+  };
+
   # Ensure the home-lab-config directory exists
   # Auto-clone or pull the home-lab repo (requires SSH keys configured for GitHub)
   # NOTE: Uses postActivation (not custom names) because nix-darwin only runs well-known activation script names.
