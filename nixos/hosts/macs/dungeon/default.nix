@@ -14,18 +14,55 @@
   # Enable SSH (Remote Login) for remote access
   services.openssh.enable = true;
 
-  # Server mode - prevent sleep when lid is closed
+  # Server mode — prevent sleep when lid is closed (clamshell mode)
+  #
+  # PROBLEM:
+  # This MacBook Pro (Apple Silicon M4 Pro) runs as a headless Docker server via
+  # OrbStack with the lid closed 99% of the time. By default, macOS enters
+  # "Clamshell Sleep" the moment the lid closes unless an external display is
+  # attached. When the machine sleeps, OrbStack's Linux VM suspends, the Docker
+  # socket becomes unresponsive (`docker ps` hangs), NFS mounts go stale, and
+  # all containers go offline.
+  #
+  # WHY caffeinate AND power.sleep.* ARE NOT ENOUGH:
+  # - `caffeinate -sdi` prevents idle/display/system sleep via software assertions,
+  #   but macOS on Apple Silicon ignores ALL software sleep assertions for the
+  #   hardware-level clamshell sleep event. pmset logs confirm:
+  #     "Entering Sleep state due to 'Clamshell Sleep'"
+  #   even with caffeinate running and power.sleep set to "never".
+  # - `pmset standby 0 / hibernatemode 0` disable secondary sleep mechanisms but
+  #   do not prevent the initial clamshell sleep trigger.
+  #
+  # THE FIX — `pmset -a disablesleep 1`:
+  # This is an undocumented pmset flag that completely disables ALL sleep,
+  # including clamshell sleep on Apple Silicon. It shows up in `pmset -g` as
+  # `SleepDisabled 1`. This is set in the activation script below.
+  #
+  # We keep three layers of defense for robustness:
+  #   1. power.sleep.* — nix-darwin's declarative pmset wrappers (idle sleep only)
+  #   2. pmset -a disablesleep 1 — the critical fix for clamshell sleep (activation script)
+  #   3. caffeinate daemon — belt-and-suspenders for idle sleep assertions
+  #
+  # If the machine still sleeps, a hardware HDMI dummy plug (~$8) is the nuclear
+  # option — it fakes an external display so macOS enters normal clamshell mode.
+  #
+  # References:
+  #   https://github.com/Moarram/wake (script built around disablesleep)
+  #   https://www.macworld.com/article/673295/how-to-use-macbook-with-lid-closed-stop-closed-mac-sleeping.html
+  #   https://github.com/waydabber/BetterDisplay (software dummy display alternative)
+  #
+  # WARNING: Reduced cooling with lid closed — ensure adequate ventilation.
   power.sleep.computer = "never";
   power.sleep.display = lib.mkForce "never";
 
-  # LaunchDaemon that continuously prevents sleep (including lid-close).
-  # NOTE: Must be plugged into a power source to stay awake with lid closed.
+  # caffeinate daemon — continuously asserts against idle/display/system sleep.
+  # NOTE: This alone does NOT prevent clamshell sleep on Apple Silicon (see above).
+  # Kept as a secondary measure alongside the pmset disablesleep override.
+  # Must be plugged into a power source to stay awake with lid closed.
   #
-  # caffeinate flags:
+  # Flags:
   #   -s  prevent system (idle) sleep while on AC power
-  #   -d  prevent display sleep — critical for clamshell (lid-closed) mode because
-  #       macOS treats lid-close as a display sleep event that cascades into full
-  #       system sleep; blocking it keeps OrbStack and Docker alive
+  #   -d  prevent display sleep
   #   -i  prevent idle sleep regardless of power source
   launchd.daemons.prevent-sleep = {
     command = "/usr/bin/caffeinate -sdi";
@@ -154,6 +191,21 @@
   #       and SSH can't find keys in ~/.ssh)
   system.activationScripts.postActivation.text = lib.mkBefore ''
     set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
+
+    # Prevent clamshell sleep on Apple Silicon (lid-close with no external display).
+    # See the detailed explanation in the power.sleep section above.
+    #
+    # nix-darwin doesn't expose these pmset settings declaratively, so we set them here.
+    #   disablesleep 1  — undocumented pmset flag that prevents ALL sleep, including
+    #                     the hardware-level clamshell sleep on Apple Silicon. This is
+    #                     the critical setting — without it, closing the lid kills
+    #                     OrbStack and all Docker containers. Shows as "SleepDisabled 1"
+    #                     in `pmset -g`. See: https://github.com/Moarram/wake
+    #   standby 0       — disable standby (deep sleep after prolonged idle)
+    #   hibernatemode 0 — disable writing RAM to disk and sleeping
+    #   autopoweroff 0  — disable auto power-off after prolonged standby
+    # -a applies to all power sources (AC and battery).
+    pmset -a disablesleep 1 standby 0 hibernatemode 0 autopoweroff 0
 
     # Create NFS mount points
     mkdir -p /Volumes/unraid-data
