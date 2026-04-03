@@ -136,6 +136,11 @@
     echo "NOTE: There are manual steps that may need to be applied for an initial setup."
     echo "      See nixos/modules/darwin/README.md"
     echo ""
+
+    # Reduce spacing between menu bar icons to fit more items
+    # https://news.ycombinator.com/item?id=47618946
+    defaults -currentHost write -globalDomain NSStatusItemSpacing -int 2
+    defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 2
   '';
 
   # nix-darwin state version
