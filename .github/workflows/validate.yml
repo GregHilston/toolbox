@@ -24,6 +24,9 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
+      - name: Cache Nix store
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
       - name: Run flake check
         working-directory: nixos
         run: nix flake check
@@ -54,6 +57,7 @@ jobs:
 
   validate-darwin:
     name: Validate Darwin configurations
+    if: github.event_name == 'pull_request'
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -65,6 +69,9 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
             experimental-features = nix-command flakes
+
+      - name: Cache Nix store
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Validate dungeon
         working-directory: nixos
