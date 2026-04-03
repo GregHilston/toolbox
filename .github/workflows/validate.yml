@@ -1,4 +1,4 @@
-name: Validate NixOS Configurations
+name: Validate Nix Configurations
 
 on:
   push:
@@ -23,6 +23,9 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
             experimental-features = nix-command flakes
+
+      - name: Cache Nix store
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Run flake check
         working-directory: nixos
@@ -51,3 +54,33 @@ jobs:
         run: |
           echo "Building home-lab..."
           nix build .#nixosConfigurations.home-lab.config.system.build.toplevel --dry-run
+
+  validate-darwin:
+    name: Validate Darwin configurations
+    if: github.event_name == 'pull_request'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Cache Nix store
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Validate dungeon
+        working-directory: nixos
+        run: |
+          echo "Building dungeon..."
+          nix build .#darwinConfigurations.dungeon.config.system.build.toplevel --dry-run
+
+      - name: Validate moria
+        working-directory: nixos
+        run: |
+          echo "Building moria..."
+          nix build .#darwinConfigurations.moria.config.system.build.toplevel --dry-run
