@@ -22,7 +22,23 @@ ssh-add ~/.ssh/id_ed25519
 
 Then add the public key to GitHub, GitLab, or any remote hosts as needed.
 
-## 3. Environment File
+## 3. Screen Sharing / VNC (dungeon only)
+
+macOS Sequoia+ requires user consent via the GUI to enable Screen Sharing. The `kickstart` CLI tool conflicts with System Settings and doesn't work reliably.
+
+1. Open **System Settings > General > Sharing > Screen Sharing** and toggle it **ON**
+2. Connect from another Mac via `vnc://192.168.1.174` (LAN) or `vnc://<tailscale-ip>` (remote)
+
+## 4. USB Ethernet Adapter (dungeon only)
+
+On first plug-in, macOS prompts to "Allow" the network extension for the USB ethernet adapter.
+
+1. Click **Allow** when prompted
+2. **Reboot** for the `en7` interface to appear
+3. After reboot, verify with `ifconfig en7` — it should have a DHCP-assigned IP
+4. Set a DHCP reservation on the router for the adapter's MAC address so it gets a stable IP
+
+## 5. Environment File
 
 Create a `~/.env` file with any secrets or environment variables not managed by nix-darwin:
 
