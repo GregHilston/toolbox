@@ -17,6 +17,7 @@ DOCKER_TIMEOUT=5
 KILL_WAIT=5
 STARTUP_WAIT=20
 DOCKER_SOCKET="$HOME/.orbstack/run/docker.sock"
+UNRAID_IP="192.168.1.2"
 
 # Portable timeout function for macOS (no coreutils `timeout` needed)
 check_docker() {
@@ -41,7 +42,23 @@ if check_docker; then
     exit 0
 fi
 
-echo "Docker is not responding. Checking OrbStack status..."
+echo "Docker is not responding."
+
+# Check if Unraid NFS server is reachable — if not, containers will hang on NFS volume mounts
+echo "Checking if Unraid server ($UNRAID_IP) is reachable..."
+if ! ping -c 1 -W 2 "$UNRAID_IP" &>/dev/null; then
+    echo ""
+    echo "WARNING: Unraid server ($UNRAID_IP) is NOT reachable!"
+    echo ""
+    echo "Most containers use NFS volumes mounted from Unraid."
+    echo "If Unraid is down, OrbStack will hang waiting for NFS mounts."
+    echo ""
+    echo "Please power on / check the Unraid server, then run this script again."
+    exit 1
+fi
+echo "Unraid server is reachable."
+
+echo "Checking OrbStack status..."
 
 if ! pgrep -i -q orbstack; then
     echo "OrbStack is not running. Starting it..."
