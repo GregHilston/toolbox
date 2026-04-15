@@ -21,7 +21,6 @@ dot/vim-pkg/.vim/.*
 .vimrc
 .bashrc
 .tmux*
-.zshrc
 
 .vagrant
 
