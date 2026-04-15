@@ -143,6 +143,10 @@
     defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 2
   '';
 
+  # Enable zsh system-wide so nix-darwin registers it as a valid shell.
+  # The actual shell config is stow-managed (dot/zsh/.zshrc).
+  programs.zsh.enable = true;
+
   # nix-darwin state version
   system.stateVersion = 6;
 }
