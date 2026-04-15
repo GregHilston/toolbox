@@ -54,7 +54,8 @@ plugins=(git
   python
   brew
   macos
-  zsh-syntax-highlighting
+  # zsh-syntax-highlighting: sourced directly in ~/.zshrc.local on nix machines
+  # (nix pkg uses .zsh not .plugin.zsh, so oh-my-zsh plugin loader can't find it)
   zsh-autosuggestions
   web-search
   jsontools

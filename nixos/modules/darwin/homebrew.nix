@@ -4,7 +4,9 @@
 
     onActivation = {
       autoUpdate = true;
-      cleanup = "check";
+      # "none" — don't touch packages not in this file. Change to "check" once
+      # manually-installed brew drift has been cleaned up on this machine.
+      cleanup = "none";
       upgrade = true;
     };
 
@@ -14,6 +16,14 @@
 
     brews = [
       "stow"
+
+      # CLI tools — managed here rather than nix for easier updates on macOS
+      "tmux"
+      "just"
+      "pandoc"
+      "gh"
+      "go"
+      "hugo"
     ];
 
     casks = [
