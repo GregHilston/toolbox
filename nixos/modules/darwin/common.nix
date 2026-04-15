@@ -31,7 +31,6 @@
     systemPackages = with pkgs; [
       bat
       zsh
-      tmux
       file
       git
       htop
@@ -46,21 +45,18 @@
       zip
       tree
       ncdu
-      just
       gcc
       lazygit
       ripgrep
       fd
       python3
-      pandoc
       gnumake
       docker-compose
 
       # Modern CLI tools
-      direnv # Directory-based environment switcher (system-wide for GUI app access)
+      direnv # kept in nix for nix-direnv caching (see tui/direnv)
       btop
       bruno-cli
-      gh
       yq-go
     ];
 
