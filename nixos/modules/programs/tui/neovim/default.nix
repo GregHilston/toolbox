@@ -8,6 +8,8 @@
     defaultEditor = true;
     viAlias = true;
     vimAlias = true;
+    withRuby = true;
+    withPython3 = true;
     extraLuaPackages = ps: [
       ps.lua
       ps.luarocks-nix
@@ -17,21 +19,21 @@
       imagemagick
 
       # Language Servers (LSP)
-      erlang_26
+      erlang_27
       elixir
       elixir-ls
       lua-language-server
       nil
       nixd
-      nodePackages_latest.svelte-language-server
+      svelte-language-server
       pyright
-      nodePackages."@tailwindcss/language-server"
+      tailwindcss-language-server
       gopls
 
       # Formatters
       black
-      nixfmt-rfc-style
-      nodePackages.prettier
+      nixfmt
+      prettierd
       biome
       shfmt
       stylelint
