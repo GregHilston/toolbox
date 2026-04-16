@@ -11,6 +11,10 @@
   programs.git = {
     enable = true;
 
+    signing = {
+      format = "openpgp";
+    };
+
     settings = {
       user = {
         name = vars.user.fullName;
