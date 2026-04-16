@@ -80,6 +80,45 @@ else
   VIDEO_ID="$INPUT"
 fi
 
+# Fetch video metadata via yt-dlp
+echo "Fetching video metadata..." >&2
+set +e
+METADATA_JSON=$(yt-dlp --dump-json --no-warnings "https://www.youtube.com/watch?v=$VIDEO_ID" 2>/dev/null)
+set -e
+
+if [[ -n "$METADATA_JSON" ]]; then
+  METADATA_JSON="$METADATA_JSON" python3 <<'PYEOF'
+import json, os
+
+data = json.loads(os.environ['METADATA_JSON'])
+
+date = data.get('upload_date', '')
+if len(date) == 8:
+    date = f"{date[:4]}-{date[4:6]}-{date[6:]}"
+
+views = data.get('view_count')
+views_str = f"{views:,}" if views is not None else 'N/A'
+
+duration = data.get('duration_string') or data.get('duration', 'N/A')
+uploader = data.get('uploader') or data.get('channel') or 'N/A'
+url = data.get('webpage_url', f"https://www.youtube.com/watch?v={data.get('id','')}")
+description = data.get('description', '').strip()
+
+print("=== VIDEO METADATA ===")
+print(f"Title:        {data.get('title', 'N/A')}")
+print(f"Channel:      {uploader}")
+print(f"Upload Date:  {date or 'N/A'}")
+print(f"Duration:     {duration}")
+print(f"Views:        {views_str}")
+print(f"URL:          {url}")
+print()
+print("Description:")
+print(description)
+print("=====================")
+print()
+PYEOF
+fi
+
 # Try to get existing transcript first (suppress all output)
 # Temporarily disable errexit to capture failure without exiting script
 set +e
@@ -89,6 +128,7 @@ set -e
 # Check if output contains error message (youtube_transcript_api returns 0 even on failure!)
 if [[ ! "$OUTPUT" =~ "Could not retrieve a transcript" ]]; then
   # Success - transcript retrieved
+  echo "=== TRANSCRIPT ==="
   echo "$OUTPUT"
   exit 0
 fi
@@ -120,4 +160,5 @@ echo "🎤 Transcribing with Whisper ($WHISPER_MODEL model, this may take a few 
 whisper-ctranslate2 "$AUDIO_FILE" --model "$WHISPER_MODEL" --output_format txt --output_dir "$TEMP_DIR" >&2
 
 # Output the transcript
+echo "=== TRANSCRIPT ==="
 cat "$TEMP_DIR/audio.txt"
