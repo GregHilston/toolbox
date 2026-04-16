@@ -38,18 +38,19 @@
       bind - split-window -v -c "#{pane_current_path}"
 
       # Vim-aware pane navigation (seamless vim/tmux navigation)
-      # These allow Ctrl+h/j/k/l to navigate between tmux panes AND vim splits
+      # These allow Ctrl+h/j/k to navigate between tmux panes AND vim splits
+      # NOTE: C-l is intentionally excluded to preserve the standard terminal
+      # behavior of clearing the screen. Use prefix + arrow keys or prefix + o
+      # to navigate to the right pane instead.
       is_vim="ps -o state= -o comm= -t '#{pane_tty}' | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|l?n?vim?x?|fzf)(diff)?$'"
       bind-key -n 'C-h' if-shell "$is_vim" 'send-keys C-h' 'select-pane -L'
       bind-key -n 'C-j' if-shell "$is_vim" 'send-keys C-j' 'select-pane -D'
       bind-key -n 'C-k' if-shell "$is_vim" 'send-keys C-k' 'select-pane -U'
-      bind-key -n 'C-l' if-shell "$is_vim" 'send-keys C-l' 'select-pane -R'
 
-      # Vim-aware pane navigation in copy mode
+      # Vim-aware pane navigation in copy mode (C-l excluded, see above)
       bind-key -T copy-mode-vi 'C-h' select-pane -L
       bind-key -T copy-mode-vi 'C-j' select-pane -D
       bind-key -T copy-mode-vi 'C-k' select-pane -U
-      bind-key -T copy-mode-vi 'C-l' select-pane -R
 
       # Resize panes with arrow keys
       bind -n S-Left resize-pane -L 5
