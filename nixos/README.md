@@ -556,6 +556,17 @@ Following Mitchell Hashimoto's approach, we use NixOS VMs for development work w
 3. The machine's `flake.nix` section will point to a `./hosts/[machine-name]`, which will resolve to `./hosts/[machine-name]/default.nix`.
 4. That `./hosts/[machine-name]/default.nix` file will define system things, and point to that machine's `./hosts/[machine-name]/hardware-configuration.nix`, and any and all `./modules/` that are relevant for that machine. For example, like `./modules/home/default.nix` which defines user packages.
 
+### Adding Python Packages
+
+To add Python packages globally (available on all hosts), add them to `modules/home/default.nix` using `python3.withPackages`:
+
+```nix
+(python3.withPackages (ps: with ps; [
+  youtube-transcript-api
+  requests
+]))
+```
+
 ## To View Your NixOs Version
 
 `$ nixos-version`

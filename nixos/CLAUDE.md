@@ -45,6 +45,7 @@ Be sure to select the host, and only the host we're working with. IE if we're de
 ## File Locations
 
 - User packages: [modules/home/default.nix](modules/home/default.nix)
+  - Python packages: Use `python3.withPackages (ps: with ps; [package-name])`
 - GUI apps: [modules/programs/gui/](modules/programs/gui/)
 - TUI apps: [modules/programs/tui/](modules/programs/tui/)
 - System packages: [modules/common/default.nix](modules/common/default.nix)

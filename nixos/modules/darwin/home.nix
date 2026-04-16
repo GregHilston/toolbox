@@ -38,6 +38,11 @@
           go
           duckdb
           claude-code
+          yt-dlp
+          (python3.withPackages (ps:
+            with ps; [
+              youtube-transcript-api
+            ]))
 
           # Fonts
           nerd-fonts.jetbrains-mono
