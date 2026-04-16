@@ -4,9 +4,19 @@ IFS=$'\n\t'
 
 # Extract YouTube video transcript, accepting URLs or video IDs
 # Falls back to local Whisper transcription if subtitles are unavailable
+#
+# Examples:
+#   yt-transcript dQw4w9WgXcQ
+#   yt-transcript "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+#   yt-transcript dQw4w9WgXcQ --model tiny  # Faster, less accurate
+#   yt-transcript dQw4w9WgXcQ --model large-v3  # Slower, more accurate
+#
+# Pipe to Claude Code with your own prompt:
+#   { echo "Summarize this song's meaning:"; echo ""; yt-transcript cB7IAXrCkO8; } | claude-code
+#   { echo "What are the key themes in these lyrics?"; echo ""; yt-transcript VIDEO_ID; } | claude-code
 
 # Default Whisper model
-WHISPER_MODEL="base"
+WHISPER_MODEL="large-v3"
 
 # Parse arguments
 if [ $# -eq 0 ]; then
