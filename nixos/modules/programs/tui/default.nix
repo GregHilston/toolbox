@@ -9,6 +9,7 @@
     ./tmux
     ./zoxide
     ./zsh
+    ./claude.nix
     ./nh.nix
     ./ssh.nix
     ./yazi.nix
