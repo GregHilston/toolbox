@@ -27,6 +27,13 @@ see `~/.oh-my-zsh/plugins/git/git.plugin.zsh`, after installing
   - Ctrl+W =: equalize width and height of all windows
 - To indent multiple line Press "<SHIFT> + v" to enter VISUAL LINE mode. Select the text you wish to indent but using either the cursor keys or the "j" and "k" keys. To indent press "<SHIFT> + dot" (> character).
 
+### f and t — Find and Till on Current Line
+
+- `f<char>` — **find**: jump forward to next `<char>` (inclusive, lands on it)
+- `t<char>` — **till**: jump forward to just before `<char>` (exclusive)
+- `F<char>` / `T<char>` — same but backwards
+- Combine with operators: `dfa` (delete through `a`), `dta` (delete up to `a`), `vta` (select up to `a`)
+
 ### Plugins Via vim-plug
 
 I'm using vim-plug to install plugins. For my own memory, I'll write some plugins and what they do/how to use them to remind myself.
