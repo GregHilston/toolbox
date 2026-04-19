@@ -42,3 +42,9 @@ dot/vim-pkg/.vim/bundle/Vundle.vim
 
 # nix build output
 result
+
+# omlx runtime state
+dot/omlx/.omlx/stats.json
+
+# extracted release archives (e.g. pi binary dropped here accidentally)
+/pi/
