@@ -1,0 +1,5 @@
+{
+  "defaultProvider": "omlx",
+  "defaultModel": "gpt-oss-120b-heretic-v2-mxfp4-q8-hi-mlx",
+  "lastChangelogVersion": "0.67.6"
+}

@@ -1,0 +1,23 @@
+{
+  "providers": {
+    "omlx": {
+      "baseUrl": "http://localhost:8000/v1",
+      "api": "openai-completions",
+      "apiKey": "V-.FeYzmycG3PNCD.sty",
+      "compat": {
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false
+      },
+      "models": [
+        {
+          "id": "gpt-oss-120b-heretic-v2-mxfp4-q8-hi-mlx",
+          "name": "GPT-OSS 120B Heretic v2 (local)",
+          "contextWindow": 32768,
+          "maxTokens": 32768,
+          "input": ["text"],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        }
+      ]
+    }
+  }
+}
