@@ -74,6 +74,18 @@ just stow <package>     # symlink a single package
 just stow-all           # symlink all packages
 ```
 
+## Plex
+
+### .plexmatch files
+
+Place a `.plexmatch` file in a show's root folder to pin it to a specific database ID. This prevents Plex from merging shows that share a name (e.g. a reboot and the original series).
+
+```
+tvdbid: 465690
+```
+
+Use `tvdbid` or `tmdbid`. Rescan the library after adding the file.
+
 ## NixOS / nix-darwin
 
 See `nixos/CLAUDE.md` for host management, deployment commands, and common mistakes.
