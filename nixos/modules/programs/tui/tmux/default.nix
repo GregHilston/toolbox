@@ -64,6 +64,10 @@
       # Enable focus events (needed for some vim plugins)
       set -g focus-events on
 
+      # CSI-u extended keys (required for pi and other modern TUI apps)
+      set -g extended-keys on
+      set -g extended-keys-format csi-u
+
       # Undercurl support (for zsh-autosuggestions styling)
       set -as terminal-overrides ',*:Smulx=\E[4::%p1%dm'
       set -as terminal-overrides ',*:Setulc=\E[58::2::%p1%{65536}%/%d::%p1%{256}%/%{255}%&%d::%p1%{255}%&%d%;m'
