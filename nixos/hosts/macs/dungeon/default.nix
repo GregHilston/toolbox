@@ -7,6 +7,7 @@
     ../../../modules/darwin/common.nix
     ../../../modules/darwin/homebrew.nix
     ../../../modules/darwin/home.nix
+    ../../../modules/darwin/smart-home.nix
   ];
 
   networking.hostName = "dungeon";

@@ -42,3 +42,6 @@ dot/vim-pkg/.vim/bundle/Vundle.vim
 
 # nix build output
 result
+
+# nix-darwin smart-home secrets (see nixos/modules/darwin/smart-home.nix)
+nixos/secrets/
