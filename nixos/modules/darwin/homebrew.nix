@@ -12,6 +12,10 @@
 
     taps = [
       "nikitabobko/tap" # AeroSpace
+      {
+        name = "jundot/omlx";
+        clone_target = "https://github.com/jundot/omlx";
+      } # omlx LLM inference server
     ];
 
     brews = [
@@ -24,6 +28,9 @@
       "gh"
       "go"
       "hugo"
+
+      # AI / LLM
+      "jundot/omlx/omlx"
     ];
 
     casks = [
