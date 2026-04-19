@@ -51,7 +51,7 @@
 
       # Dev
       "bruno"
-      "docker"
+      "docker-desktop"
       "orbstack"
       "dbeaver-community"
       "db-browser-for-sqlite"
@@ -70,11 +70,11 @@
       "draw-things"
 
       # Networking
-      "tailscale"
+      "tailscale-app"
 
       # Other
       "1password"
-      "flux"
+      "flux-app"
       "steam"
       "godot"
     ];
