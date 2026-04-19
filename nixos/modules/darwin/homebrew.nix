@@ -61,7 +61,7 @@
       "obsidian"
       "raycast"
       "stats"
-      "bartender"
+      "jordanbaird-ice"
       "aerospace"
 
       # AI
