@@ -1,4 +1,16 @@
-{...}: {
+{vars, ...}: {
+  # Launch omlx LLM inference server at login so pi and other tools can connect.
+  # Runs as a user agent (not a system daemon) so it has access to ~/models and ~/.omlx/.
+  launchd.user.agents.omlx = {
+    command = "/opt/homebrew/bin/omlx";
+    serviceConfig = {
+      RunAtLoad = true;
+      KeepAlive = true;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/omlx.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/omlx.log";
+    };
+  };
+
   homebrew = {
     enable = true;
 
