@@ -26,6 +26,7 @@
   # zsh-syntax-highlighting is sourced directly in .zshrc.local (naming mismatch
   # with oh-my-zsh's .plugin.zsh convention makes the plugin loader unreliable).
   home.packages = with pkgs; [
+    zsh-autosuggestions
     zsh-syntax-highlighting
     zsh-powerlevel10k
   ];
@@ -40,12 +41,27 @@
         || echo "stow: conflict — backup conflicting dotfiles in ~ then re-run darwin-rebuild switch"
     fi
 
-    # Wire powerlevel10k from the nix store into oh-my-zsh's custom themes dir.
-    # This is what ZSH_THEME="powerlevel10k/powerlevel10k" in .zshrc resolves to.
+    # Bootstrap oh-my-zsh if not already installed.
+    # Check for oh-my-zsh.sh (not just the directory) since the p10k step below
+    # may have already created ~/.oh-my-zsh/custom/.
+    if [ ! -f "$HOME/.oh-my-zsh/oh-my-zsh.sh" ]; then
+      ${pkgs.git}/bin/git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh.tmp"
+      # Merge into existing directory to preserve custom/ themes/plugins
+      cp -rn "$HOME/.oh-my-zsh.tmp/." "$HOME/.oh-my-zsh/"
+      rm -rf "$HOME/.oh-my-zsh.tmp"
+    fi
+
+    # Wire nix-managed plugins/themes into oh-my-zsh's custom directory.
     OMZ_CUSTOM="''${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
-    mkdir -p "$OMZ_CUSTOM/themes"
+    mkdir -p "$OMZ_CUSTOM/themes" "$OMZ_CUSTOM/plugins"
+
+    # powerlevel10k theme — resolves ZSH_THEME="powerlevel10k/powerlevel10k"
     ln -sfn "${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k" \
       "$OMZ_CUSTOM/themes/powerlevel10k"
+
+    # zsh-autosuggestions plugin — loaded by oh-my-zsh plugin list in .zshrc
+    ln -sfn "${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions" \
+      "$OMZ_CUSTOM/plugins/zsh-autosuggestions"
   '';
 
   home.file.".zshrc.local".text = ''
