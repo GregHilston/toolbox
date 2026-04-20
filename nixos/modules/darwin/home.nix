@@ -33,6 +33,7 @@
           # TUI/CLI tools
           ncdu
           ollama
+          uv
           ripgrep
           hugo
           go
