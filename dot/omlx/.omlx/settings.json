@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "server": {
-    "host": "127.0.0.1",
+    "host": "0.0.0.0",
     "port": 8000,
     "log_level": "info",
     "cors_origins": [
@@ -14,7 +14,11 @@
       "moria.local",
       "moria.tail1b9d9.ts.net",
       "192.168.1.187",
-      "100.115.155.85"
+      "100.115.155.85",
+      "dungeon",
+      "dungeon.local",
+      "192.168.1.174",
+      "100.103.22.125"
     ]
   },
   "model": {
