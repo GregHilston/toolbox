@@ -78,7 +78,8 @@ HOSTNAME=$(hostname)
 # Toolbox
 TOOLBOX_HOME=~/Git/toolbox
 export TOOLBOX_HOME=$TOOLBOX_HOME
-export PATH=$PATH:$TOOLBOX_HOME/bin
+# Add bin/ and all subdirectories recursively to PATH
+path+=($TOOLBOX_HOME/bin $TOOLBOX_HOME/bin/**/*(/N))
 
 # Editor
 export VISUAL=nvim

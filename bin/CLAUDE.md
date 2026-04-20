@@ -25,6 +25,10 @@ This causes scripts to fail fast on errors (`set -e`), undefined variables (`set
 
 ### Adding a new script
 
-1. Create the script in this directory
+1. Create the script in this directory (or a subdirectory for grouped tools)
 2. Make it executable (`chmod +x`)
 3. Optionally add a convenience alias in `dot/zsh/.zshrc`
+
+## Subdirectories
+
+Subdirectories group related scripts and are added to `$PATH` automatically via the recursive glob in `.zshrc` — no manual PATH update needed when adding a new subdirectory. Explore `bin/` to see what's available.
