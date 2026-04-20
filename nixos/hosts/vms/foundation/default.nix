@@ -13,18 +13,10 @@
 
   networking.hostName = "foundation";
 
-  # Ensure both users exist during transition
-  users.users = {
-    nixos = {
-      isNormalUser = true;
-      extraGroups = ["wheel" "networkmanager"];
-      # Keep nixos user temporarily
-    };
-    ${vars.user.name} = {
-      isNormalUser = true;
-      extraGroups = ["wheel" "networkmanager" "docker"];
-      initialPassword = "password";
-    };
+  users.users.${vars.user.name} = {
+    isNormalUser = true;
+    extraGroups = ["wheel" "networkmanager" "docker"];
+    initialPassword = "password";
   };
 
   # Override common settings that don't work well in WSL
