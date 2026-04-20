@@ -130,7 +130,7 @@
       wget
       curl
       zip
-      neofetch
+      fastfetch
       tree
       ncdu
       just
