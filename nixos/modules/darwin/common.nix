@@ -104,7 +104,7 @@
     trackpad = {
       Clicking = true;
       TrackpadRightClick = true;
-      TrackpadThreeFingerDrag = true;
+      TrackpadThreeFingerDrag = false; # false = three fingers used for Mission Control gestures (swipe up, switch spaces); true = three fingers drag windows/select text
     };
 
     screencapture = {
