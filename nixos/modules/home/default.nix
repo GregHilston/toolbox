@@ -82,6 +82,16 @@ in {
           discord
           slack
           spotify
+          (appimageTools.wrapType2 {
+            pname = "open-webui-desktop";
+            version = "0.0.9";
+            src = fetchurl {
+              # Check https://github.com/open-webui/desktop/releases for exact filename
+              url = "https://github.com/open-webui/desktop/releases/download/v0.0.9/open-webui.AppImage";
+              # Run: nix-prefetch-url <url> to get the real hash, then replace below
+              sha256 = lib.fakeSha256;
+            };
+          })
         ]
         else []
       );
