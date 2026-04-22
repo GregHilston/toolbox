@@ -2,18 +2,23 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# Extract YouTube video transcript, accepting URLs or video IDs
-# Falls back to local Whisper transcription if subtitles are unavailable
+# Extract a YouTube video transcript to stdout, accepting URLs or video IDs.
+# Falls back to local Whisper transcription if subtitles are unavailable.
+#
+# Use this script when you want the raw transcript text — to save it, process it
+# with other tools, or build your own Claude invocation. If you just want to ask
+# Claude a question about a video, use yt-ask.sh instead.
 #
 # Examples:
-#   yt-transcript dQw4w9WgXcQ
-#   yt-transcript "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-#   yt-transcript dQw4w9WgXcQ --model tiny  # Faster, less accurate
-#   yt-transcript dQw4w9WgXcQ --model large-v3  # Slower, more accurate
+#   yt-transcript.sh dQw4w9WgXcQ
+#   yt-transcript.sh "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+#   yt-transcript.sh dQw4w9WgXcQ --model tiny      # Faster, less accurate
+#   yt-transcript.sh dQw4w9WgXcQ --model large-v3  # Slower, more accurate
+#   yt-transcript.sh dQw4w9WgXcQ > transcript.txt  # Save to file
 #
-# Pipe to Claude Code with your own prompt:
-#   { echo "Summarize this song's meaning:"; echo ""; yt-transcript cB7IAXrCkO8; } | claude-code
-#   { echo "What are the key themes in these lyrics?"; echo ""; yt-transcript VIDEO_ID; } | claude-code
+# To ask Claude a question directly, use yt-ask.sh:
+#   yt-ask.sh "https://www.youtube.com/watch?v=dQw4w9WgXcQ" "summarize this video"
+#   yt-ask.sh --chat dQw4w9WgXcQ "what are the key themes?"
 
 # Default Whisper model
 WHISPER_MODEL="large-v3"
