@@ -42,6 +42,30 @@ Be sure to select the host, and only the host we're working with. IE if we're de
 - Full verification: `/verify <host>`
 - Commit: `/commit <message>` (add `--push` to push, `--pr` to create PR)
 
+## LLM Setup (oMLX)
+
+Local LLM inference is configured via **oMLX** (MLX GUI wrapper with prefix caching). The entire setup is reproducible and version-controlled.
+
+**Configuration files:**
+- **Settings**: `~/Git/toolbox/dot/omlx/.omlx/settings.json` — server config, model dirs, sampling params, caching
+- **Models**: `~/Git/toolbox/dot/omlx/.omlx/models/` — downloaded models (gitignored, stored locally)
+- **Tool integration**: `hosts/macs/moria/qwen-code.nix` — points qwen-code to local oMLX on localhost:8000
+
+**Current setup:**
+- **moria** (M4 Max 128GB): Runs oMLX server, hosts models (Qwen3.6 27B 8bit, Gemma 4 26B, GPT-OSS 120B)
+- **dungeon** (M3 Pro 36GB): Can point tools to moria's oMLX server via network aliases in settings.json
+
+**Why oMLX?**
+- Prefix caching: Repeated prompts (like roger's system prompt) reuse cached representations (~1.55x faster TTFT on cache hits)
+- Full JSON config: Reproducible, declarative, git-tracked
+- Fastest single-token on Apple Silicon (faster than Ollama, comparable to MLX)
+- OpenAI-compatible API for tool integration
+
+**To add LLM support to dungeon:**
+Create `hosts/macs/dungeon/llm-tools.nix` (mirror of moria's qwen-code.nix) pointing to `moria.local:8000` or use Tailscale alias from settings.json.
+
+**Reference:** See `~/Git/notes/ref-llm-inference-tools.md` for broader LLM tool decision guide.
+
 ## File Locations
 
 - User packages: [modules/home/default.nix](modules/home/default.nix)
@@ -55,6 +79,7 @@ Be sure to select the host, and only the host we're working with. IE if we're de
 - Host IPs / networking vars: [config/vars.nix](config/vars.nix) (`networking.hosts`)
 - SSH client config: [modules/programs/tui/ssh.nix](modules/programs/tui/ssh.nix)
 - Host configs: `hosts/<type>/<hostname>/default.nix`
+- LLM settings: `~/Git/toolbox/dot/omlx/.omlx/settings.json` (reproducible oMLX config)
 
 ## Testing
 
