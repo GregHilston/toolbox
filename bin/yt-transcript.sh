@@ -3,7 +3,9 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # Extract a YouTube video transcript to stdout, accepting URLs or video IDs.
-# Falls back to local Whisper transcription if subtitles are unavailable.
+# Falls back to local Parakeet-MLX transcription if subtitles are unavailable.
+# Inspiration to use Parakeet-MLX came from:
+# https://news.ycombinator.com/item?id=47683355
 #
 # Use this script when you want the raw transcript text — to save it, process it
 # with other tools, or build your own Claude invocation. If you just want to ask
@@ -12,16 +14,15 @@ IFS=$'\n\t'
 # Examples:
 #   yt-transcript.sh dQw4w9WgXcQ
 #   yt-transcript.sh "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-#   yt-transcript.sh dQw4w9WgXcQ --model tiny      # Faster, less accurate
-#   yt-transcript.sh dQw4w9WgXcQ --model large-v3  # Slower, more accurate
+#   yt-transcript.sh dQw4w9WgXcQ --model mlx-community/parakeet-tdt-0.6b-v3  # Default
 #   yt-transcript.sh dQw4w9WgXcQ > transcript.txt  # Save to file
 #
 # To ask Claude a question directly, use yt-ask.sh:
 #   yt-ask.sh "https://www.youtube.com/watch?v=dQw4w9WgXcQ" "summarize this video"
 #   yt-ask.sh --chat dQw4w9WgXcQ "what are the key themes?"
 
-# Default Whisper model
-WHISPER_MODEL="large-v3"
+# Default Parakeet-MLX model
+PARAKEET_MODEL="mlx-community/parakeet-tdt-0.6b-v3"
 
 # Parse arguments
 if [ $# -eq 0 ]; then
@@ -30,9 +31,9 @@ if [ $# -eq 0 ]; then
   echo "  yt-transcript dQw4w9WgXcQ"
   echo "  yt-transcript 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'"
   echo "  yt-transcript 'https://youtu.be/dQw4w9WgXcQ'"
-  echo "  yt-transcript dQw4w9WgXcQ --model large-v3"
+  echo "  yt-transcript dQw4w9WgXcQ --model mlx-community/parakeet-tdt-0.6b-v3"
   echo ""
-  echo "Available models: tiny, base (default), small, medium, large-v3"
+  echo "Uses Parakeet-MLX for fast, offline transcription on Apple Silicon"
   exit 1
 fi
 
@@ -42,32 +43,21 @@ shift
 # Parse optional flags
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --model|-m)
-      WHISPER_MODEL="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown option: $1" >&2
-      exit 1
-      ;;
-  esac
-done
-
-# Validate model
-case $WHISPER_MODEL in
-  tiny|base|small|medium|large-v3)
+  --model | -m)
+    PARAKEET_MODEL="$2"
+    shift 2
     ;;
   *)
-    echo "Invalid model: $WHISPER_MODEL" >&2
-    echo "Available models: tiny, base, small, medium, large-v3" >&2
+    echo "Unknown option: $1" >&2
     exit 1
     ;;
-esac
+  esac
+done
 
 # Extract video ID from various YouTube URL formats
 if [[ "$INPUT" =~ ^https?:// ]]; then
   # Remove backslash escapes that zsh might add
-  INPUT="${INPUT//\\}"
+  INPUT="${INPUT//\\/}"
 
   # Extract using bash regex (escape special chars)
   if [[ "$INPUT" =~ v=([a-zA-Z0-9_-]+) ]]; then
@@ -138,11 +128,11 @@ if [[ ! "$OUTPUT" =~ "Could not retrieve a transcript" ]]; then
   exit 0
 fi
 
-# Transcript unavailable, offer Whisper fallback
+# Transcript unavailable, offer Parakeet-MLX fallback
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
 echo "No subtitles available for this video." >&2
-echo "Would you like to generate a transcript using Whisper?" >&2
-echo "This will download the audio and transcribe it locally (may take a few minutes)." >&2
+echo "Would you like to generate a transcript using Parakeet-MLX?" >&2
+echo "This will download the audio and transcribe it locally (takes ~10 seconds per 10 minutes)." >&2
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
 read -p "Continue? [y/N] " -n 1 -r >&2
 echo >&2
@@ -161,9 +151,16 @@ AUDIO_FILE="$TEMP_DIR/audio.m4a"
 # Try multiple format fallbacks to avoid 403 errors
 yt-dlp -f 'bestaudio[ext=m4a]/bestaudio/best' --no-warnings -o "$AUDIO_FILE" "https://www.youtube.com/watch?v=$VIDEO_ID" >&2
 
-echo "🎤 Transcribing with Whisper ($WHISPER_MODEL model, this may take a few minutes)..." >&2
-whisper-ctranslate2 "$AUDIO_FILE" --model "$WHISPER_MODEL" --output_format txt --output_dir "$TEMP_DIR" >&2
+echo "🦜 Transcribing with Parakeet-MLX (optimized for Apple Silicon)..." >&2
+python3 <<PYEOF
+from parakeet_mlx import from_pretrained
+import sys
 
-# Output the transcript
-echo "=== TRANSCRIPT ==="
-cat "$TEMP_DIR/audio.txt"
+try:
+    model = from_pretrained("$PARAKEET_MODEL")
+    result = model.transcribe("$AUDIO_FILE")
+    print(result.text)
+except Exception as e:
+    print(f"Error: {e}", file=sys.stderr)
+    sys.exit(1)
+PYEOF
