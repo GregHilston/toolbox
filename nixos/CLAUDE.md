@@ -1,5 +1,14 @@
 # NixOS Configuration Assistant
 
+## Self-Testing Changes
+
+Always verify your own changes before asking the user to test. Detect the current host with `hostname` and dry-run build against it:
+
+- **Darwin hosts**: `nix build .#darwinConfigurations.$(hostname).system --dry-run`
+- **NixOS hosts**: `nix build .#nixosConfigurations.$(hostname).config.system.build.toplevel --dry-run`
+
+These commands do NOT require `sudo` and catch most evaluation and dependency errors. Run this after every config change so the user doesn't have to be your test runner.
+
 ## Available Hosts
 - **foundation** (x86_64 WSL VM)
 - **isengard** (x86_64 ThinkPad T420)
