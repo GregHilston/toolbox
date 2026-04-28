@@ -80,6 +80,7 @@ in {
           duckdb
           claude-code
           yt-dlp
+          ffmpeg
           (python3.withPackages (ps:
             with ps; [
               youtube-transcript-api
