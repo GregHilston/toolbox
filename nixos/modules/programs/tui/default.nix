@@ -7,6 +7,7 @@
     ./git
     ./neovim
     ./tmux
+    ./zellij
     ./zoxide
     ./zsh
     ./claude.nix
