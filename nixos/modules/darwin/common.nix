@@ -49,7 +49,6 @@
       lazygit
       ripgrep
       fd
-      python3
       gnumake
       docker-compose
 
