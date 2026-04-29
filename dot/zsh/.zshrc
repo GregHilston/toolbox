@@ -20,6 +20,8 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 
 # Auto-correction
 ENABLE_CORRECTION="true"
+# Glob pattern of words to skip correction for; extend with (pi|other|words)
+CORRECT_IGNORE="(pi)"
 
 # Show dots while waiting for completion
 COMPLETION_WAITING_DOTS="true"
