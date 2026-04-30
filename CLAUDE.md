@@ -101,6 +101,18 @@ Use `tvdbid` or `tmdbid`. Rescan the library after adding the file.
 
 CLI for dungeon's self-hosted SearXNG instance. Config managed via stow (`dot/searxngr-config/`), binary installed via `uv tool install`. See `/searxngr-search` skill for Claude Code integration.
 
+## oMLX
+
+Local LLM inference server (Apple Silicon). Config in `dot/omlx/`, per-host overrides in
+`dot/omlx-{hostname}/`. Managed as a launchd service (`org.nixos.omlx`) on port 8000.
+
+After `brew upgrade`, the old Python process may hold port 8000, causing the new instance
+to crash-loop. Fix with:
+
+```bash
+kill $(lsof -ti :8000) 2>/dev/null; launchctl kickstart -k "gui/$(id -u)/org.nixos.omlx"
+```
+
 ## NixOS / nix-darwin
 
 See `nixos/CLAUDE.md` for host management, deployment commands, and common mistakes.
