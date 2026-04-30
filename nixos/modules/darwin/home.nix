@@ -80,6 +80,7 @@ in {
           go
           duckdb
           claude-code
+          opencode
           pi-coding-agent
           yt-dlp
           ffmpeg
@@ -113,6 +114,11 @@ in {
         };
         yazi.enable = true;
         programs.pi = {
+          enable = true;
+          defaultModel = "Qwen3.6-35B-A3B-8bit";
+          omlxBaseUrl = "http://localhost:8000/v1";
+        };
+        programs.opencode = {
           enable = true;
           defaultModel = "Qwen3.6-35B-A3B-8bit";
           omlxBaseUrl = "http://localhost:8000/v1";

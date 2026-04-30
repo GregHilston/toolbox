@@ -13,6 +13,7 @@
     ./zsh
     ./claude.nix
     ./nh.nix
+    ./opencode.nix
     ./ssh.nix
     ./yazi.nix
   ];

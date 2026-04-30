@@ -53,6 +53,7 @@ in {
         go
         duckdb
         claude-code
+        opencode
         yt-dlp
         uv
         git
