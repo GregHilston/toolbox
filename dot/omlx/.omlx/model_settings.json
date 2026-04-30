@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "_comment": "Per-model overrides. These take precedence over sampling defaults in settings.json.",
+  "models": {
+    "Qwen3.6-35B-A3B-8bit": {
+      "description": "Unsloth-recommended sampling for Qwen3.6 coding/agentic tasks. Source: https://unsloth.ai/docs/models/qwen3.6 — also validated by multiple r/LocalLLaMA threads (see llm.md notes).",
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "top_k": 20,
+      "repetition_penalty": 1.0,
+      "presence_penalty": 0.0
+    }
+  }
+}
