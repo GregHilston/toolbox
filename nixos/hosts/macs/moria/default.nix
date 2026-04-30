@@ -50,6 +50,10 @@
       > "$OMLX_SETTINGS.tmp"
     mv -f "$OMLX_SETTINGS.tmp" "$OMLX_SETTINGS"
 
+    # Restart oMLX so it picks up the merged settings.json.
+    # KeepAlive only restarts on crashes, not config changes.
+    launchctl kickstart -k "gui/$(id -u ${vars.user.name})/org.nixos.omlx" 2>/dev/null || true
+
     echo "✓ oMLX configured for moria (hot_cache_max_size=32GB)"
   '';
 }

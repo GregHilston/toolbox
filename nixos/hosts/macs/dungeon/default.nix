@@ -213,6 +213,10 @@
       > "$OMLX_SETTINGS.tmp"
     mv -f "$OMLX_SETTINGS.tmp" "$OMLX_SETTINGS"
 
+    # Restart oMLX so it picks up the merged settings.json.
+    # KeepAlive only restarts on crashes, not config changes.
+    launchctl kickstart -k "gui/$(id -u ${vars.user.name})/org.nixos.omlx" 2>/dev/null || true
+
     echo "✓ oMLX configured for dungeon (hot_cache_max_size=8GB)"
 
     # Prevent clamshell sleep on Apple Silicon (lid-close with no external display).
