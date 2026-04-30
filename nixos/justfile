@@ -77,7 +77,9 @@ gc:
 # Darwin rebuild (macOS)
 # Usage: `just dr <hostname>`
 dr host flake_path=flake_path:
+  ~/Git/toolbox/bin/aerospace-save-state.sh
   sudo darwin-rebuild switch --flake {{flake_path}}#{{host}}
+  ~/Git/toolbox/bin/aerospace-restore-state.sh
   @echo ""
   @echo "Tip: Run 'just checklist' for post-deploy setup tasks"
 
