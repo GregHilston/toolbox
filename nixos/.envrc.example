@@ -1,0 +1,7 @@
+# Copy to .envrc and fill in real values:
+#   cp .envrc.example .envrc
+#
+# direnv will auto-load this when you cd into nixos/.
+# The API key is read at nix eval time via builtins.getEnv.
+
+export OMLX_API_KEY="your-omlx-api-key-here"

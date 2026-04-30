@@ -52,3 +52,9 @@ dot/pi/.pi/agent/auth.json
 
 # extracted release archives (e.g. pi binary dropped here accidentally)
 /pi/
+
+# oMLX runtime directory symlink (stow creates ~/.omlx -> dot/omlx/.omlx)
+.omlx
+
+# direnv secrets (use .envrc.example for structure)
+nixos/.envrc
