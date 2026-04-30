@@ -33,8 +33,11 @@
     TOOLBOX="/Users/${vars.user.name}/Git/toolbox/dot"
 
     # Stow shared oMLX files (model_settings.json, stats.json, etc.)
+    # --no-folding prevents stow from symlinking the .omlx/ directory itself
+    # into the repo. Without it, oMLX writes (settings saves, cache, logs)
+    # land directly in the git working tree.
     cd "$TOOLBOX"
-    stow -R omlx
+    stow -R --no-folding omlx
 
     # Merge base settings.json + moria cache overlay → ~/.omlx/settings.json
     # Write to a temp file first, then mv into place. This avoids truncating the

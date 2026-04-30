@@ -197,8 +197,10 @@
     # contains host-specific cache sizes AND auth keys. Merged with jq instead.
     export PATH="${pkgs.stow}/bin:${pkgs.jq}/bin:$PATH"
     TOOLBOX="/Users/${vars.user.name}/Git/toolbox/dot"
+    # --no-folding prevents stow from symlinking the .omlx/ directory itself
+    # into the repo. Without it, oMLX writes land directly in the git tree.
     cd "$TOOLBOX"
-    stow -R omlx
+    stow -R --no-folding omlx
 
     # Merge base settings.json + dungeon cache overlay → ~/.omlx/settings.json
     # Write to a temp file first, then mv into place. This avoids truncating the

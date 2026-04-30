@@ -4,3 +4,7 @@ README.md
 # settings.json is host-specific (cache sizes differ per machine).
 # The activation script merges base + host overlay via jq.
 \.omlx/settings\.json
+# Runtime data — large files that should never be symlinked
+\.omlx/cache
+\.omlx/logs
+\.omlx/models
