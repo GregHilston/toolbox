@@ -193,10 +193,24 @@
     set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
 
     # Deploy oMLX dotfiles: base config + dungeon-specific overrides
-    # Ensure stow is available
-    export PATH="${pkgs.stow}/bin:$PATH"
-    cd "/Users/${vars.user.name}/Git/toolbox/dot"
-    stow omlx omlx-dungeon
+    # settings.json is excluded from stow (via .stow-local-ignore) because it
+    # contains host-specific cache sizes AND auth keys. Merged with jq instead.
+    export PATH="${pkgs.stow}/bin:${pkgs.jq}/bin:$PATH"
+    TOOLBOX="/Users/${vars.user.name}/Git/toolbox/dot"
+    cd "$TOOLBOX"
+    stow -R omlx
+
+    # Merge base settings.json + dungeon cache overlay → ~/.omlx/settings.json
+    # Write to a temp file first, then mv into place. This avoids truncating the
+    # source if ~/.omlx/settings.json is a stale symlink pointing back to it,
+    # and is atomic (the old file survives if jq fails).
+    OMLX_SETTINGS="/Users/${vars.user.name}/.omlx/settings.json"
+    jq -s '.[0] * .[1]' \
+      "$TOOLBOX/omlx/.omlx/settings.json" \
+      "$TOOLBOX/omlx-dungeon/.omlx/settings.json" \
+      > "$OMLX_SETTINGS.tmp"
+    mv -f "$OMLX_SETTINGS.tmp" "$OMLX_SETTINGS"
+
     echo "✓ oMLX configured for dungeon (hot_cache_max_size=8GB)"
 
     # Prevent clamshell sleep on Apple Silicon (lid-close with no external display).

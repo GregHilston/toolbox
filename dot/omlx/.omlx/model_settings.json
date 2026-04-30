@@ -8,7 +8,22 @@
       "top_p": 0.95,
       "top_k": 20,
       "repetition_penalty": 1.0,
-      "presence_penalty": 0.0
+      "presence_penalty": 0.0,
+
+      "_comment_thinking": "Cap thinking tokens to prevent infinite reasoning loops. Qwen3.6-35B-A3B is prone to these — see https://www.reddit.com/r/LocalLLaMA/comments/1spdvpo/ and https://itayinbarr.substack.com/p/honey-i-shrunk-the-coding-agent (little-coder used 2048; we use 8192 for more headroom on complex tasks).",
+      "thinking_budget_enabled": true,
+      "thinking_budget_tokens": 8192
+    },
+    "gemma-4-26b-a4b-it-4bit": {
+      "description": "Tuned for summarization/RAG. Low temp reduces hallucination. Thinking disabled — unnecessary overhead for non-reasoning tasks. Sources: Google model card, HuggingFace gemma-4-26B-A4B-it, r/LocalLLaMA benchmarks, https://gemma4guide.com/guides/gemma4-config-guide",
+      "temperature": 0.3,
+      "top_p": 0.95,
+      "top_k": 64,
+      "repetition_penalty": 1.0,
+      "presence_penalty": 0.0,
+
+      "_comment_thinking": "Gemma 4 supports thinking via <|think|> tokens but it's wasted compute for summarization. The 26B MoE variant may still emit empty thought channel tags when disabled — this is expected.",
+      "thinking_budget_enabled": false
     }
   }
 }
