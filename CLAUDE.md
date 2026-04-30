@@ -113,6 +113,19 @@ to crash-loop. Fix with:
 kill $(lsof -ti :8000) 2>/dev/null; launchctl kickstart -k "gui/$(id -u)/org.nixos.omlx"
 ```
 
+## Secret Management
+
+All secrets live in 1Password (vault: **Infra**). Committed `.tpl` template files contain
+`{{ op://Infra/Item/field }}` references. Run `just secrets` from `nixos/` to generate
+the real files via `op inject`. Generated files are gitignored.
+
+```bash
+cd nixos && just secrets    # generates dot/omlx settings.json, dot/pi models.json, secrets/.env
+```
+
+Never commit plaintext secrets. If a new secret is needed, add it to 1Password and reference
+it in the appropriate `.tpl` file.
+
 ## NixOS / nix-darwin
 
 See `nixos/CLAUDE.md` for host management, deployment commands, and common mistakes.
