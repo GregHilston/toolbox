@@ -6,6 +6,7 @@
     ./fzf
     ./git
     ./neovim
+    ./pi.nix
     ./tmux
     ./zellij
     ./zoxide

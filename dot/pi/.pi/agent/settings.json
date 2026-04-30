@@ -1,5 +1,5 @@
 {
   "defaultProvider": "omlx",
-  "defaultModel": "gpt-oss-120b-heretic-v2-mxfp4-q8-hi-mlx",
-  "lastChangelogVersion": "0.67.6"
+  "defaultModel": "Qwen3.6-35B-A3B-8bit",
+  "lastChangelogVersion": "0.70.2"
 }

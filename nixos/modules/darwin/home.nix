@@ -74,11 +74,13 @@ in {
           ncdu
           ollama
           uv
+          git
           ripgrep
           hugo
           go
           duckdb
           claude-code
+          pi-coding-agent
           yt-dlp
           ffmpeg
           (python3.withPackages (ps:
@@ -110,6 +112,12 @@ in {
           flake = vars.paths.nixosFlake;
         };
         yazi.enable = true;
+        programs.pi = {
+          enable = true;
+          defaultModel = "Qwen3.6-35B-A3B-8bit";
+          apiKey = builtins.getEnv "OMLX_API_KEY";
+          omlxBaseUrl = "http://localhost:8000/v1";
+        };
       };
 
       programs.home-manager.enable = true;
