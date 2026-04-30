@@ -236,6 +236,7 @@ def extract_video_id(source: str) -> str:
     """Extract a YouTube video ID from a URL or bare ID string."""
     if not source.startswith(("http://", "https://")):
         return source
+    source = source.replace("\\", "")
     for pattern in YOUTUBE_URL_PATTERNS:
         match = pattern.search(source)
         if match:
