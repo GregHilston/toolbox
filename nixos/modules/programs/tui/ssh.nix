@@ -38,6 +38,12 @@
         user = "pi";
         identityFile = "~/.ssh/id_rsa";
       };
+      "pixel" = {
+        hostname = vars.networking.hosts.pixel.lan;
+        user = "u0_a305";
+        port = 8022;
+        identityFile = "~/.ssh/id_rsa";
+      };
       "*" = {
         identityFile = "~/.ssh/id_rsa";
       };
