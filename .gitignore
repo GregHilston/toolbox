@@ -46,6 +46,9 @@ result
 # omlx runtime state
 dot/omlx/.omlx/stats.json
 
+# omlx secrets (generated from settings.json.tpl via `just secrets`)
+dot/omlx/.omlx/settings.json
+
 # pi runtime state (sessions, auth tokens, generated files)
 dot/pi/.pi/agent/sessions/
 dot/pi/.pi/agent/auth.json
@@ -54,7 +57,10 @@ dot/pi/.pi/agent/auth.json
 /pi/
 
 # oMLX runtime directory symlink (stow creates ~/.omlx -> dot/omlx/.omlx)
-.omlx
+/.omlx
 
 # direnv secrets (use .envrc.example for structure)
 nixos/.envrc
+
+# generated secrets (use secrets/.env.tpl as template, run `just secrets`)
+nixos/secrets/.env

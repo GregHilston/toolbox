@@ -1,5 +1,6 @@
-# Managed by home-manager (pi.nix) — not stow
+# Generated from models.json.tpl via `just secrets` (contains API key)
 .pi/agent/models.json
+# Managed by home-manager (pi.nix)
 .pi/agent/settings.json
 # Cloned by `pi install` at runtime — reinstalled by nix activation
 .pi/agent/git/

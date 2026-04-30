@@ -1,7 +1,10 @@
-# Copy to .envrc and fill in real values:
-#   cp .envrc.example .envrc
+# Secret env vars are generated from 1Password templates.
+# Run `just secrets` to generate secrets/.env, then direnv loads it here.
 #
-# direnv will auto-load this when you cd into nixos/.
-# The API key is read at nix eval time via builtins.getEnv.
+# To set up from scratch:
+#   1. Install 1Password CLI: brew install 1password-cli
+#   2. Sign in: op signin
+#   3. Generate secrets: just secrets
+#   4. Allow direnv: direnv allow
 
-export OMLX_API_KEY="your-omlx-api-key-here"
+dotenv_if_exists secrets/.env

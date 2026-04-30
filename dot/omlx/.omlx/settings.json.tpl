@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "log_level": "info",
+    "cors_origins": [
+      "*"
+    ],
+    "server_aliases": [
+      "localhost",
+      "127.0.0.1",
+      "moria",
+      "moria.local",
+      "moria.tail1b9d9.ts.net",
+      "192.168.1.187",
+      "100.115.155.85",
+      "dungeon",
+      "dungeon.local",
+      "192.168.1.174",
+      "100.103.22.125"
+    ]
+  },
+  "model": {
+    "model_dirs": [
+      "/Users/ghilston/Git/toolbox/dot/omlx/.omlx/models"
+    ],
+    "model_dir": "/Users/ghilston/Git/toolbox/dot/omlx/.omlx/models",
+    "max_model_memory": "auto",
+    "model_fallback": false
+  },
+  "memory": {
+    "max_process_memory": "auto",
+    "prefill_memory_guard": true
+  },
+  "scheduler": {
+    "max_concurrent_requests": 8
+  },
+  "cache": {
+    "enabled": true,
+    "ssd_cache_dir": null,
+    "ssd_cache_max_size": "auto",
+    "hot_cache_max_size": "32GB",
+    "initial_cache_blocks": 256
+  },
+  "auth": {
+    "api_key": "{{ op://Infra/oMLX/api_key }}",
+    "secret_key": "{{ op://Infra/oMLX/secret_key }}",
+    "skip_api_key_verification": false,
+    "sub_keys": []
+  },
+  "mcp": {
+    "config_path": null
+  },
+  "huggingface": {
+    "endpoint": ""
+  },
+  "modelscope": {
+    "endpoint": ""
+  },
+  "network": {
+    "http_proxy": "",
+    "https_proxy": "",
+    "no_proxy": "",
+    "ca_bundle": ""
+  },
+  "sampling": {
+    "max_context_window": 262144,
+    "max_tokens": 81920,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 0,
+    "repetition_penalty": 1.0
+  },
+  "logging": {
+    "log_dir": null,
+    "retention_days": 7
+  },
+  "claude_code": {
+    "context_scaling_enabled": false,
+    "target_context_size": 200000,
+    "mode": "cloud",
+    "opus_model": null,
+    "sonnet_model": null,
+    "haiku_model": null
+  },
+  "integrations": {
+    "codex_model": null,
+    "opencode_model": null,
+    "openclaw_model": null,
+    "pi_model": null,
+    "openclaw_tools_profile": "coding"
+  },
+  "ui": {
+    "language": "en"
+  }
+}

@@ -20,14 +20,16 @@ def send_pushover_notification(
     pushover_work_api_key: str | None = None,
 ):
     if not pushover_user_key:
-        key = "PUSHOVER_USER_KEY"
-        logger.warning(f"pushover_user_key not provided, falling back to ${key}")
-        pushover_user_key = os.environ[key]
-
+        pushover_user_key = os.environ.get("PUSHOVER_USER_KEY")
     if not pushover_work_api_key:
-        key = "PUSHOVER_WORK_API_KEY"
-        logger.warning(f"pushover_work_api_key not provided, falling back to ${key}")
-        pushover_work_api_key = os.environ[key]
+        pushover_work_api_key = os.environ.get("PUSHOVER_WORK_API_KEY")
+
+    if not pushover_user_key or not pushover_work_api_key:
+        logger.error(
+            "PUSHOVER_USER_KEY and/or PUSHOVER_WORK_API_KEY not set. "
+            "Run `just secrets` in ~/Git/toolbox/nixos to generate secrets from 1Password."
+        )
+        raise SystemExit(1)
 
     return requests.post(
         "https://api.pushover.net/1/messages.json",

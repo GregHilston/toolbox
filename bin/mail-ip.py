@@ -53,18 +53,14 @@ def send_email(
 ):
     if not from_email_address_password:
         key = "FROM_EMAIL_ADDRESS_PASSWORD"
-        logger.warning(f"Password not provided, falling back to ${key}")
         from_email_address_password = os.environ.get(key)
 
     if not from_email_address_password:
-        password_file = os.path.join(
-            os.path.dirname(sys.argv[0]),
-            "secrets",
-            "gmail_password.conf.personal",
+        logger.error(
+            "FROM_EMAIL_ADDRESS_PASSWORD not set. "
+            "Run `just secrets` in ~/Git/toolbox/nixos to generate secrets from 1Password."
         )
-        logger.warning(f"Env var not set, falling back to file: {password_file}")
-        with open(password_file) as f:
-            from_email_address_password = f.read().strip()
+        sys.exit(1)
 
     server = smtplib.SMTP("smtp.gmail.com", 587)
     server.ehlo()

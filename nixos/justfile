@@ -105,6 +105,15 @@ validate:
   nix build .#darwinConfigurations.moria.system --dry-run
   @echo "All configurations valid!"
 
+# Generate secret files from 1Password templates.
+# Run this once after cloning, or after updating secrets in 1Password.
+# Requires: brew install 1password-cli && op signin
+secrets:
+  op inject -i ../dot/omlx/.omlx/settings.json.tpl -o ../dot/omlx/.omlx/settings.json
+  op inject -i ../dot/pi/.pi/agent/models.json.tpl -o ../dot/pi/.pi/agent/models.json
+  op inject -i secrets/.env.tpl -o secrets/.env
+  @echo "Secrets generated. Run 'just dr <host>' to deploy."
+
 # Show post-deploy checklist for Darwin/macOS setup
 # Usage: `just checklist`
 checklist:

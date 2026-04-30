@@ -116,7 +116,6 @@ in {
         programs.pi = {
           enable = true;
           defaultModel = "Qwen3.6-35B-A3B-8bit";
-          omlxBaseUrl = "http://localhost:8000/v1";
         };
         programs.opencode = {
           enable = true;
