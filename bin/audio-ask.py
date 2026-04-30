@@ -32,8 +32,9 @@ Time trimming (--start / --end):
 Examples:
     audio-ask.py "https://www.youtube.com/watch?v=bZfr7tzpYqU" "top five guns?"
     audio-ask.py ~/Downloads/audio_message.m4a "summarize this recording"
-    audio-ask.py --agent pi interview.mp4 "what are the key points?"
-    audio-ask.py --chat --agent pi podcast.m4a "summarize this"
+    audio-ask.py --agent claude interview.mp4 "what are the key points?"
+    audio-ask.py --chat podcast.m4a "summarize this"
+    audio-ask.py --pi-model Qwen3.6-35B-A3B-8bit interview.mp4 "review this code walkthrough"
     audio-ask.py --start 1:30 --end 5:00 lecture.mp4 "what was discussed?"
     audio-ask.py --show-transcript lecture.mp4 "what was discussed?"
 """
@@ -57,7 +58,7 @@ logger.remove()
 logger.add(sys.stderr, format="<level>{level:<8}</level> | {message}", level="DEBUG")
 
 AGENTS = ("claude", "pi")
-DEFAULT_AGENT = "claude"
+DEFAULT_AGENT = "pi"
 
 
 # ---------------------------------------------------------------------------
@@ -188,15 +189,23 @@ def run_oneshot_claude(prompt: str, transcript: str) -> float:
     return elapsed
 
 
-def run_oneshot_pi(prompt: str, transcript: str) -> float:
+def run_oneshot_pi(prompt: str, transcript: str, *, pi_model: str | None = None) -> float:
     """Run pi in one-shot mode. Returns elapsed seconds."""
+    cmd = ["pi", "-p", prompt]
+    if pi_model:
+        cmd += ["--model", pi_model]
     t0 = time.monotonic()
     with _LiveTimer("Pi thinking"):
         result = subprocess.run(
-            ["pi", "-p", prompt],
-            input=transcript, capture_output=True, text=True, check=True,
+            cmd,
+            input=transcript, capture_output=True, text=True,
         )
     elapsed = time.monotonic() - t0
+
+    if result.returncode != 0:
+        if result.stderr:
+            print(result.stderr.strip(), file=sys.stderr)
+        raise SystemExit(f"pi exited with code {result.returncode}")
 
     print(result.stdout.strip())
     print()
@@ -269,6 +278,12 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="MODEL",
         help="Parakeet-MLX model for local transcription (passed to audio-transcript.py)",
     )
+    parser.add_argument(
+        "--pi-model",
+        metavar="MODEL",
+        default="gemma-4-26b-a4b-it-4bit",
+        help="pi model to use (default: gemma-4-26b-a4b-it-4bit)",
+    )
     return parser
 
 
@@ -292,13 +307,15 @@ def main() -> None:
     if args.agent == "claude":
         llm_elapsed = run_oneshot_claude(args.prompt, transcript)
     else:
-        llm_elapsed = run_oneshot_pi(args.prompt, transcript)
+        llm_elapsed = run_oneshot_pi(args.prompt, transcript, pi_model=args.pi_model)
 
     overall_elapsed = time.monotonic() - overall_t0
 
+    model_name = args.pi_model if args.agent == "pi" else "claude"
     logger.success(
         f"=== ASK STATS ===\n"
         f"  Agent:              {args.agent}\n"
+        f"  Model:              {model_name}\n"
         f"  Transcript length:  {len(transcript):,} chars\n"
         f"  {'Transcription:':<20} {_fmt_duration(transcript_elapsed)}\n"
         f"  {'LLM response:':<20} {_fmt_duration(llm_elapsed)}\n"
