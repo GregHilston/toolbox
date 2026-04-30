@@ -1,0 +1,9 @@
+# Managed by home-manager (pi.nix) — not stow
+.pi/agent/models.json
+.pi/agent/settings.json
+# Cloned by `pi install` at runtime — reinstalled by nix activation
+.pi/agent/git/
+# Runtime session data
+.pi/agent/sessions/
+# Backup files from home-manager
+*.backup
