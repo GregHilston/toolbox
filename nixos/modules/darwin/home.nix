@@ -115,7 +115,6 @@ in {
         programs.pi = {
           enable = true;
           defaultModel = "Qwen3.6-35B-A3B-8bit";
-          apiKey = builtins.getEnv "OMLX_API_KEY";
           omlxBaseUrl = "http://localhost:8000/v1";
         };
       };
