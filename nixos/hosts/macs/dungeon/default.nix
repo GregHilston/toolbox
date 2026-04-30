@@ -1,6 +1,7 @@
 {
   vars,
   lib,
+  pkgs,
   ...
 }: {
   imports = [
@@ -186,25 +187,17 @@
 
   # Deploy oMLX with dungeon-specific settings (8GB hot cache for M3 Pro 36GB)
   # See ~/Git/toolbox/dot/omlx/README.md for stow strategy explanation
-  # This must run before the home-lab-config section below
-  system.activationScripts.postActivation.text = lib.mkBefore ''
-    # Ensure stow is available
-    export PATH="${pkgs.stow}/bin:$PATH"
+  # Combined with home-lab-config deployment and power management
+  # NOTE: Uses postActivation (not custom names) because nix-darwin only runs well-known activation script names.
+  system.activationScripts.postActivation.text = ''
+    set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
 
     # Deploy oMLX dotfiles: base config + dungeon-specific overrides
-    cd "${vars.user.home}/Git/toolbox/dot"
+    # Ensure stow is available
+    export PATH="${pkgs.stow}/bin:$PATH"
+    cd "/Users/${vars.user.name}/Git/toolbox/dot"
     stow omlx omlx-dungeon
-
     echo "✓ oMLX configured for dungeon (hot_cache_max_size=8GB)"
-  '';
-
-  # Ensure the home-lab-config directory exists
-  # Auto-clone or pull the home-lab repo (requires SSH keys configured for GitHub)
-  # NOTE: Uses postActivation (not custom names) because nix-darwin only runs well-known activation script names.
-  # NOTE: sudo -H sets HOME to the target user's home dir (otherwise HOME stays as /var/root
-  #       and SSH can't find keys in ~/.ssh)
-  system.activationScripts.postActivation.text = lib.mkAfter ''
-    set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
 
     # Prevent clamshell sleep on Apple Silicon (lid-close with no external display).
     # See the detailed explanation in the power.sleep section above.

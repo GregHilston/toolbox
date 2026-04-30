@@ -74,6 +74,17 @@ just stow <package>     # symlink a single package
 just stow-all           # symlink all packages
 ```
 
+### Stow gotchas
+
+- **Always pass `-t $HOME`** (or use `just stow`). Bare `stow <pkg>` from `~/Git/toolbox/dot/`
+  targets the parent directory (`~/Git/toolbox/`), not `$HOME`. This silently creates junk
+  symlinks inside the repo instead of in your home directory.
+- In nix activation scripts, use `stow -d "$HOME/Git/toolbox/dot" -t "$HOME" <pkg>` since
+  the working directory may not be the dot dir.
+- `lib.hm.dag.entryAfter` is available in NixOS home-manager modules (`modules/home/default.nix`)
+  but **not** in nix-darwin's `home-manager.users.<name>` block (`modules/darwin/home.nix`).
+  For Darwin, use declarative options like `xdg.configFile` instead of activation scripts.
+
 ## Plex
 
 ### .plexmatch files
