@@ -97,6 +97,10 @@ tvdbid: 465690
 
 Use `tvdbid` or `tmdbid`. Rescan the library after adding the file.
 
+## Searxngr — Privacy-Focused Search
+
+CLI for dungeon's self-hosted SearXNG instance. Config managed via stow (`dot/searxngr-config/`), binary installed via `uv tool install`. See `/searxngr-search` skill for Claude Code integration.
+
 ## NixOS / nix-darwin
 
 See `nixos/CLAUDE.md` for host management, deployment commands, and common mistakes.

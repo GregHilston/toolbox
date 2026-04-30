@@ -54,6 +54,8 @@ in {
         duckdb
         claude-code
         yt-dlp
+        uv
+        git
         (python3.withPackages (ps:
           with ps; [
             youtube-transcript-api
@@ -96,6 +98,15 @@ in {
         else []
       );
   };
+
+  # Install searxngr via uv and stow dotfiles after home-manager activation
+  home.activation.install-searxngr = lib.hm.dag.entryAfter ["installPackages"] ''
+    ${pkgs.uv}/bin/uv tool install --upgrade https://github.com/scross01/searxngr.git 2>/dev/null || true
+    # Stow searxngr config from toolbox dotfiles
+    if [ -d "$HOME/Git/toolbox/dot/searxngr-config" ]; then
+      ${pkgs.stow}/bin/stow -d "$HOME/Git/toolbox/dot" -t "$HOME" searxngr-config 2>/dev/null || true
+    fi
+  '';
 
   stylix.targets = {
     firefox.enable = false;

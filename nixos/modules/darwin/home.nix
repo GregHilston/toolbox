@@ -95,6 +95,15 @@ in {
         ];
       };
 
+      # Searxngr config — points to dungeon's SearXNG instance.
+      # The binary is installed via uv (run ~/Git/toolbox/bin/setup-searxngr.sh on first use).
+      # On NixOS hosts, home.activation handles both install + stow; on Darwin we just
+      # declare the config file here and let the user run the setup script for the binary.
+      xdg.configFile."searxngr/config.ini".text = ''
+        [searxngr]
+        searxng_url = https://searxng.grehg2.xyz
+      '';
+
       custom = {
         nh = {
           enable = true;
