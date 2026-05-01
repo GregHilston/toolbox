@@ -1,5 +1,11 @@
 # Toolbox
 
+## Pixel 8 (Termux)
+
+Shared storage path: `/data/data/com.termux/files/home/storage/shared/Git/`
+- Notes repo: `shared/Git/notes/`
+- SSH config: port 8022, user `u0_a305`, IP in `~/.ssh/config`
+
 ## Repository Layout
 
 ```
