@@ -27,7 +27,8 @@ def send_pushover_notification(
     if not pushover_user_key or not pushover_work_api_key:
         logger.error(
             "PUSHOVER_USER_KEY and/or PUSHOVER_WORK_API_KEY not set. "
-            "Run `just secrets` in ~/Git/toolbox/nixos to generate secrets from 1Password."
+            "Run `just secrets` in ~/Git/toolbox/nixos to generate secrets from 1Password, "
+            "then open a new terminal (secrets are auto-loaded via .zshrc)."
         )
         raise SystemExit(1)
 

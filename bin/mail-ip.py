@@ -58,7 +58,8 @@ def send_email(
     if not from_email_address_password:
         logger.error(
             "FROM_EMAIL_ADDRESS_PASSWORD not set. "
-            "Run `just secrets` in ~/Git/toolbox/nixos to generate secrets from 1Password."
+            "Run `just secrets` in ~/Git/toolbox/nixos to generate secrets from 1Password, "
+            "then open a new terminal (secrets are auto-loaded via .zshrc)."
         )
         sys.exit(1)
 
