@@ -2,9 +2,8 @@
 # Run `just secrets` to generate secrets/.env, then direnv loads it here.
 #
 # To set up from scratch:
-#   1. Install 1Password CLI: brew install 1password-cli
-#   2. Sign in: op signin
-#   3. Generate secrets: just secrets
-#   4. Allow direnv: direnv allow
+#   1. Enable 1Password CLI integration: 1Password app → Settings → Developer → Integrate with 1Password CLI
+#   2. Generate secrets: just secrets
+#   3. Allow direnv: direnv allow
 
 dotenv_if_exists secrets/.env
