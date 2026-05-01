@@ -126,6 +126,14 @@ cd nixos && just secrets    # generates dot/omlx settings.json, dot/pi models.js
 Never commit plaintext secrets. If a new secret is needed, add it to 1Password and reference
 it in the appropriate `.tpl` file.
 
+### Prerequisites
+
+1. **1Password CLI integration**: Open 1Password app → Settings → Developer → enable
+   "Integrate with 1Password CLI". This must be done manually on each machine.
+2. **Headless hosts (dungeon)**: `just secrets` requires 1Password GUI authentication
+   (Touch ID / password prompt). On headless Macs, connect via VNC first
+   (Finder → Go → Connect to Server) before running `just secrets`.
+
 ## NixOS / nix-darwin
 
 See `nixos/CLAUDE.md` for host management, deployment commands, and common mistakes.

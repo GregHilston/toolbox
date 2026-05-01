@@ -7,8 +7,12 @@ Run these tasks after initial deployment on a new Mac.
 - [ ] Add SSH key to GitHub: `cat ~/.ssh/id_ed25519.pub` then add at https://github.com/settings/keys
 - [ ] Test connection: `ssh -T git@github.com`
 
-## Application Logins
+## 1Password & Secrets
 - [ ] **1Password** - Sign in to sync passwords
+- [ ] **1Password CLI integration** - Open 1Password → Settings → Developer → enable "Integrate with 1Password CLI"
+- [ ] **Generate secrets** - Run `cd ~/Git/toolbox/nixos && just secrets` (on headless hosts like dungeon, connect via VNC first: Finder → Go → Connect to Server)
+
+## Application Logins
 - [ ] **Firefox** - Sign in to Firefox Sync (Settings > Sync)
 - [ ] **VS Code** - Sign in for Settings Sync (Cmd+Shift+P > "Settings Sync: Turn On")
 - [ ] **Slack** - Sign in to workspaces

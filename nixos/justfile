@@ -107,7 +107,8 @@ validate:
 
 # Generate secret files from 1Password templates.
 # Run this once after cloning, or after updating secrets in 1Password.
-# Requires: brew install 1password-cli && op signin
+# Requires: 1Password app with CLI integration enabled (Settings → Developer → Integrate with 1Password CLI).
+# On headless hosts (dungeon), connect via VNC first (Finder → Go → Connect to Server).
 secrets:
   op inject -f -i ../dot/omlx/.omlx/settings.json.tpl -o ../dot/omlx/.omlx/settings.json
   op inject -f -i ../dot/pi/.pi/agent/models.json.tpl -o ../dot/pi/.pi/agent/models.json
