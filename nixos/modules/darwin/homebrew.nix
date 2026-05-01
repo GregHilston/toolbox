@@ -41,9 +41,6 @@
       "go"
       "hugo"
 
-      # Secret management
-      "1password-cli"
-
       # AI / LLM
       "jundot/omlx/omlx"
       # pi-coding-agent moved to home-manager packages for declarative nix management
@@ -91,6 +88,7 @@
 
       # Other
       "1password"
+      "1password-cli"
       "flux-app"
       "steam"
       "godot"
