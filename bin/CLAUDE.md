@@ -21,7 +21,27 @@ This causes scripts to fail fast on errors (`set -e`), undefined variables (`set
 - Kebab-case filenames with `.sh` or `.py` extension
 - A one-line comment near the top explaining what the script does
 - Bash scripts: strict mode header (see above)
-- Python scripts: [PEP 723](https://peps.python.org/pep-0723/) inline metadata so they can be run with `uv run <script>.py` with no separate requirements file
+- Python scripts: shebang + [PEP 723](https://peps.python.org/pep-0723/) inline metadata:
+
+```python
+#!/usr/bin/env -S uv run
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["requests"]
+# ///
+```
+
+The shebang lets you run `script.py` directly instead of `uv run script.py`.
+Without it, the shell interprets the Python code as shell commands.
+
+### Secrets
+
+Secrets from 1Password are auto-loaded into every shell session via `.zshrc`
+(sourced from `nixos/secrets/.env`). Scripts can read them with `os.environ.get()`
+or `$VAR` — no manual sourcing needed.
+
+If a secret is missing, the user needs to run `just secrets` in `nixos/` and open
+a new terminal.
 
 ### Adding a new script
 
