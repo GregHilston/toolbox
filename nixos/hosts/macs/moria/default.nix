@@ -8,6 +8,7 @@
     ../../../modules/darwin/common.nix
     ../../../modules/darwin/homebrew.nix
     ../../../modules/darwin/home.nix
+    ../../../modules/darwin/omlx.nix
   ];
 
   networking.hostName = "moria";

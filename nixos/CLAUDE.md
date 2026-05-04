@@ -73,6 +73,9 @@ Local LLM inference is configured via **oMLX** (MLX GUI wrapper with prefix cach
 **To add LLM support to dungeon:**
 Create `hosts/macs/dungeon/llm-tools.nix` (mirror of moria's qwen-code.nix) pointing to `moria.local:8000` or use Tailscale alias from settings.json.
 
+**Adding model variants:**
+For extended-context or other model profiles, see `dot/omlx/CLAUDE.md` → "Creating Model Variants". The nix activation script is in `modules/darwin/omlx.nix` and handles symlink creation on all Darwin hosts automatically.
+
 **Reference:** See `~/Git/notes/ref-llm-inference-tools.md` for broader LLM tool decision guide.
 
 ## File Locations

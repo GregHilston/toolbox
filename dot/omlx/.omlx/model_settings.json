@@ -24,6 +24,17 @@
 
       "_comment_thinking": "Gemma 4 supports thinking via <|think|> tokens but it's wasted compute for summarization. The 26B MoE variant may still emit empty thought channel tags when disabled — this is expected.",
       "thinking_budget_enabled": false
+    },
+    "Qwen3.6-35B-A3B-8bit-long-context": {
+      "description": "Extended context variant of Qwen3.6-35B-A3B-8bit for long-form analysis (audio transcripts, long documents). Native 256K, extended to 1M via YaRN. Created as symlink via nixos/modules/darwin/omlx.nix.",
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "top_k": 20,
+      "repetition_penalty": 1.0,
+      "presence_penalty": 0.0,
+      "thinking_budget_enabled": true,
+      "thinking_budget_tokens": 8192,
+      "max_context_window": 1000000
     }
   }
 }

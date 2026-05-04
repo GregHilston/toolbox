@@ -112,12 +112,24 @@ CLI for dungeon's self-hosted SearXNG instance. Config managed via stow (`dot/se
 Local LLM inference server (Apple Silicon). Config in `dot/omlx/`, per-host overrides in
 `dot/omlx-{hostname}/`. Managed as a launchd service (`org.nixos.omlx`) on port 8000.
 
+**Full documentation**: See `dot/omlx/CLAUDE.md` for per-model settings, model variants, and configuration.
+
+### Troubleshooting
+
 After `brew upgrade`, the old Python process may hold port 8000, causing the new instance
 to crash-loop. Fix with:
 
 ```bash
 kill $(lsof -ti :8000) 2>/dev/null; launchctl kickstart -k "gui/$(id -u)/org.nixos.omlx"
 ```
+
+### Adding Model Variants
+
+See `dot/omlx/CLAUDE.md` → "Creating Model Variants" for step-by-step instructions on adding
+new model profiles (e.g., extended-context variants). Requires changes to:
+1. `nixos/modules/darwin/omlx.nix` (symlink creation)
+2. `dot/omlx/.omlx/model_settings.json` (variant configuration)
+3. `~/.pi/agent/models.json` (pi model registry)
 
 ## Secret Management
 

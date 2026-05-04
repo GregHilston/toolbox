@@ -35,6 +35,7 @@ Examples:
     audio-ask.py --agent claude interview.mp4 "what are the key points?"
     audio-ask.py --chat podcast.m4a "summarize this"
     audio-ask.py --pi-model Qwen3.6-35B-A3B-8bit interview.mp4 "review this code walkthrough"
+    audio-ask.py --pi-model Qwen3.6-35B-A3B-8bit-long-context long_video.mp4 "summarize this very long video (1M context window)"
     audio-ask.py --start 1:30 --end 5:00 lecture.mp4 "what was discussed?"
     audio-ask.py --show-transcript lecture.mp4 "what was discussed?"
 """

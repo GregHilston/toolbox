@@ -33,6 +33,51 @@ Available per-model fields (not exhaustive): `temperature`, `top_p`, `top_k`, `m
 
 There are also `model_profiles.json` (named presets per model) and `global_templates.json` (reusable templates across models), but we don't use those yet.
 
-## Gotcha: Global Context Window Cap
+## Creating Model Variants (e.g., Long-Context Profiles)
+
+Sometimes you want multiple configurations of the same model weights with different settings (e.g., base model + extended-context variant). This is common for long-form analysis tasks (transcripts, documents) without duplicating model storage.
+
+### How It Works
+
+Model variants are created as **symlinks** in the models directory:
+
+```
+~/Git/toolbox/dot/omlx/.omlx/models/
+├── Qwen3.6-35B-A3B-8bit/           (actual model directory)
+└── Qwen3.6-35B-A3B-8bit-long-context/ → Qwen3.6-35B-A3B-8bit  (symlink)
+```
+
+oMLX treats symlinked model names as separate models, allowing `model_settings.json` to define independent configurations for each.
+
+### To Add a New Variant
+
+1. **Add nix activation** in `nixos/modules/darwin/omlx.nix`:
+   - Create the symlink during host activation
+   - Example: `ln -s Qwen3.6-35B-A3B-8bit Qwen3.6-35B-A3B-8bit-long-context`
+
+2. **Configure in `model_settings.json`**:
+   - Add entry for the variant name (e.g., `Qwen3.6-35B-A3B-8bit-long-context`)
+   - Set variant-specific settings (e.g., `max_context_window: 1000000`)
+
+3. **Register in pi's `models.json`** (`~/.pi/agent/models.json`):
+   - Add entry for the variant with correct `contextWindow` and `maxTokens`
+   - Example:
+   ```json
+   {
+     "id": "Qwen3.6-35B-A3B-8bit-long-context",
+     "name": "Qwen 3.6 35B A3B (thinking, 1M ctx extended)",
+     "contextWindow": 1000000,
+     "maxTokens": 81920,
+     "input": ["text", "image"],
+     "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+   }
+   ```
+
+4. **Deploy and test**:
+   - Run `just dr <host>` to apply nix changes (creates symlink)
+   - Verify: `ls -la ~/Git/toolbox/dot/omlx/.omlx/models/ | grep variant-name`
+   - Verify pi sees it: `pi --list-models | grep variant-name`
+
+### Gotcha: Global Context Window Cap
 
 `settings.json` has a `sampling.max_context_window` that caps **all** models server-wide. If a tool (pi, qwen-code, etc.) reports "exceeds max context window" with a surprisingly low limit, check this value — it overrides per-model context windows configured in the tool's own settings.
