@@ -1,0 +1,8 @@
+{
+  "guards": {
+    "allowedPaths": [
+      "/opt/homebrew/Cellar/pi-coding-agent",
+      "~/.pi/agent"
+    ]
+  }
+}
