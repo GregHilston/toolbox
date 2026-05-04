@@ -32,9 +32,7 @@ in {
         "npm:pi-agent-suite"
 
         # Read-before-write enforcement, directory containment, work modes
-        # Upstream: https://github.com/galatolofederico/moonpi
-        # Fork adds guards.allowedPaths — see galatolofederico/moonpi#1
-        "https://github.com/GregHilston/moonpi"
+        "https://github.com/galatolofederico/moonpi"
       ];
       description = "Pi packages to declare in settings.json";
     };
