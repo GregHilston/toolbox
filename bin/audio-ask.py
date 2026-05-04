@@ -291,6 +291,17 @@ def main() -> None:
     overall_t0 = time.monotonic()
     args = build_parser().parse_args()
 
+    # Print LLM configuration upfront
+    logger.info("=== LLM CONFIGURATION ===")
+    if args.agent == "claude":
+        logger.info(f"  Agent:    claude")
+        logger.info(f"  Params:   -p, --output-format json")
+    else:
+        logger.info(f"  Agent:    pi")
+        logger.info(f"  Model:    {args.pi_model}")
+        logger.info(f"  Params:   -p, --model {args.pi_model}")
+    logger.info("========================")
+
     transcript, transcript_elapsed = get_transcript(
         args.source, start=args.start, end=args.end, model=args.model,
     )
