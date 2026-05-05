@@ -5,3 +5,5 @@ OMLX_API_KEY={{ op://Infra/oMLX/api_key }}
 PUSHOVER_USER_KEY={{ op://Infra/Pushover/user_key }}
 PUSHOVER_WORK_API_KEY={{ op://Infra/Pushover/work_api_key }}
 FROM_EMAIL_ADDRESS_PASSWORD="{{ op://Infra/Gmail App Password/password }}"
+SLACK_BOT_TOKEN={{ op://Infra/SlackBot/bot_token }}
+SLACK_APP_TOKEN={{ op://Infra/SlackBot/app_token }}
