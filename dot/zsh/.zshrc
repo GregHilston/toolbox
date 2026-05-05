@@ -191,6 +191,47 @@ alias docker-clear-volumes="docker-clear-volumes.sh"
 alias docker-clear-networks="docker-clear-networks.sh"
 alias localclaude="localclaude.sh"
 
+# Claude Code in Docker with persistent auth and session history
+# Uses a named Docker volume (claude-code-config) to persist ~/.claude across runs
+# Automatically creates volume and builds image on first run (idempotent)
+# Based on: https://code.claude.com/docs/en/devcontainer
+# Reference: https://github.com/anthropics/claude-code/tree/main/.devcontainer
+unalias claude-docker 2>/dev/null || true
+claude-docker() {
+  local image_name="my-claude-code:latest"
+  local dockerfile_dir="$TOOLBOX_HOME/claude-code"
+  local host_uid=$(id -u)
+  local host_gid=$(id -g)
+
+  # Build image if it doesn't exist
+  if ! docker image ls | grep -q "$image_name"; then
+    echo "Building Docker image: $image_name"
+    docker build -t "$image_name" "$dockerfile_dir" || return 1
+  fi
+
+  # Claude Code encodes the working directory path into project identifiers.
+  # To share sessions between host and container, they must see the SAME absolute path.
+  # Mount ~/Git at its actual host location instead of /workspace so paths match.
+  local host_pwd="$PWD"
+  local git_home="$(cd "$HOME/Git" 2>/dev/null && pwd)"
+
+  # Run Claude Code in container with shared history and host user
+  # -v ~/.claude:/home/node/.claude: Bind mount host's ~/.claude (shared session history)
+  # -v $git_home:$git_home: Mount ~/Git at its actual absolute path (preserves project ID)
+  # -w $host_pwd: Set same working directory as host (ensures same project in Claude)
+  # -u host_uid:host_gid: Run as host user (files created are owned by you)
+  # -e HOME=/home/node: Set home directory (required when running with custom UID)
+  docker run --rm -it \
+    -v ~/.claude:/home/node/.claude \
+    -v "$git_home:$git_home" \
+    -w "$host_pwd" \
+    -u "$host_uid:$host_gid" \
+    -e HOME=/home/node \
+    -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+    "$image_name" \
+    code "$@"
+}
+
 # ── GitHub CLI ───────────────────────────────────────────────────────
 
 alias ghpr="gh pr view --web"

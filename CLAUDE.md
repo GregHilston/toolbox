@@ -131,6 +131,32 @@ new model profiles (e.g., extended-context variants). Requires changes to:
 2. `dot/omlx/.omlx/model_settings.json` (variant configuration)
 3. `~/.pi/agent/models.json` (pi model registry)
 
+## Claude Code in Docker
+
+Run Claude Code in an isolated Docker container with persistent authentication and session history.
+
+**Setup** (one-time):
+```bash
+docker volume create claude-code-config
+cd ~/Git/toolbox/claude-code
+docker build -t my-claude-code:latest .
+```
+
+**Usage**:
+```bash
+# Start or resume session
+claude-docker
+
+# Resume a specific session
+claude-docker --resume SESSION_ID
+```
+
+**Reference**:
+- [Claude Code devcontainer documentation](https://code.claude.com/docs/en/devcontainer)
+- [Official reference devcontainer](https://github.com/anthropics/claude-code/tree/main/.devcontainer)
+
+The Docker setup uses a named volume (`claude-code-config`) to persist `~/.claude` across container runs, so your authentication and session history persist between runs. See `claude-code/Dockerfile` for implementation details.
+
 ## Secret Management
 
 All secrets live in 1Password (vault: **Infra**). Committed `.tpl` template files contain
