@@ -229,7 +229,7 @@ claude-docker() {
     -e HOME=/home/node \
     -e CLAUDE_CONFIG_DIR=/home/node/.claude \
     "$image_name" \
-    code "$@"
+    code --dangerously-skip-permissions "$@"
 }
 
 # ── GitHub CLI ───────────────────────────────────────────────────────
