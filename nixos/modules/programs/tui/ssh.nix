@@ -24,6 +24,11 @@
         user = vars.user.name;
         identityFile = "~/.ssh/id_rsa";
       };
+      "dungeonts" = {
+        hostname = vars.networking.hosts.dungeon.tailscale;
+        user = vars.user.name;
+        identityFile = "~/.ssh/id_rsa";
+      };
       "mines" = {
         hostname = vars.networking.hosts.mines.lan;
         user = vars.user.name;
