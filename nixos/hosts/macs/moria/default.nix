@@ -13,6 +13,9 @@
 
   networking.hostName = "moria";
 
+  # Display sleep timeout (30 minutes instead of default 5)
+  power.sleep.display = lib.mkForce 30;
+
   home-manager.users.${vars.user.name} = {
     # Moria-specific packages (Whisper for local transcription, Python for parakeet-mlx)
     home.packages = with pkgs; [
