@@ -20,7 +20,10 @@ When writing or updating any CLAUDE.md or README:
 
 Personal dotfiles, scripts, and configs. Key directories:
 - `bin/` — utility scripts; all subdirectories also on `$PATH` via recursive zsh glob
-- `bin/anki/` — Anki database management scripts (PEP 723, `uv run`)
+  - `fetch-thread.py` — Fetch Hacker News or Reddit threads and convert to markdown/JSON
+  - `bin/anki/` — Anki database management scripts (PEP 723, `uv run`)
 - `dot/` — dotfiles managed with GNU Stow; `just stow-all` from `dot/` sets everything up on a new machine
 - `claude-commands/` — Claude Code slash commands (symlinked to `~/.claude/commands`)
 - `claude-skills/` — Claude Code skills (symlinked to `~/.claude/skills`)
+
+See `toolbox/CLAUDE.md` for details on thread fetchers, dotfiles, and other tools.
