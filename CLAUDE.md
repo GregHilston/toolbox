@@ -178,6 +178,37 @@ it in the appropriate `.tpl` file.
    (Touch ID / password prompt). On headless Macs, connect via VNC first
    (Finder → Go → Connect to Server) before running `just secrets`.
 
+## Thread Fetchers — Convert HN & Reddit to Markdown/JSON
+
+CLI tools to fetch Hacker News and Reddit threads and convert them to markdown or JSON.
+
+### Scripts
+
+- **`fetch-thread.py`** — Main entry point. Auto-detects HN vs Reddit from URL/ID and delegates to the appropriate converter.
+- **`fetch_hn.py`** — Standalone HN converter (fetch from API, format as markdown or JSON).
+- **`fetch_reddit.py`** — Standalone Reddit converter (fetch from API, format as markdown or JSON).
+- **`_thread_converters.py`** — Shared library (HTML stripping, platform detection).
+
+### Usage
+
+```bash
+# Auto-detect from URL
+fetch-thread.py "https://news.ycombinator.com/item?id=48072225"
+fetch-thread.py "https://reddit.com/r/python/comments/abc123/title"
+
+# Explicit platform
+fetch-thread.py 48072225 hn
+fetch-thread.py abc123 reddit python
+
+# JSON output
+fetch-thread.py 48072225 hn --format json | jq .
+
+# Save to markdown
+fetch-thread.py "https://news.ycombinator.com/item?id=48072225" > thread.md
+```
+
+Both markdown (default) and JSON output formats supported. Zero external dependencies.
+
 ## NixOS / nix-darwin
 
 See `nixos/CLAUDE.md` for host management, deployment commands, and common mistakes.
