@@ -102,7 +102,7 @@ in {
       # Installed as a global uv tool so `mflux-generate` is on PATH system-wide.
       # This lets the reproduce commands in imagine_loop HTML reports run without
       # needing to be inside the roger project directory.
-      home.activation.install-mflux = lib.hm.dag.entryAfter ["installPackages"] ''
+      home.activation.install-mflux = inputs.home-manager.lib.hm.dag.entryAfter ["installPackages"] ''
         ${pkgs.uv}/bin/uv tool install --upgrade mflux 2>/dev/null || true
       '';
 
