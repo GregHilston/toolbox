@@ -21,7 +21,8 @@
     # 2. Override the flake-utils default to your version
     flake-utils.inputs.systems.follows = "systems";
     claude-desktop.url = "github:k3d3/claude-desktop-linux-flake";
-    claude-desktop.inputs.nixpkgs.follows = "nixpkgs";
+    # Do NOT follow our nixpkgs — claude-desktop uses nodePackages.asar which was
+    # removed from nixpkgs-unstable on 2026-03-03. Let it use its own pinned nixpkgs.
     claude-desktop.inputs.flake-utils.follows = "flake-utils";
 
     # nix-darwin for macOS support (Keep input if you might use it later, even if no configs defined now)
