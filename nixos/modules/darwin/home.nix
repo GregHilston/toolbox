@@ -98,6 +98,14 @@ in {
         ];
       };
 
+      # mflux — Apple Silicon image generation CLI (pip install mflux, not a brew formula).
+      # Installed as a global uv tool so `mflux-generate` is on PATH system-wide.
+      # This lets the reproduce commands in imagine_loop HTML reports run without
+      # needing to be inside the roger project directory.
+      home.activation.install-mflux = lib.hm.dag.entryAfter ["installPackages"] ''
+        ${pkgs.uv}/bin/uv tool install --upgrade mflux 2>/dev/null || true
+      '';
+
       # Searxngr config — points to dungeon's SearXNG instance.
       # The binary is installed via uv (run ~/Git/toolbox/bin/setup-searxngr.sh on first use).
       # On NixOS hosts, home.activation handles both install + stow; on Darwin we just
