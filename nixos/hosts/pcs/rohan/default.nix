@@ -77,6 +77,13 @@
   # Battery optimization for laptop use
   powerManagement.powertop.enable = true;
 
+  # Backlight control — without a DE, Fn+brightness keys need acpid to
+  # handle ACPI events. brightnessctl provides manual control as well:
+  #   brightnessctl set +10%    (brighter)
+  #   brightnessctl set 10%-    (dimmer)
+  hardware.acpilight.enable = true;
+  services.acpid.enable = true;
+
   users.users.${vars.user.name} = {
     initialPassword = "password";
     isNormalUser = true;
@@ -93,6 +100,7 @@
   environment = {
     systemPackages = with pkgs; [
       bat
+      brightnessctl
       curl
       fastfetch
       git
