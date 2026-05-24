@@ -237,13 +237,12 @@
         };
       };
 
-      # Writerdeck welcome message + auto-tmux — append to .zshrc.local
+      # Writerdeck MOTD + auto-tmux — append to .zshrc.local
       # which is sourced by the shared .zshrc at the end
       home.file.".zshrc.local".text = lib.mkAfter ''
 
-        # ── Writerdeck: auto-start tmux on login ─────────────────────────
-        # Only on interactive non-tmux shells (avoids nesting)
-        if [[ -o interactive ]] && [[ -z "$TMUX" ]] && command -v tmux &>/dev/null; then
+        # ── Writerdeck MOTD (shows in every interactive shell) ───────────
+        if [[ -o interactive ]]; then
           echo ""
           echo "  Welcome to rohan — your writerdeck."
           echo "  Notes: ~/notes/"
@@ -258,6 +257,10 @@
           echo "    nmcli device wifi list   scan wifi"
           echo "    nmcli device wifi connect \"SSID\" password \"pass\""
           echo ""
+        fi
+
+        # ── Auto-start tmux on login (not inside tmux) ──────────────────
+        if [[ -o interactive ]] && [[ -z "$TMUX" ]] && command -v tmux &>/dev/null; then
           exec tmux new-session
         fi
       '';
