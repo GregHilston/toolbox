@@ -106,7 +106,7 @@
       }
     ];
     extraConfig = "font-size=14";
-    extraOptions = "--term xterm-256color";
+    extraOptions = "--term xterm-256color --no-mouse";
   };
 
   users.users.${vars.user.name} = {
