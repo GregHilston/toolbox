@@ -68,6 +68,9 @@
   # No desktop environment — writerdeck boots to TTY
   # No xserver, no display manager, no pipewire, no Docker
 
+  # Register zsh as a system shell and suppress zsh-newuser-install wizard
+  programs.zsh.enable = true;
+
   # 1Password CLI for secret access (no GUI)
   programs._1password.enable = true;
 
@@ -199,12 +202,13 @@
         };
       };
 
-      # Writerdeck welcome message — append to .zshrc.local so it's sourced
-      # by the shared .zshrc (which sources ~/.zshrc.local at the end)
+      # Writerdeck welcome message + auto-tmux — append to .zshrc.local
+      # which is sourced by the shared .zshrc at the end
       home.file.".zshrc.local".text = lib.mkAfter ''
 
-        # ── Writerdeck MOTD ──────────────────────────────────────────────
-        if [[ -o interactive ]]; then
+        # ── Writerdeck: auto-start tmux on login ─────────────────────────
+        # Only on interactive non-tmux shells (avoids nesting)
+        if [[ -o interactive ]] && [[ -z "$TMUX" ]] && command -v tmux &>/dev/null; then
           echo ""
           echo "  Welcome to rohan — your writerdeck."
           echo "  Notes: ~/notes/"
@@ -219,6 +223,7 @@
           echo "    nmcli device wifi list   scan wifi"
           echo "    nmcli device wifi connect \"SSID\" password \"pass\""
           echo ""
+          exec tmux new-session
         fi
       '';
 
