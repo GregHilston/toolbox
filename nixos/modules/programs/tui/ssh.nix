@@ -38,6 +38,11 @@
           ForwardAgent = "yes";
         };
       };
+      "rohan" = {
+        hostname = vars.networking.hosts.rohan.lan;
+        user = vars.user.name;
+        identityFile = "~/.ssh/id_rsa";
+      };
       "fob" = {
         hostname = vars.networking.hosts.fob.tailscale;
         user = "pi";
