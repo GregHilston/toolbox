@@ -110,6 +110,22 @@
         ];
       };
 
+      # Writerdeck — console-only, distraction-free writing machine
+      # See: https://veronicaexplains.net/my-first-writerdeck/
+      rohan = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        specialArgs = {
+          inherit inputs vars;
+          outputs = self;
+        };
+        modules = [
+          ./hosts/pcs/rohan
+          stylix.nixosModules.stylix
+          home-manager.nixosModules.home-manager
+          mkHomeManagerModule
+        ];
+      };
+
       # This is the correct configuration for 'mines' as an ARM NixOS VM
       mines = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux"; # Correct system type

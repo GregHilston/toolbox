@@ -587,6 +587,44 @@ stylix.url = "github:danth/stylix/release-24.11";
 // 3. Update your flake.lock file: `$ nix flake update`. This command can take a while.
 4. Then rebuild your system: `$ just upgrade <host-name>`
 
+## Writerdeck (rohan)
+
+A [writerdeck](https://veronicaexplains.net/my-first-writerdeck/) is a dedicated distraction-free writing device — no browser, no desktop environment, just a terminal with a text editor. See also [WriterDeck OS](https://writerdeckos.com/) for a full Debian-based implementation.
+
+**rohan** is a ThinkPad X201 Tablet running a console-only NixOS configuration. It boots to a TTY login, gives you neovim + tmux + zsh, and nothing else. File transfer is via SSH/scp/rsync.
+
+### Future: Wacom Pen Input
+
+The X201 Tablet has a built-in Wacom digitizer. To unlock pen input for handwriting/sketching, you'd add a minimal X11 setup without a full desktop environment:
+
+- Enable `services.xserver` and `services.xserver.wacom.enable`
+- Add a lightweight window manager (e.g., i3) instead of KDE/GNOME
+- Install [xournal++](https://xournalpp.github.io/) for handwritten notes
+- Optionally add Obsidian for markdown wiki/linking
+
+This keeps the system minimal (~300-400MB of X11/GTK libs) while unlocking the tablet's hardware. See the [NixOS Drawing Tablet wiki](https://wiki.nixos.org/wiki/Drawing_Tablet) for driver configuration.
+
+### Writing Tools
+
+- **[glow](https://github.com/charmbracelet/glow)** — render and preview markdown in the terminal
+- **[wordgrinder](https://github.com/davidgiven/wordgrinder)** — TUI word processor with word count, exports to markdown/HTML/ODT/LaTeX
+- **aspell** — terminal spell checker (also integrates with neovim via `:set spell`)
+- **pandoc** — convert between markdown, HTML, LaTeX, PDF, and other formats
+
+### Wifi
+
+rohan uses a USB wifi dongle (Realtek RTL8188EUS). Connect via NetworkManager:
+
+```bash
+nmcli device wifi list                                  # scan for networks
+nmcli device wifi connect "SSID" password "password"    # connect
+nmcli device status                                     # check connection
+```
+
+### Pi Mono (Remote Inference)
+
+rohan includes [pi mono](https://github.com/anthropics/pi) for local coding assistance, but the X201 is too weak to run LLMs. Instead of using the shared stow + 1Password `models.json` template, rohan declares its `models.json` inline in [`hosts/pcs/rohan/default.nix`](hosts/pcs/rohan/default.nix) pointing to dungeon's oMLX server on the LAN. No models are downloaded or run locally.
+
 ## References
 
 ### Command For Git Repositories
