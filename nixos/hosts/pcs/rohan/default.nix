@@ -39,6 +39,9 @@
 
   nixpkgs.config.allowUnfree = true;
 
+  # USB wifi dongle (Realtek RTL8188EUS) needs firmware blobs
+  hardware.enableRedistributableFirmware = true;
+
   time.timeZone = vars.system.timeZone;
 
   i18n = {

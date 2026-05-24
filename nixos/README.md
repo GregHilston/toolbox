@@ -611,6 +611,16 @@ This keeps the system minimal (~300-400MB of X11/GTK libs) while unlocking the t
 - **aspell** — terminal spell checker (also integrates with neovim via `:set spell`)
 - **pandoc** — convert between markdown, HTML, LaTeX, PDF, and other formats
 
+### Wifi
+
+rohan uses a USB wifi dongle (Realtek RTL8188EUS). Connect via NetworkManager:
+
+```bash
+nmcli device wifi list                                  # scan for networks
+nmcli device wifi connect "SSID" password "password"    # connect
+nmcli device status                                     # check connection
+```
+
 ### Pi Mono (Remote Inference)
 
 rohan includes [pi mono](https://github.com/anthropics/pi) for local coding assistance, but the X201 is too weak to run LLMs. Instead of using the shared stow + 1Password `models.json` template, rohan declares its `models.json` inline in [`hosts/pcs/rohan/default.nix`](hosts/pcs/rohan/default.nix) pointing to dungeon's oMLX server on the LAN. No models are downloaded or run locally.
