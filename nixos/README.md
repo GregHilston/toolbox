@@ -587,6 +587,23 @@ stylix.url = "github:danth/stylix/release-24.11";
 // 3. Update your flake.lock file: `$ nix flake update`. This command can take a while.
 4. Then rebuild your system: `$ just upgrade <host-name>`
 
+## Writerdeck (rohan)
+
+A [writerdeck](https://veronicaexplains.net/my-first-writerdeck/) is a dedicated distraction-free writing device — no browser, no desktop environment, just a terminal with a text editor. See also [WriterDeck OS](https://writerdeckos.com/) for a full Debian-based implementation.
+
+**rohan** is a ThinkPad X201 Tablet running a console-only NixOS configuration. It boots to a TTY login, gives you neovim + tmux + zsh, and nothing else. File transfer is via SSH/scp/rsync.
+
+### Future: Wacom Pen Input
+
+The X201 Tablet has a built-in Wacom digitizer. To unlock pen input for handwriting/sketching, you'd add a minimal X11 setup without a full desktop environment:
+
+- Enable `services.xserver` and `services.xserver.wacom.enable`
+- Add a lightweight window manager (e.g., i3) instead of KDE/GNOME
+- Install [xournal++](https://xournalpp.github.io/) for handwritten notes
+- Optionally add Obsidian for markdown wiki/linking
+
+This keeps the system minimal (~300-400MB of X11/GTK libs) while unlocking the tablet's hardware. See the [NixOS Drawing Tablet wiki](https://wiki.nixos.org/wiki/Drawing_Tablet) for driver configuration.
+
 ## References
 
 ### Command For Git Repositories

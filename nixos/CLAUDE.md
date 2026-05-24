@@ -14,6 +14,7 @@ These commands do NOT require `sudo` and catch most evaluation and dependency er
 - **isengard** (x86_64 ThinkPad T420)
 - **mines** (aarch64 VM on M4 Mac via VMware Fusion)
 - **home-lab** (x86_64 VM)
+- **rohan** (x86_64 ThinkPad X201 Tablet — writerdeck, console-only)
 - **dungeon** (aarch64-darwin MacBook Pro 16" M3 Pro — nix-darwin)
 
 ## Common Mistakes to Avoid
