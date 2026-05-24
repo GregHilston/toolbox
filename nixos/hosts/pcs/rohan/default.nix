@@ -164,6 +164,7 @@
         ../../../modules/programs/tui/neovim
         ../../../modules/programs/tui/pi.nix
         ../../../modules/programs/tui/tmux
+        ../../../modules/programs/tui/ssh.nix
         ../../../modules/programs/tui/yazi.nix
         ../../../modules/programs/tui/zoxide
         ../../../modules/programs/tui/zsh
