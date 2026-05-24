@@ -155,6 +155,7 @@
     };
     users.${vars.user.name} = {
       imports = [
+        ../../../modules/programs/tui/atuin
         ../../../modules/programs/tui/claude.nix
         ../../../modules/programs/tui/direnv
         ../../../modules/programs/tui/eza
