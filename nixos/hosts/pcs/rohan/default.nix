@@ -77,12 +77,37 @@
   # Battery optimization for laptop use
   powerManagement.powertop.enable = true;
 
-  # Backlight control — without a DE, Fn+brightness keys need acpid to
-  # handle ACPI events. brightnessctl provides manual control as well:
-  #   brightnessctl set +10%    (brighter)
-  #   brightnessctl set 10%-    (dimmer)
+  # Backlight control — without a DE, Fn+brightness keys need acpid with
+  # explicit handlers. Manual fallback: brightnessctl set +10% / 10%-
   hardware.acpilight.enable = true;
-  services.acpid.enable = true;
+  services.acpid = {
+    enable = true;
+    handlers = {
+      brightness-up = {
+        event = "video/brightnessup";
+        action = "${pkgs.brightnessctl}/bin/brightnessctl set +10%";
+      };
+      brightness-down = {
+        event = "video/brightnessdown";
+        action = "${pkgs.brightnessctl}/bin/brightnessctl set 10%-";
+      };
+    };
+  };
+
+  # kmscon — replaces the default Linux VT with a userspace console that
+  # supports TrueType fonts (Nerd Font glyphs for Powerlevel10k) and 256 colors.
+  # See: https://veronicaexplains.net/my-first-writerdeck/
+  services.kmscon = {
+    enable = true;
+    fonts = [
+      {
+        name = "JetBrainsMono Nerd Font";
+        package = pkgs.nerd-fonts.jetbrains-mono;
+      }
+    ];
+    extraConfig = "font-size=14";
+    extraOptions = "--term xterm-256color";
+  };
 
   users.users.${vars.user.name} = {
     initialPassword = "password";
