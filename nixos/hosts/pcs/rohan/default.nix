@@ -62,6 +62,9 @@
   # SSH for file transfer (scp/rsync)
   services.openssh.enable = true;
 
+  # Auto-login to TTY — no username/password prompt on boot
+  services.getty.autologinUser = vars.user.name;
+
   # No desktop environment — writerdeck boots to TTY
   # No xserver, no display manager, no pipewire, no Docker
 
@@ -195,6 +198,29 @@
           };
         };
       };
+
+      # Writerdeck welcome message — append to .zshrc.local so it's sourced
+      # by the shared .zshrc (which sources ~/.zshrc.local at the end)
+      home.file.".zshrc.local".text = lib.mkAfter ''
+
+        # ── Writerdeck MOTD ──────────────────────────────────────────────
+        if [[ -o interactive ]]; then
+          echo ""
+          echo "  Welcome to rohan — your writerdeck."
+          echo "  Notes: ~/notes/"
+          echo ""
+          echo "  Quick reference:"
+          echo "    nvim <file>              edit with neovim"
+          echo "    wordgrinder              TUI word processor"
+          echo "    glow <file.md>           preview markdown"
+          echo "    aspell check <file>      spell check"
+          echo "    pandoc <in> -o <out>     convert formats"
+          echo ""
+          echo "    nmcli device wifi list   scan wifi"
+          echo "    nmcli device wifi connect \"SSID\" password \"pass\""
+          echo ""
+        fi
+      '';
 
       programs.home-manager.enable = true;
       home.stateVersion = "24.05";
