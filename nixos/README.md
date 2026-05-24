@@ -604,6 +604,10 @@ The X201 Tablet has a built-in Wacom digitizer. To unlock pen input for handwrit
 
 This keeps the system minimal (~300-400MB of X11/GTK libs) while unlocking the tablet's hardware. See the [NixOS Drawing Tablet wiki](https://wiki.nixos.org/wiki/Drawing_Tablet) for driver configuration.
 
+### Pi Mono (Remote Inference)
+
+rohan includes [pi mono](https://github.com/anthropics/pi) for local coding assistance, but the X201 is too weak to run LLMs. Instead of using the shared stow + 1Password `models.json` template, rohan declares its `models.json` inline in [`hosts/pcs/rohan/default.nix`](hosts/pcs/rohan/default.nix) pointing to dungeon's oMLX server on the LAN. No models are downloaded or run locally.
+
 ## References
 
 ### Command For Git Repositories
