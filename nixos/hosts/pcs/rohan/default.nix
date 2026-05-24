@@ -131,10 +131,14 @@
         username = vars.user.name;
         homeDirectory = "/home/${vars.user.name}";
         packages = with pkgs; [
+          aspell
+          aspellDicts.en
           claude-code
+          glow
           pandoc
           pi-coding-agent
           ripgrep
+          wordgrinder
         ];
       };
 
