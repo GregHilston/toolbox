@@ -22,8 +22,6 @@
       whisper-ctranslate2
       ffmpeg
     ];
-
-    imports = [./qwen-code.nix];
   };
 
   # Deploy oMLX with moria-specific settings (32GB hot cache for M4 Max 128GB)
