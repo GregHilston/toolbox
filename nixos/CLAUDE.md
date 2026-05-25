@@ -59,8 +59,6 @@ Local LLM inference is configured via **oMLX** (MLX GUI wrapper with prefix cach
 **Configuration files:**
 - **Settings**: `~/Git/toolbox/dot/omlx/.omlx/settings.json` — server config, model dirs, sampling params, caching
 - **Models**: `~/Git/toolbox/dot/omlx/.omlx/models/` — downloaded models (gitignored, stored locally)
-- **Tool integration**: `hosts/macs/moria/qwen-code.nix` — points qwen-code to local oMLX on localhost:8000
-
 **Current setup:**
 - **moria** (M4 Max 128GB): Runs oMLX server, hosts models (Qwen3.6 27B 8bit, Gemma 4 26B, GPT-OSS 120B)
 - **dungeon** (M3 Pro 36GB): Can point tools to moria's oMLX server via network aliases in settings.json
@@ -70,9 +68,6 @@ Local LLM inference is configured via **oMLX** (MLX GUI wrapper with prefix cach
 - Full JSON config: Reproducible, declarative, git-tracked
 - Fastest single-token on Apple Silicon (faster than Ollama, comparable to MLX)
 - OpenAI-compatible API for tool integration
-
-**To add LLM support to dungeon:**
-Create `hosts/macs/dungeon/llm-tools.nix` (mirror of moria's qwen-code.nix) pointing to `moria.local:8000` or use Tailscale alias from settings.json.
 
 **Adding model variants:**
 For extended-context or other model profiles, see `dot/omlx/CLAUDE.md` → "Creating Model Variants". The nix activation script is in `modules/darwin/omlx.nix` and handles symlink creation on all Darwin hosts automatically.
@@ -127,3 +122,25 @@ docker run --rm -v /path/to/nixos:/workspaces/nixos nixos-devcontainer just vali
 See [.devcontainer/README.md](.devcontainer/README.md) for details.
 
 If needed, see [README.md](README.md) for detailed documentation on repository structure, VM setup, and development workflows.
+
+## Future: Automatic Nix Garbage Collection for Darwin Hosts
+
+Both darwin hosts use Determinate Nix (`nix.enable = false` in `modules/darwin/common.nix`),
+which means nix-darwin's built-in `nix.gc` module **cannot** be used (it asserts `nix.gc.automatic
+requires nix.enable`). If store bloat becomes a problem, create a custom launchd daemon in
+`modules/darwin/nix-gc.nix`:
+
+```nix
+{ ... }: {
+  launchd.daemons.nix-gc = {
+    command = "/nix/var/nix/profiles/default/bin/nix-collect-garbage --delete-older-than 30d";
+    serviceConfig = {
+      RunAtLoad = false;
+      StartCalendarInterval = [{ Weekday = 7; Hour = 3; Minute = 0; }];
+    };
+  };
+}
+```
+
+Import it from each host's `default.nix`. Runs as root (launchd daemons default), so it
+cleans both user and system generations — without `sudo`, only user generations are collected.
