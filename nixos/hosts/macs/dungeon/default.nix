@@ -9,6 +9,7 @@
     ../../../modules/darwin/homebrew.nix
     ../../../modules/darwin/home.nix
     ../../../modules/darwin/omlx.nix
+    ../../../modules/darwin/ser2net.nix
   ];
 
   networking.hostName = "dungeon";
@@ -202,6 +203,7 @@
     # into the repo. Without it, oMLX writes land directly in the git tree.
     cd "$TOOLBOX"
     stow -R --no-folding omlx
+    stow -R --no-folding ser2net
 
     # Merge base settings.json + dungeon cache overlay → ~/.omlx/settings.json
     # Write to a temp file first, then mv into place. This avoids truncating the

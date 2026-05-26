@@ -1,0 +1,25 @@
+# ser2net configuration for exposing USB serial devices over TCP.
+# OrbStack has no USB passthrough, so Docker containers connect to these
+# TCP ports instead of accessing USB devices directly.
+#
+# To find your device paths after plugging in USB sticks:
+#   ls /dev/cu.usb*
+#
+# Replace the placeholder paths below with the actual device paths.
+# Common examples:
+#   /dev/cu.usbmodem14101    (Silicon Labs / Zigbee)
+#   /dev/cu.usbserial-0001   (FTDI / Z-Wave)
+#
+# Containers connect via host.orb.internal:<port> (OrbStack's host alias).
+
+connection: &zigbee
+  accepter: tcp,0.0.0.0,20108
+  connector: serialdev,/dev/cu.ZIGBEE_DEVICE,115200n81,local
+  options:
+    kickolduser: true
+
+connection: &zwave
+  accepter: tcp,0.0.0.0,20109
+  connector: serialdev,/dev/cu.ZWAVE_DEVICE,115200n81,local
+  options:
+    kickolduser: true

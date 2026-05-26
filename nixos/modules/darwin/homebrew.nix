@@ -32,6 +32,7 @@
 
     brews = [
       "stow"
+      "ser2net" # Exposes USB serial devices over TCP for OrbStack containers
 
       # CLI tools — managed here rather than nix for easier updates on macOS
       "tmux"
