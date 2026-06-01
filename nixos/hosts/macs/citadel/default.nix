@@ -55,6 +55,9 @@
       "db-browser-for-sqlite"
       "ngrok"
 
+      # Drivers
+      "displaylink"
+
       # Productivity
       "obsidian"
       "raycast"

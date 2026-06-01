@@ -86,6 +86,9 @@
       # Networking
       "tailscale-app"
 
+      # Drivers
+      "displaylink"
+
       # Other
       "1password"
       "1password-cli"
