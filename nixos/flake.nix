@@ -166,6 +166,19 @@
           home-manager.darwinModules.home-manager
         ];
       };
+
+      citadel = darwin.lib.darwinSystem {
+        system = "aarch64-darwin";
+        specialArgs = {
+          inherit inputs;
+          vars = vars // {user = vars.user // {name = "greghilston";};};
+          outputs = self;
+        };
+        modules = [
+          ./hosts/macs/citadel
+          home-manager.darwinModules.home-manager
+        ];
+      };
     };
   };
 }
