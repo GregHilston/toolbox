@@ -42,6 +42,9 @@
       "go"
       "hugo"
 
+      # Runtime (needed by pi for npm: packages)
+      "node"
+
       # AI / LLM
       "jundot/omlx/omlx"
       # pi-coding-agent moved to home-manager packages for declarative nix management

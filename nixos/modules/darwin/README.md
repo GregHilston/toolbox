@@ -58,3 +58,40 @@ Create a `~/.env` file with any secrets or environment variables not managed by 
 touch ~/.env
 # Add variables as needed
 ```
+
+## 6. oMLX Settings (hosts with oMLX)
+
+`dot/omlx/.omlx/settings.json` is gitignored and generated from a 1Password template via `just secrets`. On a new host, either:
+
+**Option A** — Run `just secrets` (requires 1Password CLI integration):
+```bash
+cd ~/Git/toolbox/nixos
+just secrets
+```
+
+**Option B** — Copy from an existing host:
+```bash
+scp ghilston@moria.local:~/Git/toolbox/dot/omlx/.omlx/settings.json ~/Git/toolbox/dot/omlx/.omlx/settings.json
+```
+
+Then redeploy (`just dr <host>`) so the jq merge in the activation script succeeds.
+
+## 7. Pi Models (hosts with pi)
+
+`~/.pi/agent/models.json` is also generated from a 1Password template. Copy from an existing host if 1Password isn't available:
+
+```bash
+cd ~/Git/toolbox/dot
+stow -t $HOME pi
+scp ghilston@moria.local:~/.pi/agent/models.json ~/.pi/agent/models.json
+```
+
+## 8. oMLX Models
+
+Models are gitignored and stored locally. Download from an existing host via rsync:
+
+```bash
+rsync -avP ghilston@moria.local:~/Git/toolbox/dot/omlx/.omlx/models/ ~/Git/toolbox/dot/omlx/.omlx/models/
+```
+
+Or download through the oMLX web UI at `http://localhost:8000`.

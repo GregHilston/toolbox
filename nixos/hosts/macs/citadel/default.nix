@@ -37,6 +37,9 @@
       "pandoc"
       "gh"
 
+      # Runtime (needed by pi for npm: packages)
+      "node"
+
       # AI / LLM
       "jundot/omlx/omlx"
     ];
