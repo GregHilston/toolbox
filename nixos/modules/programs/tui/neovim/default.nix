@@ -42,7 +42,12 @@
   };
 
   home.file.".config/nvim" = {
-    source = ./nvim;
+    # Filter out lazy-lock.json — it must be writable for lazy.nvim to update
+    # plugin versions, but Nix store symlinks are read-only.
+    source =
+      builtins.filterSource
+      (path: _: baseNameOf path != "lazy-lock.json")
+      ./nvim;
     recursive = true;
   };
 }
