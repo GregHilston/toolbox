@@ -56,21 +56,7 @@
     ];
   };
 
-  # Override home-manager packages for this host
   home-manager.users.${vars.user.name} = {
-    home.packages = lib.mkForce (with pkgs; [
-      uv
-      git
-      ripgrep
-      duckdb
-      ffmpeg
-      python3
-
-      # Fonts
-      nerd-fonts.jetbrains-mono
-      jetbrains-mono
-    ]);
-
     # Disable modules not needed on this host
     custom.programs.pi.enable = lib.mkForce false;
     custom.programs.opencode.enable = lib.mkForce false;
