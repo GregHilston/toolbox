@@ -18,6 +18,14 @@
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
+          "id": "Qwen3.6-35B-A3B-6bit",
+          "name": "Qwen 3.6 35B A3B 6-bit (thinking, 262k ctx, balanced)",
+          "contextWindow": 262144,
+          "maxTokens": 81920,
+          "input": ["text", "image"],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
           "id": "Qwen3.6-27B-8bit",
           "name": "Qwen 3.6 27B 8-bit (thinking, 262k ctx, balanced)",
           "contextWindow": 262144,
