@@ -103,6 +103,9 @@
   '';
 
   home-manager.users.${vars.user.name} = {
+    # 6-bit is the best quality/memory balance for 48GB
+    custom.programs.pi.defaultModel = lib.mkForce "Qwen3.6-35B-A3B-6bit";
+
     # Disable modules not needed on this host
     custom.programs.opencode.enable = lib.mkForce false;
 

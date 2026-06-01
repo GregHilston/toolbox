@@ -50,6 +50,22 @@
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
+          "id": "Qwen3.5-9B-OptiQ-4bit",
+          "name": "Qwen 3.5 9B OptiQ 4-bit (thinking, 131k ctx, lightweight)",
+          "contextWindow": 131072,
+          "maxTokens": 32768,
+          "input": ["text"],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "Qwen3.5-27b-Claude-4.6-Opus-Distilled-MLX-4bit",
+          "name": "Qwen 3.5 27B Claude Opus Distilled 4-bit (thinking, 131k ctx)",
+          "contextWindow": 131072,
+          "maxTokens": 32768,
+          "input": ["text"],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
           "id": "gpt-oss-120b-heretic-v2-mxfp4-q8-hi-mlx",
           "name": "GPT-OSS 120B Heretic v2 (local)",
           "contextWindow": 32768,
