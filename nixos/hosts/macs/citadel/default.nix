@@ -42,6 +42,7 @@
 
       # AI / LLM
       "jundot/omlx/omlx"
+      "pi-coding-agent"
     ];
 
     casks = [

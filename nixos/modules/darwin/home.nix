@@ -81,7 +81,7 @@ in {
           duckdb
           claude-code
           opencode
-          pi-coding-agent
+          # pi-coding-agent — managed via homebrew for faster updates
           yt-dlp
           ffmpeg
           (python3.withPackages (ps:
