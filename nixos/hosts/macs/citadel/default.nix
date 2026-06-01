@@ -9,7 +9,7 @@
     ../../../modules/darwin/home.nix
   ];
 
-  networking.hostName = "Gregs-MacBook-Pro";
+  networking.hostName = "citadel";
 
   # --- Homebrew ---
   homebrew = {
