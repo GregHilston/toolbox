@@ -121,5 +121,3 @@ For each COULD item:
 ---
 
 **After presenting the review, ask the user which items they'd like to address.**
-
-**If reviewing a GitHub PR, ask if they want to post any of this feedback as a PR comment.**
