@@ -37,8 +37,10 @@
 
     if [ -d "$DOTFILES" ] && command -v stow &>/dev/null; then
       cd "$DOTFILES"
-      stow -v -t "$HOME" zsh 2>&1 \
-        || echo "stow: conflict — backup conflicting dotfiles in ~ then re-run darwin-rebuild switch"
+      for pkg in zsh aerospace tmux; do
+        stow -v -t "$HOME" "$pkg" 2>&1 \
+          || echo "stow: conflict for $pkg — backup conflicting dotfiles in ~ then re-run darwin-rebuild switch"
+      done
     fi
 
     # Bootstrap oh-my-zsh if not already installed.
