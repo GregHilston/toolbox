@@ -49,6 +49,7 @@
       # Core
       "ghostty"
       "visual-studio-code"
+      "1password"
 
       # Media
       "spotify"
