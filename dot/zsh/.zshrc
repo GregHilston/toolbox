@@ -140,6 +140,9 @@ fi
 # uv / rustup — added by their installers, loads cargo/uv onto PATH
 [ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 
+# cargo install binaries (Homebrew Rust doesn't add this automatically)
+export PATH="$HOME/.cargo/bin:$PATH"
+
 # libpq (Postgres CLI tools)
 if [ -d "/opt/homebrew/opt/libpq/bin" ]; then
   export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
