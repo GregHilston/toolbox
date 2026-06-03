@@ -24,6 +24,7 @@
 
     taps = [
       "nikitabobko/tap" # AeroSpace
+      "hashicorp/tap" # Terraform
       {
         name = "jundot/omlx";
         clone_target = "https://github.com/jundot/omlx";
@@ -37,8 +38,16 @@
       "pandoc"
       "gh"
 
-      # Runtime (needed by pi for npm: packages)
-      "node"
+      # Node via volta (manages node/npm/npx shims in ~/.volta/bin)
+      "volta"
+
+      # Cloud / Infra
+      "hashicorp/tap/terraform"
+      "kubernetes-cli"
+
+      # Python version management
+      "pyenv"
+      "xz"
 
       # AI / LLM
       "jundot/omlx/omlx"
@@ -67,6 +76,7 @@
       # Dev
       "bruno"
       "db-browser-for-sqlite"
+      "google-cloud-sdk"
       "ngrok"
 
       # Drivers
