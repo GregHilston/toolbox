@@ -50,6 +50,7 @@
       "ghostty"
       "firefox"
       "firefox@nightly"
+      "firefox@developer-edition"
       "visual-studio-code"
       "1password"
 
@@ -57,6 +58,7 @@
       "slack"
       "zoom"
       "google-drive"
+      "thunderbird"
 
       # Media
       "spotify"
@@ -76,6 +78,9 @@
       "stats"
       "jordanbaird-ice"
       "aerospace"
+
+      # Productivity
+      "mozilla-vpn"
     ];
   };
 
