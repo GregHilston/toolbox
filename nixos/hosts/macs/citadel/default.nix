@@ -37,6 +37,7 @@
       "just"
       "pandoc"
       "gh"
+      "podman"
 
       # Node via volta (manages node/npm/npx shims in ~/.volta/bin)
       "volta"
