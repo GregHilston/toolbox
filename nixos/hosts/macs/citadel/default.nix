@@ -49,6 +49,7 @@
       # Core
       "ghostty"
       "firefox"
+      "firefox@nightly"
       "visual-studio-code"
       "1password"
 
