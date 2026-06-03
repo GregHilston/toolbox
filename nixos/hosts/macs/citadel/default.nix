@@ -48,8 +48,14 @@
     casks = [
       # Core
       "ghostty"
+      "firefox"
       "visual-studio-code"
       "1password"
+
+      # Communication
+      "slack"
+      "zoom"
+      "google-drive"
 
       # Media
       "spotify"
