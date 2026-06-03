@@ -37,7 +37,6 @@
       "just"
       "pandoc"
       "gh"
-      "podman"
 
       # Node via volta (manages node/npm/npx shims in ~/.volta/bin)
       "volta"
@@ -79,6 +78,7 @@
       "db-browser-for-sqlite"
       "google-cloud-sdk"
       "ngrok"
+      "docker-desktop"
 
       # Drivers
       "displaylink"
