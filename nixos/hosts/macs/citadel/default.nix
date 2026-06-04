@@ -142,5 +142,13 @@
 
     # Disable mflux activation
     home.activation.install-mflux = lib.mkForce "";
+
+    # Volta (Node version manager) — citadel only
+    home.file.".zshrc.local".text = lib.mkAfter ''
+
+      # ── Volta (Node version manager) ────────────────────────────────
+      export VOLTA_HOME="$HOME/.volta"
+      export PATH="$VOLTA_HOME/bin:$PATH"
+    '';
   };
 }
