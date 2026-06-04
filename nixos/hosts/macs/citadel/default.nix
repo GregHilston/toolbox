@@ -79,6 +79,7 @@
       "google-cloud-sdk"
       "ngrok"
       "docker-desktop"
+      "dbeaver-community"
 
       # Drivers
       "displaylink"
