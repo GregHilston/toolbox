@@ -178,7 +178,6 @@
         packages = with pkgs; [
           aspell
           aspellDicts.en
-          claude-code
           glow
           pandoc
           pi-coding-agent

@@ -52,7 +52,6 @@ in {
         hugo
         go
         duckdb
-        claude-code
         opencode
         yt-dlp
         uv

@@ -79,7 +79,6 @@ in {
           hugo
           go
           duckdb
-          claude-code
           opencode
           # pi-coding-agent — managed via homebrew for faster updates
           yt-dlp
