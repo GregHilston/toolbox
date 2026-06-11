@@ -61,7 +61,10 @@ plugins=(git
   zsh-autosuggestions
   web-search
   jsontools
-  dotenv
+  # dotenv: intentionally NOT loaded. It auto-sources a repo's .env on `cd` and
+  # exports it, which shadows tool-loaded .env files (Next.js .env.local, Vite,
+  # python-dotenv, `docker --env-file`) since shell env wins. Use direnv (.envrc)
+  # per-project for opt-in, auto-unloading dir env instead.
 )
 
 source $ZSH/oh-my-zsh.sh
