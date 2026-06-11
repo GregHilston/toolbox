@@ -11,6 +11,13 @@
   programs.git = {
     enable = true;
 
+    # Globally ignored paths -> written to ~/.config/git/ignore on rebuild.
+    # NOTE: enabling this makes home-manager OWN that file, replacing any
+    # hand-edited version, so keep this list authoritative.
+    ignores = [
+      ".claude/" # ignore Claude Code's per-repo dir (handoffs, settings, etc.) everywhere
+    ];
+
     signing = {
       format = "openpgp";
     };
