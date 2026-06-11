@@ -5,6 +5,7 @@
   ...
 }: {
   home.packages = with pkgs; [
+    diff2html-cli # HTML diff viewer - opens diffs in browser like a PR
     difftastic # Structural diff tool - used as git's external diff
   ];
 

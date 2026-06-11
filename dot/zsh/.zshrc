@@ -250,6 +250,7 @@ alias ghrepo="gh repo view --web"
 alias gdiff="git diff"
 alias gshow="git show --ext-diff"
 alias glog="git log --ext-diff -p"
+alias dhtml="git diff --no-ext-diff HEAD | diff2html -i stdin"
 
 # Capture the output of a command so it can be retrieved with ret
 # https://stackoverflow.com/a/58598185/1983957
