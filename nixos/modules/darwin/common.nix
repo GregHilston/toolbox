@@ -91,6 +91,7 @@
     };
 
     NSGlobalDomain = {
+      ApplePressAndHoldEnabled = false; # repeat key on hold instead of accent picker
       AppleShowAllExtensions = true;
       AppleInterfaceStyle = "Dark";
       InitialKeyRepeat = 15;
