@@ -62,6 +62,7 @@
       "firefox@developer-edition"
       "visual-studio-code"
       "1password"
+      "magic-wormhole"
 
       # Communication
       "slack"
