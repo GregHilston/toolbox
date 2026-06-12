@@ -12,6 +12,22 @@
 
   networking.hostName = "citadel";
 
+  # Citadel-specific dock order. Overrides the shared persistent-apps list in
+  # modules/darwin/common.nix.
+  # NOTE: Finder is NOT listed here — macOS always pins it to the far left
+  # automatically. Adding /System/Applications/Finder.app produces a second,
+  # broken "?" tile, so it is intentionally omitted.
+  system.defaults.dock.persistent-apps = lib.mkForce [
+    "/Applications/Firefox Nightly.app"
+    "/Applications/Ghostty.app"
+    "/Applications/Slack.app"
+    "/Applications/Obsidian.app"
+    "/Applications/Visual Studio Code.app"
+    "/Applications/Thunderbird.app"
+    "/Applications/Spotify.app"
+    "/Applications/Docker.app"
+  ];
+
   # --- Homebrew ---
   homebrew = {
     enable = true;
