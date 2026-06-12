@@ -112,6 +112,19 @@
     screencapture = {
       location = "/Users/${vars.user.name}/Pictures/screenshots";
     };
+
+    # Disable the ⌘M "Minimize" shortcut globally by remapping the Minimize
+    # menu item to an obscure chord (Ctrl+Option+Shift+M). ⌘M is then bound to
+    # nothing and does nothing. No typed NSUserKeyEquivalents option exists in
+    # this nix-darwin, so we use CustomUserPreferences against the global domain.
+    # Chord encoding: @=Cmd, ~=Option, ^=Control, $=Shift.
+    CustomUserPreferences = {
+      NSGlobalDomain = {
+        NSUserKeyEquivalents = {
+          "Minimize" = "~^$m";
+        };
+      };
+    };
   };
 
   # Power management - display sleep timeout (in minutes)
