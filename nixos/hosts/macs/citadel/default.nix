@@ -161,6 +161,21 @@
     # Disable mflux activation
     home.activation.install-mflux = lib.mkForce "";
 
+    # Citadel is the Mozilla work machine: attribute commits to the Mozilla identity and
+    # sign them with the on-host SSH key (added to the GregHilstonMozilla GitHub account),
+    # overriding the shared gmail identity + openpgp signing from the tui/git module.
+    programs.git = {
+      settings.user = {
+        name = lib.mkForce "GregHilstonMozilla";
+        email = lib.mkForce "ghilston@mozilla.com";
+      };
+      signing = {
+        format = lib.mkForce "ssh";
+        key = "/Users/${vars.user.name}/.ssh/id_rsa.pub";
+        signByDefault = true; # sign every commit/tag -> "Verified" on GitHub
+      };
+    };
+
     # Volta (Node version manager) — citadel only
     home.file.".zshrc.local".text = lib.mkAfter ''
 
