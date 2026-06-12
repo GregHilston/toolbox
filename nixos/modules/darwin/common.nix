@@ -71,8 +71,10 @@
       show-recents = false;
       mru-spaces = false;
       minimize-to-application = true;
+      # NOTE: Finder is intentionally omitted — macOS always pins it to the far
+      # left automatically. Listing /System/Applications/Finder.app produces a
+      # second, broken "?" tile.
       persistent-apps = [
-        "/System/Applications/Finder.app"
         "/Applications/Firefox.app"
         "/Applications/Ghostty.app"
         "/Applications/Slack.app"
