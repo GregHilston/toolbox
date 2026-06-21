@@ -187,6 +187,22 @@
     };
   };
 
+  # Detect & auto-heal stale NFS file handles (ESTALE) on the home-lab_nfs-* Docker volumes.
+  # Runs as a USER agent (not a system daemon) so it inherits the GUI/OrbStack docker context.
+  # Root cause + manual fix: home-lab/CLAUDE.md → "NFS Stale File Handle (ESTALE)".
+  launchd.user.agents.nfs-stale-check = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/nfs-stale-check.sh"
+      ];
+      RunAtLoad = true;
+      StartInterval = 300; # every 5 min — probe is cheap (a few `docker exec ls`)
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/nfs-stale-check.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/nfs-stale-check.log";
+    };
+  };
+
   # Deploy oMLX with dungeon-specific settings (8GB hot cache for M3 Pro 36GB)
   # See ~/Git/toolbox/dot/omlx/README.md for stow strategy explanation
   # Combined with home-lab-config deployment and power management
