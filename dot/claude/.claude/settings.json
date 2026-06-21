@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {},
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(docker build:*)",
+      "Bash(docker run:*)",
+      "Bash(searxngr:*)",
+      "WebFetch(domain:staq-studios.sentry.io)",
+      "Skill(searxngr-search)",
+      "Bash(bash */marimo-pair/scripts/discover-servers.sh *)",
+      "Bash(bash */marimo-pair/scripts/execute-code.sh *)",
+      "Bash(nix build *)",
+      "Bash(nix eval *)",
+      "Bash(nix fmt)",
+      "Bash(nix fmt *)",
+      "Bash(docker compose logs *)",
+      "Bash(docker compose ps *)",
+      "Bash(docker compose config *)",
+      "Bash(npm view *)",
+      "Bash(npm root *)",
+      "Bash(npm run build)",
+      "Bash(npm run type-check *)",
+      "Bash(npm run test:unit *)",
+      "Bash(npm run test:integration *)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/ghilston/.claude/hooks/rtk-rewrite.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "context7@claude-plugins-official": true
+  },
+  "effortLevel": "medium",
+  "autoMemoryEnabled": false,
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "auto",
+  "autoCompactEnabled": false,
+  "remoteControlAtStartup": true,
+  "agentPushNotifEnabled": true,
+  "feedbackSurveyState": {
+    "lastShownTime": 1754006348784
+  }
+}
