@@ -42,8 +42,8 @@
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
-          "id": "gemma-4-26b-a4b-it-4bit",
-          "name": "Gemma 4 26B A4B (summarization, 256k ctx, fast)",
+          "id": "gemma-4-26b-a4b-it-qat-4bit",
+          "name": "Gemma 4 26B A4B QAT (summarization, 256k ctx, fast)",
           "contextWindow": 262144,
           "maxTokens": 32768,
           "input": ["text", "image"],

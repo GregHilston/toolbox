@@ -33,6 +33,21 @@ Available per-model fields (not exhaustive): `temperature`, `top_p`, `top_k`, `m
 
 There are also `model_profiles.json` (named presets per model) and `global_templates.json` (reusable templates across models), but we don't use those yet.
 
+## Speculative Decoding & QAT
+
+**Don't add speculative decoding (MTP / DFlash / assistant drafters) to our Gemma MoE on
+Apple Silicon.** We benchmarked the Gemma 4 assistant-MTP drafter on moria (M4 Max) and
+dungeon (M3 Pro): net **0.97×** and **0.91×** — a measured loss on both. A low-active-param
+MoE on Apple Silicon isn't bandwidth-bound, so there's nothing for a drafter to recover.
+Full write-up, numbers, the "when it *would* help" boundary, and reproduction steps:
+**`speculative-decoding-findings.md`**. (oMLX *does* support it — `vlm_mtp_*`, `mtp_enabled`,
+`dflash_*`, `specprefill_*` per-model; schema in `omlx/admin/routes.py` / `GET /openapi.json`.)
+
+**QAT:** the canonical gemma is `gemma-4-26b-a4b-it-qat-4bit` (mlx-community) — same ~15GB
+footprint and speed as a naive post-training 4-bit, better quality by construction. Prefer the
+QAT checkpoint whenever one exists. pi's registry (`dot/pi/.pi/agent/models.json.tpl`) points
+at it.
+
 ## Creating Model Variants (e.g., Long-Context Profiles)
 
 Sometimes you want multiple configurations of the same model weights with different settings (e.g., base model + extended-context variant). This is common for long-form analysis tasks (transcripts, documents) without duplicating model storage.

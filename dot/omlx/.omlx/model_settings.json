@@ -14,16 +14,16 @@
       "thinking_budget_enabled": true,
       "thinking_budget_tokens": 8192
     },
-    "gemma-4-26b-a4b-it-4bit": {
-      "description": "Tuned for summarization/RAG. Low temp reduces hallucination. Thinking disabled — unnecessary overhead for non-reasoning tasks. Sources: Google model card, HuggingFace gemma-4-26B-A4B-it, r/LocalLLaMA benchmarks, https://gemma4guide.com/guides/gemma4-config-guide",
+    "gemma-4-26b-a4b-it-qat-4bit": {
+      "description": "Canonical gemma — QAT (quantization-aware-trained) 4-bit. Same ~15GB footprint and decode speed as a naive post-training 4-bit quant, better quality at low bit-width (Google simulates quantization during training to minimize error). Tuned for summarization/RAG: low temp reduces hallucination, thinking disabled (wasted compute for non-reasoning tasks). Sources: mlx-community/gemma-4-26B-A4B-it-qat-4bit, https://blog.google/innovation-and-ai/technology/developers-tools/quantization-aware-training-gemma-4/.",
       "temperature": 0.3,
       "top_p": 0.95,
       "top_k": 64,
       "repetition_penalty": 1.0,
       "presence_penalty": 0.0,
+      "thinking_budget_enabled": false,
 
-      "_comment_thinking": "Gemma 4 supports thinking via <|think|> tokens but it's wasted compute for summarization. The 26B MoE variant may still emit empty thought channel tags when disabled — this is expected.",
-      "thinking_budget_enabled": false
+      "_comment_no_speculative_decoding": "DO NOT add a vlm_mtp / dflash / mtp drafter to this model. We tested the Gemma 4 assistant-MTP drafter on moria (M4 Max) and dungeon (M3 Pro): net 0.97x and 0.91x respectively — a measured LOSS on both. A low-active-param MoE (A4B activates ~4B/token) on Apple Silicon isn't bandwidth-bound, so speculative decoding has nothing to recover and the drafter overhead dominates. Full write-up + reproduction: dot/omlx/speculative-decoding-findings.md."
     },
     "Qwen3.6-35B-A3B-8bit-long-context": {
       "description": "Extended context variant of Qwen3.6-35B-A3B-8bit for long-form analysis (audio transcripts, long documents). Native 256K, extended to 512K. Full 1M requires YaRN configuration in oMLX settings. Created as symlink via nixos/modules/darwin/omlx.nix.",
