@@ -46,6 +46,7 @@
     "context7@claude-plugins-official": true
   },
   "effortLevel": "medium",
+  "tui": "fullscreen",
   "autoMemoryEnabled": false,
   "skipDangerousModePermissionPrompt": true,
   "theme": "auto",
