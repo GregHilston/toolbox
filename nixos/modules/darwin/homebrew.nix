@@ -28,6 +28,12 @@
         name = "jundot/omlx";
         clone_target = "https://github.com/jundot/omlx";
       } # omlx LLM inference server
+      # GOTCHA: newer Homebrew enforces a tap-trust check that silently aborts the
+      # omlx source build (it builds from source via rust) with NO output — leaving the
+      # host stuck on an old version (this is how dungeon got pinned at 0.3.8 while moria
+      # was on 0.4.4rc1). If `brew upgrade jundot/omlx/omlx` fails with a bare
+      # "build.rb exited with 1", run `brew trust jundot/omlx` once, or upgrade with
+      # HOMEBREW_NO_REQUIRE_TAP_TRUST=1. Not a Command Line Tools / OS-version problem.
     ];
 
     brews = [
@@ -84,6 +90,7 @@
       # Productivity
       "obsidian"
       "raycast"
+      "shortcat"
       "stats"
       "jordanbaird-ice"
       "aerospace"
