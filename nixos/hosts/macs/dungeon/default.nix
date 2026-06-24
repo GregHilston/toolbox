@@ -310,7 +310,7 @@
   # Apple-Silicon metrics: CPU/GPU/ANE power, temperature, fan, RAM, utilization.
   # macmon's default serve port (9090) collides with Prometheus, so use 9101.
   launchd.user.agents.macmon = {
-    command = "/opt/homebrew/bin/macmon serve --host 0.0.0.0 --port 9101";
+    command = "/opt/homebrew/bin/macmon serve --port 9101";
     serviceConfig = {
       RunAtLoad = true;
       KeepAlive = true;
