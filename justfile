@@ -1,22 +1,30 @@
 set shell := ["zsh", "-cu"]
 
-# Set up Claude Code commands and skills symlinks for the current user
-# Run this once on any non-Nix host (Nix hosts get this automatically via home-manager)
+# Set up Claude Code symlinks (commands, skills, CLAUDE.md, settings, hooks) for the current user.
+# Run this once on any non-Nix host (Nix hosts get this automatically via home-manager).
 setup-claude:
     #!/usr/bin/env zsh
     set -eu
     mkdir -p "$HOME/.claude"
+    repo="$(pwd)"
 
-    if [ ! -e "$HOME/.claude/commands" ]; then
-        ln -sf "$(pwd)/claude-commands" "$HOME/.claude/commands"
-        echo "Linked ~/.claude/commands -> $(pwd)/claude-commands"
-    else
-        echo "~/.claude/commands already exists, skipping"
-    fi
+    # link_repo SRC DST — mirror of nixos/modules/programs/tui/claude.nix:
+    #   symlink -> refresh; missing -> create; real file -> warn and skip (don't clobber).
+    link_repo() {
+        if [ -L "$2" ]; then
+            ln -sfn "$1" "$2"
+            echo "Refreshed $2 -> $1"
+        elif [ ! -e "$2" ]; then
+            ln -s "$1" "$2"
+            echo "Linked $2 -> $1"
+        else
+            echo "WARNING: $2 is a real file, not a symlink — leaving it untouched." >&2
+            echo "  Migrate it into $1, delete the original, then re-run." >&2
+        fi
+    }
 
-    if [ ! -e "$HOME/.claude/skills" ]; then
-        ln -sf "$(pwd)/claude-skills" "$HOME/.claude/skills"
-        echo "Linked ~/.claude/skills -> $(pwd)/claude-skills"
-    else
-        echo "~/.claude/skills already exists, skipping"
-    fi
+    link_repo "$repo/claude-commands"             "$HOME/.claude/commands"
+    link_repo "$repo/claude-skills"               "$HOME/.claude/skills"
+    link_repo "$repo/dot/claude/.claude/CLAUDE.md"     "$HOME/.claude/CLAUDE.md"
+    link_repo "$repo/dot/claude/.claude/settings.json" "$HOME/.claude/settings.json"
+    link_repo "$repo/dot/claude/.claude/hooks"         "$HOME/.claude/hooks"

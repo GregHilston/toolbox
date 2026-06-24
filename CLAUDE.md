@@ -13,7 +13,7 @@ claude-commands/        # Global slash commands  (~/.claude/commands/)
 claude-skills/          # Global agent skills    (~/.claude/skills/)
 dot/                    # Dotfiles managed with GNU Stow
 nixos/                  # NixOS and nix-darwin host configurations
-bin/                    # Helper scripts
+bin/                    # Helper scripts (all subdirs on $PATH; e.g. fetch-thread.py, bin/anki/ Anki tools)
 ```
 
 ## Claude Commands and Skills
@@ -56,20 +56,35 @@ It becomes available as `/my-skill` in any Claude Code session.
 
 **Nix-managed hosts** (NixOS / nix-darwin): automatic. The home-manager module at
 `nixos/modules/programs/tui/claude.nix` creates the symlinks during `home-manager`
-activation when you run `just fr <host>` or `just dr <host>`.
+activation when you run `just fr <host>` or `just dr <host>`. It now manages five
+targets, all symlinked into this repo (so they're version-controlled and deploy to
+every host that imports `programs/tui`):
 
-**Non-Nix hosts**: run once after cloning this repo:
+- `~/.claude/commands`     → `claude-commands/`
+- `~/.claude/skills`       → `claude-skills/`
+- `~/.claude/CLAUDE.md`    → `dot/claude/.claude/CLAUDE.md`   (global, cross-repo memory)
+- `~/.claude/settings.json`→ `dot/claude/.claude/settings.json` (permissions, hooks, plugins)
+- `~/.claude/hooks/`       → `dot/claude/.claude/hooks/`      (e.g. the RTK rewrite hook)
 
-```bash
-just setup-claude
-```
+The symlinks are **writable** (they point into the repo, not `/nix/store`) so Claude's
+own runtime writes to `settings.json` still work — those just show up as git diffs to
+commit or discard.
 
-This creates:
-- `~/.claude/commands` → `~/Git/toolbox/claude-commands`
-- `~/.claude/skills`   → `~/Git/toolbox/claude-skills`
+**Clobber guard:** the activation's `link_repo` helper refuses to overwrite a *real*
+file. If a host already has, say, a hand-written `~/.claude/settings.json`, activation
+prints a `WARNING` and leaves it untouched. To bring it under management: move that file
+into `dot/claude/.claude/`, delete the original, then re-run home-manager.
 
-Since these are symlinks into the repo, pulling new commits automatically makes new
-commands and skills available without re-running any setup.
+**Non-Nix hosts**: run `just setup-claude` once after cloning. Since everything is a
+symlink into the repo, pulling new commits picks up changes without re-running setup.
+
+### Per-repo CLAUDE.md (reduce context re-discovery)
+
+The repo-managed `~/.claude/CLAUDE.md` is **global** — it loads in every session in every
+repo, so keep it lean and cross-cutting. Push project-specifics into a `./CLAUDE.md` in
+each repo. For repos that don't have one yet (e.g. `~/Git/ccs`, `~/Git/home-lab`), run
+`/init` once to generate a tight map of build/test/run commands + directory layout, so
+Claude stops re-deriving the structure every session.
 
 ## Dotfiles
 

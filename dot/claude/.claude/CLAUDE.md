@@ -16,14 +16,10 @@ When writing or updating any CLAUDE.md or README:
 - **Point to the directory, not its contents.** One sentence on what it's for is enough — never enumerate every file or script. Claude can always explore with Glob/ls when it needs to.
 - This prevents documentation rot: files change, tables go stale, context bloats.
 
-## Toolbox (`~/Git/toolbox`)
+## File Inspection
 
-Personal dotfiles, scripts, and configs. Key directories:
-- `bin/` — utility scripts; all subdirectories also on `$PATH` via recursive zsh glob
-  - `fetch-thread.py` — Fetch Hacker News or Reddit threads and convert to markdown/JSON
-  - `bin/anki/` — Anki database management scripts (PEP 723, `uv run`)
-- `dot/` — dotfiles managed with GNU Stow; `just stow-all` from `dot/` sets everything up on a new machine
-- `claude-commands/` — Claude Code slash commands (symlinked to `~/.claude/commands`)
-- `claude-skills/` — Claude Code skills (symlinked to `~/.claude/skills`)
+Prefer the `Read`, `Grep`, and `Glob` tools over shelling out to `cat`/`head`/`tail`/`sed`/`grep` for inspecting files — they return cleaner, line-numbered, structured output and fail less. Reserve Bash for things that genuinely need it (running builds/tests, `git`, `nix`, etc.).
 
-See `toolbox/CLAUDE.md` for details on thread fetchers, dotfiles, and other tools.
+## Toolbox
+
+`~/Git/toolbox` holds my dotfiles, scripts, and host configs. Its `bin/**` is on `$PATH` (recursive zsh glob), so helpers like `fetch-thread.py` work from any repo. See `~/Git/toolbox/CLAUDE.md` for details.

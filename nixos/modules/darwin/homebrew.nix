@@ -48,6 +48,13 @@
       # AI / LLM
       "jundot/omlx/omlx"
       "pi-coding-agent"
+
+      # Monitoring exporters — scraped by the home-lab Prometheus over
+      # host.docker.internal. Native (not containers) so they report the real Mac,
+      # not OrbStack's Linux VM. See launchd.user.agents in hosts/macs/dungeon.
+      "node_exporter" # host CPU/disk/net/load/filesystem (:9100)
+      "macmon" # Apple-Silicon temp/power/GPU/RAM via `macmon serve` (:9101)
+      "glances" # native system-monitor web UI (:61208), replaces the container
     ];
 
     casks = [
