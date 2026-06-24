@@ -30,6 +30,10 @@ Apple-Silicon object detector that Frigate connects to over ZMQ. It is not auto-
 - [ ] `git clone https://github.com/frigate-nvr/apple-silicon-detector ~/Git/apple-silicon-detector`
 - [ ] `cd ~/Git/apple-silicon-detector && /opt/homebrew/bin/python3.11 -m venv venv`
 - [ ] `./venv/bin/pip3 install -r requirements.txt`
+- [ ] Build & place the detection model (Frigate ships it to the detector over ZMQ; without it the
+      agent runs but has no model). Recipe in the home-lab repo, `frigate/model-export/`:
+      `docker build . --platform linux/amd64 --build-arg MODEL_SIZE=t --build-arg IMG_SIZE=320 --output . -f Dockerfile`
+      then `cp yolov9-t-320.onnx "${SERVER_CONFIG_BASE}/frigate/model_cache/yolo.onnx"`
 - [ ] Re-run `darwin-rebuild switch` so the agent finds the venv, then verify:
       `tail ~/Library/Logs/frigate-detector.log` shows "ZMQ server successfully bound to tcp://*:5555"
 
