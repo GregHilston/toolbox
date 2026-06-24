@@ -24,6 +24,15 @@ Run these tasks after initial deployment on a new Mac.
 - [ ] Clone notes repo: `git clone git@github.com:<user>/notes.git ~/Notes`
 - [ ] Clone other personal repos as needed
 
+## Frigate ANE Detector (dungeon only)
+The `frigate-detector` launchd agent (hosts/macs/dungeon/default.nix) runs the native
+Apple-Silicon object detector that Frigate connects to over ZMQ. It is not auto-cloned:
+- [ ] `git clone https://github.com/frigate-nvr/apple-silicon-detector ~/Git/apple-silicon-detector`
+- [ ] `cd ~/Git/apple-silicon-detector && /opt/homebrew/bin/python3.11 -m venv venv`
+- [ ] `./venv/bin/pip3 install -r requirements.txt`
+- [ ] Re-run `darwin-rebuild switch` so the agent finds the venv, then verify:
+      `tail ~/Library/Logs/frigate-detector.log` shows "ZMQ server successfully bound to tcp://*:5555"
+
 ## Launch Applications
 
 - [ ] Set up AeroSpace tiling

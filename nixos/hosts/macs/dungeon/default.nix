@@ -346,4 +346,31 @@
       StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/mac-battery-textfile.log";
     };
   };
+
+  # ---------------------------------------------------------------------------
+  # Frigate object detection on the Apple Neural Engine.
+  # Frigate runs in OrbStack's Linux VM, which can't reach the ANE — so the
+  # detector (frigate-nvr/apple-silicon-detector) runs NATIVELY here and Frigate
+  # connects from the container over ZMQ/TCP (config: detectors.type=zmq,
+  # endpoint=tcp://host.docker.internal:5555). This moves the single biggest
+  # CPU consumer (CPU inference was ~64% of Frigate's load) onto the Neural
+  # Engine. Run in AUTO mode: Frigate ships the yolov9 model over ZMQ on connect.
+  # Manual one-time install (not auto-cloned — see darwin-post-deploy.md):
+  #   git clone https://github.com/frigate-nvr/apple-silicon-detector ~/Git/apple-silicon-detector
+  #   cd ~/Git/apple-silicon-detector && /opt/homebrew/bin/python3.11 -m venv venv
+  #   ./venv/bin/pip3 install -r requirements.txt
+  launchd.user.agents.frigate-detector = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/Users/${vars.user.name}/Git/apple-silicon-detector/venv/bin/python3"
+        "-u"
+        "/Users/${vars.user.name}/Git/apple-silicon-detector/detector/zmq_onnx_client.py"
+      ];
+      WorkingDirectory = "/Users/${vars.user.name}/Git/apple-silicon-detector";
+      RunAtLoad = true;
+      KeepAlive = true;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/frigate-detector.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/frigate-detector.log";
+    };
+  };
 }
