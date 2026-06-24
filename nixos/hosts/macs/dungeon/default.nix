@@ -271,4 +271,63 @@
       exit 1
     fi
   '';
+
+  # ---------------------------------------------------------------------------
+  # Monitoring exporters for the home-lab Prometheus/Grafana stack.
+  # These run NATIVELY (not as containers) so they report the real Mac — a
+  # containerised exporter only sees OrbStack's Linux VM. Prometheus scrapes them
+  # over host.docker.internal, so they bind 0.0.0.0. Packages: ../../modules/darwin/homebrew.nix.
+  # ---------------------------------------------------------------------------
+
+  # Host metrics: CPU, filesystem, disk I/O, network, load, uptime + the battery
+  # textfile collector (fed by bin/mac-battery-textfile.sh below).
+  launchd.user.agents.node-exporter = {
+    command = "/opt/homebrew/bin/node_exporter --web.listen-address=0.0.0.0:9100 --collector.textfile.directory=/Users/${vars.user.name}/.local/state/node_exporter";
+    serviceConfig = {
+      RunAtLoad = true;
+      KeepAlive = true;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/node-exporter.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/node-exporter.log";
+    };
+  };
+
+  # Apple-Silicon metrics: CPU/GPU/ANE power, temperature, fan, RAM, utilization.
+  # macmon's default serve port (9090) collides with Prometheus, so use 9101.
+  launchd.user.agents.macmon = {
+    command = "/opt/homebrew/bin/macmon serve --host 0.0.0.0 --port 9101";
+    serviceConfig = {
+      RunAtLoad = true;
+      KeepAlive = true;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/macmon.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/macmon.log";
+    };
+  };
+
+  # Native Glances web UI on the same port the old container used (61208), so the
+  # Caddy @glances route + Homepage tile keep working but now show the real Mac.
+  # If `glances -w` fails for missing web deps, reinstall glances with web support.
+  launchd.user.agents.glances = {
+    command = "/opt/homebrew/bin/glances -w --bind 0.0.0.0 --port 61208";
+    serviceConfig = {
+      RunAtLoad = true;
+      KeepAlive = true;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/glances.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/glances.log";
+    };
+  };
+
+  # Battery % + power source (pmset) for node_exporter's textfile collector —
+  # node_exporter has no battery collector on macOS, so we shell out every 60s.
+  launchd.user.agents.mac-battery-textfile = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/toolbox/bin/mac-battery-textfile.sh"
+      ];
+      RunAtLoad = true;
+      StartInterval = 60;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/mac-battery-textfile.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/mac-battery-textfile.log";
+    };
+  };
 }
