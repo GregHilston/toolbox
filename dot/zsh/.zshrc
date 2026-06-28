@@ -274,9 +274,13 @@ autoload bashcompinit && bashcompinit
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 # ngrok
-if command -v ngrok &>/dev/null; then
-  eval "$(ngrok completion)"
-fi
+# NOTE: do NOT `eval "$(ngrok completion)"` at interactive startup. A wedged
+# ngrok binary (seen on dungeon) makes that call block forever, which hangs the
+# whole shell mid-init so the prompt never finishes rendering. The completion is
+# a nice-to-have; if you want it back, generate it once to a file and source
+# that instead of invoking ngrok on every shell launch:
+#   ngrok completion zsh > ~/.cache/ngrok-completion.zsh   # run manually, once
+[ -f ~/.cache/ngrok-completion.zsh ] && source ~/.cache/ngrok-completion.zsh
 
 # ── Powerlevel10k ────────────────────────────────────────────────────
 
