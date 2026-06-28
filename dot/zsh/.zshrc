@@ -20,8 +20,12 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 
 # Auto-correction
 ENABLE_CORRECTION="true"
-# Glob pattern of words to skip correction for; extend with (pi|other|words)
-CORRECT_IGNORE="(pi)"
+# Glob pattern of words to skip correction for; extend with (pi|other|words).
+# CORRECT_IGNORE covers command-word correction (`correct`); CORRECT_IGNORE_ALL
+# covers `correct_all` (every word), which is what ENABLE_CORRECTION turns on —
+# without the _ALL variant, `claude` still gets "corrected" to a nearby .claude dir.
+CORRECT_IGNORE="(pi|claude)"
+CORRECT_IGNORE_ALL="(pi|claude)"
 
 # Show dots while waiting for completion
 COMPLETION_WAITING_DOTS="true"
