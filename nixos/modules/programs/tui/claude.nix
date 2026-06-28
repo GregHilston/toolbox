@@ -1,10 +1,12 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }: let
   toolboxDir = "${config.home.homeDirectory}/Git/toolbox";
   claudeDir = "${config.home.homeDirectory}/.claude";
+  claudeBin = "${config.home.homeDirectory}/.local/bin/claude";
 in {
   # Declaratively symlink Claude Code user-level config from the toolbox repo so
   # any host that runs home-manager gets the same commands, skills, settings,
@@ -40,5 +42,25 @@ in {
     link_repo "${toolboxDir}/dot/claude/.claude/CLAUDE.md"     "${claudeDir}/CLAUDE.md"
     link_repo "${toolboxDir}/dot/claude/.claude/settings.json" "${claudeDir}/settings.json"
     link_repo "${toolboxDir}/dot/claude/.claude/hooks"         "${claudeDir}/hooks"
+  '';
+
+  # Install the Claude Code CLI via Anthropic's official *native* installer —
+  # NOT Homebrew. https://code.claude.com/docs/en/quickstart recommends the
+  # native install (`curl -fsSL https://claude.ai/install.sh | bash`), which
+  # drops a launcher at ~/.local/bin/claude (already on $PATH via dot/zsh/.zshrc)
+  # pointing at ~/.local/share/claude/versions/<v>, and then self-updates in
+  # place. So we only need to *bootstrap* it once per machine; thereafter Claude
+  # keeps itself current and this step no-ops.
+  #
+  # Idempotent + non-fatal: skips when the launcher already exists, and never
+  # fails activation if the network is down (just warns). The installer does not
+  # edit shell rc files when ~/.local/bin is already on PATH (verified), so it
+  # won't dirty the stow-managed ~/.zshrc.
+  home.activation.claudeCodeInstall = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    if [ ! -x "${claudeBin}" ] && ! command -v claude >/dev/null 2>&1; then
+      echo "Installing Claude Code via native installer (https://claude.ai/install.sh)…"
+      ${pkgs.curl}/bin/curl -fsSL https://claude.ai/install.sh | ${pkgs.bash}/bin/bash \
+        || echo "WARNING: Claude Code native install failed (offline?). Re-run later: curl -fsSL https://claude.ai/install.sh | bash" >&2
+    fi
   '';
 }
