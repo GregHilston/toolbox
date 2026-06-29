@@ -84,3 +84,9 @@ jobs:
         run: |
           echo "Building moria..."
           nix build .#darwinConfigurations.moria.config.system.build.toplevel --dry-run
+
+      - name: Validate citadel
+        working-directory: nixos
+        run: |
+          echo "Building citadel..."
+          nix build .#darwinConfigurations.citadel.config.system.build.toplevel --dry-run

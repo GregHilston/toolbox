@@ -3,7 +3,60 @@
   lib,
   pkgs,
   ...
-}: {
+}: let
+  # NFS mounts on macOS: nix-darwin has no `fileSystems` support, so each share is a
+  # launchd daemon that waits for the server to answer ping, then mounts NFSv3.
+  # KeepAlive(SuccessfulExit=false) + the "already mounted? exit 0" guard means it
+  # remounts after a network drop without thrashing. This helper holds the shared
+  # retry/ping/mount logic; only the per-share fields below differ.
+  mkNfsMountDaemon = {
+    mountPoint,
+    server,
+    path,
+    retries,
+    logFile,
+  }: {
+    script = ''
+      MOUNT_POINT="${mountPoint}"
+      NFS_SERVER="${server}"
+      NFS_PATH="${path}"
+
+      # Create mount point if it doesn't exist
+      /bin/mkdir -p "$MOUNT_POINT"
+
+      # If already mounted, nothing to do
+      if /sbin/mount | /usr/bin/grep -q "$MOUNT_POINT"; then
+        exit 0
+      fi
+
+      # Wait for the NFS server to be reachable (${toString retries} tries × 5s)
+      for i in $(seq 1 ${toString retries}); do
+        if /sbin/ping -c 1 -W 1 "$NFS_SERVER" >/dev/null 2>&1; then
+          break
+        fi
+        /bin/sleep 5
+      done
+
+      # Mount the NFS share. Flags (macOS NFSv3):
+      #   resvport  privileged source port (required on macOS)
+      #   vers=3    macOS defaults to v4, which hangs against these servers
+      #   nolock    servers don't run rpc.statd; consistency handled elsewhere
+      #   soft,intr return/interrupt on timeout instead of hanging indefinitely
+      #   rw        read-write (Docker bind mounts / backup writes)
+      /sbin/mount -t nfs -o resvport,vers=3,nolock,soft,intr,rw "$NFS_SERVER:$NFS_PATH" "$MOUNT_POINT"
+    '';
+    serviceConfig = {
+      RunAtLoad = true;
+      # Retry every 30s if the mount fails (e.g., server not yet up after reboot)
+      KeepAlive = {
+        SuccessfulExit = false;
+      };
+      ThrottleInterval = 30;
+      StandardOutPath = logFile;
+      StandardErrorPath = logFile;
+    };
+  };
+in {
   imports = [
     ../../../modules/darwin/common.nix
     ../../../modules/darwin/homebrew.nix
@@ -75,99 +128,25 @@
     };
   };
 
-  # NFS mount for Unraid data share
-  # Mirrors the NixOS VM mount at nixos/hosts/vms/home-lab/default.nix (192.168.1.2:/mnt/user/data)
-  # Mount point matches SERVER_DATA_SHARE_MOUNT_POINT in the home-lab .env
-  # macOS doesn't support fileSystems in nix-darwin, so we use a launchd daemon instead.
-  # The daemon waits for the NFS server to be reachable, then mounts.
-  # KeepAlive + exit-on-already-mounted ensures it remounts after network recovery.
-  launchd.daemons.mount-unraid-data = {
-    script = ''
-      MOUNT_POINT="/Volumes/unraid-data"
-      NFS_SERVER="${vars.networking.hosts.unraid.lan}"
-      NFS_PATH="/mnt/user/data"
-
-      # Create mount point if it doesn't exist
-      /bin/mkdir -p "$MOUNT_POINT"
-
-      # If already mounted, nothing to do
-      if /sbin/mount | /usr/bin/grep -q "$MOUNT_POINT"; then
-        exit 0
-      fi
-
-      # Wait for NFS server to be reachable (up to 60s)
-      for i in $(seq 1 12); do
-        if /sbin/ping -c 1 -W 1 "$NFS_SERVER" >/dev/null 2>&1; then
-          break
-        fi
-        /bin/sleep 5
-      done
-
-      # Mount the NFS share
-      # -o resvport: required on macOS for NFS (uses privileged source port)
-      # -o vers=3: Unraid exports NFSv3 — macOS defaults to v4 which hangs
-      # -o nolock: skip NFS locking — Unraid uses local_lock=none, and rpc.statd isn't available
-      # -o soft: return errors on timeout rather than hanging indefinitely
-      # -o intr: allow signals to interrupt hung operations
-      # -o rw: read-write access for Docker container bind mounts
-      /sbin/mount -t nfs -o resvport,vers=3,nolock,soft,intr,rw "$NFS_SERVER:$NFS_PATH" "$MOUNT_POINT"
-    '';
-    serviceConfig = {
-      RunAtLoad = true;
-      # Retry every 30s if the mount fails (e.g., server not yet up after reboot)
-      KeepAlive = {
-        SuccessfulExit = false;
-      };
-      # Don't restart too aggressively
-      ThrottleInterval = 30;
-      StandardOutPath = "/var/log/mount-unraid-data.log";
-      StandardErrorPath = "/var/log/mount-unraid-data.log";
-    };
+  # NFS mount for Unraid data share (NFSv3 over LAN). Used by Docker container bind
+  # mounts; mirrors the NixOS VM mount at hosts/vms/home-lab/default.nix and matches
+  # SERVER_DATA_SHARE_MOUNT_POINT in the home-lab .env.
+  launchd.daemons.mount-unraid-data = mkNfsMountDaemon {
+    mountPoint = "/Volumes/unraid-data";
+    server = vars.networking.hosts.unraid.lan;
+    path = "/mnt/user/data";
+    retries = 12; # ~60s — LAN server, usually up quickly
+    logFile = "/var/log/mount-unraid-data.log";
   };
 
-  # NFS mount for Fob offsite backup (Raspberry Pi via Tailscale)
-  # Used by Kopia for offsite backups — not used by Docker containers.
-  # Tailscale may not be connected at boot, so we retry more aggressively.
-  launchd.daemons.mount-fob-backup = {
-    script = ''
-      MOUNT_POINT="/Volumes/fob-backup"
-      NFS_SERVER="${vars.networking.hosts.fob.tailscale}"
-      NFS_PATH="/mnt/mothership"
-
-      # Create mount point if it doesn't exist
-      /bin/mkdir -p "$MOUNT_POINT"
-
-      # If already mounted, nothing to do
-      if /sbin/mount | /usr/bin/grep -q "$MOUNT_POINT"; then
-        exit 0
-      fi
-
-      # Wait for NFS server to be reachable (up to 120s — Tailscale may take time)
-      for i in $(seq 1 24); do
-        if /sbin/ping -c 1 -W 1 "$NFS_SERVER" >/dev/null 2>&1; then
-          break
-        fi
-        /bin/sleep 5
-      done
-
-      # Mount the NFS share
-      # -o resvport: required on macOS for NFS (uses privileged source port)
-      # -o vers=3: use NFSv3 explicitly — macOS defaults to v4 which can hang
-      # -o nolock: skip NFS locking — Fob doesn't run rpc.statd, and Kopia handles its own consistency
-      # -o soft: return errors on timeout rather than hanging indefinitely
-      # -o intr: allow signals to interrupt hung operations
-      # -o rw: read-write access for backup writes
-      /sbin/mount -t nfs -o resvport,vers=3,nolock,soft,intr,rw "$NFS_SERVER:$NFS_PATH" "$MOUNT_POINT"
-    '';
-    serviceConfig = {
-      RunAtLoad = true;
-      KeepAlive = {
-        SuccessfulExit = false;
-      };
-      ThrottleInterval = 30;
-      StandardOutPath = "/var/log/mount-fob-backup.log";
-      StandardErrorPath = "/var/log/mount-fob-backup.log";
-    };
+  # NFS mount for Fob offsite backup (Raspberry Pi over Tailscale). Used by Kopia for
+  # offsite backups, not by Docker. Tailscale may be slow to connect at boot, so wait longer.
+  launchd.daemons.mount-fob-backup = mkNfsMountDaemon {
+    mountPoint = "/Volumes/fob-backup";
+    server = vars.networking.hosts.fob.tailscale;
+    path = "/mnt/mothership";
+    retries = 24; # ~120s — Tailscale may take time to come up
+    logFile = "/var/log/mount-fob-backup.log";
   };
 
   # Healthchecks.io ping — signals that dungeon is alive and has network.
@@ -203,40 +182,24 @@
     };
   };
 
-  # Deploy oMLX with dungeon-specific settings (8GB hot cache for M3 Pro 36GB)
-  # See ~/Git/toolbox/dot/omlx/README.md for stow strategy explanation
-  # Combined with home-lab-config deployment and power management
+  # Deploy oMLX with dungeon-specific settings (8GB hot cache for M3 Pro 36GB).
+  # The stow + jq-merge + restart logic lives in modules/darwin/omlx.nix.
+  services.omlxDeploy = {
+    enable = true;
+    cacheSize = "8GB";
+  };
+
+  # Dungeon-specific activation: ser2net dotfiles, clamshell-sleep prevention,
+  # NFS mount points, and the home-lab repo clone/pull.
   # NOTE: Uses postActivation (not custom names) because nix-darwin only runs well-known activation script names.
   system.activationScripts.postActivation.text = ''
     set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
 
-    # Deploy oMLX dotfiles: base config + dungeon-specific overrides
-    # settings.json is excluded from stow (via .stow-local-ignore) because it
-    # contains host-specific cache sizes AND auth keys. Merged with jq instead.
-    export PATH="${pkgs.stow}/bin:${pkgs.jq}/bin:$PATH"
+    # Stow ser2net dotfiles (USB serial exposure for OrbStack containers).
+    export PATH="${pkgs.stow}/bin:$PATH"
     TOOLBOX="/Users/${vars.user.name}/Git/toolbox/dot"
-    # --no-folding prevents stow from symlinking the .omlx/ directory itself
-    # into the repo. Without it, oMLX writes land directly in the git tree.
     cd "$TOOLBOX"
-    stow -R --no-folding omlx
     stow -R --no-folding ser2net
-
-    # Merge base settings.json + dungeon cache overlay → ~/.omlx/settings.json
-    # Write to a temp file first, then mv into place. This avoids truncating the
-    # source if ~/.omlx/settings.json is a stale symlink pointing back to it,
-    # and is atomic (the old file survives if jq fails).
-    OMLX_SETTINGS="/Users/${vars.user.name}/.omlx/settings.json"
-    jq -s '.[0] * .[1]' \
-      "$TOOLBOX/omlx/.omlx/settings.json" \
-      "$TOOLBOX/omlx-dungeon/.omlx/settings.json" \
-      > "$OMLX_SETTINGS.tmp"
-    mv -f "$OMLX_SETTINGS.tmp" "$OMLX_SETTINGS"
-
-    # Restart oMLX so it picks up the merged settings.json.
-    # KeepAlive only restarts on crashes, not config changes.
-    launchctl kickstart -k "gui/$(id -u ${vars.user.name})/org.nixos.omlx" 2>/dev/null || true
-
-    echo "✓ oMLX configured for dungeon (hot_cache_max_size=8GB)"
 
     # Prevent clamshell sleep on Apple Silicon (lid-close with no external display).
     # See the detailed explanation in the power.sleep section above.

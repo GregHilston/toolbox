@@ -8,6 +8,15 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     # Use the full default set (includes Darwin)
     systems.url = "github:nix-systems/default";
+
+    # Flake structure + dev tooling
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+    git-hooks.url = "github:cachix/git-hooks.nix";
+    git-hooks.inputs.nixpkgs.follows = "nixpkgs";
+
     # Home manager
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -25,160 +34,22 @@
     # removed from nixpkgs-unstable on 2026-03-03. Let it use its own pinned nixpkgs.
     claude-desktop.inputs.flake-utils.follows = "flake-utils";
 
-    # nix-darwin for macOS support (Keep input if you might use it later, even if no configs defined now)
+    # nix-darwin for macOS support
     darwin.url = "github:LnL7/nix-darwin";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs @ {
-    self,
-    nixpkgs,
-    systems,
-    nixos-wsl,
-    nixos-hardware,
-    home-manager,
-    stylix,
-    darwin, # Keep this input if you anticipate defining macOS configs later
-    ...
-  }: let
-    lib = nixpkgs.lib // home-manager.lib;
-    # Support all major systems (Linux and Darwin)
-    allSystems = import systems;
-    forEachSystem = f: lib.genAttrs allSystems (system: f pkgsFor.${system});
-    pkgsFor = lib.genAttrs allSystems (
-      system:
-        import nixpkgs {
-          inherit system;
-          config = {allowUnfree = true;};
-        }
-    );
-    vars = import ./config/vars.nix {inherit (nixpkgs) lib;};
+  outputs = inputs:
+    inputs.flake-parts.lib.mkFlake {inherit inputs;} {
+      # Systems the per-system outputs (formatter, checks, devShells) are built for.
+      systems = import inputs.systems;
 
-    # Helper for home-manager module
-    mkHomeManagerModule = {config, ...}: {
-      home-manager = {
-        useUserPackages = true;
-        backupFileExtension = "backup";
-        users.${vars.user.name} = {};
-      };
+      imports = [
+        inputs.treefmt-nix.flakeModule
+        inputs.git-hooks.flakeModule
+        ./flake-modules/hosts.nix
+        ./flake-modules/treefmt.nix
+        ./flake-modules/dev.nix
+      ];
     };
-  in {
-    formatter = forEachSystem (pkgs: pkgs.alejandra);
-
-    nixosConfigurations = {
-      foundation = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = {
-          inherit inputs vars;
-          outputs = self;
-        };
-        modules = [
-          nixos-wsl.nixosModules.default
-          ./hosts/vms/foundation
-          stylix.nixosModules.stylix
-          home-manager.nixosModules.home-manager
-          mkHomeManagerModule
-        ];
-      };
-
-      isengard = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = {
-          inherit inputs vars;
-          outputs = self;
-        };
-        modules = [
-          nixos-hardware.nixosModules.lenovo-thinkpad-t420
-          ./hosts/pcs/isengard
-          stylix.nixosModules.stylix
-          home-manager.nixosModules.home-manager
-          mkHomeManagerModule
-        ];
-      };
-
-      home-lab = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = {
-          inherit inputs vars;
-          outputs = self;
-        };
-        modules = [
-          ./hosts/vms/home-lab
-          stylix.nixosModules.stylix
-          home-manager.nixosModules.home-manager
-          mkHomeManagerModule
-        ];
-      };
-
-      # Writerdeck — console-only, distraction-free writing machine
-      # See: https://veronicaexplains.net/my-first-writerdeck/
-      rohan = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = {
-          inherit inputs vars;
-          outputs = self;
-        };
-        modules = [
-          ./hosts/pcs/rohan
-          stylix.nixosModules.stylix
-          home-manager.nixosModules.home-manager
-          mkHomeManagerModule
-        ];
-      };
-
-      # This is the correct configuration for 'mines' as an ARM NixOS VM
-      mines = nixpkgs.lib.nixosSystem {
-        system = "aarch64-linux"; # Correct system type
-        specialArgs = {
-          inherit inputs vars;
-          outputs = self;
-        };
-        modules = [
-          ./hosts/vms/mines # This points to its specific host config
-          stylix.nixosModules.stylix
-          home-manager.nixosModules.home-manager
-          mkHomeManagerModule
-        ];
-      };
-    };
-
-    darwinConfigurations = {
-      dungeon = darwin.lib.darwinSystem {
-        system = "aarch64-darwin";
-        specialArgs = {
-          inherit inputs vars;
-          outputs = self;
-        };
-        modules = [
-          ./hosts/macs/dungeon
-          home-manager.darwinModules.home-manager
-        ];
-      };
-
-      moria = darwin.lib.darwinSystem {
-        system = "aarch64-darwin";
-        specialArgs = {
-          inherit inputs vars;
-          outputs = self;
-        };
-        modules = [
-          ./hosts/macs/moria
-          home-manager.darwinModules.home-manager
-        ];
-      };
-
-      citadel = darwin.lib.darwinSystem {
-        system = "aarch64-darwin";
-        specialArgs = {
-          inherit inputs;
-          vars = vars // {user = vars.user // {name = "greghilston";};};
-          outputs = self;
-        };
-        modules = [
-          ./hosts/macs/citadel
-          home-manager.darwinModules.home-manager
-        ];
-      };
-    };
-  };
 }

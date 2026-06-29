@@ -124,24 +124,55 @@ See [.devcontainer/README.md](.devcontainer/README.md) for details.
 
 If needed, see [README.md](README.md) for detailed documentation on repository structure, VM setup, and development workflows.
 
-## Future: Automatic Nix Garbage Collection for Darwin Hosts
+## Automatic Nix Garbage Collection for Darwin Hosts
 
-Both darwin hosts use Determinate Nix (`nix.enable = false` in `modules/darwin/common.nix`),
-which means nix-darwin's built-in `nix.gc` module **cannot** be used (it asserts `nix.gc.automatic
-requires nix.enable`). If store bloat becomes a problem, create a custom launchd daemon in
-`modules/darwin/nix-gc.nix`:
+The darwin hosts run Determinate Nix (`nix.enable = false` in `modules/darwin/common.nix`),
+so nix-darwin's built-in `nix.gc` module can't be used (it asserts `nix.gc.automatic` requires
+`nix.enable`). **A hand-rolled `launchd.daemons.nix-gc` is no longer the right answer** —
+Determinate Nix ships **Determinate Nixd**, a daemon that performs garbage collection natively.
+
+To enable scheduled GC, adopt the Determinate nix-darwin module instead of writing custom
+launchd jobs:
+
+1. Add the flake input: `determinate.url = "github:DeterminateSystems/determinate"`.
+2. Import `inputs.determinate.darwinModules.default` in `modules/darwin/common.nix`.
+3. Configure the collector, e.g.:
 
 ```nix
-{ ... }: {
-  launchd.daemons.nix-gc = {
-    command = "/nix/var/nix/profiles/default/bin/nix-collect-garbage --delete-older-than 30d";
-    serviceConfig = {
-      RunAtLoad = false;
-      StartCalendarInterval = [{ Weekday = 7; Hour = 3; Minute = 0; }];
-    };
-  };
+{
+  determinate-nix.customSettings = { };
+  # GC strategy lives under the Determinate Nixd config:
+  #   /etc/determinate/config.json (written by the module)
+  # e.g. garbageCollector.strategy = "automatic";
 }
 ```
 
-Import it from each host's `default.nix`. Runs as root (launchd daemons default), so it
-cleans both user and system generations — without `sudo`, only user generations are collected.
+See <https://docs.determinate.systems/guides/nix-darwin/> for the current option names
+(`determinateNixd.garbageCollector.strategy`). This replaces — and is simpler than — the
+old custom-daemon approach, and is correctly disk-pressure aware.
+
+## Secret Management — Decision Record (1Password vs. agenix / sops-nix)
+
+**Current approach (keep):** Secrets live in 1Password (vault **Infra**). Committed `.tpl`
+files hold `{{ op://Infra/Item/field }}` references; `just secrets` runs `op inject` to
+write the real (gitignored) files. See the toolbox root `CLAUDE.md` → "Secret Management"
+for the exact commands and prerequisites.
+
+**Why it's worth a note:** `op inject` writes **plaintext** generated files to disk and
+needs an interactive 1Password GUI unlock. On headless **dungeon** that means connecting
+via VNC + Touch ID before every `just secrets` — a manual, non-reproducible step that
+doesn't fit the otherwise declarative activation flow.
+
+**Alternatives considered (not adopted this round):**
+
+- **agenix** — secrets are `age`-encrypted *into the repo* (safe to commit) and decrypted
+  at activation to a tmpfs (RAM, never written to disk) using each host's existing SSH host
+  key. Simplest fit for our small set of standalone tokens; no GUI, no manual step, works
+  headless. Tradeoff: re-keying when host keys change, and editing requires the `agenix` CLI.
+- **sops-nix** — same activation-time, key-based decryption but with `sops`/YAML/`age` and
+  better ergonomics for *bundled* multi-key secret files. More machinery than we need today.
+
+**Decision: defer.** 1Password stays the source of truth. The manual headless `just secrets`
+step is tolerable while dungeon is the only headless Darwin host. **Revisit (lean agenix)**
+if a second headless host appears, or if the VNC-unlock dance becomes a recurring pain —
+both decrypt at activation to tmpfs and eliminate the plaintext-on-disk + GUI-unlock steps.

@@ -38,7 +38,7 @@ in {
             name = "oMLX (local)";
             options = {
               baseURL = cfg.omlxBaseUrl;
-              apiKey = cfg.apiKey;
+              inherit (cfg) apiKey;
             };
             models = {
               "Qwen3.6-35B-A3B-8bit" = {
