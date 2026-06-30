@@ -26,7 +26,7 @@
     settings = {
       user = {
         name = vars.user.fullName;
-        email = vars.user.email;
+        inherit (vars.user) email;
       };
 
       # Use difftastic for all diffs

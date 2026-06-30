@@ -1,5 +1,5 @@
 # nixos/modules/programs/tui/atuin/default.nix
-{...}: {
+_: {
   programs.atuin = {
     enable = true;
     enableZshIntegration = true;

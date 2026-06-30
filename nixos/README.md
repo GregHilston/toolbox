@@ -43,17 +43,14 @@ See [.devcontainer/README.md](.devcontainer/README.md) for more details.
 
 ### Git Hooks
 
-Git hooks are available to automate validation:
+Git hooks are managed declaratively via [git-hooks.nix](https://github.com/cachix/git-hooks.nix)
+(see [flake-modules/dev.nix](flake-modules/dev.nix)) and installed automatically when you
+enter the dev shell (`nix develop` from `nixos/`):
 
-- **pre-commit**: Runs `nix fmt` on staged `.nix` files
-- **pre-push**: Validates all NixOS configs using the devcontainer
+- **pre-commit**: Runs `treefmt` (alejandra + statix + deadnix) on staged `.nix` files
+- **pre-push**: Runs `nix flake check`
 
-**Installation:**
-```bash
-./nixos/scripts/install-hooks.sh
-```
-
-After installation, the hooks run automatically. To skip (not recommended):
+To skip (not recommended):
 ```bash
 git commit --no-verify
 git push --no-verify
@@ -61,7 +58,10 @@ git push --no-verify
 
 ## Pre Configured Shell
 
-We have a pre configured shell available, with all the required tooling. Simply run `$ nix-shell` and you have everything set up. This is powered by our `shell.nix` file, and is useful on a freshly installed NixOS machine.
+A reproducible dev shell with all required tooling (treefmt, just, nh, ...) is defined as the
+flake's default dev shell in [flake-modules/dev.nix](flake-modules/dev.nix). From `nixos/`, run
+`$ nix develop` (or let direnv do it) to get everything set up — useful on a freshly installed
+machine. Entering the shell also installs the git hooks above.
 
 ## Claude Code Best Practices
 

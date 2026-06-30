@@ -1,4 +1,4 @@
-name: Nix Format Check
+name: Nix Format & Lint Check
 
 on:
   push:
@@ -13,7 +13,7 @@ on:
 
 jobs:
   fmt:
-    name: Check Nix formatting
+    name: Check Nix formatting & lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -26,7 +26,11 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
-      - name: Check formatting
+      - name: Cache Nix store
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      # Builds the treefmt check (alejandra + statix + deadnix). Fails if any
+      # file is unformatted or trips a lint. `nix fmt` locally fixes them.
+      - name: Check formatting & lint
         working-directory: nixos
-        run: |
-          nix fmt -- --check .
+        run: nix build .#checks.x86_64-linux.treefmt -L

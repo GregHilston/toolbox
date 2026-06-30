@@ -45,9 +45,9 @@ in {
     home.file.".pi/agent/settings.json" = {
       text = builtins.toJSON {
         defaultProvider = "omlx";
-        defaultModel = cfg.defaultModel;
+        inherit (cfg) defaultModel;
         lastChangelogVersion = "0.67.6";
-        packages = cfg.packages;
+        inherit (cfg) packages;
       };
     };
 

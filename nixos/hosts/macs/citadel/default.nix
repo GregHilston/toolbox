@@ -1,12 +1,12 @@
 {
   vars,
-  pkgs,
   lib,
   ...
 }: {
   imports = [
     ../../../modules/darwin/common.nix
     ../../../modules/darwin/home.nix
+    ../../../modules/darwin/homebrew-base.nix
     ../../../modules/darwin/omlx.nix
   ];
 
@@ -28,32 +28,15 @@
     "/Applications/Docker.app"
   ];
 
-  # --- Homebrew ---
+  # --- Homebrew (work-machine extras) ---
+  # Shared baseline (enable, onActivation, common brews/casks, oMLX agent) comes
+  # from modules/darwin/homebrew-base.nix. Only citadel-specific additions here.
   homebrew = {
-    enable = true;
-
-    onActivation = {
-      autoUpdate = true;
-      cleanup = "none"; # don't touch apps not declared here
-      upgrade = true;
-    };
-
     taps = [
-      "nikitabobko/tap" # AeroSpace
       "hashicorp/tap" # Terraform
-      {
-        name = "jundot/omlx";
-        clone_target = "https://github.com/jundot/omlx";
-      }
     ];
 
     brews = [
-      "stow"
-      "tmux"
-      "just"
-      "pandoc"
-      "gh"
-
       # Node via volta (manages node/npm/npx shims in ~/.volta/bin)
       "volta"
 
@@ -64,86 +47,32 @@
       # Python version management
       "pyenv"
       "xz"
-
-      # AI / LLM
-      "jundot/omlx/omlx"
-      "pi-coding-agent"
     ];
 
     casks = [
-      # Core
-      "ghostty"
-      "firefox"
       "firefox@nightly"
       "firefox@developer-edition"
-      "visual-studio-code"
-      "1password"
       "magic-wormhole"
 
       # Communication
-      "slack"
       "zoom"
       "google-drive"
       "thunderbird"
 
-      # Media
-      "spotify"
-      "vlc"
-
       # Dev
-      "bruno"
-      "db-browser-for-sqlite"
       "google-cloud-sdk"
-      "ngrok"
-      "docker-desktop"
-      "dbeaver-community"
 
-      # Drivers
-      "displaylink"
-
-      # Productivity
-      "obsidian"
-      "raycast"
-      "stats"
-      "jordanbaird-ice"
-      "aerospace"
-
-      # Productivity
+      # Networking
       "mozilla-vpn"
     ];
   };
 
-  # oMLX launchd agent — starts inference server at login
-  launchd.user.agents.omlx = {
-    command = "/opt/homebrew/bin/omlx serve";
-    serviceConfig = {
-      RunAtLoad = true;
-      KeepAlive = true;
-      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/omlx.log";
-      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/omlx.log";
-    };
+  # Deploy oMLX with citadel-specific settings (12GB hot cache for M5 Pro 48GB).
+  # The stow + jq-merge + restart logic lives in modules/darwin/omlx.nix.
+  services.omlxDeploy = {
+    enable = true;
+    cacheSize = "12GB";
   };
-
-  # Deploy oMLX with citadel-specific settings (12GB hot cache for M5 Pro 48GB)
-  system.activationScripts.postActivation.text = lib.mkBefore ''
-    export PATH="${pkgs.stow}/bin:${pkgs.jq}/bin:$PATH"
-    TOOLBOX="/Users/${vars.user.name}/Git/toolbox/dot"
-
-    cd "$TOOLBOX"
-    stow -R --no-folding omlx
-
-    # Merge base settings.json + citadel overlay → ~/.omlx/settings.json
-    OMLX_SETTINGS="/Users/${vars.user.name}/.omlx/settings.json"
-    jq -s '.[0] * .[1]' \
-      "$TOOLBOX/omlx/.omlx/settings.json" \
-      "$TOOLBOX/omlx-citadel/.omlx/settings.json" \
-      > "$OMLX_SETTINGS.tmp"
-    mv -f "$OMLX_SETTINGS.tmp" "$OMLX_SETTINGS"
-
-    launchctl kickstart -k "gui/$(id -u ${vars.user.name})/org.nixos.omlx" 2>/dev/null || true
-
-    echo "✓ oMLX configured for citadel (hot_cache_max_size=12GB)"
-  '';
 
   home-manager.users.${vars.user.name} = {
     # 6-bit is the best quality/memory balance for 48GB

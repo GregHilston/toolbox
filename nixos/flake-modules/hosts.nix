@@ -1,0 +1,110 @@
+# NixOS + nix-darwin host definitions.
+#
+# Each host used to repeat an identical specialArgs + module list; the mkNixos/
+# mkDarwin helpers below collapse that boilerplate so a host is one entry
+# (system + module path + any host-specific extra modules / vars overrides).
+{
+  inputs,
+  self,
+  ...
+}: let
+  inherit (inputs) nixpkgs nixos-wsl nixos-hardware home-manager stylix darwin;
+
+  vars = import ../config/vars.nix {inherit (nixpkgs) lib;};
+
+  # Minimal home-manager wiring shared by every host.
+  mkHomeManagerModule = _: {
+    home-manager = {
+      useUserPackages = true;
+      backupFileExtension = "backup";
+      users.${vars.user.name} = {};
+    };
+  };
+
+  mkNixos = {
+    system,
+    modulePath,
+    extraModules ? [],
+    hostVars ? vars,
+  }:
+    nixpkgs.lib.nixosSystem {
+      inherit system;
+      specialArgs = {
+        inherit inputs;
+        vars = hostVars;
+        outputs = self;
+      };
+      modules =
+        [
+          modulePath
+          stylix.nixosModules.stylix
+          home-manager.nixosModules.home-manager
+          mkHomeManagerModule
+        ]
+        ++ extraModules;
+    };
+
+  mkDarwin = {
+    modulePath,
+    system ? "aarch64-darwin",
+    extraModules ? [],
+    hostVars ? vars,
+  }:
+    darwin.lib.darwinSystem {
+      inherit system;
+      specialArgs = {
+        inherit inputs;
+        vars = hostVars;
+        outputs = self;
+      };
+      modules =
+        [
+          modulePath
+          home-manager.darwinModules.home-manager
+        ]
+        ++ extraModules;
+    };
+in {
+  flake.nixosConfigurations = {
+    foundation = mkNixos {
+      system = "x86_64-linux";
+      modulePath = ../hosts/vms/foundation;
+      extraModules = [nixos-wsl.nixosModules.default];
+    };
+
+    isengard = mkNixos {
+      system = "x86_64-linux";
+      modulePath = ../hosts/pcs/isengard;
+      extraModules = [nixos-hardware.nixosModules.lenovo-thinkpad-t420];
+    };
+
+    home-lab = mkNixos {
+      system = "x86_64-linux";
+      modulePath = ../hosts/vms/home-lab;
+    };
+
+    # Writerdeck — console-only, distraction-free writing machine.
+    # See: https://veronicaexplains.net/my-first-writerdeck/
+    rohan = mkNixos {
+      system = "x86_64-linux";
+      modulePath = ../hosts/pcs/rohan;
+    };
+
+    mines = mkNixos {
+      system = "aarch64-linux";
+      modulePath = ../hosts/vms/mines;
+    };
+  };
+
+  flake.darwinConfigurations = {
+    dungeon = mkDarwin {modulePath = ../hosts/macs/dungeon;};
+
+    moria = mkDarwin {modulePath = ../hosts/macs/moria;};
+
+    # Mozilla work machine: override the user name (drives git identity, home dir).
+    citadel = mkDarwin {
+      modulePath = ../hosts/macs/citadel;
+      hostVars = vars // {user = vars.user // {name = "greghilston";};};
+    };
+  };
+}

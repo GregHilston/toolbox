@@ -1,5 +1,5 @@
 # nixos/modules/programs/tui/eza/default.nix
-{...}: {
+_: {
   programs.eza = {
     enable = true;
     enableZshIntegration = true;

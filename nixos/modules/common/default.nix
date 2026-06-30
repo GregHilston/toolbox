@@ -6,9 +6,7 @@
   pkgs,
   vars,
   ...
-} @ args:
-# Optional: give a name to the whole argument set
-{
+}: {
   imports = [
     inputs.home-manager.nixosModules.home-manager
     ../../modules/stylix
