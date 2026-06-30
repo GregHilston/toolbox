@@ -25,7 +25,7 @@ jobs:
             experimental-features = nix-command flakes
 
       - name: Cache Nix store
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v14
 
       - name: Run flake check
         working-directory: nixos
@@ -71,7 +71,7 @@ jobs:
             experimental-features = nix-command flakes
 
       - name: Cache Nix store
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v14
 
       - name: Validate dungeon
         working-directory: nixos

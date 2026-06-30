@@ -27,7 +27,7 @@ jobs:
             experimental-features = nix-command flakes
 
       - name: Cache Nix store
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v14
 
       # Builds the treefmt check (alejandra + statix + deadnix). Fails if any
       # file is unformatted or trips a lint. `nix fmt` locally fixes them.
