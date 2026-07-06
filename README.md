@@ -20,6 +20,46 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 
 See the [nixos/](nixos/) directory for NixOS and nix-darwin host configurations. Each host is managed declaratively via Nix flakes.
 
+## Local Diff & PR Viewers
+
+Two browser-based diff viewers for reviewing changes locally, without pushing anything or opening a GitHub PR. Both are **Mac-only** — they need a Node.js runtime (`npx`), which the Macs have (citadel via volta; dungeon/moria via Homebrew) but the NixOS hosts do not (node lives only inside per-project dev shells there).
+
+### View your working-tree changes — `diff2html`
+
+Installed via nixpkgs (`diff2html-cli`). Opens the diff in your browser.
+
+```bash
+dhtml        # all changes vs HEAD (staged + unstaged), unified
+dhtmls       # staged changes only
+dhtmlside    # all changes vs HEAD, side-by-side
+```
+
+Or drive it directly: `git diff --no-ext-diff HEAD | diff2html -i stdin`
+(`--no-ext-diff` is required because git is configured to use difftastic as its external diff).
+
+### Review a branch as a PR — `difit` / `gpr`
+
+`difit` renders a GitHub-PR-like UI in the browser. It is not in nixpkgs, so it runs via `npx` pinned to an exact version.
+
+```bash
+# Working-tree changes (alternative to diff2html)
+difit working          # staged + unstaged
+difit staged           # staged only
+difit .                # all uncommitted
+
+# This branch vs a base, PR-style
+gpr                          # vs the repo's default branch (auto-detected, e.g. origin/main)
+gpr origin/develop           # vs an explicit base
+difit HEAD main --merge-base # equivalent, done by hand
+
+# Don't open a browser / pick a port
+gpr --no-open --port 5000
+```
+
+`gpr` auto-detects the base branch from `origin/HEAD` (falling back to `main`/`master`) and uses GitHub's 3-dot (`--merge-base`) semantics by default; set `GPR_MERGE_BASE=0` for a plain 2-dot diff.
+
+**Pinning / bumping difit:** the pinned version lives in one place — `DIFIT_VERSION` at the top of `bin/difit.sh` (currently `5.0.6`). Bump it by editing that default, or override per-run with `DIFIT_VERSION=5.1.0 difit …`. Pinning avoids `npx`'s stale-cache footgun and keeps runs reproducible.
+
 ## Setting Terminal Font
 
 ### Windows 11

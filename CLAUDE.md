@@ -231,6 +231,29 @@ fetch-thread.py "https://news.ycombinator.com/item?id=48072225" > thread.md
 
 Both markdown (default) and JSON output formats supported. Zero external dependencies.
 
+## Local Diff & PR Viewers — diff2html & difit
+
+Browser-based git diff viewers. `diff2html` (nixpkgs) shows working-tree changes;
+`difit` (pinned via `npx`) shows a GitHub-PR-like UI. Both are Mac-only (need `npx`).
+
+### Scripts
+
+- **`difit.sh`** — version-pinned `npx difit@<DIFIT_VERSION>` wrapper (default `5.0.6`, the single source of version truth). Aliased to `difit`. Guards against a missing node runtime.
+- **`git-pr.sh`** — opens the current branch as a PR diff vs an auto-detected base (`origin/HEAD` → `origin/main`, fallbacks `main`/`master`); delegates to `difit.sh`. Aliased to `gpr`. Uses `--merge-base` (3-dot) by default; `GPR_MERGE_BASE=0` disables.
+
+### Usage
+
+```bash
+difit working            # uncommitted (staged + unstaged)
+difit staged             # staged only
+gpr                      # this branch vs default branch (PR view)
+gpr origin/develop       # vs an explicit base
+gpr --no-open --port 5000
+```
+
+diff2html (nixpkgs) still handles quick working-tree views via the `dhtml` /
+`dhtmls` / `dhtmlside` aliases. Bump difit by editing `DIFIT_VERSION` in `bin/difit.sh`.
+
 ## NixOS / nix-darwin
 
 See `nixos/CLAUDE.md` for host management, deployment commands, and common mistakes.

@@ -200,6 +200,8 @@ alias docker-clear-images="docker-clear-images.sh"
 alias docker-clear-volumes="docker-clear-volumes.sh"
 alias docker-clear-networks="docker-clear-networks.sh"
 alias localclaude="localclaude.sh"
+alias difit="difit.sh"
+alias gpr="git-pr.sh"
 
 # Claude Code in Docker with persistent auth and session history
 # Uses a named Docker volume (claude-code-config) to persist ~/.claude across runs
@@ -258,6 +260,8 @@ alias gdiff="git diff"
 alias gshow="git show --ext-diff"
 alias glog="git log --ext-diff -p"
 alias dhtml="git diff --no-ext-diff HEAD | diff2html -i stdin"
+alias dhtmls="git diff --no-ext-diff --cached | diff2html -i stdin"        # staged only
+alias dhtmlside="git diff --no-ext-diff HEAD | diff2html -s side -i stdin" # side-by-side
 
 # Capture the output of a command so it can be retrieved with ret
 # https://stackoverflow.com/a/58598185/1983957
