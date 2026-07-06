@@ -71,6 +71,9 @@
       show-recents = false;
       mru-spaces = false;
       minimize-to-application = true;
+      # Disable the bottom-right hot corner (defaults to Quick Note, which opens
+      # the Notes app when the cursor hits that corner). 1 = Disabled, 14 = Quick Note.
+      wvous-br-corner = 1;
       # NOTE: Finder is intentionally omitted — macOS always pins it to the far
       # left automatically. Listing /System/Applications/Finder.app produces a
       # second, broken "?" tile.
