@@ -88,6 +88,13 @@ Claude stops re-deriving the structure every session.
 
 ## Dotfiles
 
+**Pattern:** dotfiles are portable, plain-syntax, and stow-deployed (the source of
+truth). When a config needs nix-only bits, the portable file sources a small
+nix-generated `*.local` overlay that no-ops when absent — e.g. `~/.zshrc` +
+`~/.zshrc.local`, `~/.tmux.conf` + `~/.tmux.local.conf`. Overlays must use stable
+paths (`/run/current-system/sw/...`), never `${pkgs.*}` store paths (GC-safety).
+See `dot/README.md` → "Philosophy: portable base, optional nix overlay".
+
 See `dot/` — managed with GNU Stow. Run from the `dot/` directory:
 
 ```bash

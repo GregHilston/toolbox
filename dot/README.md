@@ -10,6 +10,35 @@ Each subdirectory is a **stow package**. The directory structure inside each pac
 dot/aerospace/.aerospace.toml  -->  ~/.aerospace.toml
 ```
 
+## Philosophy: portable base, optional nix overlay
+
+Dotfiles here are written in **plain, portable config syntax** — no nix, no
+templating — so they work on any machine, whether or not it runs nix. They are
+deployed with `stow`, and on nix-managed hosts the same `stow` runs
+automatically during home-manager activation (see `home.activation.stowDotfiles`
+in `nixos/modules/programs/tui/zsh/default.nix`). The committed stow file is
+always the source of truth.
+
+When a config genuinely needs **nix-only or host-specific values** (e.g. a nix
+store path), don't reach back into nix to generate the whole file. Keep the
+portable file authoritative and have it *source a small `*.local` sibling* that
+nix generates via `home.file`. The include is written to be a **no-op when the
+file is absent**, so non-nix machines are unaffected.
+
+Canonical examples in this repo:
+
+| Portable base (stow) | Nix overlay (`home.file`) | Sourced by                            |
+| -------------------- | ------------------------- | ------------------------------------- |
+| `~/.zshrc`           | `~/.zshrc.local`          | `source` at end of `.zshrc`           |
+| `~/.tmux.conf`       | `~/.tmux.local.conf`      | `source-file -q ~/.tmux.local.conf`   |
+
+**GC-safety rule for overlays:** reference *stable* paths, never `${pkgs.foo}`
+store paths. A store path can be deleted by `nix-collect-garbage`, yet a
+long-running process (a tmux server, say) may still hold the old value and then
+break. Use the auto-updating profile symlinks instead. The tmux overlay is the
+worked example: it pins `default-shell` to `/run/current-system/sw/bin/zsh` (a
+GC-root symlink) rather than `${pkgs.zsh}/bin/zsh`.
+
 ## Usage
 
 From the `dot/` directory:
