@@ -105,6 +105,25 @@ Some apps are fetched directly from GitHub releases rather than nixpkgs (e.g. Op
 5. Nix will fail with: `hash mismatch... got: sha256-REALHASH`.
 6. Replace `lib.fakeSha256` with that printed hash and rebuild — it should succeed.
 
+## `just dr` fails on Homebrew cleanup (`dir_s_rmdir ... .incomplete`)
+
+If a Darwin rebuild dies at the `Homebrew bundle...` stage with something like:
+
+```
+==> Running `brew cleanup gh`...
+Error: No such file or directory @ dir_s_rmdir - .../downloads/<hash>--foo.bottle.tar.gz.incomplete
+Upgrading gh has failed!
+`brew bundle` failed! 1 Brewfile dependency failed to install
+```
+
+the package upgrade itself **succeeded** — it's Homebrew's automatic post-upgrade cache
+cleanup choking on a stale interrupted-download stub (`.incomplete`). `brew bundle`
+propagates the non-zero exit, so `darwin-rebuild` (and `just dr`) fail even though nothing
+is actually broken. **Fix:** `brew cleanup --prune=all` to purge the stale cache, then
+re-run `just dr <host>`. (Durable option if it recurs: set `HOMEBREW_NO_INSTALL_CLEANUP=1`
+so installs stop auto-cleaning — note this is unrelated to `homebrew.onActivation.cleanup`
+in `modules/darwin/homebrew-base.nix`, which only controls Brewfile-drift uninstalls.)
+
 ## Dev Container Validation
 
 A Docker dev container is available for validating configs without a NixOS host:
