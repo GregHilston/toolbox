@@ -17,6 +17,18 @@
     # hand-edited version, so keep this list authoritative.
     ignores = [
       ".claude/" # ignore Claude Code's per-repo dir (handoffs, settings, etc.) everywhere
+
+      # Personal local-only artifacts — never tracked in any repo. Two forms:
+      # Suffix form, for files that must sit next to tracked code (relative imports):
+      "*.local.ts"
+      "*.local.js"
+      "*.local.mjs"
+      "*.local.py"
+      "*.local.ipynb"
+      "*.local.sql"
+      # Folder form, a natural home for standalone scripts / Marimo notebooks:
+      "local/"
+      "scratch/"
     ];
 
     signing = {
