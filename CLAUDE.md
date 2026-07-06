@@ -244,12 +244,16 @@ Browser-based git diff viewers. `diff2html` (nixpkgs) shows working-tree changes
 ### Usage
 
 ```bash
-difit working            # uncommitted (staged + unstaged)
+difit                    # all uncommitted changes (staged + unstaged) — the default
 difit staged             # staged only
+difit working            # unstaged only
 gpr                      # this branch vs default branch (PR view)
 gpr origin/develop       # vs an explicit base
 gpr --no-open --port 5000
 ```
+
+Note: our `difit.sh` wrapper defaults a missing target to `.` (all uncommitted);
+upstream difit would otherwise show the last commit.
 
 diff2html (nixpkgs) still handles quick working-tree views via the `dhtml` /
 `dhtmls` / `dhtmlside` aliases. Bump difit by editing `DIFIT_VERSION` in `bin/difit.sh`.

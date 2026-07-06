@@ -15,11 +15,15 @@ difit — browser-based git diff / PR viewer (pinned to difit@${DIFIT_VERSION} v
 Usage:
   difit [target] [base] [flags]
 
+With no target this wrapper shows ALL uncommitted changes (staged + unstaged),
+like 'dhtml'. (Upstream difit defaults to the last commit; we default to '.').
+
 Target-only keywords:
-  difit working        # unstaged + staged uncommitted changes
+  difit                # all uncommitted changes (the default)
+  difit .              # same — all uncommitted changes
   difit staged         # staged changes only
-  difit .              # all uncommitted changes
-  difit @              # HEAD (last commit)
+  difit working        # unstaged changes only
+  difit @              # HEAD (the last commit)
 
 Branch / PR comparison (target first, base second; diff is base -> target,
 so the target's work shows as additions):
@@ -46,6 +50,13 @@ Available only on Mac hosts (citadel via volta; dungeon/moria via Homebrew node)
 NixOS hosts have node only inside per-project dev shells.
 EOF
   exit 127
+fi
+
+# Default to '.' (all uncommitted changes) when no positional target is given —
+# matches the 'dhtml' mental model. Upstream difit would otherwise show the last
+# commit. A target is present unless there are no args, or the first is a flag.
+if [[ $# -eq 0 || "$1" == -* ]]; then
+  set -- . "$@"
 fi
 
 exec npx -y "difit@${DIFIT_VERSION}" "$@"

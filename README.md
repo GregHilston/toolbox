@@ -43,9 +43,9 @@ Or drive it directly: `git diff --no-ext-diff HEAD | diff2html -i stdin`
 
 ```bash
 # Working-tree changes (alternative to diff2html)
-difit working          # staged + unstaged
+difit                  # all uncommitted changes (staged + unstaged) — the default
 difit staged           # staged only
-difit .                # all uncommitted
+difit working          # unstaged only
 
 # This branch vs a base, PR-style
 gpr                          # vs the repo's default branch (auto-detected, e.g. origin/main)
