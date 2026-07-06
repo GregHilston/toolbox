@@ -47,12 +47,14 @@
       # Python version management
       "pyenv"
       "xz"
+
+      # File transfer CLI (formula, not a cask)
+      "magic-wormhole"
     ];
 
     casks = [
       "firefox@nightly"
       "firefox@developer-edition"
-      "magic-wormhole"
 
       # Communication
       "zoom"
