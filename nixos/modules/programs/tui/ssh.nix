@@ -29,6 +29,14 @@
         user = vars.user.name;
         identityFile = "~/.ssh/id_rsa";
       };
+      "moria" = {
+        hostname = vars.networking.hosts.moria.lan;
+        # Hardcoded (not vars.user.name): moria's account is always "ghilston",
+        # whereas on the work host citadel vars.user.name is "greghilston" —
+        # which would be the wrong remote user for moria.
+        user = "ghilston";
+        identityFile = "~/.ssh/id_rsa";
+      };
       "mines" = {
         hostname = vars.networking.hosts.mines.lan;
         user = vars.user.name;

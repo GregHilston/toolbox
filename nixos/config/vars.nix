@@ -55,6 +55,13 @@
         lan = "192.168.1.174";
         tailscale = "100.103.22.125";
       };
+      moria = {
+        # LAN Mac (M4 Max, oMLX server) reached via mDNS/Bonjour — no pinned
+        # static IP, so the .local name lives in the `lan` slot. Swap in an IP
+        # or add a `tailscale` entry later if desired; ssh.nix references
+        # vars.networking.hosts.moria.lan.
+        lan = "moria.local";
+      };
       mines = {
         lan = "192.168.180.132";
       };
