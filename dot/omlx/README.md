@@ -38,6 +38,21 @@ There are no longer per-host `omlx-<host>` stow packages — the overlay is a sm
 nix-generated JSON (`hot_cache_max_size`, the user's `ssd_cache_dir`, and the
 `model_dir`, which also corrects the base template's hardcoded username).
 
+## Topology — two independent servers
+
+moria and dungeon each run their **own** oMLX server with their **own** models;
+neither is a client of the other.
+
+- **moria** serves only itself — tools on moria hit `localhost:8000`.
+- **dungeon** is the **shared server for low-power remote clients**: the Windows
+  NixOS-WSL2 (foundation) and the Pixel 8 (Termux) reach it on LAN/Tailscale
+  `:8000` (e.g. via `~/Git/notes/sync.sh`, which uses `localhost` on moria and
+  falls back to dungeon elsewhere); rohan points at it via its inline `models.json`.
+
+The shared base `settings.json` lists both hosts' names in `server.server_aliases`
+so either server accepts requests addressed to any known alias — it does not imply
+the two share models or route to each other.
+
 ## Per-host cache sizing (`hot_cache_max_size`)
 
 Prefix caching keeps KV tensors for recently-seen sequences (e.g. shared system
@@ -46,9 +61,9 @@ tuned to leave room for model weights + inference on each machine's unified memo
 
 | Host    | Hardware | RAM   | `cacheSize` | Notes |
 |---------|----------|-------|-------------|-------|
-| moria   | M4 Max   | 128GB | `32GB`      | Runs the oMLX server + the big models |
+| moria   | M4 Max   | 128GB | `32GB`      | Self-hosted for moria only; runs the big models |
 | citadel | M5 Pro   | 48GB  | `12GB`      | Work laptop (~25% of RAM) |
-| dungeon | M3 Pro   | 36GB  | `8GB`       | Mostly a client of moria; conservative |
+| dungeon | M3 Pro   | 36GB  | `8GB`       | Shared server for remote clients; conservative for 36GB |
 
 To change a host's size, edit `cacheSize` in `hosts/macs/<host>/default.nix` and
 `just dr <host>`.

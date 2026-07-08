@@ -76,9 +76,13 @@ Local LLM inference is configured via **oMLX** (MLX GUI wrapper with prefix cach
 **Configuration files:**
 - **Settings**: `~/Git/toolbox/dot/omlx/.omlx/settings.json` — server config, model dirs, sampling params, caching
 - **Models**: `~/Git/toolbox/dot/omlx/.omlx/models/` — downloaded models (gitignored, stored locally)
-**Current setup:**
-- **moria** (M4 Max 128GB): Runs oMLX server, hosts models (Qwen3.6 27B 8bit, Gemma 4 26B, GPT-OSS 120B)
-- **dungeon** (M3 Pro 36GB): Can point tools to moria's oMLX server via network aliases in settings.json
+**Topology — the two oMLX servers are independent; neither is a client of the other:**
+- **moria** (M4 Max 128GB): runs oMLX **only for moria itself** (consumed at `localhost:8000`).
+  Hosts the big models (Qwen3.6 27B 8bit, Gemma 4 26B, GPT-OSS 120B) for local use.
+- **dungeon** (M3 Pro 36GB): runs oMLX as the **shared inference server for low-power remote
+  clients**. The Windows NixOS-WSL2 (foundation) and the Pixel 8 (Termux) reach it on
+  LAN/Tailscale `:8000` — e.g. via `~/Git/notes/sync.sh`, which uses `localhost` on moria but
+  falls back to dungeon everywhere else. rohan also points at dungeon (inline `models.json`).
 
 **Why oMLX?**
 - Prefix caching: Repeated prompts (like roger's system prompt) reuse cached representations (~1.55x faster TTFT on cache hits)
