@@ -7,6 +7,7 @@
 }: let
   # Default to GUI enabled if not specified
   enableGui = vars.enableGui or true;
+  basePackages = import ../../config/base-packages.nix pkgs;
 in {
   imports =
     [
@@ -43,25 +44,10 @@ in {
   home = {
     username = "${vars.user.name}";
     homeDirectory = "/home/${vars.user.name}";
-    packages = with pkgs;
-      [
-        # TUI/CLI tools (always installed)
-        ncdu
-        ollama
-        ripgrep
-        hugo
-        go
-        duckdb
-        opencode
-        yt-dlp
-        uv
-        git
-        (python3.withPackages (ps:
-          with ps; [
-            youtube-transcript-api
-          ]))
-      ]
-      ++ lib.optionals enableGui [
+    packages =
+      # TUI/CLI tools (always installed) — shared with Darwin.
+      basePackages.homePackages
+      ++ lib.optionals enableGui (with pkgs; [
         # GUI applications (only on non-WSL systems)
         chromium
         dmenu
@@ -75,18 +61,14 @@ in {
         nerd-fonts.jetbrains-mono
         jetbrains-mono
         inputs.claude-desktop.packages.${pkgs.stdenv.hostPlatform.system}.claude-desktop
-      ]
-      ++ (
-        if (pkgs.stdenv.hostPlatform.system != "aarch64-linux") && enableGui
-        then [
-          # x86_64 GUI apps (not on ARM, not on WSL)
-          bitwarden-desktop
-          discord
-          slack
-          spotify
-        ]
-        else []
-      );
+      ])
+      ++ lib.optionals ((pkgs.stdenv.hostPlatform.system != "aarch64-linux") && enableGui) (with pkgs; [
+        # x86_64 GUI apps (not on ARM, not on WSL)
+        bitwarden-desktop
+        discord
+        slack
+        spotify
+      ]);
   };
 
   # Install searxngr via uv and stow dotfiles after home-manager activation

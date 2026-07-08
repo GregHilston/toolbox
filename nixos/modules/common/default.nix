@@ -6,7 +6,9 @@
   pkgs,
   vars,
   ...
-}: {
+}: let
+  basePackages = import ../../config/base-packages.nix pkgs;
+in {
   imports = [
     inputs.home-manager.nixosModules.home-manager
     ../../modules/stylix
@@ -112,45 +114,21 @@
   };
 
   environment = {
-    systemPackages = with pkgs; [
-      bat
-      zsh
-      tmux
-      file
-      git
-      htop
-      jq
-      rsync
-      tldr
-      neovim
-      vimPlugins.vim-plug
-      unzip
-      wget
-      curl
-      zip
-      fastfetch
-      tree
-      ncdu
-      just
-      stow
-      gcc
-      lazygit
-      ripgrep
-      fd
-      python3
-      pandoc
-      gnumake
-      docker-compose
-      # Note: xclip moved to home.packages with enableGui conditional
-      # This allows GUI systems to have clipboard while WSL doesn't
-
-      # Modern CLI tools
-      direnv # Directory-based environment switcher (system-wide for GUI app access)
-      btop # Modern replacement for htop with graphs and better UI
-      bruno-cli # CLI for Bruno API client
-      gh # GitHub CLI for PRs, issues, and repo management
-      yq-go # YAML processor (jq for YAML files)
-    ];
+    # Shared baseline (config/base-packages.nix) plus NixOS-only extras.
+    # Darwin gets just/stow/gh via Homebrew, so they live here, not in the base.
+    # Note: xclip lives in home.packages behind the enableGui conditional so
+    # GUI systems get a clipboard while WSL doesn't.
+    systemPackages =
+      basePackages.systemPackages
+      ++ (with pkgs; [
+        tmux
+        fastfetch
+        just
+        stow
+        python3
+        pandoc
+        gh
+      ]);
 
     sessionVariables = {
       EDITOR = "nvim";
