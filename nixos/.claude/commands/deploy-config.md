@@ -13,7 +13,7 @@ $1
 ## Task
 Deploy NixOS configuration to **$1**:
 
-1. Confirm $1 is valid hostname (foundation, isengard, mines, vm-x86, vm-arm)
+1. Confirm $1 is valid hostname (foundation, isengard, mines, home-lab, rohan, dungeon, moria, citadel)
 2. Check git status above - warn if uncommitted changes exist
 3. Run: `cd /home/ghilston/Git/toolbox/nixos && just fr $1`
 4. Monitor deployment and report status
