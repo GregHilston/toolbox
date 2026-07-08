@@ -8,6 +8,26 @@
   cfg = config.services.omlxDeploy;
   user = vars.user.name;
   host = config.networking.hostName;
+
+  modelDir = "/Users/${user}/Git/toolbox/dot/omlx/.omlx/models";
+
+  # Per-host oMLX settings overlay, generated from this host's cacheSize and
+  # user. Deep-merged (jq) onto the shared base settings.json during activation.
+  # This replaces the old per-host dot/omlx-<host> stow packages; the model
+  # block also fixes the base tpl's hardcoded username (e.g. citadel).
+  settingsOverlay = pkgs.writeText "omlx-settings-overlay-${host}.json" (builtins.toJSON {
+    cache = {
+      enabled = true;
+      ssd_cache_dir = "/Users/${user}/.omlx/kv-cache";
+      ssd_cache_max_size = "auto";
+      hot_cache_max_size = cfg.cacheSize;
+      initial_cache_blocks = 256;
+    };
+    model = {
+      model_dirs = [modelDir];
+      model_dir = modelDir;
+    };
+  });
 in {
   options.services.omlxDeploy = {
     enable = lib.mkEnableOption ''
@@ -20,8 +40,9 @@ in {
       type = lib.types.str;
       example = "8GB";
       description = ''
-        Human-readable hot-cache size used only for the activation log line.
-        The real value lives in the host's omlx-<host>/.omlx/settings.json overlay.
+        Hot-cache size (hot_cache_max_size) for this host. This is authoritative:
+        it is baked into the nix-generated settings overlay that is jq-merged onto
+        the base settings.json during activation.
       '';
     };
   };
@@ -37,7 +58,7 @@ in {
     system.activationScripts.postActivation.text = lib.mkMerge [
       # ── Deploy: stow + jq settings merge + agent restart (shared across hosts)
       (lib.mkIf cfg.enable (lib.mkBefore ''
-        # Deploy oMLX dotfiles: base config + ${host}-specific overrides.
+        # Deploy oMLX dotfiles: shared base config + this host's overlay.
         # settings.json is excluded from stow (via .stow-local-ignore) because it
         # contains host-specific cache sizes AND auth keys; we merge with jq instead.
         # See ~/Git/toolbox/dot/omlx/README.md for the stow strategy explanation.
@@ -50,14 +71,14 @@ in {
         cd "$TOOLBOX"
         stow -R --no-folding omlx
 
-        # Merge base settings.json + ${host} cache overlay → ~/.omlx/settings.json.
-        # Write to a temp file first, then mv into place: avoids truncating the
-        # source if ~/.omlx/settings.json is a stale symlink pointing back to it,
-        # and is atomic (the old file survives if jq fails).
+        # Merge base settings.json + this host's nix-generated overlay →
+        # ~/.omlx/settings.json. Write to a temp file first, then mv into place:
+        # avoids truncating the source if ~/.omlx/settings.json is a stale symlink
+        # pointing back to it, and is atomic (the old file survives if jq fails).
         OMLX_SETTINGS="/Users/${user}/.omlx/settings.json"
         jq -s '.[0] * .[1]' \
           "$TOOLBOX/omlx/.omlx/settings.json" \
-          "$TOOLBOX/omlx-${host}/.omlx/settings.json" \
+          ${settingsOverlay} \
           > "$OMLX_SETTINGS.tmp"
         mv -f "$OMLX_SETTINGS.tmp" "$OMLX_SETTINGS"
 

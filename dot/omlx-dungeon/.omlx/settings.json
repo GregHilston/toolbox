@@ -1,9 +1,0 @@
-{
-  "cache": {
-    "enabled": true,
-    "ssd_cache_dir": "/Users/ghilston/.omlx/kv-cache",
-    "ssd_cache_max_size": "auto",
-    "hot_cache_max_size": "8GB",
-    "initial_cache_blocks": 256
-  }
-}
