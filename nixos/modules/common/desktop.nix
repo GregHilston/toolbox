@@ -10,7 +10,7 @@
 }: {
   options.custom.desktop.enable = lib.mkOption {
     type = lib.types.bool;
-    default = vars.enableGui or true;
+    default = vars.enableGui or false;
     description = "Enable the KDE Plasma desktop stack (SDDM, Plasma 6, PipeWire, 1Password GUI).";
   };
 

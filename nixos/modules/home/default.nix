@@ -5,8 +5,8 @@
   lib,
   ...
 }: let
-  # Default to GUI enabled if not specified
-  enableGui = vars.enableGui or true;
+  # Desktop is opt-in: hosts enable it via vars.enableGui (set in hosts.nix).
+  enableGui = vars.enableGui or false;
   basePackages = import ../../config/base-packages.nix pkgs;
 in {
   imports =
@@ -74,6 +74,9 @@ in {
   stylix.targets = {
     firefox.enable = false;
     qt.enable = false;
+    # Disable the KDE stylix target on headless hosts: without a Plasma desktop
+    # it errors on the undefined kdeglobals source.
+    kde.enable = enableGui;
   };
 
   # Enable/Disable the nh module

@@ -83,21 +83,26 @@
     };
 in {
   flake.nixosConfigurations = {
+    # Desktop is opt-in (enableGui). foundation (WSL) and home-lab (headless
+    # Proxmox server) stay console-only; isengard and mines are GUI machines.
     foundation = mkNixos {
       system = "x86_64-linux";
       modulePath = ../hosts/vms/foundation;
       extraModules = [nixos-wsl.nixosModules.default];
+      hostVars = vars // {enableGui = false;};
     };
 
     isengard = mkNixos {
       system = "x86_64-linux";
       modulePath = ../hosts/pcs/isengard;
       extraModules = [nixos-hardware.nixosModules.lenovo-thinkpad-t420];
+      hostVars = vars // {enableGui = true;};
     };
 
     home-lab = mkNixos {
       system = "x86_64-linux";
       modulePath = ../hosts/vms/home-lab;
+      hostVars = vars // {enableGui = false;};
     };
 
     # Writerdeck — console-only, distraction-free writing machine.
@@ -110,6 +115,7 @@ in {
     mines = mkNixos {
       system = "aarch64-linux";
       modulePath = ../hosts/vms/mines;
+      hostVars = vars // {enableGui = true;};
     };
   };
 
