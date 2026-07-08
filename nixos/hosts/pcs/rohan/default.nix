@@ -78,15 +78,15 @@
   # kmscon — replaces the default Linux VT with a userspace console that
   # supports TrueType fonts (Nerd Font glyphs for Powerlevel10k) and 256 colors.
   # See: https://veronicaexplains.net/my-first-writerdeck/
+  #
+  # The kmscon module dropped services.kmscon.{fonts,extraConfig}. Stylix already
+  # themes the console font (its JetBrainsMono Nerd Font monospace + fontconfig),
+  # so we only bump the console font size for the X201's small display and pass
+  # the term options via the new freeform services.kmscon.config / extraOptions.
   services.kmscon = {
     enable = true;
-    fonts = [
-      {
-        name = "JetBrainsMono Nerd Font";
-        package = pkgs.nerd-fonts.jetbrains-mono;
-      }
-    ];
-    extraConfig = "font-size=14";
+    # mkForce overrides the size stylix derives from its terminal font size.
+    config.font-size = lib.mkForce 14;
     extraOptions = "--term xterm-256color --no-mouse";
   };
 

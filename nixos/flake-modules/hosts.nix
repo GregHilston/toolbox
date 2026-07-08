@@ -21,6 +21,11 @@
         inputs.nix-vscode-extensions.overlays.default
       ];
       config.allowUnfree = true;
+      # bitwarden-desktop (isengard/mines) currently pins Electron 39, which
+      # nixpkgs now marks EOL/insecure. Allow just that version until nixpkgs
+      # moves Bitwarden to a supported Electron (then drop this line). Only the
+      # x86 GUI hosts pull it; it's a no-op everywhere else.
+      config.permittedInsecurePackages = ["electron-39.8.10"];
     };
   };
 
