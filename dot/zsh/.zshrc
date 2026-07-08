@@ -176,7 +176,6 @@ alias lg="lazygit"
 alias cat="bat"
 alias htop="btop"
 alias python='/usr/bin/python3'
-alias night="redshift.sh"
 alias audio="pavucontrol"
 
 # Clipboard (pbcopy on macOS, xclip on Linux)
@@ -192,7 +191,6 @@ fi
 alias git-all-history="git-all-history.sh"
 alias git-commit-undo="git-commit-undo.sh"
 alias youtube-to-audio="youtube-to-audio.sh"
-alias yt-transcript="yt-transcript.sh"
 alias search-string="search-string.sh"
 alias search-file="search-file.sh"
 alias docker-clear-containers="docker-clear-containers.sh"
