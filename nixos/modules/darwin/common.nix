@@ -1,5 +1,4 @@
 {
-  inputs,
   vars,
   pkgs,
   ...
@@ -9,15 +8,8 @@ in {
   # Let Determinate manage the Nix daemon; disable nix-darwin's nix management
   nix.enable = false;
 
-  nixpkgs = {
-    overlays = [
-      inputs.nur.overlays.default
-      inputs.nix-vscode-extensions.overlays.default
-    ];
-    config = {
-      allowUnfree = true;
-    };
-  };
+  # nixpkgs overlays + allowUnfree come from the shared nixpkgsModule in
+  # flake-modules/hosts.nix.
 
   # Primary user (required for system.defaults, homebrew, etc.)
   system.primaryUser = vars.user.name;

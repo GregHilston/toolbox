@@ -37,7 +37,8 @@
 
   nix.settings.experimental-features = ["nix-command" "flakes"];
 
-  nixpkgs.config.allowUnfree = true;
+  # nixpkgs overlays + allowUnfree come from the shared nixpkgsModule in
+  # flake-modules/hosts.nix (applied to every host via mkNixos).
 
   # USB wifi dongle (Realtek RTL8188EUS) needs firmware blobs
   hardware.enableRedistributableFirmware = true;

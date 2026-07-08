@@ -28,15 +28,8 @@ in {
 
   nix.settings.experimental-features = ["nix-command" "flakes"];
 
-  nixpkgs = {
-    overlays = [
-      inputs.nur.overlays.default
-      inputs.nix-vscode-extensions.overlays.default
-    ];
-    config = {
-      allowUnfree = true;
-    };
-  };
+  # nixpkgs overlays + allowUnfree come from the shared nixpkgsModule in
+  # flake-modules/hosts.nix.
 
   networking.networkmanager.enable = true;
 

@@ -12,6 +12,18 @@
 
   vars = import ../config/vars.nix {inherit (nixpkgs) lib;};
 
+  # nixpkgs config shared by every NixOS and Darwin host: our overlays and
+  # allowUnfree. Previously duplicated across common/darwin system + home modules.
+  nixpkgsModule = {
+    nixpkgs = {
+      overlays = [
+        inputs.nur.overlays.default
+        inputs.nix-vscode-extensions.overlays.default
+      ];
+      config.allowUnfree = true;
+    };
+  };
+
   # Minimal home-manager wiring shared by every host.
   mkHomeManagerModule = _: {
     home-manager = {
@@ -37,6 +49,7 @@
       modules =
         [
           modulePath
+          nixpkgsModule
           stylix.nixosModules.stylix
           home-manager.nixosModules.home-manager
           mkHomeManagerModule
@@ -60,6 +73,7 @@
       modules =
         [
           modulePath
+          nixpkgsModule
           home-manager.darwinModules.home-manager
         ]
         ++ extraModules;
