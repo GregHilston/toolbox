@@ -11,9 +11,12 @@ Shared storage path: `/data/data/com.termux/files/home/storage/shared/Git/`
 ```
 claude-commands/        # Global slash commands  (~/.claude/commands/)
 claude-skills/          # Global agent skills    (~/.claude/skills/)
+claude-code/            # Dockerfile + docs for Claude Code in a container
 dot/                    # Dotfiles managed with GNU Stow
 nixos/                  # NixOS and nix-darwin host configurations
 bin/                    # Helper scripts (all subdirs on $PATH; e.g. fetch-thread.py, bin/anki/ Anki tools)
+docs/                   # Supplementary docs (cheat sheet, README images)
+windows/                # Windows provisioning (autounattend.xml, scoop/winget lists)
 ```
 
 ## Claude Commands and Skills

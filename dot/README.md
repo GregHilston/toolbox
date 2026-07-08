@@ -61,9 +61,17 @@ just build-i3-gaps     # Build i3-gaps config for current host, then stow
 
 ```
 ├── aerospace/          # AeroSpace tiling window manager (macOS)
+├── claude/             # Claude Code global config (CLAUDE.md, settings, hooks)
 ├── i3-gaps-pkg/        # i3-gaps config (built from per-host fragments, then stowed)
 ├── i3-pkg/             # i3 config
+├── omlx/               # oMLX LLM server: shared base config + model settings
+├── omlx-citadel/       # oMLX per-host overlay (citadel)
+├── omlx-dungeon/       # oMLX per-host overlay (dungeon)
+├── omlx-moria/         # oMLX per-host overlay (moria)
+├── pi/                 # pi coding agent: extensions + model registry
 ├── redshift/           # Redshift color temperature (Linux)
+├── searxngr-config/    # searxngr CLI config for the self-hosted SearXNG
+├── ser2net/            # serial-to-network daemon config
 ├── skhd/               # skhd hotkey daemon (macOS)
 ├── tmux/               # tmux terminal multiplexer
 ├── yabai/              # yabai tiling window manager (macOS)
