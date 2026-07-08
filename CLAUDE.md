@@ -159,16 +159,9 @@ new model profiles (e.g., extended-context variants). Requires changes to:
 
 ## Claude Code in Docker
 
-Run Claude Code in an isolated Docker container with persistent authentication and session history.
+Run Claude Code in an isolated Docker container that shares your host auth and session history.
 
-**Setup** (one-time):
-```bash
-docker volume create claude-code-config
-cd ~/Git/toolbox/claude-code
-docker build -t my-claude-code:latest .
-```
-
-**Usage**:
+**Usage** (the `claude-docker` function in `dot/zsh/.zshrc` builds the image on first run):
 ```bash
 # Start or resume session
 claude-docker
@@ -177,11 +170,11 @@ claude-docker
 claude-docker --resume SESSION_ID
 ```
 
-**Reference**:
-- [Claude Code devcontainer documentation](https://code.claude.com/docs/en/devcontainer)
-- [Official reference devcontainer](https://github.com/anthropics/claude-code/tree/main/.devcontainer)
-
-The Docker setup uses a named volume (`claude-code-config`) to persist `~/.claude` across container runs, so your authentication and session history persist between runs. See `claude-code/Dockerfile` for implementation details.
+The container **bind-mounts** your real `~/.claude` and mounts `~/Git` at its
+actual host path, so credentials, sessions, and project identities are shared
+directly between host and container (no named volume). See
+`claude-code/CLAUDE.md` for the full flag-by-flag explanation and the
+[devcontainer reference](https://github.com/anthropics/claude-code/tree/main/.devcontainer).
 
 ## Secret Management
 
