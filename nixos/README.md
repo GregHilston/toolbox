@@ -12,7 +12,6 @@ A Docker-based dev container is available for testing NixOS configurations witho
 - `nix flake check` - Validate flake syntax and evaluate all outputs
 - `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run` - Build full system closure
 - `nix eval` - Evaluate specific configuration values
-- `nix develop ./dev#<lang>` - Enter language-specific dev shells (golang, typescript, ruby)
 - Catch module import errors, type mismatches, missing dependencies
 
 ### What It Cannot Do
