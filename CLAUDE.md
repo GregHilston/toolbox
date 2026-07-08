@@ -28,6 +28,10 @@ claude-commands/my-command.md
 
 It becomes available as `/my-command` in any Claude Code session.
 
+> **Note:** the whole `claude-commands/` directory is symlinked into
+> `~/.claude/commands/`, so **every** `.md` file there becomes a slash command
+> (a `README.md` would register as `/README`). Keep docs elsewhere.
+
 ### Adding a new skill
 
 Create a subdirectory with a `SKILL.md` file in `claude-skills/`:
