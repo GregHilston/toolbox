@@ -20,14 +20,13 @@
 }: {
   imports = [
     ./hardware-configuration.nix
-    inputs.home-manager.nixosModules.home-manager
+    ../../../modules/common/core.nix
     ../../../modules/stylix
   ];
 
-  networking = {
-    hostName = "rohan";
-    networkmanager.enable = true;
-  };
+  # nix settings, networkmanager, timeZone, locale, and the base user come
+  # from ../../../modules/common/core.nix (shared with modules/common).
+  networking.hostName = "rohan";
 
   # Boot — GRUB for legacy BIOS (X201 era hardware)
   boot.loader.grub = {
@@ -35,30 +34,11 @@
     device = "/dev/sda";
   };
 
-  nix.settings.experimental-features = ["nix-command" "flakes"];
-
   # nixpkgs overlays + allowUnfree come from the shared nixpkgsModule in
   # flake-modules/hosts.nix (applied to every host via mkNixos).
 
   # USB wifi dongle (Realtek RTL8188EUS) needs firmware blobs
   hardware.enableRedistributableFirmware = true;
-
-  time.timeZone = vars.system.timeZone;
-
-  i18n = {
-    defaultLocale = vars.system.locale;
-    extraLocaleSettings = {
-      LC_ADDRESS = vars.system.locale;
-      LC_IDENTIFICATION = vars.system.locale;
-      LC_MEASUREMENT = vars.system.locale;
-      LC_MONETARY = vars.system.locale;
-      LC_NAME = vars.system.locale;
-      LC_NUMERIC = vars.system.locale;
-      LC_PAPER = vars.system.locale;
-      LC_TELEPHONE = vars.system.locale;
-      LC_TIME = vars.system.locale;
-    };
-  };
 
   # SSH for file transfer (scp/rsync)
   services.openssh.enable = true;
@@ -110,17 +90,8 @@
     extraOptions = "--term xterm-256color --no-mouse";
   };
 
-  users.users.${vars.user.name} = {
-    initialPassword = "password";
-    isNormalUser = true;
-    description = vars.user.fullName;
-    extraGroups = ["networkmanager" "wheel"];
-    ignoreShellProgramCheck = true;
-    shell = pkgs.${vars.user.packages.shell};
-    openssh.authorizedKeys.keys = [
-      "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCmEoG6aAA559ZIVc4citslV5TxVTb3tbheaSTB/+bo1uOi/IDVS/yEgDqObY2KvP7uqeNqn10diVoe0Pg4yLiFTuNriFA6aPmhs00DjazttGj8WyFDOJnBIg1NL9BlewvkxlSXa/LsWfN8JanZ1Cwknff8jxxbm+s1CxV8+XWWK4MHsfHixfD69UP437cJ9QuomKFrWZ4A+s4SUHfKVknFn0xDgclay3/h6cAdc9+rlYe73UY6AzeqgKlOxL1S1NNn2TIyhmBQm32xhsW++LLpG/4jv1+pgRHeghmJYPk1+ZeGkGRi/oRSibMActa960WBccHOMxCTVDhF/Rkyw4RoMCU/gU3zFY8Nm92xM34+SU23Sf1xdP6Gs2/raQIf49bVOkGNZXtmHBh+dvnTBxmgXcyHHoJGLPYy/Ct/IYYoeRn6lRxiBSidu0kk9hwL0JqF75a7wDlHXN4hWLXvma4RKrIgGt8pJGsjjIa1bWSKKUowuLgm56PCDC0Dxa95fBE= moria (macbook pro)"
-    ];
-  };
+  # The primary user (with the moria ssh key, groups networkmanager + wheel)
+  # comes from ../../../modules/common/core.nix.
 
   # Minimal system packages — only what's needed for writing and file transfer
   environment = {
@@ -146,10 +117,10 @@
     };
   };
 
-  # Home-manager — cherry-pick only writing-relevant TUI modules
+  # Home-manager — cherry-pick only writing-relevant TUI modules.
+  # useGlobalPkgs/useUserPackages/backupFileExtension come from the shared
+  # mkHomeManagerModule in flake-modules/hosts.nix.
   home-manager = {
-    useUserPackages = true;
-    backupFileExtension = "backup";
     extraSpecialArgs = {
       inherit inputs vars;
       outputs = {};
