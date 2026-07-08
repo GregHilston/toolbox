@@ -238,7 +238,10 @@ I use [just](https://github.com/casey/just), a tool similar to Make, to help mak
 
 ## How To Build/Deploy
 
-`$ just deploy [machine name]`
+Test-build first, then switch (see `nixos/CLAUDE.md` for the full workflow):
+
+- **NixOS hosts:** `just ft <host>` (test) then `just fr <host>` (switch)
+- **Darwin hosts:** `just dt <host>` (test) then `just dr <host>` (switch)
 
 See `flake.nix` for machine names, these are based off of `hosts/`.
 
@@ -585,7 +588,7 @@ stylix.url = "github:danth/stylix/release-24.11";
 ```
 2. Make sure that your `flake.nix`'s configuration for the target machine has a URL that looks like `nixpkgs-unstable.lib.nixosSystem`
 // 3. Update your flake.lock file: `$ nix flake update`. This command can take a while.
-4. Then rebuild your system: `$ just upgrade <host-name>`
+4. Then rebuild your system: `$ just fu <host>`
 
 ## Writerdeck (rohan)
 
