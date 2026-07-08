@@ -9,11 +9,8 @@
 
   networking.hostName = "foundation";
 
-  users.users.${vars.user.name} = {
-    isNormalUser = true;
-    extraGroups = ["wheel" "networkmanager" "docker"];
-    initialPassword = "password";
-  };
+  # The primary user (groups, password, shell, ssh key) comes from
+  # modules/common/core.nix, with input/docker added by modules/common.
 
   # Desktop is off here via enableGui = false (set in flake-modules/hosts.nix),
   # so the KDE stack (xserver/sddm/plasma6/pipewire/rtkit/1Password GUI) and the

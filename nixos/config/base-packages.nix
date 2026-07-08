@@ -40,6 +40,8 @@ pkgs: {
   ];
 
   # User (home-manager) packages shared by the NixOS and Darwin profiles.
+  # A few tools (git, ripgrep, ncdu) intentionally appear here AND in
+  # systemPackages: system-wide for root/services, and in the user profile.
   homePackages = with pkgs; [
     ncdu
     ollama

@@ -36,7 +36,7 @@ in {
   # For example, this will allow VSCode server to run properly.
   programs.nix-ld.enable = true;
 
-  # Docker-Compose
+  # Virtualisation — Docker only (no libvirt/podman)
   virtualisation = {
     libvirtd.enable = false;
     docker.enable = true;
