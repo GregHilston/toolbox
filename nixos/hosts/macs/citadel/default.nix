@@ -70,7 +70,7 @@
   };
 
   # Deploy oMLX with citadel-specific settings (12GB hot cache for M5 Pro 48GB).
-  # The stow + jq-merge + restart logic lives in modules/darwin/omlx.nix.
+  # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
     enable = true;
     cacheSize = "12GB";

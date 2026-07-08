@@ -25,7 +25,7 @@
   };
 
   # Deploy oMLX with moria-specific settings (32GB hot cache for M4 Max 128GB).
-  # The stow + jq-merge + restart logic lives in modules/darwin/omlx.nix.
+  # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
     enable = true;
     cacheSize = "32GB";

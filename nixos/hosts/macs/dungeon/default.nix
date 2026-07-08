@@ -183,7 +183,7 @@ in {
   };
 
   # Deploy oMLX with dungeon-specific settings (8GB hot cache for M3 Pro 36GB).
-  # The stow + jq-merge + restart logic lives in modules/darwin/omlx.nix.
+  # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
     enable = true;
     cacheSize = "8GB";
