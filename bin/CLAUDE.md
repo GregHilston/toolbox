@@ -18,7 +18,9 @@ This causes scripts to fail fast on errors (`set -e`), undefined variables (`set
 
 ### Script structure
 
-- Kebab-case filenames with `.sh` or `.py` extension
+- Kebab-case filenames for executables (`.sh`/`.py`); use snake_case only for
+  Python modules that other scripts `import` (hyphens aren't importable) — e.g.
+  `fetch_hn.py` / `_thread_converters.py`, imported by `fetch-thread.py`
 - A one-line comment near the top explaining what the script does
 - Bash scripts: strict mode header (see above)
 - Python scripts: shebang + [PEP 723](https://peps.python.org/pep-0723/) inline metadata:
