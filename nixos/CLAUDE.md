@@ -96,12 +96,12 @@ Use `/verify <host>` before committing. Test builds catch 90% of issues.
 
 ## Updating Pinned App Versions (e.g. Open WebUI Desktop)
 
-Some apps are fetched directly from GitHub releases rather than nixpkgs (e.g. Open WebUI desktop in [modules/darwin/home.nix](modules/darwin/home.nix) and [modules/home/default.nix](modules/home/default.nix)). To upgrade them:
+Some apps are fetched directly from GitHub releases rather than nixpkgs (e.g. Open WebUI desktop in [modules/darwin/home.nix](modules/darwin/home.nix), Darwin only). To upgrade them:
 
 1. Update `version` in the derivation to the new release tag.
 2. Update the `url` if the filename changed (check the GitHub releases page).
 3. Set `sha256 = lib.fakeSha256;` — this is a known-bad placeholder.
-4. Try to build: `just dt <darwin-host>` or `just ft <linux-host>`.
+4. Try to build: `just dt <darwin-host>`.
 5. Nix will fail with: `hash mismatch... got: sha256-REALHASH`.
 6. Replace `lib.fakeSha256` with that printed hash and rebuild — it should succeed.
 
