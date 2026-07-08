@@ -176,7 +176,6 @@ alias lg="lazygit"
 alias cat="bat"
 alias htop="btop"
 alias python='/usr/bin/python3'
-alias night="redshift.sh"
 alias audio="pavucontrol"
 
 # Clipboard (pbcopy on macOS, xclip on Linux)
@@ -192,7 +191,6 @@ fi
 alias git-all-history="git-all-history.sh"
 alias git-commit-undo="git-commit-undo.sh"
 alias youtube-to-audio="youtube-to-audio.sh"
-alias yt-transcript="yt-transcript.sh"
 alias search-string="search-string.sh"
 alias search-file="search-file.sh"
 alias docker-clear-containers="docker-clear-containers.sh"
@@ -203,9 +201,9 @@ alias localclaude="localclaude.sh"
 alias difit="difit.sh"
 alias gpr="git-pr.sh"
 
-# Claude Code in Docker with persistent auth and session history
-# Uses a named Docker volume (claude-code-config) to persist ~/.claude across runs
-# Automatically creates volume and builds image on first run (idempotent)
+# Claude Code in Docker with shared host auth and session history
+# Bind-mounts the real ~/.claude (no named volume) and mounts ~/Git at its
+# actual host path so project IDs match; builds the image on first run.
 # Based on: https://code.claude.com/docs/en/devcontainer
 # Reference: https://github.com/anthropics/claude-code/tree/main/.devcontainer
 unalias claude-docker 2>/dev/null || true

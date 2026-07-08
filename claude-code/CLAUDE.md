@@ -1,6 +1,6 @@
 # Claude Code Docker Setup
 
-This directory contains a Docker setup for running Claude Code in an isolated container with persistent authentication and session history.
+This directory contains a Docker setup for running Claude Code in an isolated container that shares your host authentication and session history.
 
 ## Reference Implementation
 
@@ -12,20 +12,19 @@ This setup is based on the official Claude Code devcontainer:
 
 - **Dockerfile** — Based on the official reference. Installs Claude Code CLI and development tools in a Node.js 20 container, running as the non-root `node` user.
 
-## Setup (One-Time)
+## Setup
+
+No manual setup is required — the `claude-docker` shell function builds the
+image on first run if it isn't present. To build (or rebuild) it by hand:
 
 ```bash
-# Create the Docker volume for persistent config
-docker volume create claude-code-config
-
-# Build the image
 cd ~/Git/toolbox/claude-code
 docker build -t my-claude-code:latest .
 ```
 
 ## Usage
 
-An alias is available in `dot/zsh/.zshrc`:
+The `claude-docker` function is defined in `dot/zsh/.zshrc`:
 
 ```bash
 # Start a new session or resume the default one
@@ -35,21 +34,32 @@ claude-docker
 claude-docker --resume SESSION_ID
 ```
 
-Under the hood, this runs:
+Under the hood it runs (see the function for the authoritative version):
+
 ```bash
 docker run --rm -it \
-  -v claude-code-config:/home/node/.claude \
-  -v ~/Git:/workspace \
-  -w /workspace \
+  -v ~/.claude:/home/node/.claude \
+  -v "$git_home:$git_home" \
+  -w "$PWD" \
+  -u "$(id -u):$(id -g)" \
+  -e HOME=/home/node \
+  -e CLAUDE_CONFIG_DIR=/home/node/.claude \
   my-claude-code:latest \
-  code
+  code --dangerously-skip-permissions "$@"
 ```
 
 ## How Persistence Works
 
-- **Named Volume**: The `-v claude-code-config:/home/node/.claude` mount uses a Docker-managed named volume, not a bind mount from the host filesystem.
-- **Why**: When the container exits with `--rm`, the container filesystem is deleted, but the named volume persists. This keeps your Claude Code credentials, settings, and session history across container runs.
-- **Trade-off**: The volume is isolated from your host, so you can't directly browse `~/.claude` from outside the container. But session history is still accessible via `claude-docker --resume`.
+- **Bind mount**: `-v ~/.claude:/home/node/.claude` mounts your real host
+  `~/.claude` into the container, so credentials, settings, and session
+  history are shared directly with the host (not isolated in a Docker volume).
+- **Matching paths**: Claude Code encodes the working directory into project
+  identifiers. `~/Git` is mounted at its actual host path (not `/workspace`)
+  and `-w "$PWD"` matches the host cwd, so a project has the same identity
+  inside and outside the container — sessions started on the host resume in
+  the container and vice versa.
+- **Host user**: `-u host_uid:host_gid` (with `HOME=/home/node`) means files
+  created in the container are owned by you, not root.
 
 ## Differences from Official Reference
 
@@ -59,14 +69,12 @@ The official reference includes:
 - Zsh with Powerline10k theme (included here)
 - VS Code extensions (not applicable for CLI-only use)
 
-This implementation includes the essentials: Claude Code CLI, git, Python, zsh, and persistent authentication.
+This implementation includes the essentials: Claude Code CLI, git, Python, zsh, and shared host authentication.
 
 ## Troubleshooting
 
-**"Image not found"**: Rebuild with `docker build -t my-claude-code:latest .`
+**"Image not found"**: The function auto-builds on first run; to force a rebuild, `docker build -t my-claude-code:latest .` from this directory.
 
-**"Permission denied"**: Ensure the volume exists: `docker volume create claude-code-config`
+**"Permission denied on ~/.claude"**: The container runs as your host UID/GID; ensure your host `~/.claude` is owned by you.
 
-**"Has to re-authenticate"**: This indicates the named volume isn't being used. Verify the alias uses `-v claude-code-config:/home/node/.claude` (not a bind mount).
-
-**"Need to access files from host"**: The named volume is Docker-managed, not a host directory. To export session data, use `claude-docker --show-transcript` or copy from inside the container.
+**"Need to access files from host"**: Everything is a bind mount — `~/.claude` and your `~/Git` tree are the real host directories, editable from either side.

@@ -12,7 +12,6 @@ A Docker-based dev container is available for testing NixOS configurations witho
 - `nix flake check` - Validate flake syntax and evaluate all outputs
 - `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run` - Build full system closure
 - `nix eval` - Evaluate specific configuration values
-- `nix develop ./dev#<lang>` - Enter language-specific dev shells (golang, typescript, ruby)
 - Catch module import errors, type mismatches, missing dependencies
 
 ### What It Cannot Do
@@ -238,7 +237,10 @@ I use [just](https://github.com/casey/just), a tool similar to Make, to help mak
 
 ## How To Build/Deploy
 
-`$ just deploy [machine name]`
+Test-build first, then switch (see `nixos/CLAUDE.md` for the full workflow):
+
+- **NixOS hosts:** `just ft <host>` (test) then `just fr <host>` (switch)
+- **Darwin hosts:** `just dt <host>` (test) then `just dr <host>` (switch)
 
 See `flake.nix` for machine names, these are based off of `hosts/`.
 
@@ -573,19 +575,16 @@ To add Python packages globally (available on all hosts), add them to `modules/h
 
 ## How To Update To New Version
 
-1. In your flake.nix, you need to update the following inputs:
+This flake tracks `nixos-unstable`, so there are no pinned release branches to
+bump in `flake.nix`. Updating just means refreshing the lock and rebuilding:
 
-```nix
-nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
-home-manager = {
-  url = "github:nix-community/home-manager/release-24.11";
-  inputs.nixpkgs.follows = "nixpkgs";
-};
-stylix.url = "github:danth/stylix/release-24.11";
-```
-2. Make sure that your `flake.nix`'s configuration for the target machine has a URL that looks like `nixpkgs-unstable.lib.nixosSystem`
-// 3. Update your flake.lock file: `$ nix flake update`. This command can take a while.
-4. Then rebuild your system: `$ just upgrade <host-name>`
+1. Update the lock file (all inputs, or one):
+   - All inputs: `just up` (runs `nix flake update`; can take a while).
+   - A single input: `just upp <input>` (e.g. `just upp home-manager`).
+2. Test-build the target host: `just ft <host>` (NixOS) or `just dt <host>` (Darwin).
+3. Switch: `just fr <host>` (NixOS) or `just dr <host>` (Darwin).
+
+`just fu <host>` combines steps 1 and 3 (update + switch) in one command.
 
 ## Writerdeck (rohan)
 

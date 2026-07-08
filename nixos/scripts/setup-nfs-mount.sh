@@ -13,7 +13,7 @@ VM_IP=$(ssh ghilston@mines 'hostname -I | awk "{print \$1}"' 2>/dev/null)
 
 if [ -z "$VM_IP" ]; then
     echo "ERROR: Could not reach VM 'mines'. Make sure:"
-    echo "  1. VM is running: 'just vm-start mines' or 'just vmsa mines'"
+    echo "  1. VM is running (start it in VMware Fusion)"
     echo "  2. You've deployed the NFS config: 'just fr mines'"
     echo "  3. SSH is working: 'ssh ghilston@mines'"
     exit 1

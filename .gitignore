@@ -14,13 +14,8 @@ dots/
 
 *.pyc
 
-bin/mail_ip/gmail_password.conf.personal
-
 backup
-dot/vim-pkg/.vim/.*
 
-.vim
-.vimrc
 .bashrc
 .tmux*
 
@@ -34,13 +29,6 @@ iterm2-colors
 
 dot/env/dyn.env
 private/
-fonts/
-lib/fonts
-dot/vim-pkg/.vim/plugged
-
-# git submodules
-dot/oh-my-zsh
-dot/vim-pkg/.vim/bundle/Vundle.vim
 
 # nix build output
 result

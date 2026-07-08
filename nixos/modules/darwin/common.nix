@@ -1,21 +1,15 @@
 {
-  inputs,
   vars,
   pkgs,
   ...
-}: {
+}: let
+  basePackages = import ../../config/base-packages.nix pkgs;
+in {
   # Let Determinate manage the Nix daemon; disable nix-darwin's nix management
   nix.enable = false;
 
-  nixpkgs = {
-    overlays = [
-      inputs.nur.overlays.default
-      inputs.nix-vscode-extensions.overlays.default
-    ];
-    config = {
-      allowUnfree = true;
-    };
-  };
+  # nixpkgs overlays + allowUnfree come from the shared nixpkgsModule in
+  # flake-modules/hosts.nix.
 
   # Primary user (required for system.defaults, homebrew, etc.)
   system.primaryUser = vars.user.name;
@@ -26,38 +20,10 @@
     shell = pkgs.${vars.user.packages.shell};
   };
 
-  # System packages (CLI tools available system-wide)
+  # System packages (CLI tools available system-wide).
+  # The baseline is shared with NixOS via config/base-packages.nix.
   environment = {
-    systemPackages = with pkgs; [
-      bat
-      zsh
-      file
-      git
-      htop
-      jq
-      rsync
-      tldr
-      neovim
-      vimPlugins.vim-plug
-      unzip
-      wget
-      curl
-      zip
-      tree
-      ncdu
-      gcc
-      lazygit
-      ripgrep
-      fd
-      gnumake
-      docker-compose
-
-      # Modern CLI tools
-      direnv # kept in nix for nix-direnv caching (see tui/direnv)
-      btop
-      bruno-cli
-      yq-go
-    ];
+    inherit (basePackages) systemPackages;
 
     variables = {
       EDITOR = "nvim";

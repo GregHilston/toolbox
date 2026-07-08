@@ -5,6 +5,7 @@
   lib,
   ...
 }: let
+  basePackages = import ../../config/base-packages.nix pkgs;
   open-webui-desktop = pkgs.stdenvNoCC.mkDerivation rec {
     pname = "open-webui-desktop";
     version = "0.0.9";
@@ -45,6 +46,9 @@
   };
 in {
   home-manager = {
+    # useGlobalPkgs reuses the system nixpkgs (shared overlays + allowUnfree
+    # from flake-modules/hosts.nix) instead of a private home-manager instance.
+    useGlobalPkgs = true;
     useUserPackages = true;
     backupFileExtension = "backup";
     extraSpecialArgs = {
@@ -55,46 +59,21 @@ in {
         ../../modules/programs/tui
       ];
 
-      nixpkgs = {
-        config = {
-          allowUnfree = true;
-          allowUnfreePredicate = _: true;
-        };
-        overlays = [
-          inputs.nur.overlays.default
-          inputs.nix-vscode-extensions.overlays.default
-        ];
-      };
-
       home = {
         username = vars.user.name;
         homeDirectory = "/Users/${vars.user.name}";
-        packages = with pkgs; [
-          # TUI/CLI tools
-          ncdu
-          ollama
-          uv
-          git
-          ripgrep
-          hugo
-          go
-          duckdb
-          opencode
-          # pi-coding-agent — managed via homebrew for faster updates
-          yt-dlp
-          ffmpeg
-          (python3.withPackages (ps:
-            with ps; [
-              youtube-transcript-api
-            ]))
-
-          # Fonts
-          nerd-fonts.jetbrains-mono
-          jetbrains-mono
-
+        # TUI/CLI baseline shared with NixOS (config/base-packages.nix), plus
+        # Darwin-only extras. pi-coding-agent is managed via homebrew for faster updates.
+        packages =
+          basePackages.homePackages
+          ++ (with pkgs; [
+            ffmpeg
+            # Fonts
+            nerd-fonts.jetbrains-mono
+            jetbrains-mono
+          ])
           # GUI apps (installed via nix derivation, linked to ~/Applications/Home Manager Apps/)
-          open-webui-desktop
-        ];
+          ++ [open-webui-desktop];
       };
 
       # mflux — Apple Silicon image generation CLI (pip install mflux, not a brew formula).

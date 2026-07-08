@@ -7,7 +7,6 @@ A Docker-based development container for validating NixOS configurations without
 This container provides an isolated Nix environment that can:
 - Validate flake syntax and evaluate all NixOS configurations
 - Build system closures (dry-run) to catch configuration errors
-- Run the language-specific dev shells from `dev/flake.nix`
 
 It **cannot**:
 - Run `nixos-rebuild switch` (requires a real NixOS system)
@@ -32,7 +31,6 @@ It **cannot**:
    ```bash
    just validate          # Check all host configs
    nix flake check        # Validate flake
-   nix develop ./dev#golang  # Enter Go dev shell
    ```
 
 ### Docker CLI
@@ -70,7 +68,6 @@ devcontainer exec --workspace-folder . just validate
 | `nix flake check` | Validate flake syntax and evaluate outputs |
 | `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run` | Build a specific host config |
 | `nix eval .#nixosConfigurations.<host>.config.<option>` | Evaluate a specific config value |
-| `nix develop ./dev#<lang>` | Enter a language dev shell (golang, typescript, ruby) |
 
 ## Troubleshooting
 

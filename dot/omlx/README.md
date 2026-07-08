@@ -1,80 +1,78 @@
-# oMLX Configuration (Stow-managed)
+# oMLX Configuration (Stow-managed base + nix-generated overlay)
 
 ## Directory Structure
 
-This directory uses **GNU Stow** to manage oMLX dotfiles with per-machine overrides:
-
 ```
-dot/
-├── omlx/                    # Base oMLX config (shared across all machines)
-│   ├── README.md           # This file
-│   ├── .gitignore
-│   └── .omlx/
-│       ├── settings.json   # Base template (SSD caching disabled)
-│       ├── cache/          # Prefix cache storage (hot_cache_max_size controlled)
-│       ├── logs/
-│       ├── models/         # Downloaded models (gitignored)
-│       └── stats.json
-│
-├── omlx-moria/             # Moria-specific overrides (stow applies after base)
-│   └── .omlx/
-│       └── settings.json   # Override: hot_cache_max_size=32GB (M4 Max 128GB)
-│       └── README.md       # Why these settings
-│
-└── omlx-dungeon/           # Dungeon-specific overrides (stow applies after base)
-    └── .omlx/
-        └── settings.json   # Override: hot_cache_max_size=8GB (M3 Pro 36GB)
-        └── README.md       # Why these settings
+dot/omlx/                    # Shared oMLX config (deployed to ~/.omlx on every Mac)
+├── README.md               # This file
+├── .gitignore
+├── .stow-local-ignore      # Excludes .omlx/settings.json + runtime state from stow
+└── .omlx/
+    ├── settings.json.tpl   # Committed template (1Password refs); `just secrets` → settings.json
+    ├── settings.json       # Generated base config (gitignored)
+    ├── model_settings.json # Per-model overrides (see CLAUDE.md)
+    ├── cache/              # Prefix cache storage (gitignored)
+    ├── logs/              # (gitignored)
+    ├── models/            # Downloaded models (gitignored)
+    └── stats.json         # (gitignored)
 ```
 
-## Deployment Strategy
+## Deployment
 
-**GNU Stow** allows multiple packages to coexist. Later stow operations override earlier ones.
+1. **Base config**: `just secrets` (in `nixos/`) renders `settings.json.tpl` →
+   `settings.json` via 1Password (`op inject`).
+2. **Activation** (`nixos/modules/darwin/omlx.nix`, on `darwin-rebuild`):
+   - symlinks the repo's `model_settings.json` into `~/.omlx/`;
+   - deep-merges (`jq -s '.[0] * .[1]'`) the base `settings.json` with the
+     nix-generated per-host overlay (from `services.omlxDeploy.cacheSize` in
+     `hosts/macs/<host>/default.nix`) into `~/.omlx/settings.json`;
+   - restarts the launchd agent.
 
-### On Moria
-```bash
-cd ~/Git/toolbox/dot
-stow omlx omlx-moria
-```
-- Links base config from `omlx/`
-- Overrides `settings.json` with `omlx-moria/` version
-- Result: Base config + moria-specific hot cache settings
+The activation uses a direct `ln`, not stow, so nothing is symlinked into the repo
+working tree. `settings.json` is written by the jq merge (not linked) because it
+holds host-specific cache sizes and auth keys; models/cache/logs are runtime or
+referenced by absolute path. (`.stow-local-ignore` keeps a manual `just stow omlx`
+consistent — only `model_settings.json` links into `~/.omlx`.)
 
-### On Dungeon
-```bash
-cd ~/Git/toolbox/dot
-stow omlx omlx-dungeon
-```
-- Links base config from `omlx/`
-- Overrides `settings.json` with `omlx-dungeon/` version
-- Result: Base config + dungeon-specific hot cache settings
+There are no longer per-host `omlx-<host>` stow packages — the overlay is a small
+nix-generated JSON (`hot_cache_max_size`, the user's `ssd_cache_dir`, and the
+`model_dir`, which also corrects the base template's hardcoded username).
 
-## NixOS Automation
+## Topology — two independent servers
 
-Each machine's NixOS config automatically runs stow during activation:
+moria and dungeon each run their **own** oMLX server with their **own** models;
+neither is a client of the other.
 
-```nix
-# In hosts/macs/moria/default.nix or dungeon/default.nix
-system.activationScripts.postActivation.text = lib.mkBefore ''
-  cd ~/Git/toolbox/dot
-  stow omlx omlx-<hostname>
-'';
-```
+- **moria** serves only itself — tools on moria hit `localhost:8000`.
+- **dungeon** is the **shared server for low-power remote clients**: the Windows
+  NixOS-WSL2 (foundation) and the Pixel 8 (Termux) reach it on LAN/Tailscale
+  `:8000` (e.g. via `~/Git/notes/sync.sh`, which uses `localhost` on moria and
+  falls back to dungeon elsewhere); rohan points at it via its inline `models.json`.
 
-This ensures the correct oMLX config is deployed every time you run `darwin-rebuild switch`.
+The shared base `settings.json` lists both hosts' names in `server.server_aliases`
+so either server accepts requests addressed to any known alias — it does not imply
+the two share models or route to each other.
 
-## Why This Approach?
+## Per-host cache sizing (`hot_cache_max_size`)
 
-1. **DRY (Don't Repeat Yourself)**: Shared config lives in `omlx/`, differences isolated in `omlx-moria/` and `omlx-dungeon/`
-2. **Git-friendly**: Base config and overrides tracked separately, clear diffs
-3. **Reproducible**: Every machine gets the right settings automatically via NixOS
-4. **Maintainable**: If you add a new setting to base, all machines inherit it automatically
+Prefix caching keeps KV tensors for recently-seen sequences (e.g. shared system
+prompts) in RAM — roughly 1.55× faster time-to-first-token on cache hits. Sizes are
+tuned to leave room for model weights + inference on each machine's unified memory:
 
-## Key Settings
+| Host    | Hardware | RAM   | `cacheSize` | Notes |
+|---------|----------|-------|-------------|-------|
+| moria   | M4 Max   | 128GB | `32GB`      | Self-hosted for moria only; runs the big models |
+| citadel | M5 Pro   | 48GB  | `12GB`      | Work laptop (~25% of RAM) |
+| dungeon | M3 Pro   | 36GB  | `8GB`       | Shared server for remote clients; conservative for 36GB |
 
-See `omlx-moria/README.md` and `omlx-dungeon/README.md` for detailed explanations of why each machine has its settings.
+To change a host's size, edit `cacheSize` in `hosts/macs/<host>/default.nix` and
+`just dr <host>`.
 
-**TL;DR:**
-- **hot_cache_max_size**: Prefix caching (system prompts, code context) reused across requests. Larger = faster repeated prompts.
-- **ssd_cache_dir**: Disabled (set to null) — rely on RAM only for simplicity
-- **max_context_window**: 32K tokens, suitable for code/document workflows
+## Key base settings
+
+- **ssd_cache_dir**: null in the base (RAM-only); the overlay sets a per-user
+  `~/.omlx/kv-cache` path. SSD spill is left `auto`.
+- **max_context_window**: 262144 tokens (`sampling.max_context_window` in the
+  template) — caps all models server-wide; see the "Global Context Window Cap"
+  gotcha in `CLAUDE.md`.
+- **auth**: `api_key`/`secret_key` injected from 1Password via the template.

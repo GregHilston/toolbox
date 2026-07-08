@@ -1,21 +1,6 @@
 set shell := ["zsh", "-cu"]
 flake_path := "~/Git/toolbox/nixos"
 
-# Deploy to a specific host
-# Usage: $ just deploy host <host name>
-deploy host:
-  sudo nixos-rebuild switch --flake .#{{host}}
-
-# Upgrade a specific host
-# Usage: $ just deploy host <host name>
-upgrade host:
-  sudo nixos-rebuild --upgrade switch --flake .#{{host}}
-
-# Debug deployment to a specific host
-# Usage: $ just debug host <host name>
-debug host:
-  sudo nixos-rebuild switch --flake .#{{host}} --show-trace --verbose
-
 # List available hosts
 list-hosts:
   @find hosts -mindepth 2 -maxdepth 2 -type d -exec basename {} \;
@@ -36,9 +21,9 @@ up:
   nix flake update
 
 # Update specific input
-# usage: just upp i=home-manager
-upp:
-  nix flake update $(i)
+# usage: just upp home-manager
+upp input:
+  nix flake update {{input}}
 
 # Rebuild
 # The host argument is required.
@@ -89,22 +74,17 @@ dt host flake_path=flake_path:
   sudo darwin-rebuild check --flake {{flake_path}}#{{host}}
 
 # Validate all configurations (run in devcontainer or any Nix environment)
+# Host lists are derived from the flake, so new hosts are covered automatically.
 validate:
   nix flake check
-  @echo "Building foundation..."
-  nix build .#nixosConfigurations.foundation.config.system.build.toplevel --dry-run
-  @echo "Building isengard..."
-  nix build .#nixosConfigurations.isengard.config.system.build.toplevel --dry-run
-  @echo "Building mines..."
-  nix build .#nixosConfigurations.mines.config.system.build.toplevel --dry-run
-  @echo "Building home-lab..."
-  nix build .#nixosConfigurations.home-lab.config.system.build.toplevel --dry-run
-  @echo "Building dungeon (darwin)..."
-  nix build .#darwinConfigurations.dungeon.system --dry-run
-  @echo "Building moria (darwin)..."
-  nix build .#darwinConfigurations.moria.system --dry-run
-  @echo "Building citadel (darwin)..."
-  nix build .#darwinConfigurations.citadel.system --dry-run
+  for host in $(nix eval .#nixosConfigurations --apply builtins.attrNames --json | jq -r '.[]'); do \
+    echo "Building $host..."; \
+    nix build ".#nixosConfigurations.$host.config.system.build.toplevel" --dry-run; \
+  done
+  for host in $(nix eval .#darwinConfigurations --apply builtins.attrNames --json | jq -r '.[]'); do \
+    echo "Building $host (darwin)..."; \
+    nix build ".#darwinConfigurations.$host.system" --dry-run; \
+  done
   @echo "All configurations valid!"
 
 # Generate secret files from 1Password templates.

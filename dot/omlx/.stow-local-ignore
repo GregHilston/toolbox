@@ -1,10 +1,14 @@
 CLAUDE.md
 README.md
+speculative-decoding-findings\.md
 \.gitignore
-# settings.json is host-specific (cache sizes differ per machine).
-# The activation script merges base + host overlay via jq.
+# settings.json is host-specific (cache sizes differ per machine); the
+# activation script writes it by merging base + a nix-generated overlay via jq.
+# The .tpl is the 1Password source template and also stays out of ~/.omlx.
 \.omlx/settings\.json
-# Runtime data — large files that should never be symlinked
+\.omlx/settings\.json\.tpl
+# Runtime data — written by oMLX, never symlinked from the repo
+\.omlx/stats\.json
 \.omlx/cache
 \.omlx/logs
 \.omlx/models

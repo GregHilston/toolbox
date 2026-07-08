@@ -55,6 +55,12 @@ jobs:
           echo "Building home-lab..."
           nix build .#nixosConfigurations.home-lab.config.system.build.toplevel --dry-run
 
+      - name: Validate rohan
+        working-directory: nixos
+        run: |
+          echo "Building rohan..."
+          nix build .#nixosConfigurations.rohan.config.system.build.toplevel --dry-run
+
   validate-darwin:
     name: Validate Darwin configurations
     if: github.event_name == 'pull_request'

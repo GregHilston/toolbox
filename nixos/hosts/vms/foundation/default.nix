@@ -1,9 +1,5 @@
 {
-  inputs,
-  outputs,
   lib,
-  config,
-  pkgs,
   vars,
   ...
 }: {
@@ -13,29 +9,18 @@
 
   networking.hostName = "foundation";
 
-  users.users.${vars.user.name} = {
-    isNormalUser = true;
-    extraGroups = ["wheel" "networkmanager" "docker"];
-    initialPassword = "password";
-  };
+  # The primary user (groups, password, shell, ssh key) comes from
+  # modules/common/core.nix, with input/docker added by modules/common.
 
-  # Override common settings that don't work well in WSL
-  services = {
-    xserver.enable = lib.mkForce false;
-    displayManager.sddm.enable = lib.mkForce false;
-    desktopManager.plasma6.enable = lib.mkForce false;
-    pipewire.enable = lib.mkForce false;
-  };
+  # Desktop is off here via enableGui = false (set in flake-modules/hosts.nix),
+  # so the KDE stack (xserver/sddm/plasma6/pipewire/rtkit/1Password GUI) and the
+  # GUI home packages are simply never enabled — no per-service overrides needed.
 
   # Disable networking services unnecessary in WSL
   networking.wireless.enable = lib.mkForce false; # Disables wpa_supplicant
 
-  # Disable GUI programs that don't work in WSL
+  # 1Password CLI doesn't work in WSL (needs the desktop app for unlock)
   programs._1password.enable = lib.mkForce false;
-  programs._1password-gui.enable = lib.mkForce false;
-
-  # Disable unnecessary services for WSL
-  security.rtkit.enable = lib.mkOverride 900 false;
 
   # WSL-specific settings
   wsl = {
@@ -52,24 +37,5 @@
   stylix = {
     targets.console.enable = false;
     targets.plymouth.enable = false; # WSL has no boot splash screen
-  };
-
-  # Configure home-manager for WSL
-  home-manager = {
-    extraSpecialArgs = {
-      inherit inputs outputs;
-      # Override vars to disable GUI for WSL
-      vars =
-        vars
-        // {
-          enableGui = false;
-        };
-    };
-    users.${vars.user.name} = {pkgs, ...}: {
-      imports = [../../../modules/home];
-
-      # Disable KDE stylix target for WSL (avoids kdeglobals errors)
-      stylix.targets.kde.enable = false;
-    };
   };
 }

@@ -15,8 +15,24 @@ These commands do NOT require `sudo` and catch most evaluation and dependency er
 - **mines** (aarch64 VM on M4 Mac via VMware Fusion)
 - **home-lab** (x86_64 VM)
 - **rohan** (x86_64 ThinkPad X201 Tablet — writerdeck, console-only)
-- **dungeon** (aarch64-darwin MacBook Pro 16" M3 Pro — nix-darwin)
-- **citadel** (aarch64-darwin MacBook Pro 14" M5 Pro — nix-darwin)
+- **dungeon** (aarch64-darwin MacBook Pro 16" M3 Pro — nix-darwin, headless Docker/oMLX-client server)
+- **moria** (aarch64-darwin M4 Max — nix-darwin, runs the oMLX inference server)
+- **citadel** (aarch64-darwin MacBook Pro 14" M5 Pro — nix-darwin, Mozilla work laptop)
+
+## Desktop (GUI) vs headless NixOS hosts
+
+The KDE Plasma desktop is **opt-in**. A single flag, `vars.enableGui`, drives both
+the system desktop stack (`modules/common/desktop.nix`, gated on
+`custom.desktop.enable = vars.enableGui or false`) and the GUI home packages in
+`modules/home/default.nix`. It's set per host in `flake-modules/hosts.nix`:
+
+- **GUI host** (isengard, mines): `hostVars = vars // { enableGui = true; };`
+- **Headless host** (foundation, home-lab): `enableGui = false` (the default) — no
+  desktop, no GUI packages, no per-service `mkForce` overrides needed.
+
+rohan (the writerdeck) is console-only and doesn't import `modules/common`, so it's
+unaffected by this flag. To add a new GUI host, set `enableGui = true` in its
+`hostVars`; a new headless host needs nothing.
 
 ## Common Mistakes to Avoid
 
@@ -60,9 +76,13 @@ Local LLM inference is configured via **oMLX** (MLX GUI wrapper with prefix cach
 **Configuration files:**
 - **Settings**: `~/Git/toolbox/dot/omlx/.omlx/settings.json` — server config, model dirs, sampling params, caching
 - **Models**: `~/Git/toolbox/dot/omlx/.omlx/models/` — downloaded models (gitignored, stored locally)
-**Current setup:**
-- **moria** (M4 Max 128GB): Runs oMLX server, hosts models (Qwen3.6 27B 8bit, Gemma 4 26B, GPT-OSS 120B)
-- **dungeon** (M3 Pro 36GB): Can point tools to moria's oMLX server via network aliases in settings.json
+**Topology — the two oMLX servers are independent; neither is a client of the other:**
+- **moria** (M4 Max 128GB): runs oMLX **only for moria itself** (consumed at `localhost:8000`).
+  Hosts the big models (Qwen3.6 27B 8bit, Gemma 4 26B, GPT-OSS 120B) for local use.
+- **dungeon** (M3 Pro 36GB): runs oMLX as the **shared inference server for low-power remote
+  clients**. The Windows NixOS-WSL2 (foundation) and the Pixel 8 (Termux) reach it on
+  LAN/Tailscale `:8000` — e.g. via `~/Git/notes/sync.sh`, which uses `localhost` on moria but
+  falls back to dungeon everywhere else. rohan also points at dungeon (inline `models.json`).
 
 **Why oMLX?**
 - Prefix caching: Repeated prompts (like roger's system prompt) reuse cached representations (~1.55x faster TTFT on cache hits)
@@ -77,11 +97,14 @@ For extended-context or other model profiles, see `dot/omlx/CLAUDE.md` → "Crea
 
 ## File Locations
 
-- User packages: [modules/home/default.nix](modules/home/default.nix)
+- Shared package baseline (NixOS + Darwin, system + home): [config/base-packages.nix](config/base-packages.nix)
+- User packages: [modules/home/default.nix](modules/home/default.nix) (NixOS-only extras + GUI)
   - Python packages: Use `python3.withPackages (ps: with ps; [package-name])`
 - GUI apps: [modules/programs/gui/](modules/programs/gui/)
 - TUI apps: [modules/programs/tui/](modules/programs/tui/)
-- System packages: [modules/common/default.nix](modules/common/default.nix)
+- System packages (NixOS-only extras): [modules/common/default.nix](modules/common/default.nix)
+- Cross-host NixOS baseline (nix settings, locale, user): [modules/common/core.nix](modules/common/core.nix)
+- Desktop stack (opt-in, gated on `custom.desktop.enable`): [modules/common/desktop.nix](modules/common/desktop.nix)
 - Darwin system config: [modules/darwin/common.nix](modules/darwin/common.nix)
 - Darwin Homebrew casks: [modules/darwin/homebrew.nix](modules/darwin/homebrew.nix)
 - Darwin home-manager: [modules/darwin/home.nix](modules/darwin/home.nix)
@@ -96,12 +119,12 @@ Use `/verify <host>` before committing. Test builds catch 90% of issues.
 
 ## Updating Pinned App Versions (e.g. Open WebUI Desktop)
 
-Some apps are fetched directly from GitHub releases rather than nixpkgs (e.g. Open WebUI desktop in [modules/darwin/home.nix](modules/darwin/home.nix) and [modules/home/default.nix](modules/home/default.nix)). To upgrade them:
+Some apps are fetched directly from GitHub releases rather than nixpkgs (e.g. Open WebUI desktop in [modules/darwin/home.nix](modules/darwin/home.nix), Darwin only). To upgrade them:
 
 1. Update `version` in the derivation to the new release tag.
 2. Update the `url` if the filename changed (check the GitHub releases page).
 3. Set `sha256 = lib.fakeSha256;` — this is a known-bad placeholder.
-4. Try to build: `just dt <darwin-host>` or `just ft <linux-host>`.
+4. Try to build: `just dt <darwin-host>`.
 5. Nix will fail with: `hash mismatch... got: sha256-REALHASH`.
 6. Replace `lib.fakeSha256` with that printed hash and rebuild — it should succeed.
 

@@ -2,7 +2,7 @@
 #
 # This module serves two purposes:
 # 1. Manages VS Code installation and extensions on bare metal hosts (foundation, isengard)
-# 2. Acts as reference documentation for extension list on VM hosts (mines, vm-x86, vm-arm)
+# 2. Acts as reference documentation for extension list on VM hosts (mines)
 #
 # For VM hosts running on macOS:
 # - VS Code runs on the macOS host with extensions managed there

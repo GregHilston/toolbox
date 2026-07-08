@@ -7,12 +7,16 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 ## What's In This Repo?
 
 ```bash
-├── bin/                                    # Helper scripts. Should be added to $PATH for user convenience.
-├── docs/                                   # Additional documentation that supplements this `README.md`
+├── bin/                                    # Helper scripts. Added to $PATH (recursive) for user convenience.
+├── claude-code/                            # Dockerfile + docs for running Claude Code in a container.
+├── claude-commands/                        # Global Claude Code slash commands (→ ~/.claude/commands/).
+├── claude-skills/                          # Global Claude Code agent skills (→ ~/.claude/skills/).
+├── docs/                                   # Additional documentation that supplements this `README.md`.
 ├── dot/                                    # Dotfiles to configure a slew of programs and environments.
 ├── nixos/                                  # NixOS and nix-darwin configurations for all hosts.
-├── secret/                                 # Secrets, such as passwords. Purposefully ignored by Git, and populated on each individual machine.
-├── Brewfile                                # Describes which programs to install with Brew.
+├── windows/                                # Windows provisioning (autounattend.xml, scoop/winget lists).
+├── justfile                                # Root recipes (e.g. `just setup-claude` for non-nix hosts).
+├── CLAUDE.md                               # Repo guide for Claude Code (and humans).
 ├── README.md                               # This documentation.
 ```
 
