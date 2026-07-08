@@ -11,6 +11,7 @@
 in {
   imports = [
     ./core.nix
+    ./desktop.nix
     ../../modules/stylix
   ];
 
@@ -44,35 +45,14 @@ in {
   programs = {
     virt-manager.enable = false;
 
-    # 1Password system integration
-    # Enables CLI integration and browser extension support
-    # Browser integration automatically works for Firefox, Chrome, and Brave
+    # 1Password system integration (CLI + browser extension support).
+    # Browser integration automatically works for Firefox, Chrome, and Brave.
+    # The 1Password GUI lives in ./desktop.nix (gated on custom.desktop.enable).
     _1password.enable = true;
-    _1password-gui = {
-      enable = true;
-      polkitPolicyOwners = [vars.user.name];
-    };
   };
 
-  services = {
-    xserver.enable = true;
-    displayManager.sddm.enable = true;
-    desktopManager.plasma6.enable = true;
-
-    xserver.xkb = {
-      layout = "us";
-      variant = "";
-    };
-
-    pipewire = {
-      enable = true;
-      alsa.enable = true;
-      alsa.support32Bit = true;
-      pulse.enable = true;
-    };
-  };
-
-  security.rtkit.enable = true;
+  # The KDE Plasma desktop stack (xserver/sddm/plasma6/pipewire/rtkit/1Password
+  # GUI) lives in ./desktop.nix, gated on custom.desktop.enable.
 
   # Top up the base user (defined in ./core.nix) with desktop/docker groups.
   users.users.${vars.user.name}.extraGroups = ["input" "docker"];
