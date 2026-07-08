@@ -17,17 +17,8 @@ in {
       ../programs/gui
     ];
 
-  nixpkgs = {
-    config = {
-      allowUnfree = true;
-      allowUnfreePredicate = _: true;
-    };
-  };
-
-  nixpkgs.overlays = [
-    inputs.nur.overlays.default
-    inputs.nix-vscode-extensions.overlays.default
-  ];
+  # nixpkgs config (overlays + allowUnfree) comes from the system via
+  # home-manager.useGlobalPkgs (set in flake-modules/hosts.nix).
 
   # Disable KDE Plasma animations for a snappier feel
   # Only set this on GUI-enabled systems to avoid evaluation errors on WSL/headless hosts

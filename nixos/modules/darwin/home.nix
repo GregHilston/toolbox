@@ -46,6 +46,9 @@
   };
 in {
   home-manager = {
+    # useGlobalPkgs reuses the system nixpkgs (shared overlays + allowUnfree
+    # from flake-modules/hosts.nix) instead of a private home-manager instance.
+    useGlobalPkgs = true;
     useUserPackages = true;
     backupFileExtension = "backup";
     extraSpecialArgs = {
@@ -55,17 +58,6 @@ in {
       imports = [
         ../../modules/programs/tui
       ];
-
-      nixpkgs = {
-        config = {
-          allowUnfree = true;
-          allowUnfreePredicate = _: true;
-        };
-        overlays = [
-          inputs.nur.overlays.default
-          inputs.nix-vscode-extensions.overlays.default
-        ];
-      };
 
       home = {
         username = vars.user.name;

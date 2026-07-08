@@ -171,7 +171,8 @@
         ../../../modules/programs/tui/zsh
       ];
 
-      nixpkgs.config.allowUnfree = true;
+      # allowUnfree comes from the system nixpkgs via useGlobalPkgs
+      # (set in the shared mkHomeManagerModule in flake-modules/hosts.nix).
 
       home = {
         username = vars.user.name;

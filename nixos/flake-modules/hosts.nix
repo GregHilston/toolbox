@@ -24,9 +24,12 @@
     };
   };
 
-  # Minimal home-manager wiring shared by every host.
+  # Minimal home-manager wiring shared by every NixOS host.
+  # useGlobalPkgs makes home-manager reuse the system nixpkgs (with our shared
+  # overlays + allowUnfree) instead of building its own private instance.
   mkHomeManagerModule = _: {
     home-manager = {
+      useGlobalPkgs = true;
       useUserPackages = true;
       backupFileExtension = "backup";
       users.${vars.user.name} = {};
