@@ -1,9 +1,0 @@
-[submodule "dot/vim/bundle/Vundle.vim"]
-	path = dot/vim/bundle/Vundle.vim
-	url = https://github.com/VundleVim/Vundle.vim.git
-[submodule "dot/oh-my-zsh"]
-	path = dot/oh-my-zsh
-	url = https://github.com/robbyrussell/oh-my-zsh.git
-[submodule "lib/fonts"]
-	path = lib/fonts
-	url = https://github.com/powerline/fonts

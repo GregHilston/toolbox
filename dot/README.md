@@ -66,7 +66,6 @@ just build-i3-gaps     # Build i3-gaps config for current host, then stow
 ├── redshift/           # Redshift color temperature (Linux)
 ├── skhd/               # skhd hotkey daemon (macOS)
 ├── tmux/               # tmux terminal multiplexer
-├── vim-pkg/            # vim/neovim config (.vimrc + .vim/)
 ├── yabai/              # yabai tiling window manager (macOS)
 └── zsh/                # zsh config (.zshrc + .p10k.zsh)
 ```
