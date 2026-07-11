@@ -112,6 +112,7 @@ For extended-context or other model profiles, see `dot/omlx/CLAUDE.md` → "Crea
 - SSH client config: [modules/programs/tui/ssh.nix](modules/programs/tui/ssh.nix)
 - Host configs: `hosts/<type>/<hostname>/default.nix`
 - LLM settings: `~/Git/toolbox/dot/omlx/.omlx/settings.json` (reproducible oMLX config)
+- Example per-project dev shells (direnv + flake): [examples/](examples/) (`python-devshell/`, `typescript-devshell/`)
 
 ## Testing
 
