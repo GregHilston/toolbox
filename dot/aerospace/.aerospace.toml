@@ -207,18 +207,63 @@ automatically-unhide-macos-hidden-apps = false
     up = 'volume up'
     shift-down = ['volume set 0', 'mode main']
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Workspace → monitor assignment: ONE config that auto-adapts to TWO rigs
+# ─────────────────────────────────────────────────────────────────────────────
+# This machine (citadel) is used in two very different physical setups, and we
+# deliberately encode BOTH in a single file so switching between them requires
+# ZERO edits — you just change the hardware and AeroSpace re-resolves.
+#
+#   HOME OFFICE  — laptop lid CLOSED (clamshell), 3 external monitors:
+#                    monitor 1 = left, monitor 2 = middle, monitor 3 = right
+#   REMOTE       — laptop lid OPEN, citadel + moria side-by-side, with moria used
+#                  as a 2nd display via macOS Screen Mirroring (AirPlay). 2 monitors:
+#                    citadel built-in + "moria (AirPlay)"
+#
+# HOW THE ONE CONFIG SERVES BOTH — AeroSpace evaluates each value as an ORDERED
+# list of monitor patterns and uses the FIRST pattern that matches a *currently
+# connected* monitor. Supported patterns: integer index (1-based, left→right),
+# 'main', 'secondary' (the non-main monitor, ONLY when exactly two are connected),
+# 'built-in', and case-insensitive name regex. See:
+#   https://nikitabobko.github.io/AeroSpace/guide#assign-workspaces-to-monitors
+# We exploit two facts that differ between the rigs:
+#   • 'built-in' matches ONLY when the lid is open  → present remote, absent at home.
+#     (Verified: moria's display is named "moria (AirPlay)", so it never matches
+#      the 'built-in' substring — 'built-in' is unambiguously citadel.)
+#   • 'secondary' is only defined with exactly TWO monitors → the remote rig.
+# So each line's patterns are ordered [remote-intent, home-intent] (or vice-versa)
+# and the rig that's plugged in decides which one wins:
+#
+#   ws 1-2: ['built-in', 1]  remote→ 'built-in'=citadel wins.  home→ lid closed so
+#                            'built-in' absent, falls to index 1 = left monitor.
+#   ws 3-7: ['built-in', 2]  remote→ citadel.  home→ index 2 = middle monitor.
+#   ws 8-9: [3, 'secondary'] home→ index 3 = right monitor wins (3 mons exist).
+#                            remote→ only 2 mons so index 3 absent, 'secondary'
+#                            = the non-main monitor = moria.
+#
+# PREREQUISITES for the remote rig (both are normal macOS defaults):
+#   1. citadel's built-in must be the macOS "main" display (System Settings →
+#      Displays → drag the white menu-bar to it). This is what makes 'secondary'
+#      resolve to moria for workspaces 8-9.
+#   2. Keep the lid OPEN remote / CLOSED at home (so 'built-in' is present/absent).
+# Physical left/right placement of citadel vs moria does NOT matter remote — 1-9
+# key off 'built-in'/'secondary', not index.
+#
+# SWAP BACK (returning to the office): close the lid, plug in the 3 monitors.
+# 'built-in' disappears and index 3 reappears, so 1-7 return to left/middle and
+# 8-9 return to the right monitor. Nothing to edit or revert.
+#
+# Harmless on other Macs sharing this stow'd config (moria/dungeon): a single
+# display makes everything fall through to 'main'.
+# ─────────────────────────────────────────────────────────────────────────────
 [workspace-to-monitor-force-assignment]
-    # Left monitor
-    1 = 1
-    2 = 1
-
-    # Middle monitor
-    3 = 2
-    4 = 2
-    5 = 2
-    6 = 2
-    7 = 2
-
-    # Right monitor
-    8 = 3
-    9 = 3
+    #                      HOME (3 mon)   REMOTE (2 mon)
+    1 = ['built-in', 1]  # left           citadel
+    2 = ['built-in', 1]  # left           citadel
+    3 = ['built-in', 2]  # middle         citadel
+    4 = ['built-in', 2]  # middle         citadel
+    5 = ['built-in', 2]  # middle         citadel
+    6 = ['built-in', 2]  # middle         citadel
+    7 = ['built-in', 2]  # middle         citadel
+    8 = [3, 'secondary'] # right          moria
+    9 = [3, 'secondary'] # right          moria
