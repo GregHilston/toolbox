@@ -34,6 +34,27 @@ rohan (the writerdeck) is console-only and doesn't import `modules/common`, so i
 unaffected by this flag. To add a new GUI host, set `enableGui = true` in its
 `hostVars`; a new headless host needs nothing.
 
+## Where apps live: brew on macOS, nix on NixOS
+
+No dilemma — nixpkgs can't package many macOS `.app`s (and nix-darwin drives brew
+declaratively), while Homebrew/Linuxbrew is not idiomatic on NixOS. So the same app is
+declared in two places by platform, with truly-shared CLI tools hoisted into
+`config/base-packages.nix`:
+
+- **macOS (Darwin):** `modules/darwin/homebrew-base.nix` (every Mac) + per-host casks.
+- **NixOS CLI:** `modules/common/default.nix` systemPackages extras — the "Darwin gets
+  it via Homebrew" list (`just`, `stow`, `gh`, `pandoc`, `ngrok`, …).
+- **NixOS GUI:** the `enableGui` block in `modules/home/default.nix`, or a managed
+  `programs.*` module under `modules/programs/gui/` (e.g. `ghostty`, `alacritty` — these
+  get stylix theming for free). GUI apps reach every `enableGui` NixOS host (mines +
+  isengard), so add there rather than per-host unless you want just one.
+
+**aarch64 caveat:** mines is aarch64-linux. Several proprietary GUI apps (slack, spotify,
+discord, bitwarden-desktop) are **x86_64-linux only** in nixpkgs — hence the
+`system != "aarch64-linux"` gate in `modules/home/default.nix`. Check
+`nix eval .#nixosConfigurations.<host>.pkgs.<pkg>.meta.platforms` before adding a GUI app
+for an ARM host.
+
 ## Common Mistakes to Avoid
 
 1. **Module imports**: Always use relative paths in module imports (e.g., `../../modules/home` not absolute paths)
@@ -85,6 +106,27 @@ networking.resolvconf.dnsExtensionMechanism = false;  # drop `options edns0`
 Note: `networking.nameservers` is silently ignored under NetworkManager + openresolv, so
 forcing public resolvers that way does not work; disabling EDNS0 keeps the NAT DNS and is
 the smaller fix.
+
+## Home-manager activation fails on a long-dormant host (stale `.backup` pileup)
+
+`backupFileExtension = "backup"` (`flake-modules/hosts.nix`) makes home-manager move any
+non-managed file it wants to own to `<file>.backup`. On a host that hasn't rebuilt in
+months, those `.backup` files accumulate; the next activation's `checkLinkTargets` then
+aborts with *"Existing file `X.backup` would be clobbered by backing up `X`"* — because it
+refuses to overwrite an existing backup. Symptom: `just fr <host>` builds fine but
+`home-manager-<user>.service` fails (`systemctl status` shows the clobber message; the
+system layer still activates, so systemPackages like `ngrok` land but home packages don't).
+
+Fix: clear the stale backups, then re-run the switch. Non-destructively —
+
+```
+mkdir -p ~/.hm-stale-backups-$(date +%Y%m%d)
+find ~ -maxdepth 3 -name '*.backup' -exec mv {} ~/.hm-stale-backups-.../ \;  # preserve tree
+```
+
+These `.backup` files are home-manager's own old backups of stylix/gtk/theme configs
+(regenerable) — safe to archive. Bumping `backupFileExtension` also works but changes all
+hosts and leaves clutter, so clearing the dormant host's cruft is the better layer.
 
 ## Verification Workflow
 
