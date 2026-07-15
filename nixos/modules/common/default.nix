@@ -59,9 +59,9 @@ in {
 
   environment = {
     # Shared baseline (config/base-packages.nix) plus NixOS-only extras.
-    # Darwin gets just/stow/gh via Homebrew, so they live here, not in the base.
-    # Note: xclip lives in home.packages behind the enableGui conditional so
-    # GUI systems get a clipboard while WSL doesn't.
+    # Darwin gets just/stow/gh/ngrok via Homebrew, so they live here, not in
+    # the base. Note: xclip lives in home.packages behind the enableGui
+    # conditional so GUI systems get a clipboard while WSL doesn't.
     systemPackages =
       basePackages.systemPackages
       ++ (with pkgs; [
@@ -72,6 +72,7 @@ in {
         python3
         pandoc
         gh
+        ngrok # nix stand-in for the macOS `ngrok` Homebrew cask
       ]);
 
     sessionVariables = {

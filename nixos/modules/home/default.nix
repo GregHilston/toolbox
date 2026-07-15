@@ -48,6 +48,12 @@ in {
         xclip # X11 clipboard utility
         # texstudio
 
+        # GUI dev tools — nix stand-ins for the macOS Homebrew casks (bruno,
+        # dbeaver-community, db-browser-for-sqlite). All build on aarch64-linux.
+        bruno
+        dbeaver-bin
+        sqlitebrowser
+
         # Fonts (needed for GUI)
         nerd-fonts.jetbrains-mono
         jetbrains-mono
