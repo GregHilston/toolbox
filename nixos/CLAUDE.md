@@ -46,6 +46,42 @@ unaffected by this flag. To add a new GUI host, set `enableGui = true` in its
 8. **No hardcoded IPs**: Never put IP addresses directly in host configs or modules. All host IPs are defined in `config/vars.nix` under `networking.hosts`. Reference them as `vars.networking.hosts.<name>.lan` or `vars.networking.hosts.<name>.tailscale`. If a new host or IP is needed, add it to `vars.nix` first.
 9. **SSH config**: SSH client matchBlocks are managed centrally in `modules/programs/tui/ssh.nix` using vars. Do not add SSH host entries in individual host configs.
 
+## VMware Fusion VM (mines) — Access & Networking
+
+`mines` is a **NixOS aarch64-linux** guest under VMware Fusion on the Mac host `moria`.
+It is **not** a Darwin host — rebuild it with `just ft mines` / `just fr mines`
+(`nh os …`). Running `just dt/dr mines` fails with `darwin-rebuild: command not found`
+inside the guest; `dt`/`dr` are for the Macs only.
+
+**Reaching it from moria:** SSH over the VMware NAT subnet (`192.168.180.0/24`). The
+guest IP **drifts** via NAT DHCP, so the static `mines` entry in `vars.nix`/ssh config
+goes stale. Find the current lease on the host with:
+
+```
+awk '/^lease /{ip=$2} /starts/{s=$0} /hardware/{h=$0} /^}/{print ip"  "s"  "h}' \
+  /var/db/vmware/vmnet-dhcpd-vmnet8.leases | grep -i mines   # newest timestamp wins
+```
+
+Then `ssh ghilston@<ip>`. The host reaches the guest on this subnet even when the
+guest has no *internet*, so SSH works for remote repair.
+
+**"No internet" is usually broken DNS, not routing.** Symptom triage on the guest:
+`ping 1.1.1.1` works but `ping github.com` says *"Name or service not known"*, and
+`host github.com` resolves while `git`/`curl`/`ping`/`nix` fail with *"server returned
+answer with no data"*. Cause: **VMware's NAT DNS proxy (`192.168.180.2`) mishandles
+glibc's EDNS0 queries** — `host`/`dig` bypass glibc so they mislead you into thinking
+DNS is fine. Restarting host VMware networking
+(`sudo "/Applications/VMware Fusion.app/Contents/Library/vmnet-cli" --stop && … --start`,
+needs a real terminal — `sudo` can't prompt under a non-interactive `!` run) does **not**
+fix the glibc incompatibility. The durable fix (committed in
+`hosts/vms/mines/default.nix`) is to point the guest at public resolvers and stop
+NetworkManager from reverting `resolv.conf`:
+
+```nix
+networking.nameservers = ["1.1.1.1" "8.8.8.8"];
+networking.networkmanager.dns = "none";
+```
+
 ## Verification Workflow
 
 ALWAYS test before deploying:
