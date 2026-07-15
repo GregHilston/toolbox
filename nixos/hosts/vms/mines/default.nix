@@ -70,19 +70,15 @@
   # Reference: mitchellh-nixos-config/machines/vm-shared.nix:148-149
   networking.firewall.enable = false;
 
-  # Use public DNS resolvers instead of the VMware NAT DNS proxy.
+  # Disable the EDNS0 resolver option (drops `options edns0` from resolv.conf).
   #
-  # VMware Fusion's NAT gateway (192.168.180.2) runs a DNS proxy that mishandles
-  # glibc's EDNS0 queries: `host`/`dig` resolve fine, but every glibc-based lookup
-  # (git, curl, ping, nix substituters) fails with "server returned answer with no
-  # data". Raw IP routing through the NAT is unaffected. Pointing the VM straight at
-  # public resolvers sidesteps the broken proxy entirely.
-  #
-  # `networkmanager.dns = "none"` stops NetworkManager from overwriting
-  # /etc/resolv.conf with the DHCP-provided NAT nameserver, so these stick across
-  # reboots, DHCP renewals, and rebuilds.
-  networking.nameservers = ["1.1.1.1" "8.8.8.8"];
-  networking.networkmanager.dns = "none";
+  # VMware Fusion's NAT DNS proxy (192.168.180.2) cannot handle EDNS0 queries: with
+  # it enabled, every glibc lookup (git, curl, ping, nix substituters) fails with
+  # "server returned answer with no data", while `host`/`dig` mislead by resolving
+  # fine. Confirmed by isolation — the exact same NAT nameserver resolves correctly
+  # the instant `options edns0` is removed. Raw IP routing is unaffected. This is the
+  # minimal, root-cause fix; no need to hardcode public resolvers.
+  networking.resolvconf.dnsExtensionMechanism = false;
 
   # NFS server to share VM filesystem with macOS host
   # Enables performant filesystem access from macOS apps (Bruno, Finder, etc.)

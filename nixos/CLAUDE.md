@@ -68,19 +68,23 @@ guest has no *internet*, so SSH works for remote repair.
 **"No internet" is usually broken DNS, not routing.** Symptom triage on the guest:
 `ping 1.1.1.1` works but `ping github.com` says *"Name or service not known"*, and
 `host github.com` resolves while `git`/`curl`/`ping`/`nix` fail with *"server returned
-answer with no data"*. Cause: **VMware's NAT DNS proxy (`192.168.180.2`) mishandles
-glibc's EDNS0 queries** — `host`/`dig` bypass glibc so they mislead you into thinking
-DNS is fine. Restarting host VMware networking
+answer with no data"*. Root cause: **VMware's NAT DNS proxy (`192.168.180.2`) cannot
+handle EDNS0**, and NixOS puts `options edns0` in `resolv.conf` by default. `host`/`dig`
+resolve because they don't go through glibc — they mislead you into thinking DNS is fine.
+Isolate it by editing `/etc/resolv.conf` (a writable file, unlike the read-only
+`/etc/resolvconf.conf` symlink) to the NAT nameserver **without** `options edns0` — it
+resolves instantly. Restarting host VMware networking
 (`sudo "/Applications/VMware Fusion.app/Contents/Library/vmnet-cli" --stop && … --start`,
 needs a real terminal — `sudo` can't prompt under a non-interactive `!` run) does **not**
-fix the glibc incompatibility. The durable fix (committed in
-`hosts/vms/mines/default.nix`) is to point the guest at public resolvers and stop
-NetworkManager from reverting `resolv.conf`:
+help. The durable, root-cause fix (committed in `hosts/vms/mines/default.nix`) is one line:
 
 ```nix
-networking.nameservers = ["1.1.1.1" "8.8.8.8"];
-networking.networkmanager.dns = "none";
+networking.resolvconf.dnsExtensionMechanism = false;  # drop `options edns0`
 ```
+
+Note: `networking.nameservers` is silently ignored under NetworkManager + openresolv, so
+forcing public resolvers that way does not work; disabling EDNS0 keeps the NAT DNS and is
+the smaller fix.
 
 ## Verification Workflow
 
