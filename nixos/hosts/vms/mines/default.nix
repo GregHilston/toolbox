@@ -126,6 +126,8 @@
   # └─────────────────────────┘
   #
   # nix-ld is already enabled in common/default.nix to support VS Code Server
-  # See modules/programs/gui/vscode/default.nix for extension reference list
-  programs.vscode.enable = lib.mkForce false;
+  # See modules/programs/gui/vscode/default.nix for extension reference list.
+  # Disabling via the module's own gate (not mkForce) means the extension list is
+  # never evaluated on this host.
+  home-manager.users.${vars.user.name}.custom.programs.vscode.enable = false;
 }

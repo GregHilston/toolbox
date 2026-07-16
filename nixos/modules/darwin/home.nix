@@ -67,7 +67,6 @@ in {
         packages =
           basePackages.homePackages
           ++ (with pkgs; [
-            ffmpeg
             # Fonts
             nerd-fonts.jetbrains-mono
             jetbrains-mono
@@ -84,13 +83,15 @@ in {
         ${pkgs.uv}/bin/uv tool install --upgrade mflux 2>/dev/null || true
       '';
 
-      # Searxngr config — points to dungeon's SearXNG instance.
-      # The binary is installed via uv (run ~/Git/toolbox/bin/setup-searxngr.sh on first use).
-      # On NixOS hosts, home.activation handles both install + stow; on Darwin we just
-      # declare the config file here and let the user run the setup script for the binary.
-      xdg.configFile."searxngr/config.ini".text = ''
-        [searxngr]
-        searxng_url = https://searxng.grehg2.xyz
+      # Searxngr config — single source of truth is dot/searxngr-config (the same
+      # file NixOS stows). Stow it here too so the config never drifts between
+      # platforms. The binary is installed via uv (run
+      # ~/Git/toolbox/bin/setup-searxngr.sh on first use); on NixOS the activation
+      # also handles the uv install, on Darwin that stays manual.
+      home.activation.stow-searxngr = inputs.home-manager.lib.hm.dag.entryAfter ["writeBoundary"] ''
+        if [ -d "$HOME/Git/toolbox/dot/searxngr-config" ]; then
+          ${pkgs.stow}/bin/stow -d "$HOME/Git/toolbox/dot" -t "$HOME" searxngr-config 2>/dev/null || true
+        fi
       '';
 
       custom = {

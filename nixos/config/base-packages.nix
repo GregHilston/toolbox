@@ -51,6 +51,7 @@ pkgs: {
     duckdb
     opencode
     yt-dlp
+    ffmpeg # yt-dlp needs it to merge best-quality video+audio streams
     uv
     git
     (python3.withPackages (ps:
