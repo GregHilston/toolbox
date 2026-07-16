@@ -75,16 +75,30 @@ It is **not** a Darwin host — rebuild it with `just ft mines` / `just fr mines
 inside the guest; `dt`/`dr` are for the Macs only.
 
 **Reaching it from moria:** SSH over the VMware NAT subnet (`192.168.180.0/24`). The
-guest IP **drifts** via NAT DHCP, so the static `mines` entry in `vars.nix`/ssh config
-goes stale. Find the current lease on the host with:
+host reaches the guest on this subnet even when the guest has no *internet*, so SSH
+works for remote repair.
+
+The guest IP is **pinned via a VMware NAT DHCP reservation** so it no longer drifts.
+On the host, `/Library/Preferences/VMware Fusion/vmnet8/dhcpd.conf` maps the VM's MAC to
+a fixed address **outside** the dynamic `range` (`.128–.254`), added *below* the
+`DO NOT MODIFY SECTION`:
+
+```
+host mines {
+    hardware ethernet 00:0c:29:89:17:27;   # `ip link show enp10s0` in the guest
+    fixed-address 192.168.180.10;          # matches vars.networking.hosts.mines.lan
+}
+```
+
+Editing that file needs `sudo` (real terminal). After editing, restart networking
+(`sudo "/Applications/VMware Fusion.app/Contents/Library/vmnet-cli" --stop && … --start`)
+and renew the guest lease (`sudo systemctl restart NetworkManager` in the VM). If the
+lease ever drifts again (e.g. before the reservation existed), find the current one with:
 
 ```
 awk '/^lease /{ip=$2} /starts/{s=$0} /hardware/{h=$0} /^}/{print ip"  "s"  "h}' \
   /var/db/vmware/vmnet-dhcpd-vmnet8.leases | grep -i mines   # newest timestamp wins
 ```
-
-Then `ssh ghilston@<ip>`. The host reaches the guest on this subnet even when the
-guest has no *internet*, so SSH works for remote repair.
 
 **"No internet" is usually broken DNS, not routing.** Symptom triage on the guest:
 `ping 1.1.1.1` works but `ping github.com` says *"Name or service not known"*, and
@@ -127,6 +141,29 @@ find ~ -maxdepth 3 -name '*.backup' -exec mv {} ~/.hm-stale-backups-.../ \;  # p
 These `.backup` files are home-manager's own old backups of stylix/gtk/theme configs
 (regenerable) — safe to archive. Bumping `backupFileExtension` also works but changes all
 hosts and leaves clutter, so clearing the dormant host's cruft is the better layer.
+
+**Recurring variant on GUI hosts (`~/.gtkrc-2.0.backup`):** even a freshly-rebuilt desktop
+host hits this every activation, because running GTK/Plasma rewrites `~/.gtkrc-2.0` as a
+real file at runtime, replacing home-manager's symlink. The next activation wants to back
+it up, collides with the previous `.gtkrc-2.0.backup`, and aborts. Archiving unblocks it
+but it returns. The durable fix is to replace `backupFileExtension` with a
+`home-manager.backupCommand` that overwrites/uniquifies instead of refusing — a shared
+change in `flake-modules/hosts.nix`, so weigh it against all hosts before doing it.
+
+## Deploying to NixOS from the toolbox repo — gotchas
+
+- **Stow runs under a stripped PATH.** `programs/tui/zsh` stows the portable dotfiles
+  (`~/.zshrc`, `~/.tmux.conf`, …) from `dot/` in a home-manager activation. Home-manager
+  activation runs with a **minimal PATH that excludes `/run/current-system/sw/bin`**, so a
+  bare `stow` (or any system tool) silently no-ops on NixOS — the classic symptom is a
+  *bare shell prompt* (no powerlevel10k) because `~/.zshrc` was never linked. Always call
+  such tools by absolute nix path (`${pkgs.stow}/bin/stow`), never rely on PATH in an
+  activation script.
+- **Claude Code on NixOS comes from nixpkgs `claude-code`**, added to
+  `modules/home/default.nix` — *not* the `curl|bash` native installer in `tui/claude.nix`
+  (that installer assumes `~/.local/bin` is on PATH, which it isn't on the VM, so it
+  silently no-ops). Darwin keeps the native self-updating installer; the installer's
+  `! command -v claude` guard makes it defer to the nix-installed binary on NixOS.
 
 ## Verification Workflow
 

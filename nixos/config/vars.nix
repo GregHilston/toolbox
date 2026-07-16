@@ -63,7 +63,11 @@
         lan = "moria.local";
       };
       mines = {
-        lan = "192.168.180.132";
+        # Pinned via a VMware NAT DHCP reservation on the host (moria):
+        # /Library/Preferences/VMware Fusion/vmnet8/dhcpd.conf maps the VM's MAC
+        # (00:0c:29:89:17:27) to this fixed-address (outside the .128–.254 dynamic
+        # pool), so the lease no longer drifts. See nixos/CLAUDE.md → VMware Fusion.
+        lan = "192.168.180.10";
       };
       fob = {
         tailscale = "100.98.200.16";

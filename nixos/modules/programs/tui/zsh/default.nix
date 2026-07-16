@@ -33,14 +33,18 @@
   ];
 
   home.activation.stowDotfiles = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    export PATH="/opt/homebrew/bin:$PATH"
     DOTFILES="$HOME/Git/toolbox/dot"
 
-    if [ -d "$DOTFILES" ] && command -v stow &>/dev/null; then
+    # Call stow by its absolute nix path. home-manager activation runs with a
+    # minimal PATH that excludes the system profile (/run/current-system/sw/bin),
+    # so a bare `stow` silently no-ops on NixOS — which is why mines ended up with
+    # no ~/.zshrc / ~/.tmux.conf (and thus a bare prompt). The old /opt/homebrew/bin
+    # PATH hack only rescued Darwin. ${pkgs.stow}/bin/stow works everywhere.
+    if [ -d "$DOTFILES" ]; then
       cd "$DOTFILES"
       for pkg in zsh aerospace tmux; do
-        stow -v -t "$HOME" "$pkg" 2>&1 \
-          || echo "stow: conflict for $pkg — backup conflicting dotfiles in ~ then re-run darwin-rebuild switch"
+        ${pkgs.stow}/bin/stow -v -t "$HOME" "$pkg" 2>&1 \
+          || echo "stow: conflict for $pkg — backup conflicting dotfiles in ~ then re-run home-manager"
       done
     fi
 
