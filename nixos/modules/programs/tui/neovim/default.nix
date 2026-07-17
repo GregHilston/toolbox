@@ -19,8 +19,8 @@
       imagemagick
 
       # Language Servers (LSP)
-      erlang_27
-      elixir
+      beam27Packages.erlang # was erlang_27 (deprecated → beamPackages sets)
+      beamPackages.elixir # was elixir (deprecated → beamPackages sets)
       elixir-ls
       lua-language-server
       nil
