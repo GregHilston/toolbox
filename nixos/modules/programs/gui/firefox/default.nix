@@ -4,6 +4,10 @@
 {pkgs, ...}: {
   programs.firefox = {
     enable = true;
+    # Pin the profile location. home-manager is migrating the default from
+    # ".mozilla/firefox" to "$XDG_CONFIG_HOME/mozilla/firefox"; keep the legacy
+    # path so existing profiles (history/cookies/extensions state) aren't orphaned.
+    configPath = ".mozilla/firefox";
     profiles = {
       default = {
         id = 0;

@@ -1,12 +1,15 @@
 # nixos/modules/programs/tui/direnv/default.nix
-{vars, ...}: {
+{config, ...}: {
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;
     enableZshIntegration = true;
+    # Use the platform-correct home dir (config.home.homeDirectory): /home/<user>
+    # on NixOS, /Users/<user> on Darwin. Hardcoding /Users/... meant the whitelist
+    # never matched on NixOS, so direnv didn't auto-allow these repos there.
     config.whitelist.prefix = [
-      "/Users/${vars.user.name}/Git/home-lab"
-      "/Users/${vars.user.name}/Git/toolbox"
+      "${config.home.homeDirectory}/Git/home-lab"
+      "${config.home.homeDirectory}/Git/toolbox"
     ];
   };
 }
