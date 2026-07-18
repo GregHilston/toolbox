@@ -25,6 +25,15 @@
 
       "_comment_no_speculative_decoding": "DO NOT add a vlm_mtp / dflash / mtp drafter to this model. We tested the Gemma 4 assistant-MTP drafter on moria (M4 Max) and dungeon (M3 Pro): net 0.97x and 0.91x respectively — a measured LOSS on both. A low-active-param MoE (A4B activates ~4B/token) on Apple Silicon isn't bandwidth-bound, so speculative decoding has nothing to recover and the drafter overhead dominates. Full write-up + reproduction: dot/omlx/speculative-decoding-findings.md."
     },
+    "gemma-4-e4b-it-qat-4bit": {
+      "description": "Lighter Gemma 4 E4B (~4.5B effective / 8B total params, QAT 4-bit, ~5-6GB) for fast batch summarisation/indexing (roger vault index). Same tuning philosophy as the 26B-A4B — low temp to reduce hallucination, thinking disabled (non-reasoning task) — but a far smaller footprint/load time, chosen to speed up re-summarising the whole vault. Source: mlx-community/gemma-4-E4B-it-qat-4bit.",
+      "temperature": 0.3,
+      "top_p": 0.95,
+      "top_k": 64,
+      "repetition_penalty": 1.0,
+      "presence_penalty": 0.0,
+      "thinking_budget_enabled": false
+    },
     "Qwen3.6-35B-A3B-8bit-long-context": {
       "description": "Extended context variant of Qwen3.6-35B-A3B-8bit for long-form analysis (audio transcripts, long documents). Native 256K, extended to 512K. Full 1M requires YaRN configuration in oMLX settings. Created as symlink via nixos/modules/darwin/omlx.nix.",
       "temperature": 0.6,
