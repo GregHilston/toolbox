@@ -39,7 +39,7 @@ Then add the public key to GitHub, GitLab, or any remote hosts as needed.
 macOS Sequoia+ requires user consent via the GUI to enable Screen Sharing. The `kickstart` CLI tool conflicts with System Settings and doesn't work reliably.
 
 1. Open **System Settings > General > Sharing > Screen Sharing** and toggle it **ON**
-2. Connect from another Mac via `vnc://192.168.1.174` (LAN) or `vnc://<tailscale-ip>` (remote)
+2. Connect from another Mac via `vnc://192.168.1.229` (LAN) or `vnc://<tailscale-ip>` (remote)
 
 ## 4. USB Ethernet Adapter (dungeon only)
 
