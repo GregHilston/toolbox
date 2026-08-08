@@ -89,13 +89,38 @@ validate:
 
 # Generate secret files from 1Password templates.
 # Run this once after cloning, or after updating secrets in 1Password.
-# Requires: 1Password app with CLI integration enabled (Settings → Developer → Integrate with 1Password CLI).
-# On headless hosts (dungeon), connect via VNC first (Finder → Go → Connect to Server).
+#
+# Authentication, in order of preference:
+#
+#   1. A service account token, from $OP_SERVICE_ACCOUNT_TOKEN or the file
+#      ~/.config/op/service-account-token. This authenticates with no GUI at
+#      all, which is the only way `op inject` can work on a headless host.
+#
+#   2. The 1Password desktop app's CLI integration (Settings → Developer →
+#      Integrate with 1Password CLI). This is GUI-gated: on a headless machine
+#      it fails with "error initializing client: authorization timeout", so
+#      dungeon needs either a token (preferred) or a VNC session first.
 secrets:
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  TOKEN_FILE="$HOME/.config/op/service-account-token"
+  if [ -z "${OP_SERVICE_ACCOUNT_TOKEN:-}" ] && [ -r "$TOKEN_FILE" ]; then
+    OP_SERVICE_ACCOUNT_TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE")"
+    export OP_SERVICE_ACCOUNT_TOKEN
+  fi
+
+  if [ -n "${OP_SERVICE_ACCOUNT_TOKEN:-}" ]; then
+    echo "==> op: using service account token (headless-capable)"
+  else
+    echo "==> op: no service account token found; falling back to the desktop app"
+    echo "    integration, which requires a GUI session on this host."
+  fi
+
   op inject -f -i ../dot/omlx/.omlx/settings.json.tpl -o ../dot/omlx/.omlx/settings.json
   op inject -f -i ../dot/pi/.pi/agent/models.json.tpl -o ../dot/pi/.pi/agent/models.json
   op inject -f -i secrets/.env.tpl -o secrets/.env
-  @echo "Secrets generated. Run 'just dr <host>' to deploy."
+  echo "Secrets generated. Run 'just dr <host>' to deploy."
 
 # Show post-deploy checklist for Darwin/macOS setup
 # Usage: `just checklist`

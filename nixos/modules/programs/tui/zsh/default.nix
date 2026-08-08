@@ -7,6 +7,11 @@
 #                 at the end of .zshrc. On non-nix machines the file doesn't
 #                 exist and the source line in .zshrc is a no-op.
 #
+# ~/.zshenv       stow-managed (toolbox/dot/zsh/.zshenv) — puts Homebrew on PATH
+#                 for *every* zsh, not just login shells. Homebrew's own
+#                 ~/.zprofile hook is login-only, so `ssh <host> '<cmd>'` could
+#                 not find `just` / `op`. See that file's header for detail.
+#
 # Stow + oh-my-zsh plugin/theme wiring run automatically on each deploy via
 # home.activation.stowDotfiles. On the first run of a fresh machine, if
 # ~/.zshrc already exists as a plain file stow will warn — back it up and

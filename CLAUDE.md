@@ -196,9 +196,11 @@ it in the appropriate `.tpl` file.
 
 1. **1Password CLI integration**: Open 1Password app → Settings → Developer → enable
    "Integrate with 1Password CLI". This must be done manually on each machine.
-2. **Headless hosts (dungeon)**: `just secrets` requires 1Password GUI authentication
-   (Touch ID / password prompt). On headless Macs, connect via VNC first
-   (Finder → Go → Connect to Server) before running `just secrets`.
+2. **Headless hosts (dungeon)**: the desktop-app integration is GUI-gated, so `op inject`
+   there fails with `authorization timeout`. Preferred fix is a **1Password service
+   account token** (needs a Business/Teams plan) at `~/.config/op/service-account-token`,
+   mode `600` — `just secrets` picks it up automatically and needs no GUI. Without a
+   token, connect via VNC (Finder → Go → Connect to Server) and unlock 1Password first.
 
 ## Thread Fetchers — Convert HN & Reddit to Markdown/JSON
 
