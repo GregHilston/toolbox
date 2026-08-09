@@ -24,17 +24,14 @@ in {
   # flake-modules/hosts.nix. nix settings, networking, locale, and the base
   # user (groups networkmanager + wheel) come from ./core.nix.
 
-  # SSH server settings for the NixOS hosts that enable sshd (mines, home-lab).
-  # Inert on hosts that don't — sshd_config is only generated under
-  # services.openssh.enable, so this needs no guard.
-  #
-  # UseDns is the *only* value here that differs from the nixpkgs defaults;
-  # ports/PasswordAuthentication/X11Forwarding/PermitRootLogin were previously
-  # spelled out in a wrapper module but every one of them already matched the
-  # default, so they're gone. Worth revisiting: UseDns makes sshd do a reverse
-  # lookup on each connecting client, which is usually a login-latency cost with
-  # little benefit.
-  services.openssh.settings.UseDns = true;
+  # No sshd settings here on purpose. The hosts that run sshd (mines, home-lab)
+  # take the nixpkgs defaults; a wrapper module used to spell out
+  # ports/PasswordAuthentication/X11Forwarding/PermitRootLogin, all of which
+  # already matched the default, plus UseDns = true, which was removed because
+  # nothing in this repo can use it (no `from=` restrictions in
+  # authorizedKeys, no `Match host`, no AllowUsers/DenyUsers) while it makes
+  # sshd reverse-resolve every connecting client — through, on mines, the same
+  # VMware NAT DNS proxy this repo already works around elsewhere.
 
   # Allows using nix-ld to run dynamically linked ELF binaries
   # from Nix store without needing to build a fully static binary.
