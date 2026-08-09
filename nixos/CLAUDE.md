@@ -202,12 +202,17 @@ These `.backup` files are home-manager's own old backups of stylix/gtk/theme con
 hosts and leaves clutter, so clearing the dormant host's cruft is the better layer.
 
 **Recurring variant on GUI hosts (`~/.gtkrc-2.0.backup`):** even a freshly-rebuilt desktop
-host hits this every activation, because running GTK/Plasma rewrites `~/.gtkrc-2.0` as a
-real file at runtime, replacing home-manager's symlink. The next activation wants to back
-it up, collides with the previous `.gtkrc-2.0.backup`, and aborts. Archiving unblocks it
-but it returns. The durable fix is to replace `backupFileExtension` with a
-`home-manager.backupCommand` that overwrites/uniquifies instead of refusing — a shared
-change in `flake-modules/hosts.nix`, so weigh it against all hosts before doing it.
+host hit this every activation, because running GTK/Plasma rewrites `~/.gtkrc-2.0` as a
+real file at runtime, replacing home-manager's symlink. The next activation wanted to back
+it up, collided with the previous `.gtkrc-2.0.backup`, and aborted.
+
+**Fixed (committed in `flake-modules/hosts.nix`):** `home-manager.overwriteBackup = true`
+alongside `backupFileExtension = "backup"`. This sets `HOME_MANAGER_BACKUP_OVERWRITE=1`, so
+`checkLinkTargets` clobbers a stale `<file>.backup` (with a warning) instead of aborting —
+backups still get made, they just stop colliding with themselves. Chosen over the
+`backupCommand` route because it's one line, keeps the existing backup semantics, and needs
+no external tool. It's in the shared `homeManagerModule`, so it applies to every NixOS and
+Darwin host.
 
 ## Deploying to NixOS from the toolbox repo — gotchas
 

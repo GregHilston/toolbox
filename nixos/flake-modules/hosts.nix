@@ -43,6 +43,13 @@
       useGlobalPkgs = true;
       useUserPackages = true;
       backupFileExtension = "backup";
+      # Clobber a stale `<file>.backup` instead of aborting activation. GUI hosts
+      # (Plasma/GTK) rewrite files like `~/.gtkrc-2.0` at runtime, replacing
+      # home-manager's symlink; the next activation wants to back it up, collides
+      # with the previous `.gtkrc-2.0.backup`, and — by default — refuses. Setting
+      # this makes home-manager overwrite the old backup (with a warning) so
+      # activations stop tripping over their own backups. See nixos/CLAUDE.md.
+      overwriteBackup = true;
       extraSpecialArgs = {inherit inputs vars;};
     };
   };
