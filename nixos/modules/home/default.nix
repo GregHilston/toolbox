@@ -6,13 +6,15 @@
 # goes in ./workstation.nix, not here.
 {
   inputs,
-  vars,
+  osConfig,
   pkgs,
   lib,
   ...
 }: let
-  # Desktop is opt-in: hosts enable it via vars.enableGui (set in hosts.nix).
-  enableGui = vars.enableGui or false;
+  # Desktop is opt-in and has exactly one switch: custom.desktop.enable, set by
+  # the host itself (see ../common/desktop.nix). Read it back off the system
+  # config so the GUI packages here can never disagree with the desktop stack.
+  enableGui = osConfig.custom.desktop.enable;
 in {
   imports =
     [

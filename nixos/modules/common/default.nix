@@ -53,7 +53,7 @@ in {
   environment = {
     # Shared baseline (config/base-packages.nix) plus NixOS-only extras.
     # Darwin gets just/stow/gh/ngrok via Homebrew, so they live here, not in
-    # the base. Note: xclip lives in home.packages behind the enableGui
+    # the base. Note: xclip lives in home.packages behind the desktop
     # conditional so GUI systems get a clipboard while WSL doesn't.
     systemPackages =
       basePackages.systemPackages

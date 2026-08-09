@@ -6,6 +6,11 @@
 
   networking.hostName = "isengard";
 
+  # GUI host: pulls in the KDE Plasma stack (../../../modules/common/desktop.nix)
+  # and the GUI home packages (../../../modules/home/default.nix reads this
+  # back via osConfig).
+  custom.desktop.enable = true;
+
   boot.loader.grub = {
     enable = true;
     device = "/dev/sda";

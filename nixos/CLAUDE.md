@@ -21,18 +21,28 @@ These commands do NOT require `sudo` and catch most evaluation and dependency er
 
 ## Desktop (GUI) vs headless NixOS hosts
 
-The KDE Plasma desktop is **opt-in**. A single flag, `vars.enableGui`, drives both
-the system desktop stack (`modules/common/desktop.nix`, gated on
-`custom.desktop.enable = vars.enableGui or false`) and the GUI home packages in
-`modules/home/default.nix`. It's set per host in `flake-modules/hosts.nix`:
+The KDE Plasma desktop is **opt-in**, via one option the host sets on itself:
 
-- **GUI host** (isengard, mines): `hostVars = vars // { enableGui = true; };`
-- **Headless host** (foundation, home-lab): `enableGui = false` (the default) — no
-  desktop, no GUI packages, no per-service `mkForce` overrides needed.
+```nix
+custom.desktop.enable = true;   # in hosts/<type>/<host>/default.nix
+```
 
-rohan (the writerdeck) is console-only and doesn't import `modules/common`, so it's
-unaffected by this flag. To add a new GUI host, set `enableGui = true` in its
-`hostVars`; a new headless host needs nothing.
+That option is defined in `modules/common/desktop.nix` and drives both the system
+desktop stack (xserver/sddm/plasma6/pipewire/1Password GUI) and the GUI home packages
+in `modules/home/default.nix`, which reads it back with
+`osConfig.custom.desktop.enable`. One switch, so the two halves can't disagree.
+
+- **GUI host** (isengard, mines): sets `custom.desktop.enable = true`.
+- **Headless host** (foundation, home-lab): sets nothing — no desktop, no GUI
+  packages, no per-service `mkForce` overrides needed.
+
+rohan (the writerdeck) is console-only and doesn't import `modules/common`, so it
+doesn't have the option at all. To add a new GUI host, set the option in its host
+file; a new headless host needs nothing.
+
+> Historical note: this used to be a second flag, `vars.enableGui`, threaded through
+> `hostVars` in `flake-modules/hosts.nix` purely to supply `custom.desktop.enable`'s
+> default. Hosts now set the real option directly.
 
 ## Where apps live: brew on macOS, nix on NixOS
 

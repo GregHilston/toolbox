@@ -1,18 +1,17 @@
 # KDE Plasma desktop stack: X server, SDDM, Plasma 6, PipeWire, and the
 # 1Password GUI. Gated behind custom.desktop.enable so headless hosts don't
-# inherit a full desktop environment. The default follows the per-host
-# vars.enableGui flag (which also drives the GUI packages in modules/home).
+# inherit a full desktop environment.
+#
+# This option is the single switch for "is this a desktop host": the GUI home
+# packages in ../home/default.nix read it back through osConfig. A GUI host sets
+# it in its own config (isengard, mines); everything else defaults to off.
 {
   config,
   lib,
   vars,
   ...
 }: {
-  options.custom.desktop.enable = lib.mkOption {
-    type = lib.types.bool;
-    default = vars.enableGui or false;
-    description = "Enable the KDE Plasma desktop stack (SDDM, Plasma 6, PipeWire, 1Password GUI).";
-  };
+  options.custom.desktop.enable = lib.mkEnableOption "the KDE Plasma desktop stack (SDDM, Plasma 6, PipeWire, 1Password GUI)";
 
   config = lib.mkIf config.custom.desktop.enable {
     services = {
