@@ -162,15 +162,30 @@
   home-manager.users.${vars.user.name} = {
     custom.programs.vscode.enable = false;
 
-    # HiDPI: keep the pointer from being tiny on the Mac's Retina panel. Plasma's
-    # fractional display scaling is a runtime System Settings toggle (persists in
-    # ~/.config); the host-side lever is Fusion's "Use full resolution for Retina
-    # display". This is the one piece worth pinning declaratively.
+    # HiDPI: keep the pointer from being tiny on the Mac's Retina panel.
     home.pointerCursor = {
       name = "breeze_cursors";
       package = pkgs.kdePackages.breeze;
       size = 48;
       x11.enable = true;
     };
+
+    # HiDPI global scale, declaratively. Under the Plasma X11 session (which we pin
+    # above for the VMware clipboard) startplasma-x11 enforces its OWN font DPI —
+    # that's why `Xft.dpi` reads 96 and everything is tiny on the Retina panel, and
+    # why a bare `services.xserver.dpi` (Mitchell Hashimoto's i3 approach) gets
+    # overridden here. The Plasma-native lever is `forceFontDPI` in ~/.config/kcmfonts
+    # — exactly what System Settings -> Text & Fonts -> "Force fonts DPI" writes. It
+    # drives font-metric-based scaling across Qt/Plasma and Ghostty. `force = true`
+    # overwrites Plasma's runtime-written file instead of trying to back it up (which
+    # would hit the .backup-clobber activation failure). 144 ≈ 1.5x (96 = 100%); bump
+    # to 168 (~1.75x) or 192 (2x) if still small, lower if it overshoots. On X11 this
+    # scales fonts/most Qt UI; pixel-fixed panel icons don't scale (an X11 limitation
+    # — true fractional scaling is Wayland-only, which we traded away for clipboard).
+    xdg.configFile."kcmfonts".force = true;
+    xdg.configFile."kcmfonts".text = ''
+      [General]
+      forceFontDPI=144
+    '';
   };
 }
