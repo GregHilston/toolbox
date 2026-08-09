@@ -8,7 +8,6 @@
   # Imports your common/default.nix to share settings
   imports = [
     ../../../modules/common
-    ../../../modules/services/ssh.nix
     # run `sudo nixos-generate-config --show-hardware-config > hardware-configuration.nix` to generate
     ./hardware-configuration.nix
   ];
@@ -41,8 +40,9 @@
     ];
   };
 
-  # Enable SSH for Remote-SSH connections from macOS VS Code
-  services.ssh.enable = true;
+  # Enable SSH for Remote-SSH connections from macOS VS Code.
+  # Shared sshd settings come from ../../../modules/common.
+  services.openssh.enable = true;
 
   # Hardware Graphics Acceleration for VMware Fusion
   # Enables 3D acceleration using Mesa's SVGA driver (vmwgfx module)

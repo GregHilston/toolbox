@@ -6,7 +6,6 @@
   imports = [
     ./hardware-configuration.nix
     ../../../modules/common
-    ../../../modules/services/ssh.nix
   ];
 
   networking.hostName = "home-lab";
@@ -20,7 +19,9 @@
   # Proxmox/QEMU guest support
   services.spice-vdagentd.enable = true;
   services.qemuGuest.enable = true;
-  services.ssh.enable = true;
+
+  # Shared sshd settings come from ../../../modules/common.
+  services.openssh.enable = true;
 
   # Docker configuration for home-lab services
   virtualisation.docker.autoPrune = {
