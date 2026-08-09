@@ -55,5 +55,6 @@
   "agentPushNotifEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754006348784
-  }
+  },
+  "autoCompactWindow": 1000000
 }
