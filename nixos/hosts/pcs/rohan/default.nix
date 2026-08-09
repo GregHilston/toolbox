@@ -136,10 +136,14 @@
         ../../../modules/programs/tui/pi.nix
         ../../../modules/programs/tui/tmux
         ../../../modules/programs/tui/ssh.nix
-        # No yazi: it is opt-in via custom.yazi.enable, which this host never
-        # set, so importing it only ever contributed an unused option. Set that
-        # option here (and add the import back) if the writerdeck wants a file
-        # manager.
+        # No yazi — deliberate, not an oversight. This host used to import
+        # ../../../modules/programs/tui/yazi.nix without ever setting
+        # custom.yazi.enable, so the module contributed nothing and yazi has
+        # never actually been installed here. Decision: keep it that way. The
+        # writerdeck premise is no browser, no desktop, no dev tools, and
+        # nothing has missed a file manager in the whole time it wasn't there.
+        # To reverse: re-add the import and set `custom.yazi.enable = true`
+        # below.
         ../../../modules/programs/tui/zoxide
         ../../../modules/programs/tui/zsh
       ];
