@@ -35,6 +35,7 @@
 {
   lib,
   pkgs,
+  osConfig ? null,
   ...
 }: {
   # zsh plugins/theme as nix packages.
@@ -150,5 +151,13 @@
     alias cleanup='nh clean all'
     alias cs='sudo nix-store --gc'
     alias opts='man home-configuration.nix'
+    ${lib.optionalString (osConfig.custom.desktop.enable or false) ''
+
+      # ── macOS clipboard parity (GUI Linux hosts only) ────────────────
+      # xclip is installed on desktop hosts via modules/home/default.nix.
+      # Not added on Darwin (native pbcopy/pbpaste) or headless Linux (no xclip).
+      alias pbcopy='xclip -selection clipboard'
+      alias pbpaste='xclip -selection clipboard -o'
+    ''}
   '';
 }

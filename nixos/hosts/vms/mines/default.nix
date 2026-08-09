@@ -17,6 +17,15 @@
   # back via osConfig).
   custom.desktop.enable = true;
 
+  # Pin the Plasma X11 session (Plasma 6 otherwise defaults to Wayland,
+  # defaultSession = "plasma"). VMware Fusion's host<->guest clipboard and
+  # drag-drop are driven by open-vm-tools' `vmware-user`, which the
+  # virtualisation.vmware.guest module launches ONLY in the X11 session (via
+  # services.xserver.displayManager.sessionCommands -> vmware-user-suid-wrapper).
+  # Under Wayland that daemon never starts and the clipboard is dead; open-vm-tools
+  # Wayland clipboard support is not there yet for KDE. X11 is the seamless path.
+  services.displayManager.defaultSession = "plasmax11";
+
   # VMWare Tools
   virtualisation.vmware.guest.enable = true;
 
@@ -101,15 +110,19 @@
 
   # VMware Fusion specific packages
   environment.systemPackages = with pkgs; [
-    # wl-clipboard: Required for Wayland clipboard integration with VMware Fusion
-    # Enables proper clipboard sync between Alacritty terminal and macOS host
-    wl-clipboard
-
-    # gtkmm3: Required for VMware user tools clipboard on aarch64
-    # Without this, clipboard integration between the VM and macOS host may not
-    # function properly on ARM-based systems (Apple Silicon).
-    # Reference: Mitchell Hashimoto's vm-shared.nix configuration
+    # gtkmm3: required by open-vm-tools' `vmware-user`, the GTK process that syncs
+    # the X11 clipboard between the VM and the macOS host. Without it the clipboard
+    # integration silently fails on aarch64 (Apple Silicon).
+    # Reference: Mitchell Hashimoto's vm-shared.nix configuration.
     gtkmm3
+
+    # xrandr-auto: fallback that forces the guest display to refit the Fusion
+    # window. On X11 with vmware-user running, KDE's kscreen usually auto-resizes;
+    # this is here for when the udev/RandR event isn't honored. Verify the output
+    # name with `xrandr` if it stops working (vmwgfx names it Virtual-1).
+    (writeShellScriptBin "xrandr-auto" ''
+      exec ${xorg.xrandr}/bin/xrandr --output Virtual-1 --auto
+    '')
   ];
 
   # Disable NixOS-managed VS Code on this VM
@@ -134,5 +147,18 @@
   # See modules/programs/gui/vscode/default.nix for extension reference list.
   # Disabling via the module's own gate (not mkForce) means the extension list is
   # never evaluated on this host.
-  home-manager.users.${vars.user.name}.custom.programs.vscode.enable = false;
+  home-manager.users.${vars.user.name} = {
+    custom.programs.vscode.enable = false;
+
+    # HiDPI: keep the pointer from being tiny on the Mac's Retina panel. Plasma's
+    # fractional display scaling is a runtime System Settings toggle (persists in
+    # ~/.config); the host-side lever is Fusion's "Use full resolution for Retina
+    # display". This is the one piece worth pinning declaratively.
+    home.pointerCursor = {
+      name = "breeze_cursors";
+      package = pkgs.kdePackages.breeze;
+      size = 48;
+      x11.enable = true;
+    };
+  };
 }
