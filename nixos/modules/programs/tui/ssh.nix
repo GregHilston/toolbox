@@ -5,7 +5,18 @@
 # and the values are OpenSSH directive names verbatim (HostName, User, IdentityFile,
 # Port, ForwardAgent, IdentitiesOnly …) — what used to live under `extraOptions` is
 # now just more directives in the same block.
-{vars, ...}: {
+#
+# Two things keep this table short:
+#   * The remote login lives in config/vars.nix next to the host's addresses
+#     (`hosts.<name>.user`), because it describes the *remote* machine. It used
+#     to be `vars.user.name`, which is the *local* account and is "greghilston"
+#     on the work laptop — wrong for every personal box, which is why moria
+#     needed a hardcoded exception.
+#   * IdentityFile is set once in the `Host *` block, which OpenSSH applies to
+#     every host. Repeating it per block bought nothing.
+{vars, ...}: let
+  inherit (vars.networking) hosts;
+in {
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
@@ -14,58 +25,46 @@
       "github.com" = {
         HostName = "github.com";
         User = "git";
-        IdentityFile = "~/.ssh/id_rsa";
       };
       "unraid" = {
-        HostName = vars.networking.hosts.unraid.tailscale;
-        User = "root";
-        IdentityFile = "~/.ssh/id_rsa";
+        HostName = hosts.unraid.tailscale;
+        User = hosts.unraid.user;
       };
       "home-server" = {
-        HostName = vars.networking.hosts.home-server.tailscale;
-        User = vars.user.name;
-        IdentityFile = "~/.ssh/id_rsa";
+        HostName = hosts.home-server.tailscale;
+        User = hosts.home-server.user;
       };
       "dungeon" = {
-        HostName = vars.networking.hosts.dungeon.lan;
-        User = vars.user.name;
-        IdentityFile = "~/.ssh/id_rsa";
+        HostName = hosts.dungeon.lan;
+        User = hosts.dungeon.user;
       };
       "dungeonts" = {
-        HostName = vars.networking.hosts.dungeon.tailscale;
-        User = vars.user.name;
-        IdentityFile = "~/.ssh/id_rsa";
+        HostName = hosts.dungeon.tailscale;
+        User = hosts.dungeon.user;
       };
       "moria" = {
-        HostName = vars.networking.hosts.moria.lan;
-        # Hardcoded (not vars.user.name): moria's account is always "ghilston",
-        # whereas on the work host citadel vars.user.name is "greghilston" —
-        # which would be the wrong remote user for moria.
-        User = "ghilston";
-        IdentityFile = "~/.ssh/id_rsa";
+        HostName = hosts.moria.lan;
+        User = hosts.moria.user;
       };
       "mines" = {
-        HostName = vars.networking.hosts.mines.lan;
-        User = vars.user.name;
-        IdentityFile = "~/.ssh/id_rsa";
+        HostName = hosts.mines.lan;
+        User = hosts.mines.user;
+        # Agent forwarding so the VM can reach GitHub with the host's key.
         IdentitiesOnly = true;
         ForwardAgent = true;
       };
       "rohan" = {
-        HostName = vars.networking.hosts.rohan.lan;
-        User = vars.user.name;
-        IdentityFile = "~/.ssh/id_rsa";
+        HostName = hosts.rohan.lan;
+        User = hosts.rohan.user;
       };
       "fob" = {
-        HostName = vars.networking.hosts.fob.tailscale;
-        User = "pi";
-        IdentityFile = "~/.ssh/id_rsa";
+        HostName = hosts.fob.tailscale;
+        User = hosts.fob.user;
       };
       "pixel" = {
-        HostName = vars.networking.hosts.pixel.lan;
-        User = "u0_a305";
-        Port = 8022;
-        IdentityFile = "~/.ssh/id_rsa";
+        HostName = hosts.pixel.lan;
+        User = hosts.pixel.user;
+        Port = hosts.pixel.sshPort;
       };
       "*" = {
         IdentityFile = "~/.ssh/id_rsa";
