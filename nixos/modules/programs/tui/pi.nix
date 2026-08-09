@@ -5,6 +5,37 @@
   ...
 }: let
   cfg = config.custom.programs.pi;
+
+  # One oMLX model entry. Everything except id/name has a sane default because
+  # every model we serve shares the same shape, and `cost` is not an option at
+  # all — local inference is free, so it is always zero.
+  modelType = lib.types.submodule {
+    options = {
+      id = lib.mkOption {
+        type = lib.types.str;
+        description = "Model id exactly as oMLX serves it.";
+      };
+      name = lib.mkOption {
+        type = lib.types.str;
+        description = "Human-readable label shown in pi's model picker.";
+      };
+      contextWindow = lib.mkOption {
+        type = lib.types.int;
+        default = 262144;
+        description = "Context window in tokens.";
+      };
+      maxTokens = lib.mkOption {
+        type = lib.types.int;
+        default = 81920;
+        description = "Maximum tokens the model may generate in one response.";
+      };
+      input = lib.mkOption {
+        type = lib.types.listOf (lib.types.enum ["text" "image"]);
+        default = ["text" "image"];
+        description = "Input modalities the model accepts.";
+      };
+    };
+  };
 in {
   options.custom.programs.pi = {
     enable = lib.mkEnableOption "pi (pi-mono coding agent)";
@@ -13,6 +44,27 @@ in {
       type = lib.types.str;
       default = "Qwen3.6-35B-A3B-8bit";
       description = "Default model to use";
+    };
+
+    # models.json normally comes from stow + `just secrets` (it holds the oMLX
+    # api key, so it is templated from 1Password). Hosts that talk to *another*
+    # machine's oMLX server have no secret to inject and can declare the file
+    # here instead — set omlxBaseUrl and the module generates models.json.
+    omlxBaseUrl = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "http://192.168.1.229:8000/v1";
+      description = ''
+        When non-null, generate ~/.pi/agent/models.json pointing pi's `omlx`
+        provider at this base URL, listing `models`. When null (the default),
+        models.json is left to stow + `just secrets`.
+      '';
+    };
+
+    models = lib.mkOption {
+      type = lib.types.listOf modelType;
+      default = [];
+      description = "Models to expose under the generated `omlx` provider. Only used when omlxBaseUrl is set.";
     };
 
     # Packages installed via `pi install`. Pi resolves these at runtime.
@@ -39,8 +91,32 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    # models.json is managed by stow + op inject (dot/pi/.pi/agent/models.json.tpl).
-    # Run `just secrets` to generate it from 1Password, then stow deploys it.
+    # Remote-oMLX hosts declare models.json here; everyone else gets it from
+    # stow + op inject (dot/pi/.pi/agent/models.json.tpl, via `just secrets`).
+    home.file.".pi/agent/models.json" = lib.mkIf (cfg.omlxBaseUrl != null) {
+      text = builtins.toJSON {
+        providers.omlx = {
+          baseUrl = cfg.omlxBaseUrl;
+          api = "openai-completions";
+          apiKey = "no-key-needed"; # oMLX does not authenticate
+          compat = {
+            supportsDeveloperRole = false;
+            supportsReasoningEffort = false;
+          };
+          models = map (m:
+            m
+            // {
+              cost = {
+                input = 0;
+                output = 0;
+                cacheRead = 0;
+                cacheWrite = 0;
+              };
+            })
+          cfg.models;
+        };
+      };
+    };
 
     home.file.".pi/agent/settings.json" = {
       text = builtins.toJSON {

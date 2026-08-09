@@ -156,55 +156,24 @@
         ];
       };
 
-      # Pi mono — point to dungeon's oMLX server, not local inference
+      # Pi mono — inference runs on dungeon's oMLX server, not on this
+      # low-power writerdeck. Setting omlxBaseUrl makes modules/programs/tui/pi.nix
+      # generate ~/.pi/agent/models.json; the other hosts get that file from
+      # stow + `just secrets` instead (they need the 1Password api key).
       custom.programs.pi = {
         enable = true;
         defaultModel = "Qwen3.6-27B-8bit";
-      };
-
-      # Override models.json to use dungeon's LAN IP instead of localhost.
-      # Other hosts use stow + 1Password template; rohan declares it inline
-      # to avoid running models locally on this low-power writerdeck.
-      home.file.".pi/agent/models.json".text = builtins.toJSON {
-        providers = {
-          omlx = {
-            baseUrl = "http://${vars.networking.hosts.dungeon.lan}:8000/v1";
-            api = "openai-completions";
-            apiKey = "no-key-needed";
-            compat = {
-              supportsDeveloperRole = false;
-              supportsReasoningEffort = false;
-            };
-            models = [
-              {
-                id = "Qwen3.6-27B-8bit";
-                name = "Qwen 3.6 27B 8-bit (thinking, 262k ctx, balanced)";
-                contextWindow = 262144;
-                maxTokens = 81920;
-                input = ["text" "image"];
-                cost = {
-                  input = 0;
-                  output = 0;
-                  cacheRead = 0;
-                  cacheWrite = 0;
-                };
-              }
-              {
-                id = "Qwen3.6-27B-4bit";
-                name = "Qwen 3.6 27B 4-bit (thinking, 262k ctx, fast)";
-                contextWindow = 262144;
-                maxTokens = 81920;
-                input = ["text" "image"];
-                cost = {
-                  input = 0;
-                  output = 0;
-                  cacheRead = 0;
-                  cacheWrite = 0;
-                };
-              }
-            ];
-          };
-        };
+        omlxBaseUrl = "http://${vars.networking.hosts.dungeon.lan}:8000/v1";
+        models = [
+          {
+            id = "Qwen3.6-27B-8bit";
+            name = "Qwen 3.6 27B 8-bit (thinking, 262k ctx, balanced)";
+          }
+          {
+            id = "Qwen3.6-27B-4bit";
+            name = "Qwen 3.6 27B 4-bit (thinking, 262k ctx, fast)";
+          }
+        ];
       };
 
       # Writerdeck MOTD + auto-tmux — append to .zshrc.local
