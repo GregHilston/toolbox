@@ -503,7 +503,7 @@ VS Code runs on macOS as a client and connects to the NixOS VM via SSH. The VS C
 
 **Setup:**
 
-1. Add your SSH public key (`~/.ssh/id_rsa.pub`) to [modules/common/default.nix](modules/common/default.nix#L102-L104):
+1. Add your SSH public key (`~/.ssh/id_rsa.pub`) to the primary user in [modules/common/core.nix](modules/common/core.nix):
    ```nix
    users.users.${vars.user.name} = {
      openssh.authorizedKeys.keys = [
@@ -556,11 +556,12 @@ Following Mitchell Hashimoto's approach, we use NixOS VMs for development work w
 1. Our usage of Just will leverage a `--flake` argument, passed by the CLI as an argument, indicating what machine we'll be building and deploying by pointing to a specific section in `flake.nix`.
 2. Configuration variables are defined n `config/vars.nix`. These can be overridden by each `./hosts/`'s `default.nix`. This is done here, as we're using `flake.nix` for system level configurations.
 3. The machine's `flake.nix` section will point to a `./hosts/[machine-name]`, which will resolve to `./hosts/[machine-name]/default.nix`.
-4. That `./hosts/[machine-name]/default.nix` file will define system things, and point to that machine's `./hosts/[machine-name]/hardware-configuration.nix`, and any and all `./modules/` that are relevant for that machine. For example, like `./modules/home/default.nix` which defines user packages.
+4. That `./hosts/[machine-name]/default.nix` file will define system things, and point to that machine's `./hosts/[machine-name]/hardware-configuration.nix`, and any and all `./modules/` that are relevant for that machine. For example, like `./modules/home/default.nix` which defines user packages. See `CLAUDE.md` → "Home-manager profiles" for how the `common` / `workstation` / platform layers stack.
 
 ### Adding Python Packages
 
-To add Python packages globally (available on all hosts), add them to `modules/home/default.nix` using `python3.withPackages`:
+To add Python packages globally (available on all hosts), extend the existing
+`python3.withPackages` call in `config/base-packages.nix`:
 
 ```nix
 (python3.withPackages (ps: with ps; [

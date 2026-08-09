@@ -19,6 +19,38 @@ These commands do NOT require `sudo` and catch most evaluation and dependency er
 - **moria** (aarch64-darwin M4 Max — nix-darwin, runs the oMLX inference server)
 - **citadel** (aarch64-darwin MacBook Pro 14" M5 Pro — nix-darwin, Mozilla work laptop)
 
+## Home-manager profiles: three layers, pick the lowest one that fits
+
+`modules/home/` is a stack, not a grab bag. Add things to the **narrowest** layer
+that needs them:
+
+| Layer | File | Who imports it | What belongs there |
+| --- | --- | --- | --- |
+| identity | `modules/home/common.nix` | every host, transitively | username, home dir, stateVersion, `programs.home-manager.enable` — nothing else |
+| workstation | `modules/home/workstation.nix` | NixOS + Darwin | the shared CLI/dev baseline: `modules/programs/tui`, `basePackages.homePackages`, nh, yazi, searxngr stow |
+| platform | `modules/home/default.nix` (NixOS)<br>`modules/darwin/home.nix` (macOS) | one platform each | only what is genuinely platform-specific (NixOS: `claude-code` + the GUI block; macOS: fonts, mflux, open-webui-desktop, pi/opencode) |
+
+rohan deliberately stops at the identity layer and cherry-picks TUI modules by
+hand — the workstation baseline (ollama, go, duckdb, ffmpeg…) has no business on a
+writerdeck.
+
+Home-manager *wiring* (`useGlobalPkgs`, `useUserPackages`, `backupFileExtension`,
+`extraSpecialArgs`) is set once for both module systems by `homeManagerModule` in
+`flake-modules/hosts.nix` — the option paths are identical under NixOS and
+nix-darwin. Never repeat it in a host.
+
+## Shell integration lives in ONE place
+
+`modules/programs/tui/zsh/` owns every shell hook, alias, wrapper function, and
+exported variable, written into `~/.zshrc.local`. The per-tool modules
+(`eza`, `fzf`, `zoxide`, `atuin`, `direnv`, `zellij`, `yazi`) install the binary
+and render genuine config files only.
+
+This is because we do **not** use home-manager's `programs.zsh` — we stow a
+portable `.zshrc`. So `enableZshIntegration`, `shellWrapperName`, and friends have
+nothing to hook into and silently do nothing. If you set one, it will look correct
+and have no effect; put the line in the zsh module instead.
+
 ## Desktop (GUI) vs headless NixOS hosts
 
 The KDE Plasma desktop is **opt-in**, via one option the host sets on itself:
@@ -75,7 +107,12 @@ for an ARM host.
 6. **Home Manager**: User packages go in `modules/home/default.nix`, not system packages
 7. **WSL specifics**: foundation host needs `wsl.enable = true` and related WSL config
 8. **No hardcoded IPs**: Never put IP addresses directly in host configs or modules. All host IPs are defined in `config/vars.nix` under `networking.hosts`. Reference them as `vars.networking.hosts.<name>.lan` or `vars.networking.hosts.<name>.tailscale`. If a new host or IP is needed, add it to `vars.nix` first.
-9. **SSH config**: SSH client matchBlocks are managed centrally in `modules/programs/tui/ssh.nix` using vars. Do not add SSH host entries in individual host configs.
+9. **SSH config**: SSH client match blocks are managed centrally in `modules/programs/tui/ssh.nix` using vars. Do not add SSH host entries in individual host configs.
+10. **`vars.user.name` is the LOCAL account, never a remote login**: it is
+    `greghilston` on citadel (work) and `ghilston` everywhere else. The account to
+    log in as *on a remote machine* is that machine's own fact and lives beside its
+    addresses as `vars.networking.hosts.<name>.user`. Using `vars.user.name` for an
+    ssh `User` silently breaks on citadel.
 
 ## VMware Fusion VM (mines) — Access & Networking
 
@@ -227,6 +264,8 @@ For extended-context or other model profiles, see `dot/omlx/CLAUDE.md` → "Crea
 ## File Locations
 
 - Shared package baseline (NixOS + Darwin, system + home): [config/base-packages.nix](config/base-packages.nix)
+- Home-manager identity layer (username, home dir, stateVersion): [modules/home/common.nix](modules/home/common.nix)
+- Shared CLI/dev home baseline (NixOS + Darwin): [modules/home/workstation.nix](modules/home/workstation.nix)
 - User packages: [modules/home/default.nix](modules/home/default.nix) (NixOS-only extras + GUI)
   - Python packages: Use `python3.withPackages (ps: with ps; [package-name])`
 - GUI apps: [modules/programs/gui/](modules/programs/gui/)

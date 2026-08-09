@@ -6,7 +6,9 @@ A Docker-based development container for validating NixOS configurations without
 
 This container provides an isolated Nix environment that can:
 - Validate flake syntax and evaluate all NixOS configurations
-- Build system closures (dry-run) to catch configuration errors
+- Instantiate every host's system closure to catch configuration errors —
+  including the aarch64-darwin Macs, since `just validate` evaluates each
+  toplevel's `.drvPath` and instantiating needs no builder for that platform
 
 It **cannot**:
 - Run `nixos-rebuild switch` (requires a real NixOS system)
@@ -64,7 +66,7 @@ devcontainer exec --workspace-folder . just validate
 
 | Command | Description |
 |---------|-------------|
-| `just validate` | Run `nix flake check` and dry-run build all hosts |
+| `just validate` | Run `nix flake check`, then instantiate every NixOS and Darwin host. Fails on the first bad host — it will not report success after an error |
 | `nix flake check` | Validate flake syntax and evaluate outputs |
 | `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run` | Build a specific host config |
 | `nix eval .#nixosConfigurations.<host>.config.<option>` | Evaluate a specific config value |
