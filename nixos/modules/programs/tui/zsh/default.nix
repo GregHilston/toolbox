@@ -20,6 +20,17 @@
 # Non-nix machines: install powerlevel10k once with:
 #   git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
 #     ~/.oh-my-zsh/custom/themes/powerlevel10k
+#
+# THIS MODULE OWNS ALL SHELL INTEGRATION.
+# home-manager's per-tool `enableZshIntegration` / `shellWrapperName` /
+# `defaultOptions` options write into `programs.zsh.*` and `home.sessionVariables`,
+# and BOTH are dead ends here: we don't set `programs.zsh.enable` in home-manager
+# (zsh is stow-managed, above), and nothing sources hm-session-vars.sh. Those
+# options render no file and change no behavior. So each tool module installs its
+# binary and writes its own config file (atuin's config.toml, direnv's
+# direnv.toml, yazi's yazi.toml), and every shell hook, alias, wrapper function,
+# and exported variable lives here in .zshrc.local. Do not add integration flags
+# back to the tool modules — they will silently do nothing.
 # ──────────────────────────────────────────────────────────────────────────────
 {
   lib,
@@ -109,6 +120,28 @@
       alias la='eza -a --group-directories-first --header --icons --group'
       alias lt='eza --tree --group-directories-first --header --icons --group'
       alias lla='eza -la --group-directories-first --header --icons --group'
+    fi
+
+    # fzf — ctrl+t (paste files), ctrl+r (history), alt+c (cd)
+    # The palette is hand-tuned and does NOT track stylix; unifying terminal
+    # theming is a separate change.
+    if command -v fzf &>/dev/null; then
+      export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+      export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border --inline-info --color=fg:#d0d0d0,bg:#121212,hl:#5f87af --color=fg+:#d0d0d0,bg+:#262626,hl+:#5fd7ff --color=info:#afaf87,prompt:#d7005f,pointer:#af5fff --color=marker:#87ff00,spinner:#af5fff,header:#87afaf'
+      eval "$(fzf --zsh)"
+    fi
+
+    # yazi — `y` opens the file manager and cds to wherever you ended up
+    if command -v yazi &>/dev/null; then
+      function y() {
+        local tmp cwd
+        tmp="$(mktemp -t yazi-cwd.XXXXX)"
+        command yazi "$@" --cwd-file="$tmp"
+        if cwd="$(<"$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+          builtin cd -- "$cwd"
+        fi
+        rm -f -- "$tmp"
+      }
     fi
 
     # ── Nix maintenance ──────────────────────────────────────────────

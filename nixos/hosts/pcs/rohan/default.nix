@@ -123,7 +123,6 @@
   home-manager = {
     extraSpecialArgs = {
       inherit inputs vars;
-      outputs = {};
     };
     users.${vars.user.name} = {
       imports = [

@@ -1,22 +1,7 @@
 # nixos/modules/programs/tui/eza/default.nix
+#
+# Installs eza. The `ls`/`ll`/`la`/… aliases and their flags live in ../zsh —
+# see that module's header for why shell integration is centralised there.
 _: {
-  programs.eza = {
-    enable = true;
-    enableZshIntegration = true;
-    enableBashIntegration = true;
-
-    extraOptions = [
-      "--group-directories-first"
-      "--header"
-      "--icons"
-      "--group"
-    ];
-
-    # Note: The integration automatically creates these aliases:
-    # ls  -> eza
-    # ll  -> eza -l
-    # la  -> eza -a
-    # lt  -> eza --tree
-    # lla -> eza -la
-  };
+  programs.eza.enable = true;
 }

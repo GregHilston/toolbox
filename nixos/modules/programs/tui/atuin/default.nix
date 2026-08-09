@@ -1,13 +1,10 @@
 # nixos/modules/programs/tui/atuin/default.nix
+#
+# `settings` below is real config — it renders ~/.config/atuin/config.toml.
+# The shell hook (up-arrow / Ctrl+R) lives in ../zsh; see that module's header.
 _: {
   programs.atuin = {
     enable = true;
-    enableZshIntegration = true;
-    enableBashIntegration = true;
-
-    # Keybindings:
-    # Up arrow: Open TUI to search through shell history
-    # Ctrl+R: Also opens the history search TUI
 
     settings = {
       # Search mode: prefix, fulltext, fuzzy, or skim

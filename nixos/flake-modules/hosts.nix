@@ -3,11 +3,7 @@
 # Each host used to repeat an identical specialArgs + module list; the mkNixos/
 # mkDarwin helpers below collapse that boilerplate so a host is one entry
 # (system + module path + any host-specific extra modules / vars overrides).
-{
-  inputs,
-  self,
-  ...
-}: let
+{inputs, ...}: let
   inherit (inputs) nixpkgs nixos-wsl nixos-hardware home-manager stylix darwin;
 
   vars = import ../config/vars.nix {inherit (nixpkgs) lib;};
@@ -52,7 +48,6 @@
       specialArgs = {
         inherit inputs;
         vars = hostVars;
-        outputs = self;
       };
       modules =
         [
@@ -76,7 +71,6 @@
       specialArgs = {
         inherit inputs;
         vars = hostVars;
-        outputs = self;
       };
       modules =
         [

@@ -17,7 +17,8 @@ in {
   config = lib.mkIf config.custom.yazi.enable {
     programs.yazi = {
       enable = true;
-      shellWrapperName = "y";
+      # The `y` shell wrapper is defined in ../zsh (shellWrapperName only feeds
+      # home-manager's programs.zsh, which we don't manage — see that header).
       settings = {
         mgr = {
           show_hidden = false;
@@ -32,21 +33,17 @@ in {
           max_height = 1080;
         };
       };
+      # No starship.yazi plugin: the prompt here is powerlevel10k and the
+      # starship binary is installed on no host, so `require("starship"):setup()`
+      # only ever errored in yazi's header.
       plugins = {
         chmod = "${yazi-plugins}/chmod.yazi";
         full-border = "${yazi-plugins}/full-border.yazi";
         toggle-pane = "${yazi-plugins}/toggle-pane.yazi";
-        starship = pkgs.fetchFromGitHub {
-          owner = "Rolv-Apneseth";
-          repo = "starship.yazi";
-          rev = "6c639b4";
-          sha256 = "sha256-bhLUziCDnF4QDCyysRn7Az35RAy8ibZIVUzoPgyEO1A=";
-        };
       };
 
       initLua = ''
         require("full-border"):setup()
-        require("starship"):setup()
       '';
 
       keymap.mgr.prepend_keymap = [

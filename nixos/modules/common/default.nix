@@ -1,6 +1,5 @@
 {
   inputs,
-  outputs,
   lib,
   config,
   pkgs,
@@ -22,7 +21,7 @@ in {
 
   home-manager = {
     extraSpecialArgs = {
-      inherit inputs outputs vars;
+      inherit inputs vars;
     };
     users.${vars.user.name} = import ../../modules/home;
   };
