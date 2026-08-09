@@ -25,15 +25,25 @@
     };
   };
 
-  # Minimal home-manager wiring shared by every NixOS host.
+  # Home-manager wiring shared by every NixOS *and* Darwin host — the option
+  # paths are identical in both module systems, so one module serves both.
   # useGlobalPkgs makes home-manager reuse the system nixpkgs (with our shared
   # overlays + allowUnfree) instead of building its own private instance.
-  mkHomeManagerModule = _: {
+  #
+  # `vars` comes from specialArgs rather than the closure above, so per-host
+  # overrides (citadel's user name) apply here too. The profile itself is
+  # attached by the host's own config: modules/common for NixOS workstations,
+  # modules/darwin/home.nix for the Macs, and inline for rohan.
+  homeManagerModule = {
+    inputs,
+    vars,
+    ...
+  }: {
     home-manager = {
       useGlobalPkgs = true;
       useUserPackages = true;
       backupFileExtension = "backup";
-      users.${vars.user.name} = {};
+      extraSpecialArgs = {inherit inputs vars;};
     };
   };
 
@@ -55,7 +65,7 @@
           nixpkgsModule
           stylix.nixosModules.stylix
           home-manager.nixosModules.home-manager
-          mkHomeManagerModule
+          homeManagerModule
         ]
         ++ extraModules;
     };
@@ -77,6 +87,7 @@
           modulePath
           nixpkgsModule
           home-manager.darwinModules.home-manager
+          homeManagerModule
         ]
         ++ extraModules;
     };

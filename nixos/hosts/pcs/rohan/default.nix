@@ -12,7 +12,6 @@
 # File transfer: SSH/scp/rsync (no syncthing, no GUI file manager)
 # Networking: NetworkManager with nm-tui for wifi
 {
-  inputs,
   lib,
   pkgs,
   vars,
@@ -117,15 +116,16 @@
     };
   };
 
-  # Home-manager — cherry-pick only writing-relevant TUI modules.
-  # useGlobalPkgs/useUserPackages/backupFileExtension come from the shared
-  # mkHomeManagerModule in flake-modules/hosts.nix.
+  # Home-manager — cherry-pick only writing-relevant TUI modules, and take the
+  # identity layer (username/homeDirectory/stateVersion) without
+  # modules/home/workstation.nix, whose package baseline (ollama, go, duckdb,
+  # ffmpeg…) has no place on this machine.
+  # useGlobalPkgs/useUserPackages/backupFileExtension/extraSpecialArgs come from
+  # the shared homeManagerModule in flake-modules/hosts.nix.
   home-manager = {
-    extraSpecialArgs = {
-      inherit inputs vars;
-    };
     users.${vars.user.name} = {
       imports = [
+        ../../../modules/home/common.nix
         ../../../modules/programs/tui/atuin
         ../../../modules/programs/tui/claude.nix
         ../../../modules/programs/tui/direnv
@@ -145,8 +145,6 @@
       # (set in the shared mkHomeManagerModule in flake-modules/hosts.nix).
 
       home = {
-        username = vars.user.name;
-        homeDirectory = "/home/${vars.user.name}";
         packages = with pkgs; [
           aspell
           aspellDicts.en
@@ -236,9 +234,6 @@
           exec tmux new-session
         fi
       '';
-
-      programs.home-manager.enable = true;
-      home.stateVersion = "24.05";
     };
   };
 

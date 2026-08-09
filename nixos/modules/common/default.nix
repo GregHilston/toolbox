@@ -1,7 +1,4 @@
 {
-  inputs,
-  lib,
-  config,
   pkgs,
   vars,
   ...
@@ -19,12 +16,9 @@ in {
     allowReboot = true;
   };
 
-  home-manager = {
-    extraSpecialArgs = {
-      inherit inputs vars;
-    };
-    users.${vars.user.name} = import ../../modules/home;
-  };
+  # useGlobalPkgs/useUserPackages/backupFileExtension/extraSpecialArgs come from
+  # the shared homeManagerModule in flake-modules/hosts.nix.
+  home-manager.users.${vars.user.name} = import ../../modules/home;
 
   # nixpkgs overlays + allowUnfree come from the shared nixpkgsModule in
   # flake-modules/hosts.nix. nix settings, networking, locale, and the base
