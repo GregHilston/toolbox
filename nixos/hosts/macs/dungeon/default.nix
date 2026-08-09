@@ -59,7 +59,7 @@
 in {
   imports = [
     ../../../modules/darwin/common.nix
-    ../../../modules/darwin/homebrew.nix
+    ../../../modules/darwin/homebrew-server.nix
     ../../../modules/darwin/home.nix
     ../../../modules/darwin/omlx.nix
     ../../../modules/darwin/ser2net.nix
@@ -260,7 +260,7 @@ in {
   # Monitoring exporters for the home-lab Prometheus/Grafana stack.
   # These run NATIVELY (not as containers) so they report the real Mac — a
   # containerised exporter only sees OrbStack's Linux VM. Prometheus scrapes them
-  # over host.docker.internal, so they bind 0.0.0.0. Packages: ../../modules/darwin/homebrew.nix.
+  # over host.docker.internal, so they bind 0.0.0.0. Packages: ../../modules/darwin/homebrew-server.nix.
   # ---------------------------------------------------------------------------
 
   # Host metrics: CPU, filesystem, disk I/O, network, load, uptime + the battery

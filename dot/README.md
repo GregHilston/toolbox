@@ -77,7 +77,7 @@ just build-i3-gaps     # Build i3-gaps config for current host, then stow
 
 ## Generating a Brewfile
 
-Homebrew packages are managed declaratively via nix-darwin (`nixos/modules/darwin/homebrew.nix`). If you need a standalone Brewfile (e.g. for a work laptop without nix-darwin):
+Homebrew packages are managed declaratively via nix-darwin (`nixos/modules/darwin/homebrew-base.nix`). If you need a standalone Brewfile (e.g. for a work laptop without nix-darwin):
 
 ```bash
 brew bundle dump --file=~/Brewfile

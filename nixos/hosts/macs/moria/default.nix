@@ -6,7 +6,7 @@
 }: {
   imports = [
     ../../../modules/darwin/common.nix
-    ../../../modules/darwin/homebrew.nix
+    ../../../modules/darwin/homebrew-server.nix
     ../../../modules/darwin/home.nix
     ../../../modules/darwin/omlx.nix
   ];
@@ -16,9 +16,9 @@
   # Display sleep timeout (30 minutes instead of default 5)
   power.sleep.display = lib.mkForce 30;
 
-  # Gaming (moria-only; kept out of the shared homebrew.nix so the headless
+  # Gaming (moria-only; kept out of the shared homebrew-server.nix so the headless
   # dungeon server doesn't pull them in). nix-darwin merges these into the
-  # casks list from modules/darwin/homebrew.nix.
+  # casks list from modules/darwin/homebrew-server.nix.
   #   crossover — run Windows keyboard/mouse games natively (Wine + GPTK).
   #               Whisky is discontinued (Apr 2025); CrossOver is the path.
   #   moonlight — stream games in (from the Steam Deck via Sunshine, or from

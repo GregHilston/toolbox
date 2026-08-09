@@ -1,4 +1,5 @@
 {
+  lib,
   pkgs,
   vars,
   ...
@@ -38,49 +39,25 @@
     nfs-utils
   ];
 
-  # NFS mounts for Unraid shares
-  # These match the paths expected by docker-compose.yaml
-  fileSystems = {
-    # Main data share (TRaSH Guides structure: books, movies, music, tv, comics)
-    "/mnt/data" = {
-      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/data";
+  # NFS mounts for Unraid shares — mountpoint -> Unraid share name.
+  # These match the paths expected by docker-compose.yaml. Every one is the
+  # same automounted NFS export off unraid, so the only per-entry facts are
+  # those two strings.
+  fileSystems =
+    lib.mapAttrs (_: share: {
+      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/${share}";
       fsType = "nfs";
+      # Automount on first access and unmount after 10 idle minutes, so boot
+      # doesn't block on unraid being up.
       options = ["x-systemd.automount" "noauto" "x-systemd.idle-timeout=600"];
+    }) {
+      # TRaSH Guides structure: books, movies, music, tv, comics
+      "/mnt/data" = "data";
+      "/mnt/media" = "media";
+      "/mnt/youtube-dl" = "youtube-dl";
+      # Nextcloud user data, separate from the container's config volume
+      "/nextcloud-data" = "nextcloud_data";
+      "/unraid-backup" = "backup";
+      "/webcam" = "webcam";
     };
-
-    # Media share
-    "/mnt/media" = {
-      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/media";
-      fsType = "nfs";
-      options = ["x-systemd.automount" "noauto" "x-systemd.idle-timeout=600"];
-    };
-
-    # YouTube downloads
-    "/mnt/youtube-dl" = {
-      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/youtube-dl";
-      fsType = "nfs";
-      options = ["x-systemd.automount" "noauto" "x-systemd.idle-timeout=600"];
-    };
-
-    # Nextcloud data (separate from container config)
-    "/nextcloud-data" = {
-      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/nextcloud_data";
-      fsType = "nfs";
-      options = ["x-systemd.automount" "noauto" "x-systemd.idle-timeout=600"];
-    };
-
-    # Backup share on Unraid
-    "/unraid-backup" = {
-      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/backup";
-      fsType = "nfs";
-      options = ["x-systemd.automount" "noauto" "x-systemd.idle-timeout=600"];
-    };
-
-    # Webcam storage
-    "/webcam" = {
-      device = "${vars.networking.hosts.unraid.lan}:/mnt/user/webcam";
-      fsType = "nfs";
-      options = ["x-systemd.automount" "noauto" "x-systemd.idle-timeout=600"];
-    };
-  };
 }

@@ -235,7 +235,7 @@ For extended-context or other model profiles, see `dot/omlx/CLAUDE.md` → "Crea
 - Cross-host NixOS baseline (nix settings, locale, user): [modules/common/core.nix](modules/common/core.nix)
 - Desktop stack (opt-in, gated on `custom.desktop.enable`): [modules/common/desktop.nix](modules/common/desktop.nix)
 - Darwin system config: [modules/darwin/common.nix](modules/darwin/common.nix)
-- Darwin Homebrew casks: [modules/darwin/homebrew.nix](modules/darwin/homebrew.nix)
+- Darwin Homebrew casks: [modules/darwin/homebrew-base.nix](modules/darwin/homebrew-base.nix) (every Mac) and [modules/darwin/homebrew-server.nix](modules/darwin/homebrew-server.nix) (dungeon + moria)
 - Darwin home-manager: [modules/darwin/home.nix](modules/darwin/home.nix)
 - Host IPs / networking vars: [config/vars.nix](config/vars.nix) (`networking.hosts`)
 - SSH client config: [modules/programs/tui/ssh.nix](modules/programs/tui/ssh.nix)

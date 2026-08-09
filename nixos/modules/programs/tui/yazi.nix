@@ -2,7 +2,6 @@
   config,
   lib,
   pkgs,
-  # inputs,
   ...
 }: let
   yazi-plugins = pkgs.fetchFromGitHub {

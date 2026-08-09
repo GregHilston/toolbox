@@ -136,7 +136,10 @@
         ../../../modules/programs/tui/pi.nix
         ../../../modules/programs/tui/tmux
         ../../../modules/programs/tui/ssh.nix
-        ../../../modules/programs/tui/yazi.nix
+        # No yazi: it is opt-in via custom.yazi.enable, which this host never
+        # set, so importing it only ever contributed an unused option. Set that
+        # option here (and add the import back) if the writerdeck wants a file
+        # manager.
         ../../../modules/programs/tui/zoxide
         ../../../modules/programs/tui/zsh
       ];
