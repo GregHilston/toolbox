@@ -75,17 +75,32 @@ dt host flake_path=flake_path:
 
 # Validate all configurations (run in devcontainer or any Nix environment)
 # Host lists are derived from the flake, so new hosts are covered automatically.
+#
+# Evaluates each host's toplevel .drvPath rather than `nix build --dry-run`,
+# because instantiating a derivation needs no builder for its platform — so
+# this validates the aarch64-darwin hosts from the x86_64-linux devcontainer
+# too. Evaluation is what we are actually checking either way.
 validate:
+  #!/usr/bin/env bash
+  set -euo pipefail
+
   nix flake check
-  for host in $(nix eval .#nixosConfigurations --apply builtins.attrNames --json | jq -r '.[]'); do \
-    echo "Building $host..."; \
-    nix build ".#nixosConfigurations.$host.config.system.build.toplevel" --dry-run; \
+
+  # NixOS and Darwin differ only in where the toplevel derivation hangs, so
+  # flatten both into one list of installables and walk it once.
+  targets=$(
+    nix eval .#nixosConfigurations --apply builtins.attrNames --json \
+      | jq -r '.[] | ".#nixosConfigurations.\(.).config.system.build.toplevel"'
+    nix eval .#darwinConfigurations --apply builtins.attrNames --json \
+      | jq -r '.[] | ".#darwinConfigurations.\(.).system"'
+  )
+
+  for target in $targets; do
+    echo "==> $target"
+    nix eval --raw "$target.drvPath" >/dev/null
   done
-  for host in $(nix eval .#darwinConfigurations --apply builtins.attrNames --json | jq -r '.[]'); do \
-    echo "Building $host (darwin)..."; \
-    nix build ".#darwinConfigurations.$host.system" --dry-run; \
-  done
-  @echo "All configurations valid!"
+
+  echo "All configurations valid!"
 
 # Generate secret files from 1Password templates.
 # Run this once after cloning, or after updating secrets in 1Password.
