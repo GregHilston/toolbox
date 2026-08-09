@@ -190,66 +190,71 @@ in {
   };
 
   # Dungeon-specific activation: ser2net dotfiles, clamshell-sleep prevention,
-  # NFS mount points, and the home-lab repo clone/pull.
+  # and NFS mount points.
   # NOTE: Uses postActivation (not custom names) because nix-darwin only runs well-known activation script names.
+  #
+  # Wrapped in a subshell for two reasons. nix-darwin concatenates every
+  # module's postActivation.text into ONE bash script, so a bare
+  # `set -euo pipefail` here would silently impose those options on every
+  # fragment ordered after this one (modules/darwin/omlx.nix's mkAfter block,
+  # modules/darwin/common.nix's defaults) — none of which were written for
+  # them. And with `set -e` inside a shared script, any failure below would
+  # abort those fragments too. The subshell scopes the options and the `||`
+  # turns a failure into a warning, so a broken step here can't take the rest
+  # of activation down with it.
   system.activationScripts.postActivation.text = ''
-    set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
+    (
+      set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
 
-    # Stow ser2net dotfiles (USB serial exposure for OrbStack containers).
-    export PATH="${pkgs.stow}/bin:$PATH"
-    TOOLBOX="/Users/${vars.user.name}/Git/toolbox/dot"
-    cd "$TOOLBOX"
-    stow -R --no-folding ser2net
+      # Stow ser2net dotfiles (USB serial exposure for OrbStack containers).
+      export PATH="${pkgs.stow}/bin:$PATH"
+      TOOLBOX="/Users/${vars.user.name}/Git/toolbox/dot"
+      cd "$TOOLBOX"
+      stow -R --no-folding ser2net
 
-    # Prevent clamshell sleep on Apple Silicon (lid-close with no external display).
-    # See the detailed explanation in the power.sleep section above.
-    #
-    # nix-darwin doesn't expose these pmset settings declaratively, so we set them here.
-    #   disablesleep 1  — undocumented pmset flag that prevents ALL sleep, including
-    #                     the hardware-level clamshell sleep on Apple Silicon. This is
-    #                     the critical setting — without it, closing the lid kills
-    #                     OrbStack and all Docker containers. Shows as "SleepDisabled 1"
-    #                     in `pmset -g`. See: https://github.com/Moarram/wake
-    #   standby 0       — disable standby (deep sleep after prolonged idle)
-    #   hibernatemode 0 — disable writing RAM to disk and sleeping
-    #   autopoweroff 0  — disable auto power-off after prolonged standby
-    # -a applies to all power sources (AC and battery).
-    pmset -a disablesleep 1 standby 0 hibernatemode 0 autopoweroff 0
+      # Prevent clamshell sleep on Apple Silicon (lid-close with no external display).
+      # See the detailed explanation in the power.sleep section above.
+      #
+      # nix-darwin doesn't expose these pmset settings declaratively, so we set them here.
+      #   disablesleep 1  — undocumented pmset flag that prevents ALL sleep, including
+      #                     the hardware-level clamshell sleep on Apple Silicon. This is
+      #                     the critical setting — without it, closing the lid kills
+      #                     OrbStack and all Docker containers. Shows as "SleepDisabled 1"
+      #                     in `pmset -g`. See: https://github.com/Moarram/wake
+      #   standby 0       — disable standby (deep sleep after prolonged idle)
+      #   hibernatemode 0 — disable writing RAM to disk and sleeping
+      #   autopoweroff 0  — disable auto power-off after prolonged standby
+      # -a applies to all power sources (AC and battery).
+      pmset -a disablesleep 1 standby 0 hibernatemode 0 autopoweroff 0
 
-    # Create NFS mount points
-    mkdir -p /Volumes/unraid-data
-    mkdir -p /Volumes/fob-backup
+      # Create NFS mount points
+      mkdir -p /Volumes/unraid-data
+      mkdir -p /Volumes/fob-backup
 
-    sudo -H -u "${vars.user.name}" mkdir -p "/Users/${vars.user.name}/home-lab-config"
-
-    USER="${vars.user.name}"
-    REPO_DIR="/Users/$USER/Git/home-lab"
-    sudo -H -u "$USER" mkdir -p "/Users/$USER/Git"
-
-    # Test SSH access to GitHub before attempting git operations
-    # NOTE: ssh -T returns exit code 1 even on success, so we use || true and check output
-    SSH_OUTPUT=$(sudo -H -u "$USER" ssh -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1 || true)
-    if echo "$SSH_OUTPUT" | grep -q "successfully authenticated"; then
-      if [ ! -d "$REPO_DIR/.git" ]; then
-        echo "Cloning home-lab repo..."
-        sudo -H -u "$USER" git clone git@github.com:GregHilston/home-lab.git "$REPO_DIR"
-      else
-        echo "Pulling latest home-lab changes..."
-        sudo -H -u "$USER" git -C "$REPO_DIR" pull --ff-only
-      fi
-    else
-      echo ""
-      echo "========================================================"
-      echo "  WARNING: GitHub SSH authentication failed!"
-      echo "  Could not clone/pull GregHilston/home-lab."
-      echo ""
-      echo "  SSH keys are either missing or not added to GitHub."
-      echo "  See nixos/modules/darwin/README.md for initial setup."
-      echo "========================================================"
-      echo ""
-      exit 1
-    fi
+      sudo -H -u "${vars.user.name}" mkdir -p "/Users/${vars.user.name}/home-lab-config"
+    ) || echo "WARNING: dungeon post-activation block failed (see above); continuing."
   '';
+
+  # Keep ~/Git/home-lab checked out and current. dungeon runs
+  # scripts/nfs-stale-check.sh out of that repo (see the watchdog agent below),
+  # so it has to exist on disk.
+  #
+  # This is a user agent rather than part of postActivation on purpose: as the
+  # user it has the ssh-agent, so the old `sudo -H -u` trampoline and the SSH
+  # pre-flight probe that guarded it are both gone, and a GitHub auth failure
+  # can no longer abort a `darwin-rebuild switch`. Runs at login and every 6h.
+  launchd.user.agents.home-lab-sync = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/toolbox/bin/home-lab-sync.sh"
+      ];
+      RunAtLoad = true;
+      StartInterval = 21600; # 6h
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/home-lab-sync.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/home-lab-sync.log";
+    };
+  };
 
   # ---------------------------------------------------------------------------
   # Monitoring exporters for the home-lab Prometheus/Grafana stack.

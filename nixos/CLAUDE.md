@@ -266,6 +266,44 @@ re-run `just dr <host>`. (Durable option if it recurs: set `HOMEBREW_NO_INSTALL_
 so installs stop auto-cleaning — note this is unrelated to `homebrew.onActivation.cleanup`
 in `modules/darwin/homebrew-base.nix`, which only controls Brewfile-drift uninstalls.)
 
+## Darwin `postActivation` is ONE shared bash script — always use a subshell
+
+`system.activationScripts.postActivation.text` is `types.lines`: nix-darwin concatenates
+every module's fragment into a **single** bash script. Three consequences that have already
+bitten this repo:
+
+1. **`set -e`/`-u`/`pipefail` leak forward.** A bare `set -euo pipefail` at the top of one
+   fragment silently applies to every fragment ordered after it — including
+   **home-manager's own activation**, which is not written to run under those options.
+2. **`exit 1` kills the whole script, not your fragment.** dungeon's GitHub-SSH guard used
+   to `exit 1` at line 86 of the concatenated script, while home-manager activation started
+   at line 89 — so a missing SSH key aborted activation before any dotfiles, `.zshrc.local`,
+   or user packages were linked.
+3. **Ordering is by `mkBefore`/`mkAfter`**, not file order (see `modules/darwin/omlx.nix`).
+
+So: wrap any fragment that wants strict mode in a subshell, and make failure non-fatal.
+
+```nix
+system.activationScripts.postActivation.text = ''
+  (
+    set -euo pipefail
+    ...
+  ) || echo "WARNING: <host> post-activation block failed; continuing."
+'';
+```
+
+Inspect the real concatenated script before trusting a change:
+
+```bash
+nix eval --raw '.#darwinConfigurations.<host>.config.system.activationScripts.postActivation.text' > /tmp/pa.sh
+bash -n /tmp/pa.sh   # syntax check
+```
+
+**Don't do network or repo work in activation.** It runs as root, so it needs a
+`sudo -H -u "$USER"` trampoline and has no access to the user's ssh-agent. Use a launchd
+*user* agent instead — see `launchd.user.agents.home-lab-sync` in `hosts/macs/dungeon` and
+`bin/home-lab-sync.sh`.
+
 ## Dev Container Validation
 
 A Docker dev container is available for validating configs without a NixOS host:

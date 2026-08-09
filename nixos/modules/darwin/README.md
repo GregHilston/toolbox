@@ -34,6 +34,18 @@ ssh-add ~/.ssh/id_ed25519
 
 Then add the public key to GitHub, GitLab, or any remote hosts as needed.
 
+On **dungeon** this also unblocks the `home-lab-sync` launchd user agent, which
+keeps `~/Git/home-lab` cloned and fast-forwarded (the NFS stale-handle watchdog
+runs `scripts/nfs-stale-check.sh` out of that repo). The agent runs at login and
+every 6h; it never fails a rebuild, so if the key is missing you'll only see it
+in the log:
+
+```bash
+tail -f ~/Library/Logs/home-lab-sync.log
+# force a run now
+launchctl kickstart -k "gui/$(id -u)/org.nixos.home-lab-sync"
+```
+
 ## 3. Screen Sharing / VNC (dungeon only)
 
 macOS Sequoia+ requires user consent via the GUI to enable Screen Sharing. The `kickstart` CLI tool conflicts with System Settings and doesn't work reliably.
