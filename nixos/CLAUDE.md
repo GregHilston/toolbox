@@ -168,6 +168,18 @@ Note: `networking.nameservers` is silently ignored under NetworkManager + openre
 forcing public resolvers that way does not work; disabling EDNS0 keeps the NAT DNS and is
 the smaller fix.
 
+### mines OOM-kills the foreground scope (no swap on a tight RAM cap)
+
+Symptom: a tmux/Claude-Code scope is killed by the kernel ("system is low on memory")
+during a memory spike — nix eval/build, Claude Code plus spawned subagents, and the Plasma
+desktop all at once. Root cause: the guest ships with **no swap** (`free -h` → `Swap: 0B`),
+so any transient overshoot of the VM's RAM cap goes straight to the OOM killer with zero
+reclaimable headroom. Fix (committed in `hosts/vms/mines/default.nix`): `zramSwap.enable`
+(compressed RAM-backed swap, no disk I/O, sized at `memoryPercent = 50`). Complementary
+host-side lever: raise the guest's RAM in VMware Fusion — moria has 128GB and the guest
+currently sees ~31GiB. Do the Fusion RAM bump *first* (a rebuild itself spikes memory),
+then deploy. Avoid fanning out many Claude Code subagents inside this RAM-limited guest.
+
 ## Home-manager activation fails on a long-dormant host (stale `.backup` pileup)
 
 `backupFileExtension = "backup"` (`flake-modules/hosts.nix`) makes home-manager move any

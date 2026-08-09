@@ -94,6 +94,18 @@
   # minimal, root-cause fix; no need to hardcode public resolvers.
   networking.resolvconf.dnsExtensionMechanism = false;
 
+  # zram swap: give the kernel reclaimable headroom so a memory spike doesn't
+  # instantly OOM-kill the foreground scope (tmux/Claude Code/nix eval). The VM
+  # ships with NO swap (Swap: 0B), so any transient overshoot of its RAM cap goes
+  # straight to the OOM killer. zram is compressed RAM-backed swap — no disk I/O,
+  # ideal for a VM — sized at 50% of RAM (zstd ~3:1, so ~15GiB device costs ~5GiB).
+  # Complementary host-side lever: raise this guest's RAM in VMware Fusion (moria
+  # has 128GB; the guest currently sees ~31GiB) if builds still press against it.
+  zramSwap = {
+    enable = true;
+    memoryPercent = 50;
+  };
+
   # NFS server to share VM filesystem with macOS host
   # Enables performant filesystem access from macOS apps (Bruno, Finder, etc.)
   services.nfs.server = {
