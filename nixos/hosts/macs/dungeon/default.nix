@@ -182,6 +182,29 @@ in {
     };
   };
 
+  # Detect mains power loss/restoration, alert via Pushover, and Wake-on-LAN Unraid back
+  # up once power returns. Detection works by probing the PoE cameras, which are
+  # deliberately NOT on battery backup — so their reachability IS the mains signal.
+  # Deliberately a plain launchd agent rather than a Grafana rule: Grafana and Prometheus
+  # are containers inside OrbStack, exactly the stack most likely to be degraded during a
+  # power event. This depends on nothing but the network.
+  # Full topology + signal ladder: home-lab/docs/power-outage.md.
+  launchd.user.agents.power-watch = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/power-watch.sh"
+      ];
+      RunAtLoad = true;
+      # Every 60s. Far tighter than nfs-stale-check's 5 min because the whole point is to
+      # catch the outage while there is still battery left to act on; the probe is two TCP
+      # connects. A 2-run confirm streak means an edge is declared ~2 min after the event.
+      StartInterval = 60;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/power-watch.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/power-watch.log";
+    };
+  };
+
   # Deploy oMLX with dungeon-specific settings (8GB hot cache for M3 Pro 36GB).
   # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
