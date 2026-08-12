@@ -49,11 +49,11 @@ cd ~/Git/toolbox/dot && just stow karabiner
 ```
 
 Because the directory is a symlink into the repo, Karabiner's own UI edits land in the
-working tree as git diffs — commit or discard them. Expect one sizeable diff the first
-time Karabiner loads this file: it normalizes on write, adding the `devices`,
-`fn_function_keys`, and `simple_modifications` defaults plus several `global` keys. That's
-expected, not corruption. Its `automatic_backups/` and UI-imported `assets/` output is
-gitignored.
+working tree as git diffs — commit or discard them. Karabiner 16.1 loaded this file as
+written without rewriting it, so the minimal form here is stable; if you change something
+through the UI it may normalize on save (filling in `devices`, `fn_function_keys`,
+`simple_modifications` and extra `global` keys), which is expected rather than corruption.
+Its `automatic_backups/` and UI-imported `assets/` output is gitignored.
 
 ## Setup and per-host caveats
 
@@ -66,9 +66,29 @@ behind TCC prompts and per-app state, so nix can't declare any of it.
   Lock keeps toggling caps. On headless **dungeon** that approval needs a VNC session.
 - **citadel is a work-managed Mac.** If MDM policy blocks driver/system extensions,
   Karabiner won't load there at all. Nothing to do about it from this repo.
-- If Handy's shortcut picker refuses `F18`, switch this file and the keyd config to a hyper
-  combo instead — `command+control+option+shift+d` here, `C-A-S-d` in keyd.
+- **Handy stores the binding as `fn+f18`, not `f18`.** That's correct: macOS stamps the
+  function-key flag on every F-key event, so `fn` is what the OS reported while the picker
+  was capturing, not something this config sends. It matches at runtime. If a future version
+  ever fails to match, plain `"f18"` in Handy's `settings_store.json` is the fallback.
+- If Handy's shortcut picker refuses `F18` outright, switch this file and the keyd config to
+  a hyper combo instead — `command+control+option+shift+d` here, `C-A-S-d` in keyd.
 - If a long dictation ever re-triggers itself, the cause is macOS auto-repeat on the held
   `F18` (Karabiner's `repeat` defaults to true, which is *also* what makes the key stay
   held — so don't "fix" it with `"repeat": false`, which would turn the hold into a tap).
   Handle it with `hold_down_milliseconds` or on Handy's side.
+
+## Troubleshooting
+
+Karabiner 16 renamed its internals, so older advice (and the process name `karabiner_grabber`)
+no longer matches — that rename is also what broke nix-darwin's `services.karabiner-elements`.
+What to actually look for:
+
+```bash
+pgrep -lf "Karabiner-Core-Service"        # the privileged grabber, under its 16.x name
+systemextensionsctl list | grep -i pqrs   # want [activated enabled]
+grep -iE "load|grabbed|error" /var/log/karabiner/core_service.log
+```
+
+A healthy load logs `Load ~/.config/karabiner/karabiner.json...` followed by
+`hid queue value monitor is started (grabbed)` for each keyboard — every keyboard needs its
+own grab, so check yours is listed if a remap works on one board but not another.

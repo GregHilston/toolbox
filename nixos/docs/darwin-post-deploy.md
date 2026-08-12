@@ -48,9 +48,11 @@ per-host caveats: `dot/karabiner/README.md`.
       then download a model: Parakeet V3 (CPU-efficient English) or Whisper Turbo/Large
       (better accuracy, 100+ languages)
 - [ ] **Handy hotkey** - set the binding to `F18` by *holding* Caps Lock while the picker is
-      capturing, and leave push-to-talk mode on (its default)
-- [ ] Verify the hold actually holds: Karabiner's EventViewer should show `F18` staying
-      **down** for the whole hold, not pulsing once
+      capturing, and leave push-to-talk mode on (its default). It will display and store this
+      as `fn + F18` — that's correct, macOS flags all F-keys with `fn`
+- [ ] Smoke test, in order: a quick Caps Lock tap sends Escape; holding it opens Handy's
+      recording overlay and speaking inserts text at the cursor; Caps Lock never toggles caps
+      on *any* attached keyboard (each one needs its own grab)
 
 ## Launch Applications
 
