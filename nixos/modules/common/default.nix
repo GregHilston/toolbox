@@ -8,6 +8,7 @@ in {
   imports = [
     ./core.nix
     ./desktop.nix
+    ./handy.nix
     ../../modules/stylix
   ];
 
