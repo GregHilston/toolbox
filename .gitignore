@@ -42,6 +42,7 @@ dot/omlx/.omlx/settings.json
 # pi runtime state (sessions, auth tokens, generated files)
 dot/pi/.pi/agent/sessions/
 dot/pi/.pi/agent/auth.json
+dot/pi/.pi/agent/models-store.json
 
 # extracted release archives (e.g. pi binary dropped here accidentally)
 /pi/
