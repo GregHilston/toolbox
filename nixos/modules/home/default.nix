@@ -49,6 +49,19 @@ in {
       vlc
       godot_4
       xclip # X11 clipboard utility
+
+      # Voice input — hold Caps Lock to dictate. Local speech-to-text (Whisper /
+      # Parakeet); audio never leaves the host. The Caps-Lock-to-F18 remap that
+      # drives it is ../common/keyd.nix; bind F18 as Handy's push-to-talk key.
+      # Builds on aarch64-linux and substitutes from cache, so mines doesn't have
+      # to compile webkitgtk (which would risk the OOM documented in CLAUDE.md).
+      #
+      # xdotool is NOT linked by the nixpkgs build — that build injects text
+      # in-process via enigo/XTEST (buildInputs carry libxtst, not libxdo). It's
+      # here because upstream's README claims X11 injection needs it, and it's
+      # the tool for manually confirming F18 arrives (`xdotool key`, `xev`).
+      handy
+      xdotool
       # texstudio
 
       # GUI dev tools — nix stand-ins for the macOS Homebrew casks (bruno,
