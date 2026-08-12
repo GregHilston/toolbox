@@ -4,13 +4,28 @@ Caps Lock remap for macOS, managed via GNU Stow. Caps Lock **never toggles caps 
 
 | Gesture | Result |
 | --- | --- |
-| quick tap (< 200ms) | `Escape` |
-| hold (> 200ms) | `F18` held for as long as you hold Caps Lock — Handy's push-to-talk key |
+| quick tap (< 250ms) | `Escape` |
+| hold (> 250ms) | `F18` held for as long as you hold Caps Lock — Handy's push-to-talk key |
 
-The Linux half of the same behavior is `services.keyd` in
-`nixos/modules/common/handy.nix`; both platforms emit `F18` so Handy has one hotkey
-everywhere. Tune the two thresholds in `.config/karabiner/karabiner.json` under
-`complex_modifications.parameters`.
+The Linux half of the same behavior is `services.keyd` in `nixos/modules/common/keyd.nix`;
+both platforms emit `F18` so Handy has one hotkey everywhere.
+
+## Retuning the thresholds
+
+The two parameters under `complex_modifications.parameters` must stay **equal to each
+other**, and matched to keyd's single `timeout(esc, N, f18)`. Three literals, one number.
+
+- `basic.to_if_held_down_threshold_milliseconds` is the real tap/hold split, and the only
+  one keyd has an equivalent for.
+- `basic.to_if_alone_timeout_milliseconds` is the window in which a release still counts as
+  a tap. Karabiner's default is 1000ms. Raising it **above** the hold threshold risks
+  emitting `Escape` *in addition to* `F18` on a hold — a stray Escape into whatever you're
+  dictating at, which is the exact failure this design exists to avoid.
+
+250ms is a deliberate compromise. Lower makes it easy to overshoot while reaching for
+Escape, which swallows the Escape and fires a useless sub-10ms recording; higher delays the
+start of dictation. Overshooting costs more than the delay does, since a hold lasts seconds
+anyway.
 
 ## Why the whole directory is symlinked, not the file
 
@@ -24,7 +39,9 @@ by default (tree folding), so this package needs no special handling.
 
 The catch: stow only folds the directory if `~/.config/karabiner` **doesn't exist yet**.
 If Karabiner has already run on a host, stow descends into the existing directory and
-links just `karabiner.json` — the broken case. Fix it by quitting Karabiner, then:
+links just `karabiner.json` — the broken case, and it exits 0, so nothing warns you at
+stow time. The `stowDotfiles` activation in `nixos/modules/programs/tui/zsh/` checks for
+this after the fact and prints a warning. To fix, quit Karabiner, then:
 
 ```bash
 mv ~/.config/karabiner ~/.config/karabiner.pre-stow
@@ -32,23 +49,26 @@ cd ~/Git/toolbox/dot && just stow karabiner
 ```
 
 Because the directory is a symlink into the repo, Karabiner's own UI edits land in the
-working tree as git diffs — commit or discard them. Its `automatic_backups/` output is
+working tree as git diffs — commit or discard them. Expect one sizeable diff the first
+time Karabiner loads this file: it normalizes on write, adding the `devices`,
+`fn_function_keys`, and `simple_modifications` defaults plus several `global` keys. That's
+expected, not corruption. Its `automatic_backups/` and UI-imported `assets/` output is
 gitignored.
 
-## One-time manual setup (not declarable)
+## Setup and per-host caveats
 
-macOS gates all of this behind TCC prompts and per-app state, so nix can't do it:
+The one-time GUI steps (Karabiner's driver extension + Input Monitoring, Handy's
+Microphone/Accessibility grants, and setting Handy's hotkey to `F18`) are in
+`nixos/docs/darwin-post-deploy.md`, which `just checklist` prints. macOS gates all of it
+behind TCC prompts and per-app state, so nix can't declare any of it.
 
-1. **Karabiner**: on first launch, approve the driver extension (System Settings →
-   Privacy & Security → allow, may need a reboot) and grant **Input Monitoring**.
-   Karabiner's own remap supersedes System Settings → Keyboard → Modifier Keys, so
-   leave that at its default.
-2. **Handy**: grant **Microphone** and **Accessibility** (needed to paste transcribed
-   text into the focused app), then download a model — Parakeet V3 for CPU-efficient
-   English, or Whisper Turbo/Large for better accuracy and 100+ languages.
-3. **Handy hotkey**: set the binding to `F18` by *holding Caps Lock* while the shortcut
-   picker is capturing, and leave push-to-talk mode **on** (its default). Handy stores
-   this in its own app state, not a file we manage.
-
-If Handy's picker refuses `F18`, switch both this file and the keyd config to a hyper
-combo instead — `command+control+option+shift+d` here, `C-A-S-d` in keyd.
+- **Until the driver extension is approved on a host, Karabiner is inert there** and Caps
+  Lock keeps toggling caps. On headless **dungeon** that approval needs a VNC session.
+- **citadel is a work-managed Mac.** If MDM policy blocks driver/system extensions,
+  Karabiner won't load there at all. Nothing to do about it from this repo.
+- If Handy's shortcut picker refuses `F18`, switch this file and the keyd config to a hyper
+  combo instead — `command+control+option+shift+d` here, `C-A-S-d` in keyd.
+- If a long dictation ever re-triggers itself, the cause is macOS auto-repeat on the held
+  `F18` (Karabiner's `repeat` defaults to true, which is *also* what makes the key stay
+  held — so don't "fix" it with `"repeat": false`, which would turn the hold into a tap).
+  Handle it with `hold_down_milliseconds` or on Handy's side.
