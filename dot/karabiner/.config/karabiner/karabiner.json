@@ -8,12 +8,12 @@
       "selected": true,
       "complex_modifications": {
         "parameters": {
-          "basic.to_if_alone_timeout_milliseconds": 200,
-          "basic.to_if_held_down_threshold_milliseconds": 200
+          "basic.to_if_alone_timeout_milliseconds": 250,
+          "basic.to_if_held_down_threshold_milliseconds": 250
         },
         "rules": [
           {
-            "description": "Caps Lock: tap = Escape, hold = F18 (Handy push-to-talk). Never toggles caps lock.",
+            "description": "Caps Lock: tap = Escape, hold = F18 (Handy push-to-talk). Never toggles caps lock. Keep both thresholds EQUAL and matched to keyd in nixos/modules/common/keyd.nix — see dot/karabiner/README.md.",
             "manipulators": [
               {
                 "type": "basic",
