@@ -57,13 +57,29 @@
     # so a bare `stow` silently no-ops on NixOS — which is why mines ended up with
     # no ~/.zshrc / ~/.tmux.conf (and thus a bare prompt). The old /opt/homebrew/bin
     # PATH hack only rescued Darwin. ${pkgs.stow}/bin/stow works everywhere.
+    # karabiner is Darwin-only (the Caps-Lock-to-dictation remap; NixOS uses keyd
+    # in modules/common/handy.nix instead). Stow folds ~/.config/karabiner into a
+    # single directory symlink, which is what Karabiner requires — see
+    # dot/karabiner/README.md for why, and how to recover if it already exists.
     if [ -d "$DOTFILES" ]; then
       cd "$DOTFILES"
-      for pkg in zsh aerospace tmux; do
+      for pkg in zsh aerospace tmux ${lib.optionalString pkgs.stdenv.isDarwin "karabiner"}; do
         ${pkgs.stow}/bin/stow -v -t "$HOME" "$pkg" 2>&1 \
           || echo "stow: conflict for $pkg — backup conflicting dotfiles in ~ then re-run home-manager"
       done
     fi
+
+    ${lib.optionalString pkgs.stdenv.isDarwin ''
+      # Karabiner needs ~/.config/karabiner to be a *directory* symlink: it replaces
+      # a symlinked karabiner.json on save and won't notice edits through one. Stow
+      # folds the directory that way only if the target doesn't exist yet —
+      # otherwise it descends in, links the file alone, and still exits 0. That
+      # silent success is the one failure the conflict guard above can't catch.
+      if [ -e "$HOME/.config/karabiner" ] && [ ! -L "$HOME/.config/karabiner" ]; then
+        echo "WARNING: ~/.config/karabiner is a real directory, not a stow symlink."
+        echo "         Karabiner will not see repo changes. Recovery: dot/karabiner/README.md"
+      fi
+    ''}
 
     # Bootstrap oh-my-zsh if not already installed.
     # Check for oh-my-zsh.sh (not just the directory) since the p10k step below

@@ -37,6 +37,23 @@ Apple-Silicon object detector that Frigate connects to over ZMQ. It is not auto-
 - [ ] Re-run `darwin-rebuild switch` so the agent finds the venv, then verify:
       `tail ~/Library/Logs/frigate-detector.log` shows "ZMQ server successfully bound to tcp://*:5555"
 
+## Voice Input (Karabiner + Handy)
+Hold Caps Lock to dictate; a quick tap is Escape. Until these are done Karabiner is inert
+and Caps Lock still toggles caps. On headless dungeon, do them over VNC. Background and
+per-host caveats: `dot/karabiner/README.md`.
+- [ ] **Karabiner** - approve the driver extension (System Settings → Privacy & Security;
+      may need a reboot), then grant Input Monitoring. Leave System Settings → Keyboard →
+      Modifier Keys at its default — Karabiner's own remap supersedes it.
+- [ ] **Handy** - grant Microphone and Accessibility (needed to paste into the focused app),
+      then download a model: Parakeet V3 (CPU-efficient English) or Whisper Turbo/Large
+      (better accuracy, 100+ languages)
+- [ ] **Handy hotkey** - set the binding to `F18` by *holding* Caps Lock while the picker is
+      capturing, and leave push-to-talk mode on (its default). It will display and store this
+      as `fn + F18` — that's correct, macOS flags all F-keys with `fn`
+- [ ] Smoke test, in order: a quick Caps Lock tap sends Escape; holding it opens Handy's
+      recording overlay and speaking inserts text at the cursor; Caps Lock never toggles caps
+      on *any* attached keyboard (each one needs its own grab)
+
 ## Launch Applications
 
 - [ ] Set up AeroSpace tiling

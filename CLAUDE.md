@@ -93,6 +93,20 @@ each repo. For repos that don't have one yet (e.g. `~/Git/ccs`, `~/Git/home-lab`
 `/init` once to generate a tight map of build/test/run commands + directory layout, so
 Claude stops re-deriving the structure every session.
 
+## Voice Input — Hold Caps Lock to Dictate
+
+Caps Lock stops toggling caps: a quick tap sends `Escape`, holding it sends `F18` for the
+duration. [Handy](https://handy.computer/) binds that `F18` as its push-to-talk key and
+transcribes locally (Whisper / Parakeet — audio never leaves the machine).
+
+Two implementations, one hotkey. macOS: Karabiner-Elements — see `dot/karabiner/`.
+NixOS GUI hosts: `services.keyd` — see `nixos/modules/common/keyd.nix`.
+
+On macOS this only takes effect once Karabiner's driver extension is approved on that
+host — until then Caps Lock still toggles caps. That grant, Handy's mic/accessibility
+grants, and Handy's own hotkey setting are GUI-gated and can't be declared; they're in
+`nixos/docs/darwin-post-deploy.md` (`just checklist`).
+
 ## Dotfiles
 
 **Pattern:** dotfiles are portable, plain-syntax, and stow-deployed (the source of

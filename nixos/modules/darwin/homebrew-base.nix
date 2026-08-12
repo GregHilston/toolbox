@@ -80,6 +80,15 @@
       # Drivers
       "displaylink"
 
+      # Voice input: hold Caps Lock to dictate. Karabiner does the tap-vs-hold
+      # remap (dot/karabiner/), Handy is the local speech-to-text engine bound to
+      # the F18 that Karabiner emits. Both are casks rather than nixpkgs on
+      # purpose: macOS TCC permissions key on the binary path, so a nix-store app
+      # re-prompts for Microphone/Accessibility on every rebuild. NixOS gets the
+      # same pair from nixos/modules/common/handy.nix (keyd + nixpkgs handy).
+      "karabiner-elements"
+      "handy"
+
       # Productivity
       "obsidian"
       "raycast"
