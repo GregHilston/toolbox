@@ -28,6 +28,9 @@ backup
 iterm2-colors
 
 dot/env/dyn.env
+
+# Karabiner-Elements writes its own rolling config backups into the stowed dir
+dot/karabiner/.config/karabiner/automatic_backups/
 private/
 
 # nix build output
