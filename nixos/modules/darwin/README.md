@@ -51,7 +51,7 @@ launchctl kickstart -k "gui/$(id -u)/org.nixos.home-lab-sync"
 macOS Sequoia+ requires user consent via the GUI to enable Screen Sharing. The `kickstart` CLI tool conflicts with System Settings and doesn't work reliably.
 
 1. Open **System Settings > General > Sharing > Screen Sharing** and toggle it **ON**
-2. Connect from another Mac via `vnc://192.168.1.229` (LAN) or `vnc://<tailscale-ip>` (remote)
+2. Connect from another Mac via `vnc://dungeon.local` (LAN — the IP is DHCP and drifts) or `vnc://<tailscale-ip>` (remote)
 
 ## 4. USB Ethernet Adapter (dungeon only)
 

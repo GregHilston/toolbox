@@ -64,7 +64,14 @@ _: {
         user = "ghilston";
       };
       dungeon = {
-        lan = "192.168.1.229";
+        # DHCP, so this drifts (was .229, now .238) and `ssh dungeon` breaks
+        # until it is re-pinned here while `ssh dungeonts` keeps working. This
+        # is the **USB Ethernet** (en7) address — the wired default route, and
+        # what `dungeon.local` resolves to. The box also holds a Wi-Fi (en0)
+        # address on the same subnet; prefer the wired one.
+        # To stop the drift for good, add a DHCP reservation on the router for
+        # en7's MAC 00:e0:4c:06:0f:50.
+        lan = "192.168.1.238";
         tailscale = "100.103.22.125";
         user = "ghilston";
       };

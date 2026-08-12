@@ -53,7 +53,7 @@ in {
     omlxBaseUrl = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      example = "http://192.168.1.229:8000/v1";
+      example = "http://192.168.1.238:8000/v1";
       description = ''
         When non-null, generate ~/.pi/agent/models.json pointing pi's `omlx`
         provider at this base URL, listing `models`. When null (the default),
