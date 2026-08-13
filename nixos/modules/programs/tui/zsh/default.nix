@@ -58,7 +58,7 @@
     # no ~/.zshrc / ~/.tmux.conf (and thus a bare prompt). The old /opt/homebrew/bin
     # PATH hack only rescued Darwin. ${pkgs.stow}/bin/stow works everywhere.
     # karabiner is Darwin-only (the Caps-Lock-to-dictation remap; NixOS uses keyd
-    # in modules/common/handy.nix instead). Stow folds ~/.config/karabiner into a
+    # in modules/common/keyd.nix instead). Stow folds ~/.config/karabiner into a
     # single directory symlink, which is what Karabiner requires — see
     # dot/karabiner/README.md for why, and how to recover if it already exists.
     if [ -d "$DOTFILES" ]; then
