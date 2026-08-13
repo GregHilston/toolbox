@@ -106,14 +106,25 @@ Handy has to be *running* for the hotkey to do anything, so it's started declara
 rather than by hand: a launchd agent on macOS (`nixos/modules/darwin/handy.nix`, imported
 by citadel and moria — headless dungeon skips it) and a home-manager systemd user service
 bound to `graphical-session.target` on NixOS GUI hosts (`nixos/modules/home/default.nix`).
-Handy's own "Launch at login" toggle stays off; it writes app state nix doesn't own. The
-rationale for the launchd `open -a` shape lives in `nixos/CLAUDE.md` → "Launching GUI apps
-at login".
+Handy's own "Launch at login" toggle stays off; it writes app state nix doesn't own. Ice
+(below) is started the same way — the shared rationale for the launchd `open -a` shape lives
+in `nixos/CLAUDE.md` → "Launching GUI apps at login".
 
 On macOS this only takes effect once Karabiner's driver extension is approved on that
 host — until then Caps Lock still toggles caps. That grant, Handy's mic/accessibility
 grants, and Handy's own hotkey setting are GUI-gated and can't be declared; they're in
 `nixos/docs/darwin-post-deploy.md` (`just checklist`).
+
+## Menu Bar — Ice
+
+[Ice](https://github.com/jordanbaird/Ice) manages the macOS menu bar (hides the overflow
+icons the notch would otherwise swallow). Cask `jordanbaird-ice` in
+`nixos/modules/darwin/homebrew-base.nix`; launched at login by
+`nixos/modules/darwin/ice.nix`, imported from `modules/darwin/common.nix` so all three Macs
+get it. Same pattern as Handy above (`nixos/CLAUDE.md` → "Launching GUI apps at login"): a
+launchd `open -a` agent, `RunAtLoad` only, and Ice's own "Launch at login" toggle stays
+**off** so the two don't double-register. Ice's Accessibility + Screen Recording grants are
+GUI-gated — `nixos/docs/darwin-post-deploy.md`.
 
 ## Dotfiles
 

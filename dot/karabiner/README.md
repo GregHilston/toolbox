@@ -69,6 +69,8 @@ behind TCC prompts and per-app state, so nix can't declare any of it.
   login; check it with `launchctl list | grep org.nixos.handy` and read
   `~/Library/Logs/handy.log` if it didn't come up. Leave Handy's own "Launch at login"
   setting off so both aren't registering it. dungeon has the cask but not the agent.
+  Ice (the menu bar manager) is started by the same launchd `open -a` pattern — why it's
+  shaped that way is in `nixos/CLAUDE.md` → "Launching GUI apps at login".
 - **citadel is a work-managed Mac.** If MDM policy blocks driver/system extensions,
   Karabiner won't load there at all. Nothing to do about it from this repo.
 - **Handy stores the binding as `fn+f18`, not `f18`.** That's correct: macOS stamps the

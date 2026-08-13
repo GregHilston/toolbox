@@ -5,6 +5,12 @@
 }: let
   basePackages = import ../../config/base-packages.nix pkgs;
 in {
+  imports = [
+    # Launch Ice (menu bar manager) at login. Here rather than per-host because
+    # every Mac gets the cask from ./homebrew-base.nix and wants it running.
+    ./ice.nix
+  ];
+
   # Let Determinate manage the Nix daemon; disable nix-darwin's nix management
   nix.enable = false;
 

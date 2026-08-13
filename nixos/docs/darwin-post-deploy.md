@@ -60,4 +60,10 @@ per-host caveats: `dot/karabiner/README.md`.
 ## Launch Applications
 
 - [ ] Set up AeroSpace tiling
-- [ ] Configure Bartender menu bar layout
+- [ ] **Ice** (menu bar manager, replaced Bartender) - it's launched at login by the launchd
+      agent in `modules/darwin/ice.nix`, but its permissions are GUI-gated: on first launch
+      approve Accessibility (move/hide menu bar items) and Screen Recording (item search and
+      menu bar appearance). Leave Ice's own Settings → General → "Launch Ice at login"
+      **off** — the launchd agent owns that, and both would double-register.
+- [ ] Arrange the menu bar in Ice: drag icons above/below the divider with ⌘-drag to choose
+      what stays visible vs. hidden
