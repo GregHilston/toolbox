@@ -102,6 +102,14 @@ transcribes locally (Whisper / Parakeet — audio never leaves the machine).
 Two implementations, one hotkey. macOS: Karabiner-Elements — see `dot/karabiner/`.
 NixOS GUI hosts: `services.keyd` — see `nixos/modules/common/keyd.nix`.
 
+Handy has to be *running* for the hotkey to do anything, so it's started declaratively
+rather than by hand: a launchd agent on macOS (`nixos/modules/darwin/handy.nix`, imported
+by citadel and moria — headless dungeon skips it) and a home-manager systemd user service
+bound to `graphical-session.target` on NixOS GUI hosts (`nixos/modules/home/default.nix`).
+Handy's own "Launch at login" toggle stays off; it writes app state nix doesn't own. The
+rationale for the launchd `open -a` shape lives in `nixos/CLAUDE.md` → "Launching GUI apps
+at login".
+
 On macOS this only takes effect once Karabiner's driver extension is approved on that
 host — until then Caps Lock still toggles caps. That grant, Handy's mic/accessibility
 grants, and Handy's own hotkey setting are GUI-gated and can't be declared; they're in

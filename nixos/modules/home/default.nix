@@ -83,6 +83,33 @@ in {
       spotify
     ]);
 
+  # Launch Handy with the graphical session (Linux half of "hold Caps Lock to
+  # dictate"; the macOS half is a launchd agent in ../darwin/handy.nix). Handy is
+  # a tray app and has to already be running for the F18 that keyd emits on a
+  # Caps Lock hold to land anywhere — otherwise Caps Lock behaves correctly and
+  # nothing dictates. Same enableGui gate as the package itself above.
+  #
+  # graphical-session.target, not default.target: Handy is webkitgtk + a tray
+  # icon, so it needs a display and a running status-notifier host. PartOf ties
+  # it to the session so it stops on logout instead of lingering.
+  #
+  # Untested on Linux, like the keyd half — see ../common/keyd.nix's note.
+  systemd.user.services.handy = lib.mkIf enableGui {
+    Unit = {
+      Description = "Handy — local speech-to-text, push-to-talk on F18";
+      After = ["graphical-session.target"];
+      PartOf = ["graphical-session.target"];
+    };
+    Service = {
+      ExecStart = "${pkgs.handy}/bin/handy";
+      # Plasma can bring the tray up slightly after the target, so give a failed
+      # start a few retries rather than leaving dictation dead until next login.
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+    Install.WantedBy = ["graphical-session.target"];
+  };
+
   # Install the searxngr binary via uv. The config itself is stowed on both
   # platforms by ./workstation.nix; on Darwin this install stays manual.
   home.activation.install-searxngr = lib.hm.dag.entryAfter ["installPackages"] ''

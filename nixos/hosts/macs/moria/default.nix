@@ -9,6 +9,9 @@
     ../../../modules/darwin/homebrew-server.nix
     ../../../modules/darwin/home.nix
     ../../../modules/darwin/omlx.nix
+    # Launch Handy at login so the Caps-Lock-hold → F18 dictation hotkey works
+    # without opening the app by hand.
+    ../../../modules/darwin/handy.nix
   ];
 
   networking.hostName = "moria";

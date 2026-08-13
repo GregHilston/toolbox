@@ -64,6 +64,11 @@ behind TCC prompts and per-app state, so nix can't declare any of it.
 
 - **Until the driver extension is approved on a host, Karabiner is inert there** and Caps
   Lock keeps toggling caps. On headless **dungeon** that approval needs a VNC session.
+- **Handy launching is declarative, its permissions aren't.** A launchd agent
+  (`nixos/modules/darwin/handy.nix`, on citadel and moria) runs `open -g -j -a Handy` at
+  login; check it with `launchctl list | grep org.nixos.handy` and read
+  `~/Library/Logs/handy.log` if it didn't come up. Leave Handy's own "Launch at login"
+  setting off so both aren't registering it. dungeon has the cask but not the agent.
 - **citadel is a work-managed Mac.** If MDM policy blocks driver/system extensions,
   Karabiner won't load there at all. Nothing to do about it from this repo.
 - **Handy stores the binding as `fn+f18`, not `f18`.** That's correct: macOS stamps the

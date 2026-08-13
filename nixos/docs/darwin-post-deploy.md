@@ -47,6 +47,9 @@ per-host caveats: `dot/karabiner/README.md`.
 - [ ] **Handy** - grant Microphone and Accessibility (needed to paste into the focused app),
       then download a model: Parakeet V3 (CPU-efficient English) or Whisper Turbo/Large
       (better accuracy, 100+ languages)
+      > Starting Handy is *not* a manual step: `modules/darwin/handy.nix` launches it at
+      > login (`launchctl list | grep org.nixos.handy`). Leave Handy's own "Launch at
+      > login" setting off so the two don't both register it.
 - [ ] **Handy hotkey** - set the binding to `F18` by *holding* Caps Lock while the picker is
       capturing, and leave push-to-talk mode on (its default). It will display and store this
       as `fn + F18` — that's correct, macOS flags all F-keys with `fn`
