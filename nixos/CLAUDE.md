@@ -97,6 +97,34 @@ discord, bitwarden-desktop) are **x86_64-linux only** in nixpkgs — hence the
 `nix eval .#nixosConfigurations.<host>.pkgs.<pkg>.meta.platforms` before adding a GUI app
 for an ARM host.
 
+## Launching GUI apps at login: a launchd `open -a` agent
+
+Menu-bar apps have to already be running to do anything, and they fail *silently* when
+they aren't — no Handy means Caps Lock still behaves and nothing dictates; no Ice means
+the stock cluttered menu bar. So each gets a launchd user agent: `modules/darwin/handy.nix`
+(imported per-host by citadel and moria; headless dungeon has the cask but no use for a
+dictation app) and `modules/darwin/ice.nix` (imported from `modules/darwin/common.nix`, so
+all three Macs). The Linux equivalent is a home-manager `systemd.user.services.*` unit
+bound to `graphical-session.target` — see handy in `modules/home/default.nix`.
+
+The shape is always the same, and *why* is the part worth remembering:
+
+- **`/usr/bin/open -g -j -a /Applications/Foo.app`, not the bundle's inner binary.** macOS
+  TCC keys Microphone/Accessibility/Screen-Recording grants on a LaunchServices launch, so
+  `open` is what a double-click does and the grants from `docs/darwin-post-deploy.md`
+  survive. It's also idempotent — `open -a` on a running app just activates it, so the
+  agent bootstrap on every `just dr <host>` can't leave two copies running. `-g` = don't
+  steal focus, `-j` = launch hidden.
+- **`RunAtLoad` only, never `KeepAlive`.** `open` exits as soon as LaunchServices takes
+  over, so KeepAlive reads that as a crash and respawns forever. The tradeoff: a real
+  crash isn't restarted. Fine — the missing menu-bar icon is the tell.
+- **Not the app's own "Launch at login" toggle.** Those register an `SMAppService` login
+  item in app-written state (e.g. Handy's `settings_store.json`) that nix neither owns nor
+  can assert. Keep the in-app toggle **off** so the two don't double-register.
+- **Log to `~/Library/Logs/<app>.log`.** On a fresh host the agent can load before Homebrew
+  installs the cask; `Unable to find application named ...` shows up there rather than
+  failing the rebuild.
+
 ## Common Mistakes to Avoid
 
 1. **Module imports**: Always use relative paths in module imports (e.g., `../../modules/home` not absolute paths)
