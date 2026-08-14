@@ -205,6 +205,34 @@ in {
     };
   };
 
+  # Detect drift between ProtonVPN's forwarded port and Transmission's peer-port, and
+  # re-run the sync that should have run on its own.
+  #
+  # gluetun's up-command pages when it RUNS AND FAILS. It cannot cover the up-command not
+  # running at all — nothing failed, so nothing alerts, while Transmission listens on a port
+  # Proton no longer forwards and receives no inbound peers. Confirmed 2026-08-13: a gluetun
+  # restart stranded the netns members, the sync failed against an unreachable RPC, and
+  # Proton then handed back THE SAME PORT — so the up-command never fired again and the
+  # staleness had nothing watching it.
+  #
+  # 15 min, not 5: the condition is silent-but-not-urgent (inbound peers only), the probe
+  # costs two `docker exec`s, and the script itself confirms drift over 2 consecutive runs
+  # before acting — so a real drift is healed within ~30 min while a reconnect's brief,
+  # legitimate mismatch is never mistaken for one.
+  # Rationale + failure modes: home-lab/docs/runbooks/proton-port-sync-failed.md.
+  launchd.user.agents.port-sync-check = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/port-sync-check.sh"
+      ];
+      RunAtLoad = true;
+      StartInterval = 900;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/port-sync-check.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/port-sync-check.log";
+    };
+  };
+
   # Deploy oMLX with dungeon-specific settings (8GB hot cache for M3 Pro 36GB).
   # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
