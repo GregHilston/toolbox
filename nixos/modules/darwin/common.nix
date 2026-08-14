@@ -105,8 +105,42 @@ in {
   # Power management - display sleep timeout (in minutes)
   power.sleep.display = 5;
 
-  # Touch ID for sudo
-  security.pam.services.sudo_local.touchIdAuth = true;
+  # Touch ID for sudo.
+  #
+  # `reattach` pulls in pam_reattach, which reattaches the auth attempt to the
+  # user's GUI bootstrap session. Without it pam_tid.so cannot reach the Touch ID
+  # UI from inside tmux/screen and silently falls back to a typed password — and
+  # `just dr` is normally run from tmux. Harmless on headless dungeon.
+  security.pam.services.sudo_local = {
+    touchIdAuth = true;
+    reattach = true;
+  };
+
+  # Let Homebrew's own sudo calls through without a password, so `just dr` asks
+  # exactly once (for darwin-rebuild itself) instead of again at every cask.
+  #
+  # Why a sudoers rule is the ONLY thing that works here: Homebrew runs
+  # `sudo --reset-timestamp` unconditionally at the top of every invocation
+  # (Library/Homebrew/brew.sh, "Reset sudo timestamp to avoid running
+  # unauthorized sudo commands"). It deliberately destroys the caller's ticket,
+  # so nothing ticket-based survives — not a longer timestamp_timeout, not
+  # timestamp_type=global, not a `sudo -v` keep-alive loop in the justfile.
+  #
+  # And it fires constantly, not just for the odd package: any cask with an
+  # `uninstall launchctl:` stanza probes with sudo *unconditionally* — the
+  # `booleans = [false, true]` loop in cask/artifact/abstract_uninstall.rb runs
+  # the sudo pass with no writability check. That's 12 of the ~47 casks
+  # installed here (1password, docker, chrome, vscode, steam, spotify, …).
+  #
+  # Scope: only the binaries brew actually escalates. Interactive
+  # `sudo <anything else>` still prompts normally, which a blanket NOPASSWD
+  # would not. Be honest about the limit though — root `cp`/`rm` can be turned
+  # into full root, so this is a speed bump against casual misuse, not a
+  # security boundary.
+  security.sudo.extraConfig = ''
+    Cmnd_Alias BREW_CMDS = /bin/launchctl, /bin/cp, /bin/rm, /bin/chmod, /bin/mkdir, /bin/rmdir, /usr/sbin/chown, /usr/sbin/installer
+    ${vars.user.name} ALL=(root) NOPASSWD: BREW_CMDS
+  '';
 
   # Timezone
   time.timeZone = vars.system.timeZone;
