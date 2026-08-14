@@ -360,6 +360,42 @@ re-run `just dr <host>`. (Durable option if it recurs: set `HOMEBREW_NO_INSTALL_
 so installs stop auto-cleaning — note this is unrelated to `homebrew.onActivation.cleanup`
 in `modules/darwin/homebrew-base.nix`, which only controls Brewfile-drift uninstalls.)
 
+## `just dr` re-prompts for a password at every cask — don't chase the sudo ticket
+
+Homebrew runs `sudo --reset-timestamp` **unconditionally at the top of every invocation**
+(`brew.sh`, "Reset sudo timestamp to avoid running unauthorized sudo commands"), with no
+env-var opt-out. It deliberately throws away the caller's ticket, so **nothing ticket-based
+survives `brew bundle`** — not a longer `timestamp_timeout`, not `timestamp_type=global`,
+not a `sudo -v` keep-alive wrapped around the rebuild in the justfile. All three were tried
+and all three fail. A sudoers rule is the only lever, and it does work because the prompt is
+a plain `/usr/bin/sudo` tty prompt, not a GUI Authorization dialog.
+
+This is frequent, not occasional: any cask with an `uninstall launchctl:` stanza takes the
+sudo path **with no writability check** (the `booleans = [false, true]` loop in
+`cask/artifact/abstract_uninstall.rb`) — ~12 of the ~47 casks here. File ownership is a red
+herring; the app bundles are already user-owned.
+
+**Fixed** in `modules/darwin/common.nix` (`security.sudo.extraConfig`): NOPASSWD for only
+the binaries brew escalates. Interactive `sudo <anything else>` still prompts. Not a
+security boundary — root `cp`/`rm` converts to full root — it's a speed bump. Confirmed on
+moria, dungeon, and citadel.
+
+Related, same file: `security.pam.services.sudo_local.reattach = true`. `just dr` is run
+from tmux, where `pam_tid.so` can't reach the GUI bootstrap session and **silently** falls
+back to a typed password. `reattach` (pam_reattach) is what makes Touch ID actually work
+there. Inert on headless dungeon.
+
+When changing that sudoers block, check the generated file parses before deploying — a
+syntax error in `/etc/sudoers.d/` locks you out of sudo entirely:
+
+```bash
+nix eval --raw '.#darwinConfigurations.<host>.config.environment.etc."sudoers.d/10-nix-darwin-extra-config".text' > /tmp/su
+visudo -c -f /tmp/su
+```
+
+Also verify each granted path exists (`test -x /bin/launchctl`, …) — sudoers matches on the
+resolved absolute path, so a wrong one silently fails to match and the prompts quietly return.
+
 ## Darwin `postActivation` is ONE shared bash script — always use a subshell
 
 `system.activationScripts.postActivation.text` is `types.lines`: nix-darwin concatenates
