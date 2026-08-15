@@ -233,6 +233,38 @@ in {
     };
   };
 
+  # Detect & auto-heal a gluetun tunnel that is broken while Docker insists it is healthy.
+  #
+  # Incident 2026-08-14: a mains blip took the WAN down; gluetun rode it out by cycling
+  # Proton servers and 25 min later was still resolving nothing, while reporting
+  # health=healthy FailingStreak=0 RestartCount=0. Its healthcheck runs every 5s with
+  # retries=3, but the internal VPN loop keeps partially recovering, so the failing streak
+  # flapped 0->2 and never latched at 3. Nothing alerted: these services have no HTTP front
+  # door for blackbox, so the whole VPN stack was silently dead for 45 minutes. It then
+  # recurred ~26h later. Docker's health status is not a usable signal for this fault.
+  #
+  # The script therefore probes FUNCTION from inside the netns members, asking two
+  # independent questions — can it reach a fixed IP (no DNS anywhere), and can it resolve a
+  # name. The pair discriminates a DNS wedge from a dead tunnel from a stranded namespace,
+  # which need different fixes. Rationale: home-lab/docs/runbooks/gluetun-dns-wedge.md.
+  #
+  # 5 min, matching nfs-stale-check: the probe is a few `docker exec`s, and the script
+  # confirms a fault over 2 consecutive runs before restarting anything — so a real wedge is
+  # healed within ~10 min while gluetun's legitimate few-second gaps mid-server-switch are
+  # never mistaken for one. A 30-min cooldown stops a restart loop when Proton is at fault.
+  launchd.user.agents.gluetun-health-check = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/gluetun-health-check.sh"
+      ];
+      RunAtLoad = true;
+      StartInterval = 300;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/gluetun-health-check.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/gluetun-health-check.log";
+    };
+  };
+
   # Deploy oMLX with dungeon-specific settings (8GB hot cache for M3 Pro 36GB).
   # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
