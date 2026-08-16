@@ -11,7 +11,6 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 ├── claude-code/                            # Dockerfile + docs for running Claude Code in a container.
 ├── claude-commands/                        # Global Claude Code slash commands (→ ~/.claude/commands/).
 ├── claude-skills/                          # Global Claude Code agent skills (→ ~/.claude/skills/).
-├── docs/                                   # Additional documentation that supplements this `README.md`.
 ├── dot/                                    # Dotfiles to configure a slew of programs and environments.
 ├── nixos/                                  # NixOS and nix-darwin configurations for all hosts.
 ├── windows/                                # Windows provisioning (autounattend.xml, scoop/winget lists).
@@ -64,35 +63,7 @@ gpr --no-open --port 5000
 
 **Pinning / bumping difit:** the pinned version lives in one place — `DIFIT_VERSION` at the top of `bin/difit.sh` (currently `5.0.6`). Bump it by editing that default, or override per-run with `DIFIT_VERSION=5.1.0 difit …`. Pinning avoids `npx`'s stale-cache footgun and keeps runs reproducible.
 
-## Setting Terminal Font
+## Fonts
 
-### Windows 11
-
-Since we do not do much developing on Windows, and may only use it to SSH into a remote Linux box, we will not be automating this much. Please follow these steps to get the fonts working on your Windows machine.
-
-1. Navigate to [this URL](https://github.com/romkatv/powerlevel10k#manual-font-installation), and download `MesloLGS NF Regular.ttf`, `MesloLGS NF Bold.ttf`, `MesloLGS NF Italic.ttf`, and `MesloLGS NF Bold Italic.ttf`.
-2. For each of the four `.ttf` files, double click them, which opens up a popup showing you sample text in your font. Click the `install` button in the right corner.
-
-![Font Installation](./docs/res/font-installation.png)
-
-3. Open our WSL application, which is usually called `Debian` or `Ubuntu.`
-
-![Debian Application](./docs/res/debian-application.png)
-
-![Ubuntu Application](./docs/res/ubuntu-application.png)
-
-4. Right click on the top of the terminal, and navigate to `Settings`
-
-![Application Settings](./docs/res/application-settings.png)
-
-5. Then navigate to `Profiles > Debian/Ubuntu` <sup>5</sup>
-
-![More Application Settings](./docs/res/application-settings2.png)
-
-6. Then navigate to `Additional Settings/Appearance` <sup>6</sup>
-
-![Additional Settings](./docs/res/additional-settings.png)
-
-7. Select `MesloLGS NF` from the `Font face` dropdown. <sup>7</sup>
-
-![Font Face](./docs/res/font-face.png)
+Fonts are provisioned declaratively by Stylix on the nix-managed hosts — see
+`nixos/modules/stylix/`. Nothing to install by hand.
