@@ -381,10 +381,15 @@ a prefill-path fix.
 
 Every one of these produced a plausible, wrong result. Three needed permanent tooling.
 
-**1. Foreign traffic on a shared server.** A scheduled digest job (normally 05:30, fired late
-as a launchd wake catch-up) hammered `gpt-oss-120b` on the same oMLX instance for ~5 minutes.
-It overlapped exactly one model's window — `Qwen3.6-27B-8bit`, which read **11.7 tok/s**
-contaminated versus **11.98 tok/s** in the final clean run. Nothing in the benchmark output
+**1. Foreign traffic on a shared server.** Another process on this machine hammered
+`gpt-oss-120b` on the same oMLX instance for ~5 minutes — most likely a manual `roger` run,
+which uses that model. It overlapped exactly one model's window — `Qwen3.6-27B-8bit`, which
+read **11.7 tok/s** contaminated versus **11.98 tok/s** in the final clean run.
+
+(An earlier draft blamed roger's *scheduled* digest agent. That was wrong and is worth
+recording as its own lesson: that agent turned out to fail at Redis before ever reaching the
+LLM, so it cannot have been the source. A plausible-sounding culprit is not evidence — the
+log tells you *which model* was served, never *which process* asked for it.) Nothing in the benchmark output
 hinted at it. `bench/contention_audit.sh` now audits a window against the server log, and
 **fails closed**: an unparseable window, an unreadable log, or an empty window is a hard
 error, because a false "CLEAN" launders a bad run as verified.

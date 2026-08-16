@@ -166,6 +166,36 @@ in {
     };
   };
 
+  # roger's daily digest email.
+  #
+  # This lives on dungeon, not moria, because everything roger needs is here: roger-redis,
+  # the ~/Git/notes vault mount, the credentials dir, and the oMLX the compose stack points
+  # at. It replaces `com.roger.digest.greg`, a hand-written (non-nix) agent on moria that
+  # had drifted into failing every run — placeholder vault path, a dead LM Studio endpoint,
+  # a model id oMLX does not serve, and no Redis on that host. launchctl reported
+  # last_exit=1 and nothing surfaced it, which is exactly the failure mode nix-managing it
+  # prevents. The script runs the digest INSIDE the compose stack so there is no second
+  # copy of the config left to drift. See home-lab/scripts/roger-digest.sh.
+  launchd.user.agents.roger-digest-greg = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/roger-digest.sh"
+        "greg"
+      ];
+      # Daily at 05:30. Deliberately NOT RunAtLoad: this sends a real email, so an
+      # activation or a reboot must not fire one.
+      StartCalendarInterval = [
+        {
+          Hour = 5;
+          Minute = 30;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/roger-digest-greg.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/roger-digest-greg.log";
+    };
+  };
+
   # Detect & auto-heal stale NFS file handles (ESTALE) on the home-lab_nfs-* Docker volumes.
   # Runs as a USER agent (not a system daemon) so it inherits the GUI/OrbStack docker context.
   # Root cause + manual fix: home-lab/CLAUDE.md → "NFS Stale File Handle (ESTALE)".
