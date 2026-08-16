@@ -6,6 +6,13 @@ machines and it was a net *loss* on both (moria 0.97×, dungeon 0.91×). The tec
 that wins big on a bandwidth-starved discrete GPU does not transfer to MLX here. This
 doc exists so we don't re-try it without new reason.**
 
+> **2026-08-15 update — the "when it *would* help" boundary below was hit, and the
+> prediction held.** `Qwen3.8-27B` is a *dense* 27B with published MTP drafters, and there
+> speculative decoding is a real win: **1.43× on code, 1.19× average** (see
+> `docs/local-llm-benchmarks.md`). The MoE reasoning in this doc is still correct — it just doesn't
+> apply to dense targets. Caveat: oMLX 0.5.7's `vlm_mtp` measured **not bit-identical** on
+> that pair against a verified determinism control, so it is documented but left disabled.
+
 Date: 2026-06-12. oMLX 0.4.4rc1. Tested by: Greg + Claude.
 
 ---

@@ -2,8 +2,39 @@
   "version": 1,
   "_comment": "Per-model overrides. These take precedence over sampling defaults in settings.json.",
   "models": {
+    "Qwen3.6-35B-A3B-4bit": {
+      "description": "DEFAULT local coding model (MoE, 35B total / ~3B active, 4-bit, ~19GB). Measured on moria: 130.7 t/s decode and 995-1532 t/s prefill -- 5.7x the decode and ~5x the prefill of the dense Qwen3.8-27B-4bit -- while scoring 9/10 vs 8/10 on our 10-task executable coding eval. It is faster AND was not worse, so it is the default. 4-bit over 8-bit: the 8-bit sibling measured 86.9 t/s, a 1.50x penalty (cheaper than the dense model's 1.92-2.00x, because a MoE only reads its ~3B active params, but still not free). Full write-up: docs/local-llm-benchmarks.md.",
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "top_k": 20,
+      "repetition_penalty": 1.0,
+      "presence_penalty": 0.0,
+
+      "_comment_sampling": "temp 0.6 matches the Unsloth recommendation for Qwen3.6 and our existing -8bit entry. NOTE our coding eval ran this model at temp 1.0 (to match the knobs the dense model was measured with) and scored 9/10, so both settings work; 0.6 is shipped for consistency with the rest of the Qwen3.6 family.",
+
+      "_comment_thinking": "Same runaway guard as the -8bit entry. This model has no reasoning_effort knob (that is new in Qwen3.8), so the token budget is the ONLY bound available. It spent ~8.4k tokens/task on our eval and truncated one task at 16k.",
+      "thinking_budget_enabled": true,
+      "thinking_budget_tokens": 8192
+    },
+    "Qwen3.8-27B-4bit": {
+      "description": "SPECIALIST, not the default (dense 27B, 4-bit, 14.95GiB). Reach for it when A3B-4bit has actually failed a specific hard problem, or when output tokens are precious -- it solved our eval with 31.8k tokens vs A3B's 84.1k (2.6x fewer). Otherwise A3B-4bit is 5.7x faster and scored a point higher. IMPORTANT: we did NOT measure a quality advantage for this model; our 10-task eval hits a ceiling (8/10 vs 9/10) and cannot discriminate. Its case rests on published benchmarks (SWE-bench Pro 61.7, LiveCodeBench v6 90.3, Terminal-Bench 2.1 73.0) being a newer generation, not on our data. 4-bit not 8-bit: on a DENSE 27B the 8-bit quant measured ~2x slower (23.0 -> 11.9 t/s) for a quality difference nobody can detect at >=4 bits. No 6-bit exists upstream. Full write-up: docs/local-llm-benchmarks.md.",
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "top_k": 20,
+      "repetition_penalty": 1.0,
+      "presence_penalty": 0.0,
+
+      "_comment_reasoning_effort": "THE most important setting for this model. Qwen3.8's chat template adds reasoning_effort and DEFAULTS IT TO xhigh (chat_template.jinja:47). Measured on moria: xhigh burns the entire 8000-token budget over 401s and never emits an answer (finish_reason=length). On our 10-task coding eval, medium scored 8/10 using 31.8k tokens while xhigh scored 6/10 using 123.4k -- every extra failure was a truncation. More thinking is strictly worse here. medium is the default; pass reasoning_effort per-request to override.",
+      "chat_template_kwargs": { "reasoning_effort": "medium" },
+
+      "_comment_thinking_budget": "Hard stop, belt-and-braces with reasoning_effort. Even at medium one task ran to a 16k cap. reasoning_effort shapes intent; this bounds it.",
+      "thinking_budget_enabled": true,
+      "thinking_budget_tokens": 8192,
+
+      "_comment_no_speculative_decoding": "vlm_mtp with Qwen3.8-27B-MTP-4bit IS a real speedup here (1.43x on code, 1.19x avg) -- unlike our gemma MoE result -- because a dense 27B is genuinely bandwidth-bound. It is NOT enabled because we measured it is NOT lossless: with a verified determinism control (drafter off, same prompts, 3/3 identical across a restart), turning the drafter ON changed output on 2 of 3 prompts. Greedy verification is supposed to be bit-identical, so this looks like an oMLX 0.5.7 bug. Re-check with dot/omlx/bench/lossless_check.py after any oMLX upgrade."
+    },
     "Qwen3.6-35B-A3B-8bit": {
-      "description": "Unsloth-recommended sampling for Qwen3.6 coding/agentic tasks. Source: https://unsloth.ai/docs/models/qwen3.6 — also validated by multiple r/LocalLLaMA threads (see llm.md notes).",
+      "description": "SUPERSEDED by Qwen3.6-35B-A3B-4bit for general use -- measured 86.9 t/s here vs 130.7 t/s at 4-bit (a 1.50x penalty) for 35GB instead of 19GB. Kept because it is the target of the nix-managed -long-context symlink and as an 8-bit reference point. Unsloth-recommended sampling for Qwen3.6 coding/agentic tasks. Source: https://unsloth.ai/docs/models/qwen3.6 — also validated by multiple r/LocalLLaMA threads (see llm.md notes).",
       "temperature": 0.6,
       "top_p": 0.95,
       "top_k": 20,

@@ -33,6 +33,31 @@ Available per-model fields (not exhaustive): `temperature`, `top_p`, `top_k`, `m
 
 There are also `model_profiles.json` (named presets per model) and `global_templates.json` (reusable templates across models), but we don't use those yet.
 
+## Which coding model to use
+
+**Default: `Qwen3.6-35B-A3B-4bit`** (MoE). Measured on moria at **130.7 t/s** decode vs the
+dense `Qwen3.8-27B-4bit`'s **23.0** — 5.7× — while scoring 9/10 vs 8/10 on a 10-task
+executable coding eval. Faster *and* not worse.
+
+**Specialist: `Qwen3.8-27B-4bit`** (dense, newer generation). Reach for it when A3B has
+actually failed a specific hard problem, or when output tokens are precious (31.8k vs 84.1k
+to solve the same eval). We did **not** measure a quality advantage — the eval ceilings out —
+so that case rests on its published benchmarks, not on our data.
+
+**Always prefer 4-bit over 8-bit**, but for different reasons per architecture: on a *dense*
+27B, 8-bit costs ~2× the speed (23.0 → 11.9 t/s); on the *MoE* it costs 1.50×
+(130.7 → 86.9) because only ~3B params are active per token. Cheaper, but not free — don't
+assume MoE 8-bit is a freebie. No 6-bit exists upstream for either.
+
+**Set `reasoning_effort` on Qwen3.8.** Its template defaults to `xhigh`, which on moria burns
+the whole token budget and never emits an answer. `model_settings.json` pins `medium` plus an
+8192-token budget. Measured: `medium` 8/10 in 27 min; `xhigh` 6/10 in 111 min — more thinking
+was strictly worse. Qwen3.6 has no such knob, so its token budget is the only guard.
+
+Full write-up (quant matrix, reasoning_effort study, speculative-decoding re-test, long-context
+prefill, and the seven measurement confounds that produced wrong numbers):
+**`docs/local-llm-benchmarks.md`**. Reproducible harness: **`bench/`**.
+
 ## Speculative Decoding & QAT
 
 **Don't add speculative decoding (MTP / DFlash / assistant drafters) to our Gemma MoE on
