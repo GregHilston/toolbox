@@ -101,10 +101,18 @@ validate:
   targets="$nixos_targets
   $darwin_targets"
 
-  # Belt and braces: an empty list walks zero hosts and still exits 0, which reads
-  # as "validated everything" when nothing was looked at.
-  if [ -z "${nixos_targets}${darwin_targets}" ]; then
-    echo "no host configurations found — refusing to report success" >&2
+  # Each side separately, not `-z "$nixos_targets$darwin_targets"`: the failure
+  # worth catching is one platform vanishing, and a combined test only fires when
+  # BOTH are empty. `nix eval` on an empty attrset succeeds and yields `[]`, so a
+  # Darwin list that quietly became empty would sail past a combined guard on the
+  # strength of the NixOS hosts — on CI's Linux runner, where evaluating the Macs
+  # is the one thing `nix flake check` does not already cover.
+  if [ -z "$nixos_targets" ]; then
+    echo "no NixOS configurations found — refusing to report success" >&2
+    exit 1
+  fi
+  if [ -z "$darwin_targets" ]; then
+    echo "no Darwin configurations found — refusing to report success" >&2
     exit 1
   fi
 

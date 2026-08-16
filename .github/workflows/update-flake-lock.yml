@@ -47,6 +47,10 @@ jobs:
     # Skip when the lock was already current: no PR, nothing to check.
     if: needs.update-lock.outputs.pr-number != ''
     runs-on: ubuntu-latest
+    # Evaluation is minutes, not tens of minutes. A bump that makes it pathological
+    # should fail visibly rather than sit there — and the report step below still
+    # runs, so the PR gets told.
+    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: write
@@ -71,9 +75,13 @@ jobs:
       # deriving the host list from the flake so a new host needs no edit in either
       # place. Instantiating a derivation needs no builder for its platform, which is
       # what lets this one Linux runner cover the aarch64-darwin hosts too.
+      #
+      # `.#ci`, not the default dev shell: everything entered here gets built from
+      # the very lock under test, and the default shell would drag nh, nvd,
+      # nix-output-monitor and treefmt in with it. See flake-modules/dev.nix.
       - name: Check the flake and evaluate every host
         working-directory: nixos
-        run: nix develop --command just validate
+        run: nix develop .#ci --command just validate
 
       # Report unless the run was cancelled — `always()` would fire on cancellation
       # too, and `job.status` is `cancelled` there, which would post a hard
