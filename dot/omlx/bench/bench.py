@@ -7,13 +7,17 @@ Replicates the methodology of dot/omlx/speculative-decoding-findings.md:
   prompt families = code / prose / qa, ~500 prompt tokens -> 200 completion tokens.
 
 Uses streaming so prefill (TTFT) and decode are measured separately:
-  decode_tps = (n_tokens - 1) / (t_last - t_first)
-which is the number bandwidth-bound analysis actually predicts.
+  decode_tps = usage.completion_tokens / (wall - ttft)
+which is the number bandwidth-bound analysis actually predicts. Note the first
+token is emitted at the end of the prefill span, so this very slightly overstates
+decode for every model equally - it does not affect ratios.
 """
 import json, sys, time, urllib.request, statistics, argparse, os
 
 BASE = "http://127.0.0.1:8000/v1"
-KEY = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "omlx_key")).read().strip()
+from _key import load_key
+
+KEY = load_key()
 
 # ---- prompt families (~500 prompt tokens each), mirroring the findings doc ----
 CODE = """You are reviewing a Python module. Here is the file:
@@ -155,7 +159,14 @@ def stream_once(model, prompt, max_tokens=200, temperature=0.0, extra=None, time
         return None
     wall = t_end - t0
     ttft = t_first - t0
-    comp = (usage or {}).get("completion_tokens", n)
+    comp = (usage or {}).get("completion_tokens")
+    if not comp:
+        # Never fall back to the chunk count: oMLX packs several tokens per SSE
+        # chunk, and doing so once produced a nonsensical "7 t/s decode" against
+        # a 22 t/s end-to-end rate. Fail loudly instead of reporting a wrong number.
+        raise RuntimeError(
+            "no usage.completion_tokens in stream (is stream_options.include_usage "
+            "honored by this server?) - refusing to guess from chunk counts")
     # oMLX batches several tokens into one SSE chunk, so chunk counts are NOT token
     # counts. Derive decode rate from usage.completion_tokens and the post-prefill span.
     decode_span = (wall - ttft) or 1e-9

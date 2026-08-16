@@ -1,3 +1,8 @@
 .omlx/models/
 .omlx/cache/
 .omlx/logs/
+# Harness runtime: the oMLX API key is read from bench/omlx_key at runtime.
+# It must never be committed - all other secrets go through 1Password/op inject.
+bench/omlx_key
+# Result files written into the harness dir by effort.py / longctx.py / lossless_check.py
+bench/*.json

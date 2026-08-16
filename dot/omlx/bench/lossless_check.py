@@ -14,7 +14,9 @@ import hashlib, json, os, sys, urllib.request
 
 BASE = "http://127.0.0.1:8000/v1"
 HERE = os.path.dirname(os.path.abspath(__file__))
-KEY = open(os.path.join(HERE, "omlx_key")).read().strip()
+from _key import load_key
+
+KEY = load_key()
 
 PROMPTS = [
     "Write a Python function to merge overlapping intervals. Explain the algorithm.",

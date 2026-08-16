@@ -10,17 +10,30 @@ from tasks import TASKS
 
 BASE = "http://127.0.0.1:8000/v1"
 HERE = os.path.dirname(os.path.abspath(__file__))
-KEY = open(os.path.join(HERE, "omlx_key")).read().strip()
+from _key import load_key
 
-FENCE = re.compile(r"```(?:python|py)?\s*\n(.*?)```", re.S)
+KEY = load_key()
+
+PY_FENCE = re.compile(r"```(?:python|py)[ \t]*\r?\n(.*?)```", re.S)
+BARE_FENCE = re.compile(r"```[ \t]*\r?\n(.*?)```", re.S)
 
 
 def extract_code(text):
-    blocks = FENCE.findall(text or "")
-    if blocks:
-        # concatenate all blocks: models sometimes split helper + main
-        return "\n\n".join(b.strip() for b in blocks)
-    return (text or "").strip()
+    """Pull the solution out of a model response.
+
+    Prefer explicitly python-tagged fences: concatenating *every* fence
+    (including ```bash or an "example usage" block that prints or asserts)
+    manufactures false failures and biases against verbose models. Fall back
+    to untagged fences, then to the raw text.
+    """
+    text = text or ""
+    tagged = PY_FENCE.findall(text)
+    if tagged:
+        return "\n\n".join(b.strip() for b in tagged)
+    untagged = BARE_FENCE.findall(text)
+    if untagged:
+        return "\n\n".join(b.strip() for b in untagged)
+    return text.strip()
 
 
 def call(model, prompt, max_tokens, temperature, extra=None, timeout=2400):
@@ -137,7 +150,7 @@ def eval_model(model, max_tokens, temperature, extra=None, reps=1):
     n = len(rows)
     passed = sum(1 for x in rows if x["ok"])
     truncated = sum(1 for x in rows if x.get("finish") == "length")
-    toks = sum(x["completion_tokens"] for x in rows)
+    toks = sum(x.get("completion_tokens", 0) for x in rows)
     print(
         f"  ==> {model}: {passed}/{n} = {100*passed/n:.1f}%"
         f"   (truncated: {truncated}, total tokens spent: {toks})",

@@ -18,16 +18,16 @@
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
-          "id": "Qwen3.6-35B-A3B-8bit",
-          "name": "Qwen 3.6 35B A3B 8-bit (thinking, 262k ctx, 81k max, heavy)",
+          "id": "Qwen3.6-35B-A3B-4bit-DWQ",
+          "name": "Qwen 3.6 35B A3B 4-bit DWQ (MoE, 104 t/s, quality-leaning)",
           "contextWindow": 262144,
           "maxTokens": 81920,
           "input": ["text", "image"],
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
-          "id": "Qwen3.6-35B-A3B-6bit",
-          "name": "Qwen 3.6 35B A3B 6-bit (thinking, 262k ctx, balanced)",
+          "id": "Qwen3.6-35B-A3B-8bit",
+          "name": "Qwen 3.6 35B A3B 8-bit (thinking, 262k ctx, 81k max, heavy)",
           "contextWindow": 262144,
           "maxTokens": 81920,
           "input": ["text", "image"],

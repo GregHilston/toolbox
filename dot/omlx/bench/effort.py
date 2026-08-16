@@ -11,7 +11,9 @@ import json, sys, time, urllib.request, os, statistics
 
 BASE = "http://127.0.0.1:8000/v1"
 HERE = os.path.dirname(os.path.abspath(__file__))
-KEY = open(os.path.join(HERE, "omlx_key")).read().strip()
+from _key import load_key
+
+KEY = load_key()
 MODEL = sys.argv[1] if len(sys.argv) > 1 else "Qwen3.8-27B-4bit"
 
 PROMPT = (
