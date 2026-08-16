@@ -278,7 +278,11 @@ Be sure to select the host, and only the host we're working with. IE if we're de
 - Test: `/test-config <host>`
 - Deploy: `/deploy-config <host>`
 - Full verification: `/verify <host>`
-- Commit: `/commit <message>` (add `--push` to push, `--pr` to create PR)
+
+`/commit` is the **global** command from `claude-commands/commit.md`. This directory
+deliberately does not define its own — a project command of the same name shadows the
+global one, and the copy that used to live here was both weaker and hardcoded to a Linux
+path, so it broke on all three Macs.
 
 ## LLM Setup (oMLX)
 
