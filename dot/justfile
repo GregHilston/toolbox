@@ -3,6 +3,22 @@ set shell := ["zsh", "-cu"]
 # The target directory for stow (home directory)
 target := env("HOME")
 
+# Packages the *-all recipes operate on.
+#
+# This is an explicit allowlist, NOT a `*/` glob. Two packages in dot/ must
+# never be stowed:
+#
+#   claude/  deployed by direct symlink instead — see the link_repo helper in
+#            the root justfile and modules/programs/tui/claude.nix.
+#   omlx/    deployed by direct `ln` in modules/darwin/omlx.nix, which explains
+#            why: "a bare `stow` from dot/ targets the parent (the repo), not
+#            $HOME". Stowing it creates toolbox/.omlx inside the working tree —
+#            the accident the `/.omlx` entry in the root .gitignore documents.
+#
+# A glob would also silently deploy any stale package someone forgets to
+# delete. Adding a new package? Add it here too.
+packages := "aerospace karabiner pi searxngr-config ser2net tmux zsh"
+
 # Stow a single package
 # Usage: just stow aerospace
 stow package:
@@ -18,47 +34,60 @@ unstow package:
 restow package:
     stow -v -R -t {{target}} {{package}}
 
-# Stow all packages
+# Stow every package in the allowlist
 stow-all:
     #!/usr/bin/env zsh
     set -eu
-    for pkg in */; do
-        pkg="${pkg%/}"
+    for pkg in {{packages}}; do
         echo "Stowing $pkg..."
         stow -v -t {{target}} "$pkg"
     done
 
-# Unstow all packages
+# Unstow every package in the allowlist
 unstow-all:
     #!/usr/bin/env zsh
     set -eu
-    for pkg in */; do
-        pkg="${pkg%/}"
+    for pkg in {{packages}}; do
         echo "Unstowing $pkg..."
         stow -v -D -t {{target}} "$pkg"
     done
 
-# Restow all packages
+# Restow every package in the allowlist
 restow-all:
     #!/usr/bin/env zsh
     set -eu
-    for pkg in */; do
-        pkg="${pkg%/}"
+    for pkg in {{packages}}; do
         echo "Restowing $pkg..."
         stow -v -R -t {{target}} "$pkg"
     done
 
-# List all available stow packages
+# List the packages the *-all recipes manage
 list:
-    @ls -d */ 2>/dev/null | sed 's|/||'
+    @for pkg in {{packages}}; do echo "$pkg"; done
+
+# List every directory in dot/, flagging any that the *-all recipes skip
+list-all:
+    #!/usr/bin/env zsh
+    set -eu
+    for pkg in */; do
+        pkg="${pkg%/}"
+        if [[ " {{packages}} " == *" $pkg "* ]]; then
+            echo "$pkg"
+        else
+            echo "$pkg  (not stowed — deployed by symlink; see the packages list in this justfile)"
+        fi
+    done
 
 # Dry-run stow for a package (shows what would happen)
 # Usage: just dry-run aerospace
 dry-run package:
     stow -v -n -t {{target}} {{package}}
 
-# Build i3-gaps config for the current host, then stow it
-# Usage: just build-i3-gaps
-build-i3-gaps:
-    bash i3-gaps-pkg/src/build-i3-config.sh
-    stow -v -t {{target}} i3-gaps-pkg
+# Dry-run every package in the allowlist (shows what stow-all would do)
+dry-run-all:
+    #!/usr/bin/env zsh
+    set -eu
+    for pkg in {{packages}}; do
+        echo "--- $pkg"
+        stow -v -n -t {{target}} "$pkg"
+    done
