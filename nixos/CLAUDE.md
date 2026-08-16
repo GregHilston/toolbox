@@ -131,7 +131,8 @@ The shape is always the same, and *why* is the part worth remembering:
 1. **Module imports**: Always use relative paths in module imports (e.g., `../../modules/home` not absolute paths)
 2. **Testing before deploy**: NEVER skip `just ft <host>` before `just fr <host>`
 3. **Hardware configs**: Never edit `hardware-configuration.nix` files - they're auto-generated
-4. **Flake updates**: After updating flake.lock, always test build before deploying
+4. **Flake updates**: After updating flake.lock, always test build before deploying — a
+   *real* build, not `--dry-run`. See "Flake lock bumps" below.
 5. **Architecture mismatch**: Check host architecture (x86_64-linux vs aarch64-linux vs aarch64-darwin) matches the config
 6. **Home Manager**: User packages go in `modules/home/default.nix`, not system packages
 7. **WSL specifics**: foundation host needs `wsl.enable = true` and related WSL config
@@ -142,6 +143,64 @@ The shape is always the same, and *why* is the part worth remembering:
     log in as *on a remote machine* is that machine's own fact and lives beside its
     addresses as `vars.networking.hosts.<name>.user`. Using `vars.user.name` for an
     ssh `User` silently breaks on citadel.
+
+## Flake lock bumps — evaluation is not a build
+
+Every check this repo runs on a lock bump is an **evaluation**: `just validate`, the
+`validate.yml` CI job, `nix build --dry-run`, and the `Self-Testing Changes` commands
+at the top of this file all stop at instantiating a derivation. That is the right
+default — it is fast, and it works for every host from any platform. But it answers
+only "does this configuration make sense?", never "does it build?".
+
+The gap is not theoretical. On **2026-08-16**, a fresh `nix flake update` moved nixpkgs
+`2026-07-05 → 2026-08-13` and passed everything:
+
+```
+darwinConfigurations.{moria,dungeon,citadel}.system   --dry-run clean
+nixosConfigurations.{foundation,home-lab,isengard,mines,rohan}   evaluate to a drvPath
+```
+
+The real build then failed:
+
+```
+error: hash mismatch in fixed-output derivation '...-source.drv':
+         specified: sha256-gM53wlQSV/X7rDND6P7/fKpX0M28RDnWkGGOHQ+SK+g=
+            got:    sha256-FysyKC01XBnRiur5RR9fcsTxQqE8x0JJHSoe3q6JtKc=
+```
+
+Upstream had re-rolled the `googlefonts/nanoemoji` v0.16.0 tarball, so
+`python3Packages.nanoemoji` → `gftools` → **`jetbrains-mono`** → `home-manager-fonts`
+could not build. nixpkgs fixed it in `1e544d5f3`, but `nixos-unstable` was pinned
+exactly one commit *behind* that fix, and the aarch64-darwin output was not in the
+binary cache — so the failure only appears when something actually builds it.
+
+A fixed-output hash is by definition invisible to evaluation: the hash is a literal in
+the expression, and whether the fetched bytes match it is a build-time fact.
+
+**So: before deploying a lock bump, build one host for real.**
+
+```bash
+nix build --no-link .#darwinConfigurations.<host>.system      # macOS
+nix build --no-link .#nixosConfigurations.<host>.config.system.build.toplevel
+```
+
+Do it on the machine you are about to `just dr`/`just fr`, since a cached path on one
+host proves nothing about another architecture. This cannot be moved into CI — the
+runners have neither the time nor the disk for a full system closure — which is why it
+is written down here instead.
+
+When a bump does turn out to be broken, check whether the fix has already landed
+upstream before working around it:
+
+```bash
+gh api "repos/NixOS/nixpkgs/commits?path=<path/to/package.nix>&per_page=5" \
+  --jq '.[] | "\(.commit.committer.date)  \(.sha[0:9])  \(.commit.message | split("\n")[0])"'
+gh api "repos/NixOS/nixpkgs/compare/<fix-sha>...nixos-unstable" --jq '.behind_by'
+```
+
+`behind_by == 0` means the channel has it and a re-run of `nix flake update` is all that
+is needed. Anything else means waiting is cheaper than patching — the channel usually
+catches up within days, and the weekly bot PR will pick it up on its own.
 
 ## VMware Fusion VM (mines) — Access & Networking
 
