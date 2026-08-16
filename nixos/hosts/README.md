@@ -1,7 +1,8 @@
 Host configurations, grouped by machine type: `macs/`, `pcs/`, `vms/`. Each
-`<type>/<host>/` holds that machine's `default.nix`, and — for hosts running on real
-hardware — a generated `hardware-configuration.nix`. The three Macs and the WSL host
-(foundation) have no hardware config; nix-darwin and NixOS-WSL supply that themselves.
+`<type>/<host>/` holds that machine's `default.nix`, plus a generated
+`hardware-configuration.nix` where NixOS needs one — currently isengard, rohan, home-lab
+and mines. The three Macs and the WSL host (foundation) have none: nix-darwin and
+NixOS-WSL supply that layer themselves.
 
 Hosts are registered in `flake-modules/hosts.nix`, not here. Run `just list-hosts` for the
 current list.
