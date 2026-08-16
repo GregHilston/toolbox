@@ -499,6 +499,38 @@ bash -n /tmp/pa.sh   # syntax check
 *user* agent instead — see `launchd.user.agents.home-lab-sync` in `hosts/macs/dungeon` and
 `bin/home-lab-sync.sh`.
 
+## Git hooks do not run in a `git worktree` — silently
+
+`nix develop` installs the hooks in `flake-modules/dev.nix` (treefmt on commit,
+`nix flake check` on push). **They do not fire in a worktree**, and nothing says so:
+the commit simply succeeds with no hook output at all. Not "the hook failed" — the
+hook was never found.
+
+Cause is upstream, in git-hooks.nix's installation script:
+
+```bash
+common_dir=$(git rev-parse --path-format=absolute --git-common-dir)
+common_dir=${common_dir#$GIT_WC/}                    # deliberately made relative
+git config --local core.hooksPath "$common_dir/hooks"
+```
+
+It goes out of its way to make the path **relative** (`.git/hooks`), and
+`core.hooksPath` is `--local`, which worktrees *share*. In a worktree `.git` is a
+file, not a directory, so `.git/hooks` resolves to nothing.
+
+`git config --local --unset core.hooksPath` fixes it — git then falls back to
+`$GIT_COMMON_DIR/hooks`, which resolves correctly from both — but it does not stick,
+because the next `nix develop` writes it straight back.
+
+To actually run a hook from a worktree, override it for the one command:
+
+```bash
+git -c core.hooksPath="$(git rev-parse --path-format=absolute --git-common-dir)/hooks" push
+```
+
+So: **do not treat a clean commit in a worktree as evidence it passes the hooks.**
+Verify from the main checkout, or with the override above.
+
 ## Dev Container Validation
 
 A Docker dev container is available for validating configs without a NixOS host:
