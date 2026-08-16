@@ -13,6 +13,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    outputs:
+      pr-number: ${{ steps.update.outputs.pull-request-number }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -21,6 +23,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@main
 
       - name: Update flake.lock and open PR
+        id: update
         uses: DeterminateSystems/update-flake-lock@main
         with:
           path-to-flake-dir: nixos
@@ -28,3 +31,79 @@ jobs:
           pr-labels: |
             dependencies
             automated
+
+  # The PR this workflow opens is created with the default GITHUB_TOKEN, and GitHub
+  # deliberately does not start workflow runs for events raised by that token (it is
+  # how they stop bots recursing). So `validate.yml`/`fmt.yml`, which trigger on
+  # `pull_request`, never run on it — PR #72 sat open for a month with *zero* checks
+  # and nobody could tell whether the lock it proposed even evaluated.
+  #
+  # There is no fix on the PR side short of a PAT. Instead validate the branch here,
+  # from the scheduled run, which does have a normal workflow context — then say so on
+  # the PR so the result is visible where the human is actually looking.
+  validate:
+    name: Validate the proposed lock
+    needs: update-lock
+    # Skip when the lock was already current: no PR, nothing to check.
+    if: needs.update-lock.outputs.pr-number != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout the bot's branch
+        uses: actions/checkout@v7
+        with:
+          ref: update_flake_lock_action
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Cache Nix store
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Run flake check
+        working-directory: nixos
+        run: nix flake check
+
+      # Instantiating a derivation needs no builder for its platform, so this one
+      # Linux runner covers the aarch64-darwin hosts too. Same reasoning as
+      # `just validate`; see the comment on that recipe in nixos/justfile.
+      - name: Evaluate every host
+        working-directory: nixos
+        run: |
+          targets=$(
+            nix eval .#nixosConfigurations --apply builtins.attrNames --json \
+              | jq -r '.[] | ".#nixosConfigurations.\(.).config.system.build.toplevel"'
+            nix eval .#darwinConfigurations --apply builtins.attrNames --json \
+              | jq -r '.[] | ".#darwinConfigurations.\(.).system"'
+          )
+          for target in $targets; do
+            echo "==> $target"
+            nix eval --raw "$target.drvPath" >/dev/null
+          done
+
+      # `always()` so a failure reports itself. A red run buried in the Actions tab is
+      # not a signal anyone sees; a comment on the PR is.
+      - name: Report the result on the PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ needs.update-lock.outputs.pr-number }}
+          RESULT: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$RESULT" = "success" ]; then
+            body="✅ **Lock validated** — \`nix flake check\` passed and every host evaluates to a toplevel derivation. ([run]($RUN_URL))
+
+          Evaluation is not a build. It cannot catch a fixed-output hash mismatch in a
+          dependency, so real-build the host you are about to deploy (\`nix build
+          .#darwinConfigurations.<host>.system\`) before \`just dr\`/\`just fr\`."
+          else
+            body="❌ **Lock failed validation** — do not merge. ([run]($RUN_URL))"
+          fi
+          gh pr comment "$PR" --body "$body"
