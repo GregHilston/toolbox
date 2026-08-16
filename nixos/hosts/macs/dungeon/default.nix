@@ -263,6 +263,35 @@ in {
     };
   };
 
+  # Detect Frigate's GenAI descriptions being silently down.
+  #
+  # This is invisible to every monitoring layer we have: object detection is unaffected
+  # (yolov9-t runs on the ANE), no container restarts, no HTTP probe moves, no cAdvisor
+  # metric changes. Frigate looks perfectly healthy while writing no descriptions.
+  # home-lab/docs/runbooks/frigate-genai-down.md said to build this "if it recurs" — it
+  # recurred on 2026-08-16, when a `brew upgrade` left oMLX running a deleted bundle and
+  # every GenAI request 409'd on a cached model-load failure. It was found days later by
+  # accident, reading an unrelated log.
+  #
+  # One real vision round-trip through oMLX; Pushover on two consecutive failures.
+  # Read-only by design — it never restarts oMLX, because an auto-heal would mask exactly
+  # the recurring upgrade bug it exists to surface.
+  launchd.user.agents.frigate-genai-check = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/frigate-genai-check.sh"
+      ];
+      RunAtLoad = true;
+      # Every 30 min. Far looser than port-sync-check's 15 min: a missing description is
+      # not urgent, and each run costs a real VLM inference that competes with Frigate's
+      # own GenAI calls for the same ~28GB Metal ceiling.
+      StartInterval = 1800;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/frigate-genai-check.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/frigate-genai-check.log";
+    };
+  };
+
   # Detect & auto-heal a gluetun tunnel that is broken while Docker insists it is healthy.
   #
   # Incident 2026-08-14: a mains blip took the WAN down; gluetun rode it out by cycling
