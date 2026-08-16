@@ -1,0 +1,49 @@
+name: Shell Script Lint
+
+# The nix workflows are path-filtered to nixos/**, so nothing in CI ever
+# exercised bin/ — a syntax error in a script on $PATH was invisible until it
+# was run by hand. This closes that gap.
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "bin/**"
+      - ".github/workflows/shell.yml"
+  pull_request:
+    paths:
+      - "bin/**"
+      - ".github/workflows/shell.yml"
+
+jobs:
+  shell:
+    name: Syntax check & shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # Parse-only. Catches unbalanced quotes/brackets and stray backticks
+      # without executing anything.
+      - name: Syntax check
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r script; do
+            if ! bash -n "$script"; then
+              echo "::error file=$script::bash -n failed"
+              fail=1
+            fi
+          done < <(find bin -type f -name '*.sh')
+          exit "$fail"
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      # Advisory for now: these scripts predate the check, so a hard failure
+      # would block unrelated PRs. Tighten by dropping `|| true` once the
+      # existing warnings are cleared.
+      - name: Shellcheck
+        run: |
+          find bin -type f -name '*.sh' -print0 \
+            | xargs -0 shellcheck --severity=warning --external-sources || true
