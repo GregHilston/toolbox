@@ -12,3 +12,4 @@ speculative-decoding-findings\.md
 \.omlx/cache
 \.omlx/logs
 \.omlx/models
+bench

@@ -10,32 +10,32 @@
       },
       "models": [
         {
+          "id": "Qwen3.6-35B-A3B-4bit",
+          "name": "Qwen 3.6 35B A3B 4-bit (MoE, 131 t/s, coding DEFAULT)",
+          "contextWindow": 262144,
+          "maxTokens": 81920,
+          "input": ["text", "image"],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "Qwen3.6-35B-A3B-4bit-DWQ",
+          "name": "Qwen 3.6 35B A3B 4-bit DWQ (MoE, 104 t/s, quality-leaning)",
+          "contextWindow": 262144,
+          "maxTokens": 81920,
+          "input": ["text", "image"],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
           "id": "Qwen3.6-35B-A3B-8bit",
-          "name": "Qwen 3.6 35B A3B (thinking, 262k ctx, 81k max, heavy)",
+          "name": "Qwen 3.6 35B A3B 8-bit (thinking, 262k ctx, 81k max, heavy)",
           "contextWindow": 262144,
           "maxTokens": 81920,
           "input": ["text", "image"],
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
-          "id": "Qwen3.6-35B-A3B-6bit",
-          "name": "Qwen 3.6 35B A3B 6-bit (thinking, 262k ctx, balanced)",
-          "contextWindow": 262144,
-          "maxTokens": 81920,
-          "input": ["text", "image"],
-          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
-        },
-        {
-          "id": "Qwen3.6-27B-8bit",
-          "name": "Qwen 3.6 27B 8-bit (thinking, 262k ctx, balanced)",
-          "contextWindow": 262144,
-          "maxTokens": 81920,
-          "input": ["text", "image"],
-          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
-        },
-        {
-          "id": "Qwen3.6-27B-4bit",
-          "name": "Qwen 3.6 27B 4-bit (thinking, 262k ctx, fast)",
+          "id": "Qwen3.8-27B-4bit",
+          "name": "Qwen 3.8 27B 4-bit (dense, 23 t/s, slow specialist)",
           "contextWindow": 262144,
           "maxTokens": 81920,
           "input": ["text", "image"],

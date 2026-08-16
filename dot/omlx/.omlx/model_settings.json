@@ -2,31 +2,71 @@
   "version": 1,
   "_comment": "Per-model overrides. These take precedence over sampling defaults in settings.json.",
   "models": {
-    "Qwen3.6-35B-A3B-8bit": {
-      "description": "Unsloth-recommended sampling for Qwen3.6 coding/agentic tasks. Source: https://unsloth.ai/docs/models/qwen3.6 — also validated by multiple r/LocalLLaMA threads (see llm.md notes).",
+    "Qwen3.6-35B-A3B-4bit": {
+      "description": "DEFAULT local coding model (MoE, 35B total / ~3B active, 4-bit, ~19GB). Measured on moria: 130.7 t/s decode vs the dense Qwen3.8-27B-4bit's 23.0 (5.7x), and 6.6-10.0x faster prefill, while scoring 9/10 vs 8/10 on our 10-task executable coding eval. Faster AND not worse, so it is the default. 4-bit over 8-bit: the 8-bit sibling measured 86.9 t/s, a 1.50x penalty -- cheaper than the dense model's 1.92-2.00x because a MoE only reads its ~3B active params, but NOT free. Full write-up: docs/local-llm-benchmarks.md.",
       "temperature": 0.6,
       "top_p": 0.95,
       "top_k": 20,
       "repetition_penalty": 1.0,
       "presence_penalty": 0.0,
-
-      "_comment_thinking": "Cap thinking tokens to prevent infinite reasoning loops. Qwen3.6-35B-A3B is prone to these — see https://www.reddit.com/r/LocalLLaMA/comments/1spdvpo/ and https://itayinbarr.substack.com/p/honey-i-shrunk-the-coding-agent (little-coder used 2048; we use 8192 for more headroom on complex tasks).",
+      "_comment_sampling": "These are Qwen's OFFICIAL 'thinking, precise coding' parameters for this model (temp 0.6 / top_p 0.95 / top_k 20 / min_p 0.0 / presence_penalty 0.0). Qwen publishes a DIFFERENT set for general thinking work (temp 1.0, presence_penalty 1.5) -- do not copy that one here; the card warns a higher presence_penalty 'may occasionally result in language mixing and a slight decrease in model performance'. NOTE our coding eval ran this model at temp 1.0 (to match the knobs the dense model was measured with) and scored 9/10, so the headline number was not produced by the shipped temperature.",
+      "_comment_thinking": "Same runaway guard as the -8bit entry. This model has no reasoning_effort knob (that is new in Qwen3.8), so the token budget is the ONLY bound available. It spent ~8.4k tokens/task on our eval and truncated one task at 16k.",
+      "thinking_budget_enabled": true,
+      "thinking_budget_tokens": 8192,
+      "min_p": 0.0,
+      "_comment_alternatives": "Considered and rejected: Qwen3.6-35B-A3B-OptiQ-4bit advertises a higher aggregate Capability Score but per-metric it LOSES on MMLU (-0.9), GSM8K (-1.5) and IFEval (-0.4), TIES HumanEval (+0.0), and wins only on BFCL-V3 and HashHop -- nothing for coding, at 24.7GB vs 19GB. TurboQuant KV (turboquant_kv_*) is a known ~8x slowdown at 4/6-bit. See the -DWQ entry for the one alternative that is genuinely competitive."
+    },
+    "Qwen3.6-35B-A3B-4bit-DWQ": {
+      "description": "QUALITY-LEANING ALTERNATIVE to Qwen3.6-35B-A3B-4bit, NOT the default. DWQ (distilled weight quantization) gradient-optimizes the quant scales against a full-precision teacher and is reported to behave like ~4.6-bit. Measured on moria: 10/10 on our coding eval -- the best result of anything tested, and the only model to pass diff_lcs -- but 103.6 t/s vs 130.7, a 21% speed cost. By our own n=10 standard that extra task is NOT a demonstrated quality gain while the 21% is measured and certain, so the plain 4-bit stays default. The slowdown has a clear cause: DWQ keeps embeddings, lm_head, routers and shared experts at higher precision, and a MoE reads those on every token. Swap it in if a harder eval ever justifies it.",
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "top_k": 20,
+      "min_p": 0.0,
+      "repetition_penalty": 1.0,
+      "presence_penalty": 0.0,
+      "thinking_budget_enabled": true,
+      "thinking_budget_tokens": 8192
+    },
+    "Qwen3.8-27B-4bit": {
+      "description": "SPECIALIST, not the default (dense 27B, 4-bit, 14.95GiB). Reach for it when A3B-4bit has actually failed a specific hard problem, or when output tokens are precious -- it solved our eval with 31.8k tokens vs A3B's 84.1k (2.6x fewer). Otherwise A3B-4bit is 5.7x faster and scored a point higher. IMPORTANT: we did NOT measure a quality advantage for this model; our 10-task eval hits a ceiling (8/10 vs 9/10) and cannot discriminate. Its case rests on published benchmarks (SWE-bench Pro 61.7, LiveCodeBench v6 90.3, Terminal-Bench 2.1 73.0) being a newer generation, not on our data. 4-bit not 8-bit: on a DENSE 27B the 8-bit quant measured ~2x slower (23.0 -> 11.9 t/s) for a quality difference nobody can detect at >=4 bits. No 6-bit exists upstream. Full write-up: docs/local-llm-benchmarks.md.",
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "top_k": 20,
+      "repetition_penalty": 1.0,
+      "presence_penalty": 0.0,
+      "_comment_reasoning_effort": "THE most important setting for this model. Qwen3.8's chat template adds reasoning_effort and DEFAULTS IT TO xhigh (chat_template.jinja:47). Measured on moria: xhigh burns the entire 8000-token budget over 401s and never emits an answer (finish_reason=length). On our 10-task coding eval, medium scored 8/10 using 31.8k tokens while xhigh scored 6/10 using 123.4k -- every extra failure was a truncation. The unambiguous result is that unset/xhigh NEVER TERMINATES (401s, finish_reason=length, no answer at all); the 8-vs-6 eval gap is two tasks and is suggestive rather than proven. medium is the default; pass reasoning_effort per-request to override.",
+      "chat_template_kwargs": {
+        "reasoning_effort": "medium"
+      },
+      "_comment_thinking_budget": "Hard stop, belt-and-braces with reasoning_effort. Even at medium one task ran to a 16k cap. reasoning_effort shapes intent; this bounds it.",
+      "thinking_budget_enabled": true,
+      "thinking_budget_tokens": 8192,
+      "_comment_no_speculative_decoding": "vlm_mtp with Qwen3.8-27B-MTP-4bit IS a real speedup here (1.43x on code, 1.19x avg) -- unlike our gemma MoE result -- because a dense 27B is genuinely bandwidth-bound. It is NOT enabled because we measured it is NOT lossless: with a verified determinism control (drafter off, same prompts, 3/3 identical across a restart), turning the drafter ON changed output on 2 of 3 prompts. Greedy verification is supposed to be bit-identical, so this looks like an oMLX 0.5.7 bug (n=3, so strong evidence rather than proof). Re-check with dot/omlx/bench/lossless_check.py after any oMLX upgrade.",
+      "min_p": 0.0
+    },
+    "Qwen3.6-35B-A3B-8bit": {
+      "description": "SUPERSEDED by Qwen3.6-35B-A3B-4bit for general use -- measured 86.9 t/s here vs 130.7 t/s at 4-bit (a 1.50x penalty) for 35GB instead of 19GB. Kept because it is the target of the nix-managed -long-context symlink and as an 8-bit reference point. Unsloth-recommended sampling for Qwen3.6 coding/agentic tasks. Source: https://unsloth.ai/docs/models/qwen3.6 \u2014 also validated by multiple r/LocalLLaMA threads (see llm.md notes).",
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "top_k": 20,
+      "repetition_penalty": 1.0,
+      "presence_penalty": 0.0,
+      "_comment_thinking": "Cap thinking tokens to prevent infinite reasoning loops. Qwen3.6-35B-A3B is prone to these \u2014 see https://www.reddit.com/r/LocalLLaMA/comments/1spdvpo/ and https://itayinbarr.substack.com/p/honey-i-shrunk-the-coding-agent (little-coder used 2048; we use 8192 for more headroom on complex tasks).",
       "thinking_budget_enabled": true,
       "thinking_budget_tokens": 8192
     },
     "gemma-4-26b-a4b-it-qat-4bit": {
-      "description": "Canonical gemma — QAT (quantization-aware-trained) 4-bit. Same ~15GB footprint and decode speed as a naive post-training 4-bit quant, better quality at low bit-width (Google simulates quantization during training to minimize error). Tuned for summarization/RAG: low temp reduces hallucination, thinking disabled (wasted compute for non-reasoning tasks). Sources: mlx-community/gemma-4-26B-A4B-it-qat-4bit, https://blog.google/innovation-and-ai/technology/developers-tools/quantization-aware-training-gemma-4/.",
+      "description": "Canonical gemma \u2014 QAT (quantization-aware-trained) 4-bit. Same ~15GB footprint and decode speed as a naive post-training 4-bit quant, better quality at low bit-width (Google simulates quantization during training to minimize error). Tuned for summarization/RAG: low temp reduces hallucination, thinking disabled (wasted compute for non-reasoning tasks). Sources: mlx-community/gemma-4-26B-A4B-it-qat-4bit, https://blog.google/innovation-and-ai/technology/developers-tools/quantization-aware-training-gemma-4/.",
       "temperature": 0.3,
       "top_p": 0.95,
       "top_k": 64,
       "repetition_penalty": 1.0,
       "presence_penalty": 0.0,
       "thinking_budget_enabled": false,
-
-      "_comment_no_speculative_decoding": "DO NOT add a vlm_mtp / dflash / mtp drafter to this model. We tested the Gemma 4 assistant-MTP drafter on moria (M4 Max) and dungeon (M3 Pro): net 0.97x and 0.91x respectively — a measured LOSS on both. A low-active-param MoE (A4B activates ~4B/token) on Apple Silicon isn't bandwidth-bound, so speculative decoding has nothing to recover and the drafter overhead dominates. Full write-up + reproduction: dot/omlx/speculative-decoding-findings.md."
+      "_comment_no_speculative_decoding": "DO NOT add a vlm_mtp / dflash / mtp drafter to this model. We tested the Gemma 4 assistant-MTP drafter on moria (M4 Max) and dungeon (M3 Pro): net 0.97x and 0.91x respectively \u2014 a measured LOSS on both. A low-active-param MoE (A4B activates ~4B/token) on Apple Silicon isn't bandwidth-bound, so speculative decoding has nothing to recover and the drafter overhead dominates. Full write-up + reproduction: dot/omlx/speculative-decoding-findings.md."
     },
     "gemma-4-e4b-it-qat-4bit": {
-      "description": "Lighter Gemma 4 E4B (~4.5B effective / 8B total params, QAT 4-bit, ~5-6GB) for fast batch summarisation/indexing (roger vault index). Same tuning philosophy as the 26B-A4B — low temp to reduce hallucination, thinking disabled (non-reasoning task) — but a far smaller footprint/load time, chosen to speed up re-summarising the whole vault. Source: mlx-community/gemma-4-E4B-it-qat-4bit.",
+      "description": "Lighter Gemma 4 E4B (~4.5B effective / 8B total params, QAT 4-bit, ~5-6GB) for fast batch summarisation/indexing (roger vault index). Same tuning philosophy as the 26B-A4B \u2014 low temp to reduce hallucination, thinking disabled (non-reasoning task) \u2014 but a far smaller footprint/load time, chosen to speed up re-summarising the whole vault. Source: mlx-community/gemma-4-E4B-it-qat-4bit.",
       "temperature": 0.3,
       "top_p": 0.95,
       "top_k": 64,
