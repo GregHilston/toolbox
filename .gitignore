@@ -65,3 +65,8 @@ nixos/.envrc
 
 # generated secrets (use secrets/.env.tpl as template, run `just secrets`)
 nixos/secrets/.env
+
+# Written by the git-hooks flake module whenever a nix command evaluates the flake.
+# It is a symlink into /nix/store, so committing it pins a path that exists on exactly
+# one machine — and a `git add -A` sweeps it up silently.
+.pre-commit-config.yaml
