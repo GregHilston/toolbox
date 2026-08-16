@@ -47,10 +47,6 @@ jobs:
     # Skip when the lock was already current: no PR, nothing to check.
     if: needs.update-lock.outputs.pr-number != ''
     runs-on: ubuntu-latest
-    # Evaluation is minutes, not tens of minutes. A bump that makes it pathological
-    # should fail visibly rather than sit there — and the report step below still
-    # runs, so the PR gets told.
-    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: write
@@ -79,8 +75,16 @@ jobs:
       # `.#ci`, not the default dev shell: everything entered here gets built from
       # the very lock under test, and the default shell would drag nh, nvd,
       # nix-output-monitor and treefmt in with it. See flake-modules/dev.nix.
+      #
+      # Evaluation is minutes, not tens of minutes, so bound it — but on the STEP,
+      # not the job. A job timeout *cancels*, which is the one thing the
+      # `!cancelled()` guard on the report step below suppresses: the timeout added
+      # to make a runaway visible would leave the PR with no comment at all. A step
+      # timeout is a step failure, so the report still runs and still says ❌. This
+      # is the job's only long-running step, so the bound is the same either way.
       - name: Check the flake and evaluate every host
         working-directory: nixos
+        timeout-minutes: 30
         run: nix develop .#ci --command just validate
 
       # Report unless the run was cancelled — `always()` would fire on cancellation
