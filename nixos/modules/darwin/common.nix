@@ -137,9 +137,27 @@ in {
   # would not. Be honest about the limit though — root `cp`/`rm` can be turned
   # into full root, so this is a speed bump against casual misuse, not a
   # security boundary.
+  #
+  # SETENV is required, not optional. Homebrew installs a `.pkg` cask with
+  #   /usr/bin/sudo -u root -E LOGNAME=… USER=… -- /usr/sbin/installer -pkg …
+  # and `-E` is refused unless the matching sudoers rule carries SETENV, with
+  # "sorry, you are not allowed to preserve the environment". Because this alias
+  # names /usr/sbin/installer it is the rule that matches, so WITHOUT SETENV the
+  # entry added to help Homebrew is precisely what breaks it — and it fails
+  # closed, aborting the whole `brew bundle` and with it `darwin-rebuild switch`.
+  #
+  # It only bites on `.pkg` casks; the ~47 `.app` drag-installs here never invoke
+  # /usr/sbin/installer at all. karabiner-elements is a .pkg, which is why it was
+  # the only one failing on dungeon (2026-08-15) while every other cask reported
+  # "Using", and why moria never hit it — Karabiner was installed there before
+  # this rule existed, so its installer never re-ran.
+  #
+  # SETENV does not widen the hole in any way that matters: this rule already
+  # grants passwordless root `cp`/`rm`, which is game over on its own, as the
+  # paragraph above says.
   security.sudo.extraConfig = ''
     Cmnd_Alias BREW_CMDS = /bin/launchctl, /bin/cp, /bin/rm, /bin/chmod, /bin/mkdir, /bin/rmdir, /usr/sbin/chown, /usr/sbin/installer
-    ${vars.user.name} ALL=(root) NOPASSWD: BREW_CMDS
+    ${vars.user.name} ALL=(root) NOPASSWD: SETENV: BREW_CMDS
   '';
 
   # Timezone
