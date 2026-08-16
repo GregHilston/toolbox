@@ -88,12 +88,25 @@ validate:
 
   # NixOS and Darwin differ only in where the toplevel derivation hangs, so
   # flatten both into one list of installables and walk it once.
-  targets=$(
-    nix eval .#nixosConfigurations --apply builtins.attrNames --json \
-      | jq -r '.[] | ".#nixosConfigurations.\(.).config.system.build.toplevel"'
-    nix eval .#darwinConfigurations --apply builtins.attrNames --json \
-      | jq -r '.[] | ".#darwinConfigurations.\(.).system"'
-  )
+  #
+  # One assignment each, deliberately. A command substitution takes the status of
+  # its LAST command, so collecting both `nix eval`s inside a single `$( ... )`
+  # would let a failure in the first one be masked by success in the second —
+  # `set -e` never sees it, jq emits nothing, and the loop below silently skips a
+  # whole platform while still exiting 0.
+  nixos_targets=$(nix eval .#nixosConfigurations --apply builtins.attrNames --json \
+    | jq -r '.[] | ".#nixosConfigurations.\(.).config.system.build.toplevel"')
+  darwin_targets=$(nix eval .#darwinConfigurations --apply builtins.attrNames --json \
+    | jq -r '.[] | ".#darwinConfigurations.\(.).system"')
+  targets="$nixos_targets
+  $darwin_targets"
+
+  # Belt and braces: an empty list walks zero hosts and still exits 0, which reads
+  # as "validated everything" when nothing was looked at.
+  if [ -z "${nixos_targets}${darwin_targets}" ]; then
+    echo "no host configurations found — refusing to report success" >&2
+    exit 1
+  fi
 
   for target in $targets; do
     echo "==> $target"

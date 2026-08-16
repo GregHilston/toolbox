@@ -31,6 +31,7 @@
       shellHook = config.pre-commit.installationScript;
       packages = with pkgs; [
         git
+        jq # `just validate` parses `nix eval --json` with it
         just
         nh
         nix-output-monitor
