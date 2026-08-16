@@ -322,6 +322,43 @@ in {
     };
   };
 
+  # Tier-1 backup: the ~210 MB of ${SERVER_CONFIG_BASE} that genuinely cannot be
+  # regenerated — the Zigbee pairing database and coordinator NVRAM, zwave-js-ui's S2
+  # security keys, Home Assistant's .storage, the *arr databases, Plex's Preferences.xml.
+  # Losing any of it means re-pairing every Zigbee and Z-Wave device by hand. Everything
+  # else under that directory (~21 GB of Plex/Jellyfin/linuxgsm cache) is deliberately not
+  # backed up: losing it costs time, not information.
+  #
+  # Two independent restic repositories, not `restic copy` — unraid (on-LAN, parity) and
+  # fob (a Pi with an external disk, offsite). Independent so a corrupt repo or a password
+  # mistake cannot propagate, and offsite because Unraid is in the same building as
+  # dungeon. Rationale + restore procedure: home-lab/docs/runbooks/backup-tier1.md.
+  #
+  # 03:30, and RunAtLoad is deliberately FALSE — the two differences from every sibling
+  # agent here, both for the same reason. This one is not a watchdog; each run stages
+  # ~205 MB and pushes it over sftp to two hosts, and it notifies on *every* run including
+  # success. RunAtLoad would fire a full two-destination backup on every darwin-rebuild and
+  # every login, which is both wasteful and the fastest way to train you to ignore the
+  # notification that is the whole staleness-detection mechanism. Overlap is safe
+  # regardless: the script takes a single-flight lock and steals it only when stale.
+  launchd.user.agents.backup-tier1 = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/backup-tier1.sh"
+      ];
+      RunAtLoad = false;
+      StartCalendarInterval = [
+        {
+          Hour = 3;
+          Minute = 30;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/backup-tier1.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/backup-tier1.log";
+    };
+  };
+
   # Deploy oMLX with dungeon-specific settings (8GB hot cache for M3 Pro 36GB).
   # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {

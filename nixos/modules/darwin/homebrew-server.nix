@@ -18,6 +18,12 @@
       "node_exporter" # host CPU/disk/net/load/filesystem (:9100)
       "macmon" # Apple-Silicon temp/power/GPU/RAM via `macmon serve` (:9101)
       "glances" # native system-monitor web UI (:61208), replaces the container
+
+      # Tier-1 backup engine, driven by the backup-tier1 launchd agent in
+      # hosts/macs/dungeon. Deliberately on the whole server class rather than dungeon
+      # alone: restic is also the *restore* tool, and the one machine you cannot count on
+      # having during a restore is the one that was being backed up.
+      "restic"
     ];
 
     casks = [
