@@ -11,8 +11,12 @@ The following steps must be completed manually after the initial `nix-darwin` ac
 
 ```bash
 mv ~/.zshrc ~/.zshrc.pre-stow
-darwin-rebuild switch --flake ~/Git/toolbox/nixos
+just dr <host>
 ```
+
+Use `just dr <host>` rather than a bare `darwin-rebuild switch` — the recipe also saves and
+restores the AeroSpace window layout around the rebuild, which a raw `darwin-rebuild`
+skips.
 
 ## 1. VMware Fusion
 

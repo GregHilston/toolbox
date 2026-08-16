@@ -242,7 +242,8 @@ Test-build first, then switch (see `nixos/CLAUDE.md` for the full workflow):
 - **NixOS hosts:** `just ft <host>` (test) then `just fr <host>` (switch)
 - **Darwin hosts:** `just dt <host>` (test) then `just dr <host>` (switch)
 
-See `flake.nix` for machine names, these are based off of `hosts/`.
+Run `just list-hosts` for the machine names. They are defined in
+`flake-modules/hosts.nix` and mirror the directory layout under `hosts/<type>/<host>/`.
 
 ## NixOS in WSL (Windows Subsystem for Linux)
 
@@ -379,7 +380,7 @@ cd /host/ghilston/Projects/myproject
 - Full read-write access with `umask=22` (new files readable by group/others, writable by owner)
 - High performance (kernel-level filesystem)
 - Changes visible immediately on both macOS and VM
-- Configured in [hosts/vms/mines/default.nix:24-35](hosts/vms/mines/default.nix#L24-L35)
+- Configured by the `fileSystems."/host"` block in [hosts/vms/mines/default.nix](hosts/vms/mines/default.nix)
 
 #### NixOS VM → macOS Host (Access VM files from Mac)
 
@@ -389,7 +390,7 @@ cd /host/ghilston/Projects/myproject
 
 **Setup:**
 
-1. Ensure NFS server is configured in NixOS VM (already configured in [hosts/vms/mines/default.nix:83-88](hosts/vms/mines/default.nix#L83-L88)):
+1. Ensure NFS server is configured in NixOS VM (already configured by the `services.nfs.server` block in [hosts/vms/mines/default.nix](hosts/vms/mines/default.nix)):
    ```nix
    services.nfs.server = {
      enable = true;
@@ -528,7 +529,7 @@ VS Code runs on macOS as a client and connects to the NixOS VM via SSH. The VS C
 
 5. Connect via `Cmd+Shift+P` → "Remote-SSH: Connect to Host"
 
-**Why:** Combines macOS hardware/battery with Linux development environment. VS Code is disabled in the VM config ([hosts/vms/mines/default.nix:128](hosts/vms/mines/default.nix#L128)) since it runs on the macOS host.
+**Why:** Combines macOS hardware/battery with Linux development environment. VS Code is disabled in the VM config (`custom.programs.vscode.enable = false` in [hosts/vms/mines/default.nix](hosts/vms/mines/default.nix)) since it runs on the macOS host.
 
 ## When Running A Nix OS VM: When to Use NixOS vs Native OS Applications
 

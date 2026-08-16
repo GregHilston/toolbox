@@ -86,10 +86,11 @@ declared in two places by platform, with truly-shared CLI tools hoisted into
 - **macOS (Darwin):** `modules/darwin/homebrew-base.nix` (every Mac) + per-host casks.
 - **NixOS CLI:** `modules/common/default.nix` systemPackages extras — the "Darwin gets
   it via Homebrew" list (`just`, `stow`, `gh`, `pandoc`, `ngrok`, …).
-- **NixOS GUI:** the `enableGui` block in `modules/home/default.nix`, or a managed
-  `programs.*` module under `modules/programs/gui/` (e.g. `ghostty`, `alacritty` — these
-  get stylix theming for free). GUI apps reach every `enableGui` NixOS host (mines +
-  isengard), so add there rather than per-host unless you want just one.
+- **NixOS GUI:** the `enableGui` block in `modules/home/default.nix` (a local binding
+  reading `osConfig.custom.desktop.enable`), or a managed `programs.*` module under
+  `modules/programs/gui/` — currently `firefox`, `ghostty`, `vscode`, which get stylix
+  theming for free. GUI apps reach every `enableGui` NixOS host (mines + isengard), so add
+  there rather than per-host unless you want just one.
 
 **aarch64 caveat:** mines is aarch64-linux. Several proprietary GUI apps (slack, spotify,
 discord, bitwarden-desktop) are **x86_64-linux only** in nixpkgs — hence the
@@ -268,7 +269,7 @@ Be sure to select the host, and only the host we're working with. IE if we're de
 2. Test build: `just ft <host>`
 3. Deploy: `just fr <host>`
 
-### Darwin hosts (dungeon)
+### Darwin hosts (dungeon, moria, citadel)
 1. Format: `nix fmt .`
 2. Test build: `just dt <host>`
 3. Deploy: `just dr <host>`
@@ -457,7 +458,13 @@ See [.devcontainer/README.md](.devcontainer/README.md) for details.
 
 If needed, see [README.md](README.md) for detailed documentation on repository structure, VM setup, and development workflows.
 
-## Automatic Nix Garbage Collection for Darwin Hosts
+## Automatic Nix Garbage Collection for Darwin Hosts — PROPOSED, NOT IMPLEMENTED
+
+> **Status: not done.** There is no `determinate` flake input and nothing imports
+> `determinate.darwinModules.default`. Scheduled GC is *not* currently running on any Mac;
+> reclaim space by hand with `just delete-all-old-generations`. The rest of this section is
+> the plan for adopting it, not a description of the current state.
+
 
 The darwin hosts run Determinate Nix (`nix.enable = false` in `modules/darwin/common.nix`),
 so nix-darwin's built-in `nix.gc` module can't be used (it asserts `nix.gc.automatic` requires
