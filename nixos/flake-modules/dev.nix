@@ -26,6 +26,21 @@
       };
     };
 
+    # Just enough to run `just validate`, and nothing else.
+    #
+    # The weekly lock-bump workflow validates a *proposed* flake.lock, and every
+    # package it enters a shell for is built from that unproven lock. `default`
+    # carries nh (Rust), nix-output-monitor (Haskell), nvd and treefmt's
+    # inputsFrom — so a bump landing on a nixpkgs rev those aren't cached for yet
+    # would have CI compiling a Haskell toolchain before validation even starts,
+    # for tools the validation never calls. just + jq are cheap and always cached.
+    #
+    # No shellHook either: `default`'s installs git hooks, which is right for a
+    # human entering the shell and pure noise on a runner that never commits.
+    devShells.ci = pkgs.mkShell {
+      packages = with pkgs; [jq just];
+    };
+
     devShells.default = pkgs.mkShell {
       inputsFrom = [config.treefmt.build.devShell];
       shellHook = config.pre-commit.installationScript;
