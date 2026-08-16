@@ -23,9 +23,7 @@ target := env("HOME")
 # .gitignore carries dot/pi/.pi/agent/{sessions,auth.json,models-store.json}.
 # It stays on the list because it has always been stowed and removing it would
 # be a behavior change, but prefer `stow --no-folding pi` on a fresh host.
-# `ser2net` is the same story: dungeon stows it with --no-folding explicitly
-# (hosts/macs/dungeon/default.nix), while these recipes fold.
-packages := "aerospace karabiner pi searxngr-config ser2net tmux zsh"
+packages := "aerospace karabiner pi searxngr-config tmux zsh"
 
 # Stow a single package
 # Usage: just stow aerospace
