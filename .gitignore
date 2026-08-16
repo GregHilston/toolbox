@@ -14,6 +14,10 @@ dots/
 
 *.pyc
 
+# The recursive glob in .zshrc puts every subdirectory of bin/ on $PATH, so a
+# stray __pycache__ becomes a PATH entry. Keep it out of the repo entirely.
+__pycache__/
+
 backup
 
 .bashrc
