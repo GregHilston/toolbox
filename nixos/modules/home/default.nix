@@ -62,7 +62,6 @@ in {
       # the tool for manually confirming F18 arrives (`xdotool key`, `xev`).
       handy
       xdotool
-      # texstudio
 
       # GUI dev tools — nix stand-ins for the macOS Homebrew casks (bruno,
       # dbeaver-community, db-browser-for-sqlite). All build on aarch64-linux.

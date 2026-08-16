@@ -8,24 +8,21 @@ _: {
     fullName = "Greg Hilston";
     email = "Gregory.Hilston@gmail.com";
     packages = {
-      terminal = "alacritty";
-      editor = "nvim";
+      # Consumed by modules/common/core.nix and modules/darwin/common.nix to set
+      # the login shell. `terminal` and `editor` used to sit here too, but
+      # nothing ever read them — the terminal is a stylix-themed programs/gui
+      # module and EDITOR is exported from the zsh module.
       shell = "zsh";
     };
   };
 
   paths = {
-    dotfiles = "$HOME/.dotfiles";
-    configHome = "$HOME/.config";
-    dataHome = "$HOME/.local/share";
-    cacheHome = "$HOME/.cache";
     nixosFlake = "$HOME/Git/toolbox/nixos";
   };
 
   system = {
     timeZone = "America/New_York";
     locale = "en_US.UTF-8";
-    stateVersion = "24.05";
   };
 
   services = {
@@ -42,7 +39,6 @@ _: {
   # longer leaks into the ssh blocks for the personal machines.
   # Entries without a `user` are not ssh targets.
   networking = {
-    domain = "local";
     hosts = {
       unraid = {
         lan = "192.168.1.2";
