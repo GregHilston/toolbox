@@ -66,33 +66,28 @@ jobs:
       - name: Cache Nix store
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - name: Run flake check
+      # `just validate` (nixos/justfile) rather than a copy of it here: it runs
+      # `nix flake check` and then evaluates every host to a toplevel drvPath,
+      # deriving the host list from the flake so a new host needs no edit in either
+      # place. Instantiating a derivation needs no builder for its platform, which is
+      # what lets this one Linux runner cover the aarch64-darwin hosts too.
+      - name: Check the flake and evaluate every host
         working-directory: nixos
-        run: nix flake check
+        run: nix develop --command just validate
 
-      # Instantiating a derivation needs no builder for its platform, so this one
-      # Linux runner covers the aarch64-darwin hosts too. Same reasoning as
-      # `just validate`; see the comment on that recipe in nixos/justfile.
-      - name: Evaluate every host
-        working-directory: nixos
-        run: |
-          targets=$(
-            nix eval .#nixosConfigurations --apply builtins.attrNames --json \
-              | jq -r '.[] | ".#nixosConfigurations.\(.).config.system.build.toplevel"'
-            nix eval .#darwinConfigurations --apply builtins.attrNames --json \
-              | jq -r '.[] | ".#darwinConfigurations.\(.).system"'
-          )
-          for target in $targets; do
-            echo "==> $target"
-            nix eval --raw "$target.drvPath" >/dev/null
-          done
-
-      # `always()` so a failure reports itself. A red run buried in the Actions tab is
-      # not a signal anyone sees; a comment on the PR is.
+      # Report unless the run was cancelled — `always()` would fire on cancellation
+      # too, and `job.status` is `cancelled` there, which would post a hard
+      # "do not merge" verdict about a lock nothing ever checked.
+      #
+      # A red run buried in the Actions tab is not a signal anyone sees; a comment on
+      # the PR is. GH_REPO because a failure in the checkout step above leaves an empty
+      # workspace, and `gh` would otherwise have no git remote to infer the repo from —
+      # failing silently in exactly the case this step exists to report.
       - name: Report the result on the PR
-        if: always()
+        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           PR: ${{ needs.update-lock.outputs.pr-number }}
           RESULT: ${{ job.status }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
