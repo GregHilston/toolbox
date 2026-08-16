@@ -8,7 +8,6 @@
     brews = [
       "go"
       "hugo"
-      "ser2net" # Exposes USB serial devices over TCP for OrbStack containers
 
       # Runtime (needed by pi for npm: packages)
       "node"

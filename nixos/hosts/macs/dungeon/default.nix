@@ -1,7 +1,6 @@
 {
   vars,
   lib,
-  pkgs,
   ...
 }: let
   # NFS mounts on macOS: nix-darwin has no `fileSystems` support, so each share is a
@@ -62,7 +61,6 @@ in {
     ../../../modules/darwin/homebrew-server.nix
     ../../../modules/darwin/home.nix
     ../../../modules/darwin/omlx.nix
-    ../../../modules/darwin/ser2net.nix
   ];
 
   networking.hostName = "dungeon";
@@ -331,8 +329,7 @@ in {
     cacheSize = "8GB";
   };
 
-  # Dungeon-specific activation: ser2net dotfiles, clamshell-sleep prevention,
-  # and NFS mount points.
+  # Dungeon-specific activation: clamshell-sleep prevention and NFS mount points.
   # NOTE: Uses postActivation (not custom names) because nix-darwin only runs well-known activation script names.
   #
   # Wrapped in a subshell for two reasons. nix-darwin concatenates every
@@ -347,12 +344,6 @@ in {
   system.activationScripts.postActivation.text = ''
     (
       set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
-
-      # Stow ser2net dotfiles (USB serial exposure for OrbStack containers).
-      export PATH="${pkgs.stow}/bin:$PATH"
-      TOOLBOX="/Users/${vars.user.name}/Git/toolbox/dot"
-      cd "$TOOLBOX"
-      stow -R --no-folding ser2net
 
       # Prevent clamshell sleep on Apple Silicon (lid-close with no external display).
       # See the detailed explanation in the power.sleep section above.
