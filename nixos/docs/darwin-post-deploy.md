@@ -37,6 +37,27 @@ Apple-Silicon object detector that Frigate connects to over ZMQ. It is not auto-
 - [ ] Re-run `darwin-rebuild switch` so the agent finds the venv, then verify:
       `tail ~/Library/Logs/frigate-detector.log` shows "ZMQ server successfully bound to tcp://*:5555"
 
+## Tier-1 Backup (dungeon only)
+The `backup-tier1` launchd agent (hosts/macs/dungeon/default.nix) runs the home-lab script at
+03:30 into two restic repositories. `restic` itself comes from homebrew-server.nix, but three
+things cannot be expressed in nix and the agent fails — loudly, nightly — without them:
+- [ ] Create the `Infra/restic` item in 1Password with a **strong, unique** repository password,
+      then `cd ~/Git/home-lab && just secrets` to write `SECRET_RESTIC_PASSWORD`.
+      ⚠️ This password is **not recoverable**. restic repositories are encrypted at rest, so a
+      backup whose password is lost is indistinguishable from no backup at all. It lives in
+      1Password specifically so it is not stored only on the machine being backed up.
+- [ ] Authorise dungeon's SSH key on the offsite Pi: `ssh-copy-id -i ~/.ssh/id_rsa.pub pi@100.98.200.16`
+      (run from dungeon; interactive, needs the Pi's password once).
+- [ ] Verify both destinations answer before trusting the schedule:
+      `ssh root@192.168.1.2 true && ssh fob true`
+- [ ] Dry-run it, which stages everything but writes no repository:
+      `cd ~/Git/home-lab && bash scripts/backup-tier1.sh --dry-run`
+- [ ] Then one real run by hand, and confirm the Pushover notification arrives. Success is
+      **not** silent here on purpose: the daily notification is the staleness detector, so if
+      it ever stops arriving, that is the alert.
+
+Restore procedure and failure triage: home-lab `docs/runbooks/backup-tier1.md`.
+
 ## Voice Input (Karabiner + Handy)
 Hold Caps Lock to dictate; a quick tap is Escape. Until these are done Karabiner is inert
 and Caps Lock still toggles caps. On headless dungeon, do them over VNC. Background and
