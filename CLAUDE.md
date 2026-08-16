@@ -1,9 +1,10 @@
 # Toolbox
 
-<!-- The Pixel 8 (Termux) paths used to be duplicated here verbatim from the
-     global ~/.claude/CLAUDE.md (dot/claude/.claude/CLAUDE.md). Both files load
-     in every session in this repo, so the copy was pure duplicated context.
-     The global one is authoritative. -->
+<!-- The Pixel 8 (Termux) paths used to be duplicated here from the global
+     ~/.claude/CLAUDE.md (dot/claude/.claude/CLAUDE.md) — same paths and port,
+     differing only in one label. Both files load in every session in this
+     repo, so the copy was duplicated context. The global one is
+     authoritative. -->
 
 ## Repository Layout
 

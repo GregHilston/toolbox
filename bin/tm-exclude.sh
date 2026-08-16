@@ -25,7 +25,17 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
 fi
 
 DRY_RUN=0
-[[ "${1:-}" == "--dry-run" ]] && DRY_RUN=1
+case "${1:-}" in
+  --dry-run | -n) DRY_RUN=1 ;;
+  "") ;;
+  # Anything else is a typo. Never fall through to the destructive path just
+  # because the user misspelled --dry-run.
+  *)
+    echo "tm-exclude.sh: unknown argument '$1'" >&2
+    echo "Usage: tm-exclude.sh [--dry-run|-n]" >&2
+    exit 2
+    ;;
+esac
 
 exclude() {
   local path="$1" note="${2:-}" size
@@ -34,13 +44,16 @@ exclude() {
     return
   fi
 
-  size="$(du -sh "$path" 2>/dev/null | cut -f1)"
-  size="${size:-?}"
-
+  # Check exclusion BEFORE measuring. `du -sh` on ~/Library/Caches or a models
+  # directory takes minutes, and paying that on the common already-excluded
+  # path made even --dry-run look hung.
   if tmutil isexcluded "$path" 2>/dev/null | grep -q '\[Excluded\]'; then
-    printf '  already         %6s  %s\n' "$size" "$path"
+    printf '  already         %s\n' "$path"
     return
   fi
+
+  size="$(du -sh "$path" 2>/dev/null | cut -f1)"
+  size="${size:-?}"
 
   if (( DRY_RUN )); then
     printf '  would exclude   %6s  %s%s\n' "$size" "$path" "${note:+  # $note}"
@@ -70,14 +83,17 @@ exclude "$HOME/Virtual Machines.localized"           "VMware VMs, incl. mines"
 
 echo
 echo "Nix store (rebuildable from the flake; needs sudo):"
-if [[ -d /nix ]]; then
-  if (( DRY_RUN )); then
-    printf '  would exclude   %6s  /nix\n' "$(du -sh /nix 2>/dev/null | cut -f1)"
-  elif sudo tmutil addexclusion /nix; then
-    echo "  excluded        /nix"
-  fi
-else
+if [[ ! -d /nix ]]; then
   echo "  skip (missing)  /nix"
+elif tmutil isexcluded /nix 2>/dev/null | grep -q '\[Excluded\]'; then
+  echo "  already         /nix"
+elif (( DRY_RUN )); then
+  printf '  would exclude   %6s  /nix\n' "$(du -sh /nix 2>/dev/null | cut -f1)"
+elif sudo tmutil addexclusion /nix; then
+  echo "  excluded        /nix"
+else
+  # Without this branch a mistyped sudo password looked like success.
+  echo "  FAILED          /nix (sudo declined or tmutil errored)"
 fi
 
 echo

@@ -1,4 +1,4 @@
-name: Shell Script Lint
+name: bin/ Script Lint
 
 # The nix workflows are path-filtered to nixos/**, so nothing in CI ever
 # exercised bin/ — a syntax error in a script on $PATH was invisible until it
@@ -17,7 +17,7 @@ on:
 
 jobs:
   shell:
-    name: Syntax check & shellcheck
+    name: Syntax check (bash + python) & shellcheck
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -35,6 +35,21 @@ jobs:
               fail=1
             fi
           done < <(find bin -type f -name '*.sh')
+          exit "$fail"
+
+      # bin/ is roughly half Python (PEP 723 single-file scripts), and the
+      # paths: filter above fires on those too — without this the job would go
+      # green having checked nothing.
+      - name: Python syntax check
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r script; do
+            if ! python3 -m py_compile "$script"; then
+              echo "::error file=$script::py_compile failed"
+              fail=1
+            fi
+          done < <(find bin -type f -name '*.py')
           exit "$fail"
 
       - name: Install shellcheck

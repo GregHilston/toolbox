@@ -1,6 +1,6 @@
 ---
 description: Test a host configuration without switching
-allowed-tools: Bash(just:*), Bash(git diff:*)
+allowed-tools: Bash(just:*), Bash(git diff:*), Bash(echo:*)
 argument-hint: [hostname]
 ---
 

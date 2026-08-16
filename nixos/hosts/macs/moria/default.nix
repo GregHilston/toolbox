@@ -34,7 +34,10 @@
   ];
 
   home-manager.users.${vars.user.name} = {
-    # Moria-specific packages (Whisper for local transcription, Python for parakeet-mlx)
+    # Moria-specific packages: whisper for local transcription, ffmpeg to extract
+    # audio from video first. The comment here used to also claim a Python for
+    # parakeet-mlx — that was for bin/audio-transcript.py, which now lives in
+    # roger (roger/audio/transcribe.py) and brings its own environment.
     home.packages = with pkgs; [
       whisper-ctranslate2
       ffmpeg

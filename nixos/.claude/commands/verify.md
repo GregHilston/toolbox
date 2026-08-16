@@ -1,17 +1,18 @@
 ---
 description: Complete verification - format, test build, validate
-allowed-tools: Bash(nix:*), Bash(just:*), Bash(find:*)
+allowed-tools: Bash(nix:*), Bash(just:*), Bash(find:*), Bash(wc:*), Bash(git rev-parse:*)
 argument-hint: [hostname]
 ---
 
 ## Files to Check
-!`find . -name "*.nix" -type f | wc -l` Nix files
+!`find "$(git rev-parse --show-toplevel)/nixos" -name "*.nix" -type f | wc -l` Nix files
 
 ## Task
 Multi-step verification for **$1**:
 
 ### Step 1: Format
-Run: `nix fmt .`
+Run `nix fmt .` from the `nixos/` directory — it formats the current directory, so
+running it from a subdirectory silently formats only that subtree.
 Report files changed.
 
 ### Step 2: Test Build
