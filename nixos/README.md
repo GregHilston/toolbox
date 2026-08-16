@@ -169,6 +169,11 @@ When you enter a project directory with a `flake.nix` and `.envrc`, direnv autom
 
 ### Setup a New Project
 
+> **Prefer to copy a working example?** See [`examples/`](examples/) for complete,
+> runnable versions of the snippets below — [`python-devshell/`](examples/python-devshell/)
+> and [`typescript-devshell/`](examples/typescript-devshell/). Each is a directory you can
+> copy, `direnv allow`, and run immediately.
+
 #### Python Project
 ```bash
 # Create project

@@ -1,0 +1,10 @@
+# direnv's cached shell — machine-local, regenerated on demand
+.direnv/
+
+# python
+__pycache__/
+*.pyc
+
+# typescript / node
+node_modules/
+hello.js
