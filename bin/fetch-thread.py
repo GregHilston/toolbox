@@ -97,14 +97,15 @@ def build_parser() -> argparse.ArgumentParser:
             "  fetch-thread.py https://reddit.com/r/python/comments/abc123\n"
             "  fetch-thread.py 48072225 hn\n"
             "  fetch-thread.py abc123 reddit python\n"
-            "  fetch-thread.py 48072225 --format json | jq .\n"
+            "  fetch-thread.py 48072225 hn --format json | jq .\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "source",
         metavar="SOURCE",
-        help="URL, item ID, post ID, or shorthand (auto-detects HN vs Reddit)",
+        help="Thread URL (platform auto-detected), or a bare item/post ID — "
+        "a bare ID needs the platform given as the next argument",
     )
     parser.add_argument(
         "platform_or_subreddit",

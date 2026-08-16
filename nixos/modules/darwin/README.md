@@ -11,12 +11,14 @@ The following steps must be completed manually after the initial `nix-darwin` ac
 
 ```bash
 mv ~/.zshrc ~/.zshrc.pre-stow
-just dr <host>
+cd ~/Git/toolbox/nixos && just dr <host>
 ```
 
 Use `just dr <host>` rather than a bare `darwin-rebuild switch` — the recipe also saves and
 restores the AeroSpace window layout around the rebuild, which a raw `darwin-rebuild`
-skips.
+skips. It does need to run from `nixos/`, where the justfile lives; the equivalent from
+anywhere is `sudo darwin-rebuild switch --flake ~/Git/toolbox/nixos#<host>` (without the
+AeroSpace handling).
 
 ## 1. VMware Fusion
 
