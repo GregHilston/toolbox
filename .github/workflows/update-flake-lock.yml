@@ -87,30 +87,122 @@ jobs:
         timeout-minutes: 30
         run: nix develop .#ci --command just validate
 
-      # Report unless the run was cancelled — `always()` would fire on cancellation
-      # too, and `job.status` is `cancelled` there, which would post a hard
-      # "do not merge" verdict about a lock nothing ever checked.
-      #
-      # A red run buried in the Actions tab is not a signal anyone sees; a comment on
-      # the PR is. GH_REPO because a failure in the checkout step above leaves an empty
-      # workspace, and `gh` would otherwise have no git remote to infer the repo from —
-      # failing silently in exactly the case this step exists to report.
-      - name: Report the result on the PR
-        if: ${{ !cancelled() }}
+  # Evaluation cannot see a fixed-output hash, because the hash is a literal in the
+  # expression and whether the fetched bytes match it is a build-time fact. On
+  # 2026-08-16 that gap was not theoretical: a bump passed `just validate` on all
+  # eight hosts and then died on a real build, because upstream had re-rolled the
+  # googlefonts/nanoemoji tarball and `jetbrains-mono` could no longer be built.
+  #
+  # So build one host for real. dungeon, because it is the deploy target and the
+  # headless one; and on macOS because that is where the gap actually bites —
+  # nixpkgs' aarch64-darwin outputs are cached far less reliably than x86_64-linux,
+  # so a Linux build would have substituted the cached result and noticed nothing.
+  #
+  # ~6.6 GB of closure, mostly substituted. Expensive for a per-PR check, entirely
+  # affordable once a week — and it is the only check here that answers the question
+  # `just dr` actually asks.
+  build-darwin:
+    name: Build a Darwin host for real
+    needs: update-lock
+    if: needs.update-lock.outputs.pr-number != ''
+    runs-on: macos-latest
+    outputs:
+      failure-tail: ${{ steps.capture.outputs.tail }}
+    steps:
+      - name: Checkout the bot's branch
+        uses: actions/checkout@v7
+        with:
+          ref: update_flake_lock_action
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Cache Nix store
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Build dungeon
+        working-directory: nixos
+        timeout-minutes: 90
+        run: |
+          set -o pipefail
+          nix build --no-link --print-build-logs \
+            .#darwinConfigurations.dungeon.system 2>&1 | tee /tmp/build.log
+
+      # "Go read the logs" is a worse comment than the four lines that matter. A hash
+      # mismatch says everything in `error:` + `specified:` + `got:`.
+      - name: Capture the failure
+        id: capture
+        if: failure()
+        run: |
+          # `head` exits 0 on empty input, so the emptiness has to be tested rather
+          # than left to `||`. And the log may not exist at all if an earlier step
+          # died, hence `|| true` on every read.
+          lines=$(grep -E 'error:|hash mismatch|specified:|got:' /tmp/build.log 2>/dev/null | head -20 || true)
+          [ -n "$lines" ] || lines=$(tail -20 /tmp/build.log 2>/dev/null || true)
+          {
+            echo 'tail<<GH_EOF_MARKER'
+            # A delimiter appearing in the payload would end the block early and let
+            # the rest be parsed as workflow commands.
+            printf '%s\n' "$lines" | grep -v '^GH_EOF_MARKER$' || true
+            echo 'GH_EOF_MARKER'
+          } >> "$GITHUB_OUTPUT"
+
+  # Its own job so it can speak for both checks at once, and so a failure in either
+  # still gets said out loud. `!cancelled()` rather than `always()`: a cancelled run
+  # validated nothing, and "❌ do not merge" would be a verdict about work that never
+  # happened. `!cancelled()` also keeps this running when a *dependency* failed,
+  # which `success()` (the default) would not.
+  #
+  # A red run buried in the Actions tab is not a signal anyone sees; a comment on the
+  # PR is. GH_REPO because this job checks nothing out, so `gh` has no git remote to
+  # infer the repository from.
+  report:
+    name: Report on the PR
+    needs: [update-lock, validate, build-darwin]
+    if: ${{ !cancelled() && needs.update-lock.outputs.pr-number != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment the verdict
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           PR: ${{ needs.update-lock.outputs.pr-number }}
-          RESULT: ${{ job.status }}
+          EVAL: ${{ needs.validate.result }}
+          BUILD: ${{ needs.build-darwin.result }}
+          TAIL: ${{ needs.build-darwin.outputs.failure-tail }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          if [ "$RESULT" = "success" ]; then
-            body="✅ **Lock validated** — \`nix flake check\` passed and every host evaluates to a toplevel derivation. ([run]($RUN_URL))
+          mark() { [ "$1" = "success" ] && echo "✅" || echo "❌"; }
 
-          Evaluation is not a build. It cannot catch a fixed-output hash mismatch in a
-          dependency, so real-build the host you are about to deploy (\`nix build
-          .#darwinConfigurations.<host>.system\`) before \`just dr\`/\`just fr\`."
+          if [ "$EVAL" = "success" ] && [ "$BUILD" = "success" ]; then
+            header="✅ **Lock validated** — safe to merge."
           else
-            body="❌ **Lock failed validation** — do not merge. ([run]($RUN_URL))"
+            header="❌ **Do not merge.**"
           fi
+
+          body="$header ([run]($RUN_URL))
+
+          | check | |
+          |---|---|
+          | \`nix flake check\` + all eight hosts evaluate | $(mark "$EVAL") \`$EVAL\` |
+          | \`darwinConfigurations.dungeon.system\` builds for real | $(mark "$BUILD") \`$BUILD\` |
+          "
+
+          if [ "$BUILD" != "success" ] && [ -n "$TAIL" ]; then
+            body="$body
+          <details><summary>Build failure</summary>
+
+          \`\`\`
+          $TAIL
+          \`\`\`
+          </details>
+          "
+          fi
+
           gh pr comment "$PR" --body "$body"
