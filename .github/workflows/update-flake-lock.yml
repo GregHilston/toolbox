@@ -49,7 +49,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
     steps:
       - name: Checkout the bot's branch
         uses: actions/checkout@v7
@@ -106,6 +105,12 @@ jobs:
     needs: update-lock
     if: needs.update-lock.outputs.pr-number != ''
     runs-on: macos-latest
+    # This job executes thousands of third-party build scripts — 2202 of the closure's
+    # derivations are fixed-output fetches — from a freshly bumped, unreviewed nixpkgs.
+    # The repo's default workflow permission is `write`, so without this it would be
+    # the one job here holding a push-capable token, and the one least entitled to it.
+    permissions:
+      contents: read
     outputs:
       failure-tail: ${{ steps.capture.outputs.tail }}
     steps:
@@ -124,13 +129,19 @@ jobs:
       - name: Cache Nix store
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
+      # 6.6 GB of closure onto a runner documented at 14 GB is the least headroom in
+      # this design, so `No space left on device` is the likeliest false ❌. It already
+      # lands in the failure tail via the `error:` grep, which distinguishes it from a
+      # hash mismatch; `df` either side makes that unambiguous at a glance.
       - name: Build dungeon
         working-directory: nixos
         timeout-minutes: 90
         run: |
           set -o pipefail
+          df -h /
           nix build --no-link --print-build-logs \
             .#darwinConfigurations.dungeon.system 2>&1 | tee /tmp/build.log
+          df -h /
 
       # "Go read the logs" is a worse comment than the four lines that matter. A hash
       # mismatch says everything in `error:` + `specified:` + `got:`.
@@ -143,6 +154,9 @@ jobs:
           # died, hence `|| true` on every read.
           lines=$(grep -E 'error:|hash mismatch|specified:|got:' /tmp/build.log 2>/dev/null | head -20 || true)
           [ -n "$lines" ] || lines=$(tail -20 /tmp/build.log 2>/dev/null || true)
+          # Nothing useful to say beats an empty block: leave the key unset and let the
+          # report's `-n "$TAIL"` guard drop the section entirely.
+          [ -n "$lines" ] || exit 0
           {
             echo 'tail<<GH_EOF_MARKER'
             # A delimiter appearing in the payload would end the block early and let
@@ -195,12 +209,15 @@ jobs:
           "
 
           if [ "$BUILD" != "success" ] && [ -n "$TAIL" ]; then
+            # Four backticks, not three: nix build logs can contain a fenced block, and
+            # a three-backtick fence would be closed by it — spilling the rest of the
+            # log into prose and leaving a stray fence and a duplicate </details>.
             body="$body
           <details><summary>Build failure</summary>
 
-          \`\`\`
+          \`\`\`\`
           $TAIL
-          \`\`\`
+          \`\`\`\`
           </details>
           "
           fi
