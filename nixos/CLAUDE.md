@@ -185,9 +185,17 @@ nix build --no-link .#nixosConfigurations.<host>.config.system.build.toplevel
 ```
 
 Do it on the machine you are about to `just dr`/`just fr`, since a cached path on one
-host proves nothing about another architecture. This cannot be moved into CI — the
-runners have neither the time nor the disk for a full system closure — which is why it
-is written down here instead.
+host proves nothing about another architecture.
+
+For the **weekly bot bump** this is now automated: `update-flake-lock.yml`'s
+`build-darwin` job really builds `darwinConfigurations.dungeon.system` on a macOS
+runner and comments the verdict on the PR, so a green tick there does mean "it builds".
+It is macOS on purpose — nixpkgs' aarch64-darwin outputs are cached far less reliably
+than x86_64-linux, so a Linux runner substitutes the cached result and sees nothing.
+~6.6 GB of closure, mostly substituted: affordable weekly, not per-PR.
+
+That covers dungeon only. **For any lock change you make by hand, or before deploying
+to moria or citadel, still build it yourself** — nothing checks those.
 
 When a bump does turn out to be broken, check whether the fix has already landed
 upstream before working around it:
