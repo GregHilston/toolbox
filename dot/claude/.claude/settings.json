@@ -56,6 +56,5 @@
   "agentPushNotifEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754006348784
-  },
-  "model": "opus"
+  }
 }
