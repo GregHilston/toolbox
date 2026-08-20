@@ -86,6 +86,31 @@ Only moria runs the agent. Other hosts keep working off whatever
 (Upgrade path if the notification is too quiet: home-lab has Pushover
 credentials, but they live in *its* secrets on dungeon, not in toolbox's.)
 
+## Working across toolbox and home-lab in one session
+
+The two repos are coupled — toolbox owns dungeon's machine config, home-lab owns
+the containers on it — so a single question often spans both. But a pi session
+has one working directory, and moonpi's `cwdOnly` guard blocks the file tools
+outside it (`guards.ts`: it checks `read`, `write`, `edit`, `grep`, `find`,
+`ls`; note `bash` is *not* path-guarded).
+
+`moonpi.json` therefore names both repos in `guards.allowedPaths`. Start the
+session in whichever repo the task is mostly about — you keep that repo's git
+context, PI WEB's worktree-derived workspaces, and its `CLAUDE.md` — and the
+agent can still read and edit across into the other.
+
+Deliberately the two repos and not `~/Git`: that would open all ~40 repos and
+leave the guard doing nothing. Verified after changing it that `~/Git/ccs` and
+`~/.ssh/config` are still blocked.
+
+The tradeoff is real — an agent working in toolbox can now edit home-lab without
+being asked. That is wanted here because the repos are two halves of one system,
+but it is not a reason to keep adding paths.
+
+Nothing is needed on the PI WEB side: `pathAccess.allowedPaths` is already
+`~/Git`, so its file explorer can browse both. That setting only governs PI WEB's
+own UI/API, never what the agent can touch — the guard above is the real control.
+
 ## Web search
 
 `extensions/web-search.ts` registers a `web_search` tool against our self-hosted
