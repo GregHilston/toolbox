@@ -136,8 +136,20 @@ def main() -> None:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Reconstruct source argument for the specific converter
-    source = " ".join(positional_args).replace("--format", "").strip()
+    # Drop an explicit platform hint before handing the rest to a converter:
+    # neither of them expects one. `48072225 hn` has to reach convert_hn as
+    # `48072225`, and `abc123 reddit python` has to reach convert_reddit as
+    # `abc123 python`, which is the "post id + subreddit" form it parses.
+    #
+    # Only the FIRST match is removed, and only an exact one — r/reddit is a
+    # real subreddit, so `abc123 reddit reddit` must keep its second token.
+    # A URL carries no bare hint, so nothing is stripped from it.
+    source_parts = list(positional_args)
+    for index, part in enumerate(source_parts):
+        if part.lower() == platform:
+            del source_parts[index]
+            break
+    source = " ".join(source_parts).strip()
 
     try:
         if platform == "hn":
