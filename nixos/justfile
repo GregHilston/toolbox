@@ -155,6 +155,7 @@ secrets:
 
   op inject -f -i ../dot/omlx/.omlx/settings.json.tpl -o ../dot/omlx/.omlx/settings.json
   op inject -f -i ../dot/pi/.pi/agent/models.json.tpl -o ../dot/pi/.pi/agent/models.json
+  op inject -f -i ../dot/pi/.pi/agent/secrets.json.tpl -o ../dot/pi/.pi/agent/secrets.json
   op inject -f -i secrets/.env.tpl -o secrets/.env
   echo "Secrets generated. Run 'just dr <host>' to deploy."
 
