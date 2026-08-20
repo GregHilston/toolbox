@@ -262,6 +262,13 @@ it in the appropriate `.tpl` file.
 `fetch-thread.py` prints a Hacker News or Reddit thread as markdown, or `--format json`.
 Zero external dependencies.
 
+**Reddit needs auth.** Reddit has required it on `.json` endpoints since mid-2026, so
+Reddit threads 403 without a session cookie. The tool reads the same cookie as pi's
+reddit tools (`~/.config/pi-reddit-research/cookie.txt`), which
+`bin/reddit-cookie-sync.sh` refreshes daily from Firefox. If it 403s, the fix is to log
+in to reddit.com **in Firefox** and re-run that script — see `dot/pi/CLAUDE.md`.
+HN needs nothing.
+
 Give it a **URL** and the platform is auto-detected. A **bare ID** can't be — pass the
 platform as the next argument (and the subreddit, for Reddit):
 

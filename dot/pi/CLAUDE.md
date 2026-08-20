@@ -40,13 +40,36 @@ The script is deliberately conservative:
 - It writes through a mode-600 temp file and `mv`, so the cookie is never
   briefly world-readable.
 
-When it cannot help — logged out of Firefox, cookies cleared, session lapsed
-there too — it posts a macOS notification telling you to log in again. That is
-the manual step, and it is the only one:
+### First-time setup, and the only recurring manual step
 
+Both are the same action, so there is nothing separate to remember:
+
+1. Open **Firefox** (not Chrome or Safari — macOS encrypts their cookie jars
+   with a Keychain key, so they cannot be read without prompting).
+2. Go to <https://reddit.com> and log in. Stay logged in; do not use a private
+   window, and do not tick anything that clears cookies on exit.
+3. Run `~/Git/toolbox/bin/reddit-cookie-sync.sh` once to seed the cookie, or
+   just wait for the daily agent.
+
+That is the whole procedure. There is no cookie to copy, no devtools, no
+`token_v2` — `reddit_session` alone authenticates, which the sync script and
+`fetch-thread.py` both rely on.
+
+When the session lapses, the script posts a macOS notification and you repeat
+step 2. Nothing else changes: no rebuild, no `just secrets`, no restart.
+
+Confirm it worked:
+
+```bash
+~/Git/toolbox/bin/reddit-cookie-sync.sh    # "OK: ..." on either path
+fetch-thread.py https://www.reddit.com/r/NixOS/comments/<id>/
 ```
-Open reddit.com in Firefox and log in. That is it.
-```
+
+If the script reports it cannot find a `reddit_session`, Firefox is logged out
+or you are looking at a different Firefox profile — it scans every profile under
+`~/Library/Application Support/Firefox/Profiles/` and takes the first with a
+cookie, so a second profile that is logged out is not a problem, but *no*
+profile being logged in is.
 
 The next daily run picks it up. To force it immediately:
 
