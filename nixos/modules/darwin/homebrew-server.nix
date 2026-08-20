@@ -30,6 +30,12 @@
       "google-chrome"
       "discord"
       "calibre"
+
+      # OrbStack is THE container runtime on this host class — home-lab's
+      # docker-compose stack, its NFS volumes and its USB passthrough all assume it.
+      # ⚠️ Never add "docker-desktop" to homebrew-base.nix: both casks claim
+      # /usr/local/bin/docker, and with onActivation.upgrade = true whichever one brew
+      # touches last wins on every rebuild. It lives in hosts/macs/citadel only.
       "orbstack"
       "shortcat"
       "tailscale-app"

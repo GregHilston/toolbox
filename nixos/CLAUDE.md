@@ -468,6 +468,37 @@ re-run `just dr <host>`. (Durable option if it recurs: set `HOMEBREW_NO_INSTALL_
 so installs stop auto-cleaning — note this is unrelated to `homebrew.onActivation.cleanup`
 in `modules/darwin/homebrew-base.nix`, which only controls Brewfile-drift uninstalls.)
 
+## ⚠️ Never put `docker-desktop` in `homebrew-base.nix`
+
+`docker-desktop` is declared in `hosts/macs/citadel/default.nix` **only**. dungeon and moria get
+`orbstack` from `modules/darwin/homebrew-server.nix`, and the two casks both claim
+`/usr/local/bin/docker`.
+
+`onActivation.upgrade = true` turns that collision into a recurring, silent one: every
+`darwin-rebuild switch` runs `brew upgrade`, and whichever cask brew touches last re-installs its
+own symlinks over the other's. **`cleanup = "none"` means dropping a cask from the Nix lists never
+uninstalls it** — the config and the machine drift apart quietly.
+
+This actually happened. `docker-desktop` sat in the shared Darwin cask list from `b72fe6b`
+(2026-03-22, the commit that created dungeon's config) — as `"docker"`, which is easy to read as
+"the docker CLI"; `10d75fd` renamed it to `docker-desktop` on 2026-04-18 tracking the upstream
+cask rename, and `321ed35` carried it into `homebrew-base.nix`. `orbstack` arrived five days after
+dungeon's config was born (`ea2e06b`, 2026-03-27) and nobody removed the other one. On
+**2026-08-17 08:28** a cask bump to Docker Desktop 4.87.0 repointed `/usr/local/bin/docker` at
+`Docker.app`, which silently disabled a home-lab launchd watchdog that resolved `docker` through
+it (see home-lab `docs/runbooks/proton-port-sync-failed.md`).
+
+Docker Desktop was never even *running* on dungeon — `/var/run/docker.sock` has pointed at
+OrbStack throughout, and the active docker context is `orbstack`. Only the CLI symlink was taken,
+which is why nothing looked broken.
+
+**Check any Mac in one line** — a host should never print both:
+
+```bash
+brew list --cask --versions | grep -iE "docker-desktop|orbstack"
+readlink /usr/local/bin/docker      # want …/OrbStack.app/… on dungeon and moria
+```
+
 ## `just dr` re-prompts for a password at every cask — don't chase the sudo ticket
 
 Homebrew runs `sudo --reset-timestamp` **unconditionally at the top of every invocation**
