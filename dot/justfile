@@ -8,7 +8,7 @@ target := env("HOME")
 # This is an explicit allowlist, NOT a `*/` glob — a glob silently deploys any
 # stale package nobody remembered to delete. Adding a new package? Add it here.
 #
-# Two packages in dot/ are deliberately excluded and must never be stowed:
+# Three packages in dot/ are deliberately excluded and must never be stowed:
 #
 #   claude/  deployed by direct symlink instead — see the link_repo helper in
 #            the root justfile and modules/programs/tui/claude.nix.
@@ -16,6 +16,11 @@ target := env("HOME")
 #            why: "a bare `stow` from dot/ targets the parent (the repo), not
 #            $HOME". Stowing it creates toolbox/.omlx inside the working tree —
 #            the accident the `/.omlx` entry in the root .gitignore documents.
+#   pi-web/  deployed by direct `ln` in modules/darwin/pi-web.nix, same as omlx.
+#            It is worse than most if stowed: ~/.config/pi-web does not exist on
+#            a fresh host, so stow folds the whole directory to one symlink into
+#            this repo and PI WEB then writes runtime state inside the working
+#            tree. Only moria runs it, so a single `ln` is also less machinery.
 #
 # CAVEAT, not yet fixed: `pi` has the same directory-folding hazard. If ~/.pi
 # does not already exist, stow folds it to a single symlink into this repo and
