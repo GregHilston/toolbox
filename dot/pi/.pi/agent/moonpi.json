@@ -4,5 +4,6 @@
       "/opt/homebrew/Cellar/pi-coding-agent",
       "~/.pi/agent"
     ]
-  }
+  },
+  "preserveExternalTools": true
 }
