@@ -2,7 +2,9 @@
   "guards": {
     "allowedPaths": [
       "/opt/homebrew/Cellar/pi-coding-agent",
-      "~/.pi/agent"
+      "~/.pi/agent",
+      "~/Git/toolbox",
+      "~/Git/home-lab"
     ]
   },
   "preserveExternalTools": true
