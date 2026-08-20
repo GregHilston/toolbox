@@ -159,6 +159,28 @@ secrets:
   op inject -f -i secrets/.env.tpl -o secrets/.env
   echo "Secrets generated. Run 'just dr <host>' to deploy."
 
+# Install and start PI WEB on this host (one time, moria only)
+#
+# Not an activation script on purpose. This needs the network and a real user
+# login session for `launchctl bootstrap`, neither of which activation has — and
+# `pi-web install` writes and validates its own launchd plists, so nix declaring
+# them would break `pi-web doctor`/`status`/`restart`. See
+# modules/darwin/pi-web.nix.
+#
+# Re-running is safe: pi-web replaces its existing services rather than
+# duplicating them, so this doubles as the upgrade path.
+# Usage: `just pi-web-setup`
+pi-web-setup:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  # --allow-scripts is an npm 12 flag that lets node-pty build its native module
+  # without enabling install scripts for everything else. npm 11 runs install
+  # scripts anyway and ignores the flag, so this is correct on both.
+  npm install -g @jmfederico/pi-web --allow-scripts=node-pty
+  pi-web install
+  pi-web doctor
+  pi-web status
+
 # Show post-deploy checklist for Darwin/macOS setup
 # Usage: `just checklist`
 checklist:
