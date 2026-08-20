@@ -155,8 +155,13 @@ secrets:
 
   op inject -f -i ../dot/omlx/.omlx/settings.json.tpl -o ../dot/omlx/.omlx/settings.json
   op inject -f -i ../dot/pi/.pi/agent/models.json.tpl -o ../dot/pi/.pi/agent/models.json
-  op inject -f -i ../dot/pi/.pi/agent/secrets.json.tpl -o ../dot/pi/.pi/agent/secrets.json
   op inject -f -i secrets/.env.tpl -o secrets/.env
+  # Last, and non-fatal. The recipe runs under `set -euo pipefail`, and this is
+  # the only template whose 1Password item is created by hand as a post-deploy
+  # step — so if it is missing, aborting here would take Pushover, Slack, and
+  # Gmail credentials down with it on every host. Warn and carry on instead.
+  op inject -f -i ../dot/pi/.pi/agent/secrets.json.tpl -o ../dot/pi/.pi/agent/secrets.json \
+    || echo "WARNING: pi secrets.json not generated — create the 'Brave Search API' item in the Infra vault (see docs/darwin-post-deploy.md)."
   echo "Secrets generated. Run 'just dr <host>' to deploy."
 
 # Install and start PI WEB on this host (one time, moria only)
@@ -173,9 +178,11 @@ secrets:
 pi-web-setup:
   #!/usr/bin/env bash
   set -euo pipefail
-  # --allow-scripts is an npm 12 flag that lets node-pty build its native module
-  # without enabling install scripts for everything else. npm 11 runs install
-  # scripts anyway and ignores the flag, so this is correct on both.
+  # npm 11 does NOT run install scripts by default (dangerously-allow-all-scripts
+  # is false), and node-pty needs one to build its native module. --allow-scripts
+  # permits that single package without opening the gate for the whole tree, so
+  # the flag is load-bearing — do not drop it. It is rejected for project-scoped
+  # installs and accepted for -g, which is what this is.
   npm install -g @jmfederico/pi-web --allow-scripts=node-pty
   pi-web install
   pi-web doctor

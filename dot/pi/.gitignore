@@ -4,8 +4,12 @@
 .pi/agent/secrets.json
 # Managed by home-manager (pi.nix)
 .pi/agent/settings.json
-# Cloned by `pi install` at runtime — reinstalled by nix activation
+.pi/agent/reddit-research.json
+# Installed by `pi install` at runtime — reinstalled by nix activation.
+# These only land inside the repo at all because ~/.pi is a folded stow
+# symlink into it; see the CAVEAT in dot/justfile.
 .pi/agent/git/
+.pi/agent/npm/
 # Runtime session data
 .pi/agent/sessions/
 # Backup files from home-manager
