@@ -27,7 +27,11 @@ Run these tasks after initial deployment on a new Mac.
       ```
       pi -p 'Use the reddit_search tool to search Reddit for "nixos flakes". Report the count.'
       ```
-      Redo whenever the tools start failing on auth.
+      On **moria** this is a one-time step: `launchd.user.agents.reddit-cookie-sync`
+      re-copies the cookie out of Firefox daily (`bin/reddit-cookie-sync.sh`), so it only
+      needs your attention when it notifies you that Firefox is logged out — the fix then
+      is just to log in at reddit.com in Firefox again. Elsewhere, redo it by hand whenever
+      the tools start failing on auth.
 
 ## Application Logins
 - [ ] **Firefox** - Sign in to Firefox Sync (Settings > Sync)

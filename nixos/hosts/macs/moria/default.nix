@@ -54,6 +54,28 @@
     cacheSize = "32GB";
   };
 
+  # Keep pi's Reddit session cookie current by copying it out of Firefox.
+  #
+  # Reddit expires it every few days and offers no refresh-token flow, so this
+  # cannot renew a session — only copy one you already have. It no-ops while the
+  # existing cookie still authenticates, and notifies if Firefox cannot supply a
+  # working one. See bin/reddit-cookie-sync.sh for the full tradeoff.
+  #
+  # A user agent, not postActivation: it needs the network and the user's own
+  # Firefox profile, neither of which root-at-activation should be touching.
+  launchd.user.agents.reddit-cookie-sync = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/toolbox/bin/reddit-cookie-sync.sh"
+      ];
+      RunAtLoad = true;
+      StartInterval = 86400; # daily; the cookie lasts a few days
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/reddit-cookie-sync.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/reddit-cookie-sync.log";
+    };
+  };
+
   # PI WEB deploys its config here; the service itself is installed once with
   # `just pi-web-setup`. See modules/darwin/pi-web.nix for why nix does not own
   # its launchd agents.
