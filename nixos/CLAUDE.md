@@ -126,6 +126,38 @@ The shape is always the same, and *why* is the part worth remembering:
   installs the cask; `Unable to find application named ...` shows up there rather than
   failing the rebuild.
 
+## PI WEB is the exception to the launchd rule above
+
+Every other long-running user service here gets a nix-declared
+`launchd.user.agents.*`. **PI WEB does not, on purpose.**
+
+`pi-web install` writes `~/Library/LaunchAgents/com.pi-web.{web,sessiond}.plist`
+itself, and `src/nativeServices/installedServiceDefinitions.ts` re-reads them on
+every `status`, `doctor`, and `restart`, refusing to continue unless the loaded
+agent reports the plist PI WEB considers canonical. A nix-written plist would
+therefore not be redundant — it would break PI WEB's own lifecycle commands, and
+the failure surfaces as a confusing doctor error rather than an activation error.
+
+So the split is: **nix owns the config, PI WEB owns the services.**
+
+- `modules/darwin/pi-web.nix` symlinks `dot/pi-web/.config/pi-web/config.json`
+  into `~/.config/pi-web` and stops there. A symlink, not a `home.file`, because
+  PI WEB's Settings UI writes back to that file and `/nix/store` is read-only.
+- `just pi-web-setup` runs `npm install -g` + `pi-web install` once per host.
+  It is idempotent (pi-web *replaces* its services) so it doubles as the upgrade
+  path, and it is in `docs/darwin-post-deploy.md` so `just checklist` surfaces it.
+
+It is not in activation for the ordinary reasons this file already gives:
+activation is root, has no user login session for `launchctl bootstrap`, and
+should not do network work.
+
+**Its plist environment is also closed.** `pi-web doctor` validates the daemon's
+environment against the canonical definition, so an API key cannot be injected
+there — and because a launchd agent never sources `~/.zshrc`, a shell export does
+not reach a PI WEB session either. Keys that pi extensions read from
+`process.env` go in `~/.pi/agent/secrets.json` and are loaded by the `pi-secrets`
+extension from inside pi; see `dot/pi/CLAUDE.md`.
+
 ## Common Mistakes to Avoid
 
 1. **Module imports**: Always use relative paths in module imports (e.g., `../../modules/home` not absolute paths)

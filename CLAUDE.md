@@ -200,6 +200,21 @@ new model profiles (e.g., extended-context variants). Requires changes to:
 2. `dot/omlx/.omlx/model_settings.json` (variant configuration)
 3. `~/.pi/agent/models.json` (pi model registry)
 
+## PI WEB — supervise pi sessions from a browser
+
+[PI WEB](https://pi-web.dev/) keeps pi coding-agent sessions alive in real
+workspaces, so they can be driven from a phone or tablet instead of a terminal.
+**moria only** — it is the 128GB box and already runs oMLX, so sessions and
+inference stay together. Reachable at `https://pi.grehg2.xyz` over Tailscale.
+
+Config in `dot/pi-web/`; the nix module is
+`nixos/modules/darwin/pi-web.nix`. Installed once per host with
+`just pi-web-setup` in `nixos/` — nix deliberately does not own its launchd
+agents, and `nixos/CLAUDE.md` explains why.
+
+PI WEB has **no authentication**. The tailnet is the only thing keeping it
+private.
+
 ## Claude Code in Docker
 
 Run Claude Code in an isolated Docker container that shares your host auth and session history.

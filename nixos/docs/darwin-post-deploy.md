@@ -11,6 +11,22 @@ Run these tasks after initial deployment on a new Mac.
 - [ ] **1Password** - Sign in to sync passwords
 - [ ] **1Password CLI integration** - Open 1Password → Settings → Developer → enable "Integrate with 1Password CLI"
 - [ ] **Generate secrets** - Run `cd ~/Git/toolbox/nixos && just secrets` (on headless hosts like dungeon, connect via VNC first: Finder → Go → Connect to Server)
+- [ ] **Brave Search API key** (hosts with pi) - `just secrets` reads `Infra/Brave Search API/api_key`.
+      Create the key at https://api-dashboard.search.brave.com/app/keys and store it in that
+      1Password item *before* running `just secrets`, or `op inject` fails on the reference.
+      This is what makes pi-brave-search work; without it the extension reports "no key found".
+- [ ] **Reddit session cookie** (hosts with pi) - pi-reddit-research needs one; Reddit has
+      required auth on its `.json` endpoints since mid-2026. Deliberately *not* in 1Password —
+      it expires every few days, and the file is re-read per request, so refreshing it needs no
+      rebuild and no `just secrets`:
+      ```
+      mkdir -p ~/.config/pi-reddit-research
+      # private window → reddit.com/login → F12 → Application → Cookies → reddit.com
+      # copy the reddit_session (and token_v2) values
+      printf 'reddit_session=VALUE; token_v2=VALUE\n' > ~/.config/pi-reddit-research/cookie.txt
+      chmod 600 ~/.config/pi-reddit-research/cookie.txt
+      ```
+      Verify with `pi -p '/reddit status'`. Redo whenever the tools start failing on auth.
 
 ## Application Logins
 - [ ] **Firefox** - Sign in to Firefox Sync (Settings > Sync)
@@ -77,6 +93,24 @@ per-host caveats: `dot/karabiner/README.md`.
 - [ ] Smoke test, in order: a quick Caps Lock tap sends Escape; holding it opens Handy's
       recording overlay and speaking inserts text at the cursor; Caps Lock never toggles caps
       on *any* attached keyboard (each one needs its own grab)
+
+## PI WEB (moria only)
+
+`custom.programs.piWeb.enable` deploys the config, but the service is installed by hand.
+It needs the network and a real login session for `launchctl bootstrap`, neither of which
+nix activation has — and `pi-web install` writes and validates its own launchd plists, so
+nix declaring them would break `pi-web doctor`. See `modules/darwin/pi-web.nix`.
+
+- [ ] **Install** - `cd ~/Git/toolbox/nixos && just pi-web-setup`. Re-running is safe and is
+      also the upgrade path: pi-web replaces its services rather than duplicating them.
+- [ ] **Verify** - `pi-web doctor` reports both `com.pi-web.web` and `com.pi-web.sessiond`
+      healthy, and `curl -sI http://$(tailscale ip -4):8504/` returns 200
+- [ ] **Reach it remotely** - https://pi.grehg2.xyz over Tailscale, routed by Caddy on
+      dungeon (see `~/Git/home-lab/caddy/Caddyfile`). PI WEB has **no authentication** of its
+      own — the tailnet is the only thing keeping it private, which is why it binds to
+      moria's tailnet address and not 0.0.0.0
+- [ ] **Add a project** - point it at `~/Git`, start a session, close the tab and reopen it
+      to confirm the session survived
 
 ## Launch Applications
 
