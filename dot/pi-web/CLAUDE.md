@@ -2,24 +2,33 @@
 
 Config for [PI WEB](https://pi-web.dev/) — a web UI that keeps pi coding-agent
 sessions alive in real workspaces, so they can be supervised from a phone or
-tablet instead of a terminal. Stowed to `~/.config/pi-web`.
+tablet instead of a terminal. Deployed to `~/.config/pi-web/config.json`.
 
 Only **moria** runs it (`custom.programs.piWeb.enable` in
 `nixos/modules/darwin/pi-web.nix`). It is the M4 Max with 128 GB and already
 runs the local oMLX server, so sessions and inference stay on one box.
 
-## Why this is stowed and not `home.file`
+## Why a repo symlink and not `home.file`
 
 PI WEB's **Settings** UI writes back to `config.json`. A `home.file` entry is a
-read-only `/nix/store` symlink, so every save in the browser would fail. Stow
-gives a symlink that points into *this repo* — writable, still
-version-controlled, and UI edits show up as ordinary git diffs to commit or
-discard. Same reasoning as `~/.claude/settings.json`; see the root `CLAUDE.md`.
+read-only `/nix/store` symlink, so every save in the browser would fail. A
+symlink pointing into *this repo* is writable, still version-controlled, and
+turns UI edits into ordinary git diffs to commit or discard. Same reasoning as
+`~/.claude/settings.json`; see the root `CLAUDE.md`.
 
-Stow it with `--no-folding`. `~/.config/pi-web` does not otherwise exist, so a
-plain `stow` folds the whole directory into one symlink at the repo and PI WEB
-then writes runtime state inside the working tree — the hazard `dot/justfile`
-already documents for `pi` and `omlx`.
+## Do not stow it
+
+`nixos/modules/darwin/pi-web.nix` creates that symlink directly during
+activation, with the same clobber guard as `link_repo` in
+`modules/programs/tui/claude.nix` — a real file at the target is left alone and
+warned about rather than deleted.
+
+`dot/justfile` therefore lists `pi-web` among the packages the `*-all` recipes
+skip, alongside `claude` and `omlx`. Stowing it as well makes the two fight over
+one path. It would also be the worst package to stow: `~/.config/pi-web` does
+not exist on a fresh host, so stow folds the whole directory into one symlink
+into this repo and PI WEB writes runtime state inside the working tree — the
+hazard `dot/justfile` documents for `pi`.
 
 ## Why it binds to a tailnet address
 
