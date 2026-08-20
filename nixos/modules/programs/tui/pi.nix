@@ -85,6 +85,18 @@ in {
 
         # Read-before-write enforcement, directory containment, work modes
         "https://github.com/galatolofederico/moonpi"
+
+        # Reddit JSON research tools + a matching skill: compact evidence packs
+        # for opinions, bugs, fixes, comparisons. Needs a session cookie —
+        # see reddit-research.json below.
+        # https://github.com/SaintNerona/pi-reddit-research
+        "npm:pi-reddit-research"
+
+        # Token-efficient Brave web search + AI grounding, with optional
+        # full-page markdown clipping. Needs BRAVE_API_KEY — see the
+        # pi-secrets extension in dot/pi/.
+        # https://github.com/w-winter/dot314 (extensions/brave-search)
+        "npm:pi-brave-search"
       ];
       description = "Pi packages to declare in settings.json";
     };
