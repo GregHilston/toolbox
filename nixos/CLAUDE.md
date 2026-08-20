@@ -152,19 +152,14 @@ It is not in activation for the ordinary reasons this file already gives:
 activation is root, has no user login session for `launchctl bootstrap`, and
 should not do network work.
 
-**An API key cannot ride along in the plist either**, for the same reason: the
-next `pi-web install` regenerates it.
-
-And `~/.zshrc.local` — the nix-generated shell file — does not reach a PI WEB
-session. Its agents run `/usr/bin/env zsh -lc <cmd>`, a *login* but
-**non-interactive** shell, so `~/.zshenv` and `~/.zprofile` are sourced and
-`~/.zshrc` is skipped. `~/.zshrc.local` is sourced by `~/.zshrc`, so it never
-runs. (`~/.zshenv` *would* work, but exports the key to every process on the
-machine and is not managed by this repo.)
-
-So keys that pi extensions read from `process.env` go in
-`~/.pi/agent/secrets.json`, loaded by the `pi-secrets` extension from inside pi —
-scoped to pi, and surviving PI WEB upgrades. See `dot/pi/CLAUDE.md`.
+**Nothing in this setup needs a key in that plist**, which is lucky, because the
+next `pi-web install` would regenerate it away. Note also that `~/.zshrc.local`
+— the nix-generated shell file — does not reach a PI WEB session: its agents run
+`/usr/bin/env zsh -lc <cmd>`, a *login* but **non-interactive** shell, so
+`~/.zshenv` and `~/.zprofile` are sourced and `~/.zshrc` is skipped, and
+`~/.zshrc.local` is sourced by `~/.zshrc`. Anything a pi extension must read
+from `process.env` under PI WEB has to come from a file it reads itself, not
+from a shell rc.
 
 ## Common Mistakes to Avoid
 

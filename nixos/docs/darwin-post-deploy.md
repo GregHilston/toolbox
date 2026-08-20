@@ -11,13 +11,6 @@ Run these tasks after initial deployment on a new Mac.
 - [ ] **1Password** - Sign in to sync passwords
 - [ ] **1Password CLI integration** - Open 1Password → Settings → Developer → enable "Integrate with 1Password CLI"
 - [ ] **Generate secrets** - Run `cd ~/Git/toolbox/nixos && just secrets` (on headless hosts like dungeon, connect via VNC first: Finder → Go → Connect to Server)
-- [ ] **Brave Search API key** (hosts with pi) - `just secrets` reads `Infra/Brave Search API/api_key`.
-      Create the key at https://api-dashboard.search.brave.com/app/keys and store it in that
-      1Password item *before* running `just secrets`, or `op inject` fails on the reference.
-      This is what makes pi-brave-search work; without it the extension reports "no key found".
-      > On a host stowed with `--no-folding`, `just secrets` writes into the repo but stow
-      > only links files that existed when it ran — so re-run `just stow pi` afterwards or
-      > `~/.pi/agent/secrets.json` will not exist. Same caveat as `models.json`.
 - [ ] **Reddit session cookie** (hosts with pi) - pi-reddit-research needs one; Reddit has
       required auth on its `.json` endpoints since mid-2026. Deliberately *not* in 1Password —
       it expires every few days, and the file is re-read per request, so refreshing it needs no
@@ -29,7 +22,12 @@ Run these tasks after initial deployment on a new Mac.
       printf 'reddit_session=VALUE; token_v2=VALUE\n' > ~/.config/pi-reddit-research/cookie.txt
       chmod 600 ~/.config/pi-reddit-research/cookie.txt
       ```
-      Verify with `pi -p '/reddit status'`. Redo whenever the tools start failing on auth.
+      Verify with a real tool call, not the slash command — in `-p` the model tends to look
+      for `/reddit` in the repo instead of running it:
+      ```
+      pi -p 'Use the reddit_search tool to search Reddit for "nixos flakes". Report the count.'
+      ```
+      Redo whenever the tools start failing on auth.
 
 ## Application Logins
 - [ ] **Firefox** - Sign in to Firefox Sync (Settings > Sync)

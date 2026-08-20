@@ -1,10 +1,9 @@
 # Generated from models.json.tpl via `just secrets` (contains API key)
 .pi/agent/models.json
-# Generated from secrets.json.tpl via `just secrets` (contains API keys)
-.pi/agent/secrets.json
 # Managed by home-manager (pi.nix)
 .pi/agent/settings.json
 .pi/agent/reddit-research.json
+.pi/agent/searxng.json
 # Installed by `pi install` at runtime — reinstalled by nix activation.
 # These only land inside the repo at all because ~/.pi is a folded stow
 # symlink into it; see the CAVEAT in dot/justfile.
@@ -12,5 +11,7 @@
 .pi/agent/npm/
 # Runtime session data
 .pi/agent/sessions/
+# pi-fff's frecency database — binary runtime state, rewritten constantly
+.pi/agent/fff/
 # Backup files from home-manager
 *.backup

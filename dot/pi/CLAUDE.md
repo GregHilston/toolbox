@@ -6,27 +6,49 @@ Dotfiles for the pi coding agent, stowed to `~/.pi`.
 
 `models.json` contains the oMLX API key and is generated from `models.json.tpl` via `just secrets` (1Password `op inject`). `settings.json` is managed by home-manager (pi.nix) and contains no secrets.
 
-`secrets.json` holds API keys for third-party extensions (currently
-`BRAVE_API_KEY` for pi-brave-search) and is likewise generated from
-`secrets.json.tpl` via `just secrets`.
+Nothing else here holds a secret. The Reddit session cookie for
+pi-reddit-research lives outside 1Password on purpose: `reddit-research.json` is
+declared by pi.nix and points at `~/.config/pi-reddit-research/cookie.txt`, a
+hand-edited file. Reddit expires the cookie every few days, and `cookieFile` is
+re-read before every request — so refreshing it needs no rebuild, no
+`just secrets`, and no restart.
 
-**Why a file and not a shell export.** Extensions read their keys from
-`process.env`, and the obvious home for one is `~/.zshrc.local`. That does not
-reach a PI WEB session: its launchd agents run `/usr/bin/env zsh -lc <cmd>`, a
-*login* but **non-interactive** shell, so `~/.zshenv` and `~/.zprofile` are
-sourced and `~/.zshrc` is skipped — and `~/.zshrc.local` is sourced by
-`~/.zshrc`. `~/.zshenv` would work, but it exports the key to every process on
-the machine and this repo does not manage that file. Putting it in PI WEB's
-launchd plists does not stick either, since `pi-web install` regenerates them.
+## Web search
 
-Reading the file from inside pi is scoped to pi, survives PI WEB upgrades, and
-behaves identically in the TUI and the browser. A real environment variable
-still wins, so `BRAVE_API_KEY=... pi` works for a one-off.
+`extensions/web-search.ts` registers a `web_search` tool against our self-hosted
+SearXNG on dungeon. There is no API key, which is the point — it replaced a paid
+Brave Search key.
 
-The Reddit session cookie is deliberately *not* in here. `reddit-research.json`
-is declared by pi.nix and points at `~/.config/pi-reddit-research/cookie.txt`, a
-hand-edited file — Reddit expires the cookie every few days, and re-running
-`just secrets` on every host that often is worse than editing one file.
+The endpoint is not a literal in the extension. Only nix knows each host's answer
+(localhost on dungeon, the tailnet address everywhere else), so
+`custom.programs.pi.searxngBaseUrl` writes `~/.pi/agent/searxng.json` and the
+extension reads it. `PI_SEARXNG_URL` overrides for a one-off.
+
+### Gotcha: moonpi silently strips third-party tools
+
+moonpi calls `setActiveTools()` with a closed allowlist per mode. Before
+**v0.4**, that allowlist was hardcoded to moonpi's own tools, so *every*
+third-party tool — `web_search`, all the `reddit_*` tools, pi-fff — vanished
+with no error. The model simply reported it had no such tool, which reads like a
+bug in the extension rather than in moonpi.
+
+The fix is `"preserveExternalTools": true` in `moonpi.json`, which unions
+external tools into the allowlist. It needs moonpi ≥ v0.4 — the option parses on
+older versions but is never read, so it looks set and does nothing. If a tool
+disappears again, check moonpi's version first:
+
+```bash
+git -C ~/.pi/agent/git/github.com/galatolofederico/moonpi describe --tags
+pi update --extensions
+```
+
+### Gotcha: SearXNG returning zero results for everything
+
+SearXNG answers HTTP 200 with an empty `results` array when its engines are
+blocked, so a broken instance looks identical to a query with no matches. The
+`unresponsive_engines` field is the tell, and `web_search` surfaces it rather
+than reporting "no results". See `home-lab/searxng/settings.yml` — engines that
+block a self-hosted instance rotate over time.
 
 ## Gotcha: Context Window Errors
 
