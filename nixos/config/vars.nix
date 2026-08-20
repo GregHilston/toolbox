@@ -72,11 +72,15 @@ _: {
         user = "ghilston";
       };
       moria = {
-        # LAN Mac (M4 Max, oMLX server) reached via mDNS/Bonjour — no pinned
-        # static IP, so the .local name lives in the `lan` slot. Swap in an IP
-        # or add a `tailscale` entry later if desired; ssh.nix references
-        # vars.networking.hosts.moria.lan.
+        # LAN Mac (M4 Max, oMLX + PI WEB server) reached via mDNS/Bonjour — no
+        # pinned static IP, so the .local name lives in the `lan` slot.
+        # ssh.nix references vars.networking.hosts.moria.lan.
         lan = "moria.local";
+        # Tailnet address, stable in a way the DHCP lease is not. This is the
+        # address PI WEB binds to and the one home-lab's Caddy on dungeon
+        # reverse-proxies pi.grehg2.xyz to — mDNS does not resolve from inside
+        # a container, and the LAN lease drifts.
+        tailscale = "100.115.155.85";
         user = "ghilston";
       };
       mines = {
