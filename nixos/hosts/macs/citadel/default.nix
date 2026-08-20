@@ -67,6 +67,16 @@
       # Dev
       "google-cloud-sdk"
 
+      # Docker Desktop is citadel-only ON PURPOSE. It used to live in
+      # homebrew-base.nix (every Mac), which put it on dungeon and moria alongside
+      # OrbStack — see modules/darwin/homebrew-server.nix. Two Docker runtimes on one
+      # host fight over /usr/local/bin/docker, and `onActivation.upgrade = true` means
+      # every darwin-rebuild re-installs the loser's symlinks. That is exactly what
+      # happened on dungeon on 2026-08-17: a Docker Desktop cask bump repointed
+      # /usr/local/bin/docker at Docker.app and silently disabled a launchd watchdog
+      # that resolved `docker` through it. citadel has no OrbStack, so it is safe here.
+      "docker-desktop"
+
       # Networking
       "mozilla-vpn"
     ];

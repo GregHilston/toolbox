@@ -72,7 +72,6 @@
 
       # Dev
       "bruno"
-      "docker-desktop"
       "dbeaver-community"
       "db-browser-for-sqlite"
       "ngrok"
