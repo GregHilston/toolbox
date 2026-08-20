@@ -12,6 +12,9 @@
     # Launch Handy at login so the Caps-Lock-hold → F18 dictation hotkey works
     # without opening the app by hand.
     ../../../modules/darwin/handy.nix
+    # PI WEB — supervise pi sessions from a browser. moria only: it is the
+    # 128GB box and already runs oMLX, so sessions and inference stay together.
+    ../../../modules/darwin/pi-web.nix
   ];
 
   networking.hostName = "moria";
@@ -50,4 +53,9 @@
     enable = true;
     cacheSize = "32GB";
   };
+
+  # PI WEB deploys its config here; the service itself is installed once with
+  # `just pi-web-setup`. See modules/darwin/pi-web.nix for why nix does not own
+  # its launchd agents.
+  custom.programs.piWeb.enable = true;
 }

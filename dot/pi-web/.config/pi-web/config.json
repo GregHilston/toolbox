@@ -1,0 +1,10 @@
+{
+  "host": "100.115.155.85",
+  "port": 8504,
+  "pathAccess": {
+    "allowedPaths": ["~/Git"]
+  },
+  "spawnSessions": true,
+  "subsessions": true,
+  "askUser": true
+}

@@ -126,6 +126,41 @@ The shape is always the same, and *why* is the part worth remembering:
   installs the cask; `Unable to find application named ...` shows up there rather than
   failing the rebuild.
 
+## PI WEB is the exception to the launchd rule above
+
+Every other long-running user service here gets a nix-declared
+`launchd.user.agents.*`. **PI WEB does not, on purpose.**
+
+`pi-web install` generates `~/Library/LaunchAgents/com.pi-web.{web,sessiond}.plist`
+from its own plan and **replaces** them every time it runs — which is also the
+documented upgrade path. `pi-web doctor` then re-reads what is installed and
+compares it back: `shellCommand` and `workingDirectory` must match the plan, and
+the two agents must agree with each other. So a nix-written plist is not merely
+redundant. It either loses to the next `pi-web install`, or it fails doctor — and
+doctor is the tool you reach for when PI WEB misbehaves.
+
+So the split is: **nix owns the config, PI WEB owns the services.**
+
+- `modules/darwin/pi-web.nix` symlinks `dot/pi-web/.config/pi-web/config.json`
+  into `~/.config/pi-web` and stops there. A symlink, not a `home.file`, because
+  PI WEB's Settings UI writes back to that file and `/nix/store` is read-only.
+- `just pi-web-setup` runs `npm install -g` + `pi-web install` once per host.
+  It is idempotent (pi-web *replaces* its services) so it doubles as the upgrade
+  path, and it is in `docs/darwin-post-deploy.md` so `just checklist` surfaces it.
+
+It is not in activation for the ordinary reasons this file already gives:
+activation is root, has no user login session for `launchctl bootstrap`, and
+should not do network work.
+
+**Nothing in this setup needs a key in that plist**, which is lucky, because the
+next `pi-web install` would regenerate it away. Note also that `~/.zshrc.local`
+— the nix-generated shell file — does not reach a PI WEB session: its agents run
+`/usr/bin/env zsh -lc <cmd>`, a *login* but **non-interactive** shell, so
+`~/.zshenv` and `~/.zprofile` are sourced and `~/.zshrc` is skipped, and
+`~/.zshrc.local` is sourced by `~/.zshrc`. Anything a pi extension must read
+from `process.env` under PI WEB has to come from a file it reads itself, not
+from a shell rc.
+
 ## Common Mistakes to Avoid
 
 1. **Module imports**: Always use relative paths in module imports (e.g., `../../modules/home` not absolute paths)

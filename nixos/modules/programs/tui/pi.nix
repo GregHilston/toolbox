@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  vars,
   ...
 }: let
   cfg = config.custom.programs.pi;
@@ -67,6 +68,21 @@ in {
       description = "Models to expose under the generated `omlx` provider. Only used when omlxBaseUrl is set.";
     };
 
+    # Where the web-search extension sends queries. SearXNG runs as a container
+    # on dungeon (home-lab), so every other host reaches it over the tailnet.
+    # dungeon itself overrides this to localhost.
+    searxngBaseUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "http://${vars.networking.hosts.dungeon.tailscale}:8214";
+      example = "http://localhost:8214";
+      description = ''
+        Base URL of the SearXNG instance pi's `web_search` tool queries. Written
+        to ~/.pi/agent/searxng.json, which dot/pi/.pi/agent/extensions/web-search.ts
+        reads. Deliberately not a literal in the extension: only nix knows each
+        host's answer, and hardcoding one silently breaks the others.
+      '';
+    };
+
     # Packages installed via `pi install`. Pi resolves these at runtime.
     # Git-based packages are cloned to ~/.pi/agent/git/; npm packages go to
     # the global node_modules. Local extensions (plan-mode) live in
@@ -85,6 +101,12 @@ in {
 
         # Read-before-write enforcement, directory containment, work modes
         "https://github.com/galatolofederico/moonpi"
+
+        # Reddit JSON research tools + a matching skill: compact evidence packs
+        # for opinions, bugs, fixes, comparisons. Needs a session cookie —
+        # see reddit-research.json below.
+        # https://github.com/SaintNerona/pi-reddit-research
+        "npm:pi-reddit-research"
       ];
       description = "Pi packages to declare in settings.json";
     };
@@ -116,6 +138,24 @@ in {
           cfg.models;
         };
       };
+    };
+
+    # pi-reddit-research needs a Reddit session cookie — Reddit has required
+    # auth on its .json endpoints since mid-2026. The cookie is NOT declared
+    # here: it expires every few days, and `cookieFile` is re-read before every
+    # request, so refreshing it means editing one file — no rebuild, no
+    # `just secrets`, no restart. This file holds only the pointer, so a
+    # read-only /nix/store symlink is the right shape for it.
+    home.file.".pi/agent/reddit-research.json" = {
+      text = builtins.toJSON {
+        cookieFile = "${config.home.homeDirectory}/.config/pi-reddit-research/cookie.txt";
+      };
+    };
+
+    # Endpoint for the local web-search extension. No secret in it, so a
+    # read-only /nix/store symlink is the right shape — same as reddit-research.json.
+    home.file.".pi/agent/searxng.json" = {
+      text = builtins.toJSON {inherit (cfg) searxngBaseUrl;};
     };
 
     home.file.".pi/agent/settings.json" = {

@@ -158,6 +158,47 @@ secrets:
   op inject -f -i secrets/.env.tpl -o secrets/.env
   echo "Secrets generated. Run 'just dr <host>' to deploy."
 
+# Install and start PI WEB on this host (one time, moria only)
+#
+# Not an activation script on purpose. This needs the network and a real user
+# login session for `launchctl bootstrap`, neither of which activation has — and
+# `pi-web install` writes and validates its own launchd plists, so nix declaring
+# them would break `pi-web doctor`/`status`/`restart`. See
+# modules/darwin/pi-web.nix.
+#
+# Re-running is safe: pi-web replaces its existing services rather than
+# duplicating them, so this doubles as the upgrade path.
+# Usage: `just pi-web-setup`
+pi-web-setup:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  # npm 11 does NOT run install scripts by default (dangerously-allow-all-scripts
+  # is false), and node-pty needs one to build its native module. --allow-scripts
+  # permits that single package without opening the gate for the whole tree, so
+  # the flag is load-bearing — do not drop it. It is rejected for project-scoped
+  # installs and accepted for -g, which is what this is.
+  npm install -g @jmfederico/pi-web --allow-scripts=node-pty
+
+  # node-pty ships its macOS spawn-helper without the executable bit, so PI WEB
+  # installs fine, serves fine, and then every terminal fails to open. `pi-web
+  # doctor` catches it and exits non-zero. npm recreates the file on each
+  # upgrade, so this has to run here rather than be a one-time manual chmod.
+  #   https://github.com/microsoft/node-pty/issues/850
+  #   https://github.com/jmfederico/pi-web/issues/4
+  # Guarded on darwin: the bug and the prebuilds path are macOS-only.
+  if [ "$(uname -s)" = "Darwin" ]; then
+    for helper in "$(npm root -g)"/@jmfederico/pi-web/node_modules/node-pty/prebuilds/darwin-*/spawn-helper; do
+      if [ -f "$helper" ] && [ ! -x "$helper" ]; then
+        chmod +x "$helper"
+        echo "✓ chmod +x $helper"
+      fi
+    done
+  fi
+
+  pi-web install
+  pi-web doctor
+  pi-web status
+
 # Show post-deploy checklist for Darwin/macOS setup
 # Usage: `just checklist`
 checklist:
