@@ -184,6 +184,25 @@ pi-web-setup:
   # the flag is load-bearing — do not drop it. It is rejected for project-scoped
   # installs and accepted for -g, which is what this is.
   npm install -g @jmfederico/pi-web --allow-scripts=node-pty
+
+  # node-pty ships its macOS spawn-helper without the executable bit, so PI WEB
+  # installs fine, serves fine, and then every terminal fails to open. `pi-web
+  # doctor` catches it and exits non-zero. npm recreates the file on each
+  # upgrade, so this has to run here rather than be a one-time manual chmod.
+  #   https://github.com/microsoft/node-pty/issues/850
+  #   https://github.com/jmfederico/pi-web/issues/4
+  # Guarded on darwin: the bug and the prebuilds path are macOS-only.
+  # `if`, not an `&&` chain — under `set -e` an already-executable file would
+  # make the chain return non-zero and abort the recipe on every re-run.
+  if [ "$(uname -s)" = "Darwin" ]; then
+    for helper in "$(npm root -g)"/@jmfederico/pi-web/node_modules/node-pty/prebuilds/darwin-*/spawn-helper; do
+      if [ -f "$helper" ] && [ ! -x "$helper" ]; then
+        chmod +x "$helper"
+        echo "✓ chmod +x $helper"
+      fi
+    done
+  fi
+
   pi-web install
   pi-web doctor
   pi-web status
