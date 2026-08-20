@@ -15,6 +15,9 @@ Run these tasks after initial deployment on a new Mac.
       Create the key at https://api-dashboard.search.brave.com/app/keys and store it in that
       1Password item *before* running `just secrets`, or `op inject` fails on the reference.
       This is what makes pi-brave-search work; without it the extension reports "no key found".
+      > On a host stowed with `--no-folding`, `just secrets` writes into the repo but stow
+      > only links files that existed when it ran — so re-run `just stow pi` afterwards or
+      > `~/.pi/agent/secrets.json` will not exist. Same caveat as `models.json`.
 - [ ] **Reddit session cookie** (hosts with pi) - pi-reddit-research needs one; Reddit has
       required auth on its `.json` endpoints since mid-2026. Deliberately *not* in 1Password —
       it expires every few days, and the file is re-read per request, so refreshing it needs no
@@ -98,13 +101,18 @@ per-host caveats: `dot/karabiner/README.md`.
 
 `custom.programs.piWeb.enable` deploys the config, but the service is installed by hand.
 It needs the network and a real login session for `launchctl bootstrap`, neither of which
-nix activation has — and `pi-web install` writes and validates its own launchd plists, so
-nix declaring them would break `pi-web doctor`. See `modules/darwin/pi-web.nix`.
+nix activation has — and `pi-web install` regenerates its own launchd plists every run, so
+anything nix declared there would be replaced or fail `pi-web doctor`.
+See `modules/darwin/pi-web.nix`.
 
 - [ ] **Install** - `cd ~/Git/toolbox/nixos && just pi-web-setup`. Re-running is safe and is
       also the upgrade path: pi-web replaces its services rather than duplicating them.
 - [ ] **Verify** - `pi-web doctor` reports both `com.pi-web.web` and `com.pi-web.sessiond`
       healthy, and `curl -sI http://$(tailscale ip -4):8504/` returns 200
+      > Straight after a cold boot this can look broken: the services bind to moria's
+      > tailnet address, which does not exist until tailscaled has come up. The agents are
+      > `RunAtLoad` with `KeepAlive{SuccessfulExit:false}`, so they retry on their own —
+      > give it a moment before believing `doctor`.
 - [ ] **Reach it remotely** - https://pi.grehg2.xyz over Tailscale, routed by Caddy on
       dungeon (see `~/Git/home-lab/caddy/Caddyfile`). PI WEB has **no authentication** of its
       own — the tailnet is the only thing keeping it private, which is why it binds to

@@ -131,12 +131,13 @@ The shape is always the same, and *why* is the part worth remembering:
 Every other long-running user service here gets a nix-declared
 `launchd.user.agents.*`. **PI WEB does not, on purpose.**
 
-`pi-web install` writes `~/Library/LaunchAgents/com.pi-web.{web,sessiond}.plist`
-itself, and `src/nativeServices/installedServiceDefinitions.ts` re-reads them on
-every `status`, `doctor`, and `restart`, refusing to continue unless the loaded
-agent reports the plist PI WEB considers canonical. A nix-written plist would
-therefore not be redundant — it would break PI WEB's own lifecycle commands, and
-the failure surfaces as a confusing doctor error rather than an activation error.
+`pi-web install` generates `~/Library/LaunchAgents/com.pi-web.{web,sessiond}.plist`
+from its own plan and **replaces** them every time it runs — which is also the
+documented upgrade path. `pi-web doctor` then re-reads what is installed and
+compares it back: `shellCommand` and `workingDirectory` must match the plan, and
+the two agents must agree with each other. So a nix-written plist is not merely
+redundant. It either loses to the next `pi-web install`, or it fails doctor — and
+doctor is the tool you reach for when PI WEB misbehaves.
 
 So the split is: **nix owns the config, PI WEB owns the services.**
 
@@ -151,12 +152,19 @@ It is not in activation for the ordinary reasons this file already gives:
 activation is root, has no user login session for `launchctl bootstrap`, and
 should not do network work.
 
-**Its plist environment is also closed.** `pi-web doctor` validates the daemon's
-environment against the canonical definition, so an API key cannot be injected
-there — and because a launchd agent never sources `~/.zshrc`, a shell export does
-not reach a PI WEB session either. Keys that pi extensions read from
-`process.env` go in `~/.pi/agent/secrets.json` and are loaded by the `pi-secrets`
-extension from inside pi; see `dot/pi/CLAUDE.md`.
+**An API key cannot ride along in the plist either**, for the same reason: the
+next `pi-web install` regenerates it.
+
+And `~/.zshrc.local` — the nix-generated shell file — does not reach a PI WEB
+session. Its agents run `/usr/bin/env zsh -lc <cmd>`, a *login* but
+**non-interactive** shell, so `~/.zshenv` and `~/.zprofile` are sourced and
+`~/.zshrc` is skipped. `~/.zshrc.local` is sourced by `~/.zshrc`, so it never
+runs. (`~/.zshenv` *would* work, but exports the key to every process on the
+machine and is not managed by this repo.)
+
+So keys that pi extensions read from `process.env` go in
+`~/.pi/agent/secrets.json`, loaded by the `pi-secrets` extension from inside pi —
+scoped to pi, and surviving PI WEB upgrades. See `dot/pi/CLAUDE.md`.
 
 ## Common Mistakes to Avoid
 
