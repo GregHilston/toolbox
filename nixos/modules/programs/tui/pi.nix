@@ -130,6 +130,18 @@ in {
       };
     };
 
+    # pi-reddit-research needs a Reddit session cookie — Reddit has required
+    # auth on its .json endpoints since mid-2026. The cookie is NOT declared
+    # here: it expires every few days, and `cookieFile` is re-read before every
+    # request, so refreshing it means editing one file — no rebuild, no
+    # `just secrets`, no restart. This file holds only the pointer, so a
+    # read-only /nix/store symlink is the right shape for it.
+    home.file.".pi/agent/reddit-research.json" = {
+      text = builtins.toJSON {
+        cookieFile = "${config.home.homeDirectory}/.config/pi-reddit-research/cookie.txt";
+      };
+    };
+
     home.file.".pi/agent/settings.json" = {
       text = builtins.toJSON {
         defaultProvider = "omlx";
