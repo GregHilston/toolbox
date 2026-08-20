@@ -29,10 +29,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import urllib.request
-from urllib.error import URLError
+from pathlib import Path
+from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
 
 from _thread_converters import strip_html_tags
@@ -46,6 +48,49 @@ REDDIT_USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 )
+
+
+def load_reddit_cookie() -> str | None:
+    """Return a Reddit session cookie, or None if none is configured.
+
+    Reddit has required authentication on its .json endpoints since mid-2026,
+    so this script returns HTTP 403 for every thread without one.
+
+    The lookup order deliberately matches pi-reddit-research's, and the default
+    path is the same file, so both tools share one cookie and the daily refresh
+    in bin/reddit-cookie-sync.sh keeps both working.
+    """
+    env_cookie = os.environ.get("PI_REDDIT_COOKIE")
+    if env_cookie:
+        return env_cookie
+
+    env_file = os.environ.get("PI_REDDIT_COOKIE_FILE")
+    candidates = [Path(env_file)] if env_file else []
+
+    # pi's own config may redirect to a different file.
+    config_path = Path(
+        os.environ.get("PI_REDDIT_CONFIG_PATH", Path.home() / ".pi/agent/reddit-research.json")
+    )
+    try:
+        config = json.loads(config_path.read_text())
+    except (OSError, ValueError):
+        config = {}
+    if isinstance(config, dict):
+        if isinstance(config.get("cookie"), str) and config["cookie"]:
+            return config["cookie"]
+        if isinstance(config.get("cookieFile"), str):
+            candidates.append(Path(config["cookieFile"]).expanduser())
+
+    candidates.append(Path.home() / ".config/pi-reddit-research/cookie.txt")
+
+    for path in candidates:
+        try:
+            value = path.read_text().strip()
+        except OSError:
+            continue
+        if value:
+            return value
+    return None
 
 
 def fetch_thread(post_id: str, subreddit: str) -> tuple[dict, dict]:
@@ -67,9 +112,33 @@ def fetch_thread(post_id: str, subreddit: str) -> tuple[dict, dict]:
     req = urllib.request.Request(url)
     req.add_header("User-Agent", REDDIT_USER_AGENT)
 
+    cookie = load_reddit_cookie()
+    if cookie:
+        req.add_header("Cookie", cookie)
+
     try:
         with urllib.request.urlopen(req, timeout=10) as response:
             data = json.loads(response.read())
+    except HTTPError as e:
+        # 403 here is almost always auth, not a genuinely private thread, and the
+        # bare "HTTP Error 403: Blocked" gives no clue what to do about it.
+        if e.code in (401, 403):
+            detail = (
+                "no Reddit cookie found"
+                if not cookie
+                else "the configured Reddit cookie was rejected (it has probably expired)"
+            )
+            print(
+                f"Error fetching {url}: HTTP {e.code} — {detail}.\n"
+                "Reddit has required authentication on .json endpoints since mid-2026.\n"
+                "Fix: log in to reddit.com in Firefox, then run "
+                "~/Git/toolbox/bin/reddit-cookie-sync.sh\n"
+                "(or write the cookie by hand to ~/.config/pi-reddit-research/cookie.txt).",
+                file=sys.stderr,
+            )
+        else:
+            print(f"Error fetching {url}: {e}", file=sys.stderr)
+        raise
     except URLError as e:
         print(f"Error fetching {url}: {e}", file=sys.stderr)
         raise
