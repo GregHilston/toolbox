@@ -224,24 +224,27 @@ in {
         workingVibe = "off";
 
         powerline = {
+          # The default preset's separators and segment icons are Nerd Font
+          # glyphs. Every host has one: nerd-fonts.jetbrains-mono via
+          # modules/darwin/home.nix (all three Macs) and modules/home/default.nix
+          # plus stylix (NixOS). Verified by rendering the footer, not assumed.
           preset = "default";
           welcome = false; # no startup splash over the session
-
-          # ascii, not powerline: the separator glyphs need a Nerd Font, and
-          # only the NixOS GUI hosts provably have one. Same call as the
-          # ccstatusline layout in dot/ccstatusline/.
-          separator = "ascii";
 
           # Mirrors the ccstatusline layout: context pressure and token counts,
           # no git and no cost. Git branch is already in the shell prompt, and
           # local inference is free so `cost` is permanently $0.00.
+          #
+          # `context_pct` already renders "10k/262k (4.0%)" — used, total and
+          # percentage in one segment — so `context_total` alongside it would
+          # only repeat the 262k.
           #
           # All three groups are listed explicitly: a present array replaces
           # that preset group exactly, an omitted one keeps the preset's.
           # `secondary = []` is what clears the preset's second row.
           layout = {
             left = ["model" "thinking"];
-            right = ["context_pct" "context_total" "token_in" "token_out"];
+            right = ["context_pct" "token_in" "token_out"];
             secondary = [];
           };
         };
