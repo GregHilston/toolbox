@@ -137,8 +137,13 @@ it in the appropriate `.tpl` file.
 
 ### Prerequisites
 
-`op` needs the 1Password desktop integration enabled per machine. On headless dungeon
-that is GUI-gated — see `nixos/CLAUDE.md` for the service-account-token route.
+`op` needs the 1Password desktop integration enabled per machine (Settings → Developer
+→ "Integrate with 1Password CLI").
+
+On **headless dungeon** that integration is GUI-gated, so `op inject` fails with
+`authorization timeout`. Put a 1Password **service account token** (Business/Teams
+plan) at `~/.config/op/service-account-token`, mode `600` — `just secrets` picks it up
+and needs no GUI. Without one, VNC in and unlock 1Password first.
 
 ## Thread Fetchers — Convert HN & Reddit to Markdown/JSON
 

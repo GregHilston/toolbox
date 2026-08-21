@@ -10,6 +10,13 @@ oMLX runs as a launchd user agent (`org.nixos.omlx`):
 launchctl kickstart -k gui/$(id -u)/org.nixos.omlx
 ```
 
+**After `brew upgrade`, that alone is not enough.** The old Python process keeps port
+8000, so the new instance crash-loops. Kill the holder first:
+
+```bash
+kill $(lsof -ti :8000) 2>/dev/null; launchctl kickstart -k "gui/$(id -u)/org.nixos.omlx"
+```
+
 ## Per-Model Settings
 
 oMLX supports per-model overrides for sampling, thinking, KV cache, and more via `model_settings.json` (lives alongside `settings.json` in `~/.omlx/`). These override the global `sampling.*` defaults in `settings.json` for a specific model only.
