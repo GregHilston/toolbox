@@ -1,62 +1,23 @@
 # Toolbox
 
-<!-- The Pixel 8 (Termux) paths used to be duplicated here from the global
-     ~/.claude/CLAUDE.md (dot/claude/.claude/CLAUDE.md) — same paths and port,
-     differing only in one label. Both files load in every session in this
-     repo, so the copy was duplicated context. The global one is
-     authoritative. -->
-
 ## Repository Layout
 
-```
-claude-commands/        # Global slash commands  (~/.claude/commands/)
-claude-skills/          # Global agent skills    (~/.claude/skills/)
-claude-code/            # Dockerfile + docs for Claude Code in a container
-dot/                    # Dotfiles managed with GNU Stow
-nixos/                  # NixOS and nix-darwin host configurations
-bin/                    # Helper scripts (all subdirs on $PATH) — see bin/CLAUDE.md
-windows/                # Windows provisioning (autounattend.xml, scoop/winget lists)
-```
+`ls` answers this. `bin/**` is recursively on `$PATH`, so helpers work from any repo.
 
 ## Claude Commands and Skills
 
 ### Adding a new slash command
 
-Create a markdown file in `claude-commands/`:
+Drop a `.md` in `claude-commands/`; it becomes `/<name>` everywhere.
 
-```
-claude-commands/my-command.md
-```
-
-It becomes available as `/my-command` in any Claude Code session.
-
-> **Note:** the whole `claude-commands/` directory is symlinked into
-> `~/.claude/commands/`, so **every** `.md` file there becomes a slash command
-> (a `README.md` would register as `/README`). Keep docs elsewhere.
+> **Trap:** the whole directory is symlinked into `~/.claude/commands/`, so **every**
+> `.md` there becomes a command — a `README.md` would register as `/README`. Keep docs
+> elsewhere.
 
 ### Adding a new skill
 
-Create a subdirectory with a `SKILL.md` file in `claude-skills/`:
-
-```
-claude-skills/my-skill/SKILL.md
-```
-
-The `SKILL.md` must include YAML frontmatter:
-
-```markdown
----
-name: my-skill
-description: |
-  What this skill does and when Claude should use it.
-model: inherit
-tools: ["Bash"]
----
-
-Agent instructions here...
-```
-
-It becomes available as `/my-skill` in any Claude Code session.
+A `claude-skills/<name>/SKILL.md` with `name`/`description` frontmatter becomes
+`/<name>`. Copy an existing skill for the shape.
 
 ### How they reach each host
 
@@ -84,46 +45,20 @@ into `dot/claude/.claude/`, delete the original, then re-run home-manager.
 **Non-Nix hosts**: run `just setup-claude` once after cloning. Since everything is a
 symlink into the repo, pulling new commits picks up changes without re-running setup.
 
-### Per-repo CLAUDE.md (reduce context re-discovery)
-
-The repo-managed `~/.claude/CLAUDE.md` is **global** — it loads in every session in every
-repo, so keep it lean and cross-cutting. Push project-specifics into a `./CLAUDE.md` in
-each repo. For repos that don't have one yet (e.g. `~/Git/ccs`, `~/Git/home-lab`), run
-`/init` once to generate a tight map of build/test/run commands + directory layout, so
-Claude stops re-deriving the structure every session.
-
 ## Voice Input — Hold Caps Lock to Dictate
 
-Caps Lock stops toggling caps: a quick tap sends `Escape`, holding it sends `F18` for the
-duration. [Handy](https://handy.computer/) binds that `F18` as its push-to-talk key and
-transcribes locally (Whisper / Parakeet — audio never leaves the machine).
+Caps Lock: a tap sends Escape, a hold sends F18, which [Handy](https://handy.computer/)
+transcribes locally. Karabiner-Elements does this on macOS (`dot/karabiner/`), `services.keyd`
+on NixOS GUI hosts.
 
-Two implementations, one hotkey. macOS: Karabiner-Elements — see `dot/karabiner/`.
-NixOS GUI hosts: `services.keyd` — see `nixos/modules/common/keyd.nix`.
-
-Handy has to be *running* for the hotkey to do anything, so it's started declaratively
-rather than by hand: a launchd agent on macOS (`nixos/modules/darwin/handy.nix`, imported
-by citadel and moria — headless dungeon skips it) and a home-manager systemd user service
-bound to `graphical-session.target` on NixOS GUI hosts (`nixos/modules/home/default.nix`).
-Handy's own "Launch at login" toggle stays off; it writes app state nix doesn't own. Ice
-(below) is started the same way — the shared rationale for the launchd `open -a` shape lives
-in `nixos/CLAUDE.md` → "Launching GUI apps at login".
-
-On macOS this only takes effect once Karabiner's driver extension is approved on that
-host — until then Caps Lock still toggles caps. That grant, Handy's mic/accessibility
-grants, and Handy's own hotkey setting are GUI-gated and can't be declared; they're in
-`nixos/docs/darwin-post-deploy.md` (`just checklist`).
+Launching, permissions, and why the app's own "launch at login" stays off are all in
+`nixos/CLAUDE.md` → "Launching GUI apps at login", which owns this.
 
 ## Menu Bar — Ice
 
-[Ice](https://github.com/jordanbaird/Ice) manages the macOS menu bar (hides the overflow
-icons the notch would otherwise swallow). Cask `jordanbaird-ice` in
-`nixos/modules/darwin/homebrew-base.nix`; launched at login by
-`nixos/modules/darwin/ice.nix`, imported from `modules/darwin/common.nix` so all three Macs
-get it. Same pattern as Handy above (`nixos/CLAUDE.md` → "Launching GUI apps at login"): a
-launchd `open -a` agent, `RunAtLoad` only, and Ice's own "Launch at login" toggle stays
-**off** so the two don't double-register. Ice's Accessibility + Screen Recording grants are
-GUI-gated — `nixos/docs/darwin-post-deploy.md`.
+[Ice](https://github.com/jordanbaird/Ice) manages the macOS menu bar. Cask in
+`modules/darwin/homebrew-base.nix`, launched by `modules/darwin/ice.nix` — same
+launchd pattern as Handy, documented in `nixos/CLAUDE.md`.
 
 ## Dotfiles
 
@@ -152,53 +87,19 @@ just stow-all           # symlink all packages
   but **not** in nix-darwin's `home-manager.users.<name>` block (`modules/darwin/home.nix`).
   For Darwin, use declarative options like `xdg.configFile` instead of activation scripts.
 
-## Plex
-
-### .plexmatch files
-
-Place a `.plexmatch` file in a show's root folder to pin it to a specific database ID. This prevents Plex from merging shows that share a name (e.g. a reboot and the original series).
-
-```
-tvdbid: 465690
-```
-
-Use `tvdbid` or `tmdbid`. Rescan the library after adding the file.
-
 ## Searxngr — Privacy-Focused Search
 
 CLI for dungeon's self-hosted SearXNG instance. Config managed via stow (`dot/searxngr-config/`), binary installed via `uv tool install`. See `/searxngr-search` skill for Claude Code integration.
 
 ## oMLX
 
-Local LLM inference server (Apple Silicon). Config in `dot/omlx/`. Managed as a launchd
-service (`org.nixos.omlx`) on port 8000.
+Local LLM inference (Apple Silicon), launchd service `org.nixos.omlx` on port 8000.
+Per-host settings are generated by `nixos/modules/darwin/omlx.nix`, not stowed.
 
-Per-host differences are generated by nix, not stowed: `nixos/modules/darwin/omlx.nix`
-merges the base `settings.json` with a per-host overlay. It replaced the old
-`dot/omlx-<host>/` stow packages, which no longer exist.
-
-Note the merge base `dot/omlx/.omlx/settings.json` is **generated, not committed** — it
-holds secrets, so only `settings.json.tpl` is in git. Run `just secrets` in `nixos/` before
-the first activation on a new host, or the merge has nothing to read.
-
-**Full documentation**: See `dot/omlx/CLAUDE.md` for per-model settings, model variants, and configuration.
-
-### Troubleshooting
-
-After `brew upgrade`, the old Python process may hold port 8000, causing the new instance
-to crash-loop. Fix with:
-
-```bash
-kill $(lsof -ti :8000) 2>/dev/null; launchctl kickstart -k "gui/$(id -u)/org.nixos.omlx"
-```
-
-### Adding Model Variants
-
-See `dot/omlx/CLAUDE.md` → "Creating Model Variants" for step-by-step instructions on adding
-new model profiles (e.g., extended-context variants). Requires changes to:
-1. `nixos/modules/darwin/omlx.nix` (symlink creation)
-2. `dot/omlx/.omlx/model_settings.json` (variant configuration)
-3. `~/.pi/agent/models.json` (pi model registry)
+`dot/omlx/CLAUDE.md` owns per-model settings, model variants, and restart
+troubleshooting. Note its merge base `dot/omlx/.omlx/settings.json` is **generated,
+not committed** — run `just secrets` in `nixos/` before the first activation on a new
+host, or the merge has nothing to read.
 
 ## PI WEB — supervise pi sessions from a browser
 
@@ -217,22 +118,9 @@ private.
 
 ## Claude Code in Docker
 
-Run Claude Code in an isolated Docker container that shares your host auth and session history.
-
-**Usage** (the `claude-docker` function in `dot/zsh/.zshrc` builds the image on first run):
-```bash
-# Start or resume session
-claude-docker
-
-# Resume a specific session
-claude-docker --resume SESSION_ID
-```
-
-The container **bind-mounts** your real `~/.claude` and mounts `~/Git` at its
-actual host path, so credentials, sessions, and project identities are shared
-directly between host and container (no named volume). See
-`claude-code/CLAUDE.md` for the full flag-by-flag explanation and the
-[devcontainer reference](https://github.com/anthropics/claude-code/tree/main/.devcontainer).
+`claude-docker` (a zsh function in `dot/zsh/.zshrc`) runs Claude Code in a container
+that bind-mounts your real `~/.claude` and `~/Git`, so credentials and sessions are
+shared. See `claude-code/CLAUDE.md`.
 
 ## Secret Management
 
@@ -249,52 +137,25 @@ it in the appropriate `.tpl` file.
 
 ### Prerequisites
 
-1. **1Password CLI integration**: Open 1Password app → Settings → Developer → enable
-   "Integrate with 1Password CLI". This must be done manually on each machine.
-2. **Headless hosts (dungeon)**: the desktop-app integration is GUI-gated, so `op inject`
-   there fails with `authorization timeout`. Preferred fix is a **1Password service
-   account token** (needs a Business/Teams plan) at `~/.config/op/service-account-token`,
-   mode `600` — `just secrets` picks it up automatically and needs no GUI. Without a
-   token, connect via VNC (Finder → Go → Connect to Server) and unlock 1Password first.
+`op` needs the 1Password desktop integration enabled per machine. On headless dungeon
+that is GUI-gated — see `nixos/CLAUDE.md` for the service-account-token route.
 
 ## Thread Fetchers — Convert HN & Reddit to Markdown/JSON
 
-`fetch-thread.py` prints a Hacker News or Reddit thread as markdown, or `--format json`.
-Zero external dependencies.
+`fetch-thread.py <url>` prints a Hacker News or Reddit thread as markdown
+(`--format json` for JSON); `-h` has the full reference.
 
-**Reddit needs auth.** Reddit has required it on `.json` endpoints since mid-2026, so
-Reddit threads 403 without a session cookie. The tool reads the same cookie as pi's
-reddit tools (`~/.config/pi-reddit-research/cookie.txt`), which
-`bin/reddit-cookie-sync.sh` refreshes daily from Firefox. If it 403s, the fix is to log
-in to reddit.com **in Firefox** and re-run that script — see `dot/pi/CLAUDE.md`.
-HN needs nothing.
-
-Give it a **URL** and the platform is auto-detected. A **bare ID** can't be — pass the
-platform as the next argument (and the subreddit, for Reddit):
-
-```bash
-fetch-thread.py https://news.ycombinator.com/item?id=48072225
-fetch-thread.py 48072225 hn
-fetch-thread.py abc123 reddit python
-```
-
-`fetch-thread.py -h` has the full reference. (With no arguments it only prints the
-two-line argparse usage stanza to stderr, not the examples.)
+**Reddit needs auth** — it has required it on `.json` endpoints since mid-2026. The
+tool reads the same cookie as pi's reddit tools; a 403 means logging in to reddit.com
+**in Firefox** and running `bin/reddit-cookie-sync.sh`. See `dot/pi/CLAUDE.md`.
 
 ## Local Diff & PR Viewers — diff2html & difit
 
-Browser-based git diff viewers, both Mac-only (they need a node runtime):
+`dhtml`/`dhtmls`/`dhtmlside` (diff2html), `difit` (PR-like UI), `gpr` (current branch
+as a PR diff). Mac-only; flags are in the root `README.md`.
 
-- `dhtml` / `dhtmls` / `dhtmlside` — diff2html, quick working-tree views.
-- `difit` — a GitHub-PR-like UI. Version-pinned; `DIFIT_VERSION` in `bin/difit.sh` is the
-  single source of truth, so bump it there.
-- `gpr` — the current branch as a PR diff against an auto-detected base.
-
-Note our `difit.sh` defaults a missing target to `.` (all uncommitted changes); upstream
-difit would show the last commit instead.
-
-See the root `README.md` for the full flag reference, and `bin/difit.sh` / `bin/git-pr.sh`
-for the wrappers themselves.
+One divergence worth knowing: our `difit.sh` defaults a missing target to `.` (all
+uncommitted changes) where upstream would show the last commit.
 
 ## NixOS / nix-darwin
 
