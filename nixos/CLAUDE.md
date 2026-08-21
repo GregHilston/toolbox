@@ -10,14 +10,11 @@ Always verify your own changes before asking the user to test. Detect the curren
 These commands do NOT require `sudo` and catch most evaluation and dependency errors. Run this after every config change so the user doesn't have to be your test runner.
 
 ## Available Hosts
-- **foundation** (x86_64 WSL VM)
-- **isengard** (x86_64 ThinkPad T420)
-- **mines** (aarch64 VM on M4 Mac via VMware Fusion)
-- **home-lab** (x86_64 VM)
-- **rohan** (x86_64 ThinkPad X201 Tablet — writerdeck, console-only)
-- **dungeon** (aarch64-darwin MacBook Pro 16" M3 Pro — nix-darwin, headless Docker/oMLX-client server)
-- **moria** (aarch64-darwin M4 Max — nix-darwin, runs the oMLX inference server)
-- **citadel** (aarch64-darwin MacBook Pro 14" M5 Pro — nix-darwin, Mozilla work laptop)
+
+`just list-hosts`. Three are Darwin (**moria** M4 Max/oMLX server, **dungeon** M3 Pro
+headless Docker server, **citadel** M5 Pro work laptop) and take `just dt`/`dr`;
+the rest are NixOS and take `just ft`/`fr`. **mines** is a NixOS guest on moria — not
+a Darwin host. **rohan** is a console-only writerdeck that skips the workstation layer.
 
 ## Home-manager profiles: three layers, pick the lowest one that fits
 
@@ -181,36 +178,12 @@ from a shell rc.
 
 ## Flake lock bumps — evaluation is not a build
 
-Every check this repo runs on a lock bump is an **evaluation**: `just validate`, the
-`validate.yml` CI job, `nix build --dry-run`, and the `Self-Testing Changes` commands
-at the top of this file all stop at instantiating a derivation. That is the right
-default — it is fast, and it works for every host from any platform. But it answers
-only "does this configuration make sense?", never "does it build?".
-
-The gap is not theoretical. On **2026-08-16**, a fresh `nix flake update` moved nixpkgs
-`2026-07-05 → 2026-08-13` and passed everything:
-
-```
-darwinConfigurations.{moria,dungeon,citadel}.system   --dry-run clean
-nixosConfigurations.{foundation,home-lab,isengard,mines,rohan}   evaluate to a drvPath
-```
-
-The real build then failed:
-
-```
-error: hash mismatch in fixed-output derivation '...-source.drv':
-         specified: sha256-gM53wlQSV/X7rDND6P7/fKpX0M28RDnWkGGOHQ+SK+g=
-            got:    sha256-FysyKC01XBnRiur5RR9fcsTxQqE8x0JJHSoe3q6JtKc=
-```
-
-Upstream had re-rolled the `googlefonts/nanoemoji` v0.16.0 tarball, so
-`python3Packages.nanoemoji` → `gftools` → **`jetbrains-mono`** → `home-manager-fonts`
-could not build. nixpkgs fixed it in `1e544d5f3`, but `nixos-unstable` was pinned
-exactly one commit *behind* that fix, and the aarch64-darwin output was not in the
-binary cache — so the failure only appears when something actually builds it.
-
-A fixed-output hash is by definition invisible to evaluation: the hash is a literal in
-the expression, and whether the fetched bytes match it is a build-time fact.
+Every check here — `just validate`, CI, `nix build --dry-run`, the Self-Testing
+commands above — stops at instantiating a derivation. That answers "does this
+configuration make sense?", never "does it build?". A fixed-output hash is invisible
+to evaluation by definition: whether the fetched bytes match is a build-time fact.
+This is not theoretical — a 2026-08-16 nixpkgs bump passed every dry-run and then
+failed on a re-rolled tarball hash in a `jetbrains-mono` dependency.
 
 **So: before deploying a lock bump, build one host for real.**
 
@@ -313,37 +286,18 @@ then deploy. Avoid fanning out many Claude Code subagents inside this RAM-limite
 
 ## Home-manager activation fails on a long-dormant host (stale `.backup` pileup)
 
-`backupFileExtension = "backup"` (`flake-modules/hosts.nix`) makes home-manager move any
-non-managed file it wants to own to `<file>.backup`. On a host that hasn't rebuilt in
-months, those `.backup` files accumulate; the next activation's `checkLinkTargets` then
-aborts with *"Existing file `X.backup` would be clobbered by backing up `X`"* — because it
-refuses to overwrite an existing backup. Symptom: `just fr <host>` builds fine but
-`home-manager-<user>.service` fails (`systemctl status` shows the clobber message; the
-system layer still activates, so systemPackages like `ngrok` land but home packages don't).
+`backupFileExtension = "backup"` makes home-manager move any file it wants to own to
+`<file>.backup`. Stale ones used to collide and abort activation with *"Existing file
+X.backup would be clobbered"*.
 
-Fix: clear the stale backups, then re-run the switch. Non-destructively —
+**Fixed** in `flake-modules/hosts.nix`: `overwriteBackup = true` clobbers a stale
+backup with a warning instead of aborting, on every host. If a pileup still appears on
+a long-dormant host, archive it non-destructively:
 
-```
+```bash
 mkdir -p ~/.hm-stale-backups-$(date +%Y%m%d)
-find ~ -maxdepth 3 -name '*.backup' -exec mv {} ~/.hm-stale-backups-.../ \;  # preserve tree
+find ~ -maxdepth 3 -name '*.backup' -exec mv {} ~/.hm-stale-backups-.../ \;
 ```
-
-These `.backup` files are home-manager's own old backups of stylix/gtk/theme configs
-(regenerable) — safe to archive. Bumping `backupFileExtension` also works but changes all
-hosts and leaves clutter, so clearing the dormant host's cruft is the better layer.
-
-**Recurring variant on GUI hosts (`~/.gtkrc-2.0.backup`):** even a freshly-rebuilt desktop
-host hit this every activation, because running GTK/Plasma rewrites `~/.gtkrc-2.0` as a
-real file at runtime, replacing home-manager's symlink. The next activation wanted to back
-it up, collided with the previous `.gtkrc-2.0.backup`, and aborted.
-
-**Fixed (committed in `flake-modules/hosts.nix`):** `home-manager.overwriteBackup = true`
-alongside `backupFileExtension = "backup"`. This sets `HOME_MANAGER_BACKUP_OVERWRITE=1`, so
-`checkLinkTargets` clobbers a stale `<file>.backup` (with a warning) instead of aborting —
-backups still get made, they just stop colliding with themselves. Chosen over the
-`backupCommand` route because it's one line, keeps the existing backup semantics, and needs
-no external tool. It's in the shared `homeManagerModule`, so it applies to every NixOS and
-Darwin host.
 
 ## Deploying to NixOS from the toolbox repo — gotchas
 
@@ -354,6 +308,15 @@ Darwin host.
   *bare shell prompt* (no powerlevel10k) because `~/.zshrc` was never linked. Always call
   such tools by absolute nix path (`${pkgs.stow}/bin/stow`), never rely on PATH in an
   activation script.
+- **The same stripped PATH silently disabled pi's package install.**
+  `modules/programs/tui/pi.nix` guards its activation on `command -v pi`, and pi
+  lives at `/opt/homebrew/bin/pi` on Darwin — not on activation's minimal PATH.
+  The guard failed, the whole block was skipped, and nothing said so: activation
+  prints `Activating installPiPackages` and simply never prints its success line.
+  It went unnoticed for as long as it existed, because pi installs missing
+  packages from `settings.json` at startup anyway — it only surfaced when two
+  *new* packages failed to appear after a deploy. If an activation block guards
+  on `command -v`, give it an explicit PATH first.
 - **Claude Code on NixOS comes from nixpkgs `claude-code`**, added to
   `modules/home/default.nix` — *not* the `curl|bash` native installer in `tui/claude.nix`
   (that installer assumes `~/.local/bin` is on PATH, which it isn't on the VM, so it
@@ -415,24 +378,8 @@ For extended-context or other model profiles, see `dot/omlx/CLAUDE.md` → "Crea
 
 ## File Locations
 
-- Shared package baseline (NixOS + Darwin, system + home): [config/base-packages.nix](config/base-packages.nix)
-- Home-manager identity layer (username, home dir, stateVersion): [modules/home/common.nix](modules/home/common.nix)
-- Shared CLI/dev home baseline (NixOS + Darwin): [modules/home/workstation.nix](modules/home/workstation.nix)
-- User packages: [modules/home/default.nix](modules/home/default.nix) (NixOS-only extras + GUI)
-  - Python packages: Use `python3.withPackages (ps: with ps; [package-name])`
-- GUI apps: [modules/programs/gui/](modules/programs/gui/)
-- TUI apps: [modules/programs/tui/](modules/programs/tui/)
-- System packages (NixOS-only extras): [modules/common/default.nix](modules/common/default.nix)
-- Cross-host NixOS baseline (nix settings, locale, user): [modules/common/core.nix](modules/common/core.nix)
-- Desktop stack (opt-in, gated on `custom.desktop.enable`): [modules/common/desktop.nix](modules/common/desktop.nix)
-- Darwin system config: [modules/darwin/common.nix](modules/darwin/common.nix)
-- Darwin Homebrew casks: [modules/darwin/homebrew-base.nix](modules/darwin/homebrew-base.nix) (every Mac) and [modules/darwin/homebrew-server.nix](modules/darwin/homebrew-server.nix) (dungeon + moria)
-- Darwin home-manager: [modules/darwin/home.nix](modules/darwin/home.nix)
-- Host IPs / networking vars: [config/vars.nix](config/vars.nix) (`networking.hosts`)
-- SSH client config: [modules/programs/tui/ssh.nix](modules/programs/tui/ssh.nix)
-- Host configs: `hosts/<type>/<hostname>/default.nix`
-- LLM settings: `~/Git/toolbox/dot/omlx/.omlx/settings.json` (reproducible oMLX config)
-- Example per-project dev shells (direnv + flake): [examples/](examples/) (`python-devshell/`, `typescript-devshell/`)
+`ls modules/` and `ls hosts/*/`. The layering is in "Home-manager profiles" above;
+platform split in "Where apps live".
 
 ## Testing
 
@@ -470,70 +417,41 @@ in `modules/darwin/homebrew-base.nix`, which only controls Brewfile-drift uninst
 
 ## ⚠️ Never put `docker-desktop` in `homebrew-base.nix`
 
-`docker-desktop` is declared in `hosts/macs/citadel/default.nix` **only**. dungeon and moria get
-`orbstack` from `modules/darwin/homebrew-server.nix`, and the two casks both claim
-`/usr/local/bin/docker`.
+**citadel only.** OrbStack owns `/usr/local/bin/docker` on dungeon and moria, and
+Docker Desktop was never running there — installing it hijacks that path, after which
+the Docker CLI works only by borrowing OrbStack's socket.
 
-`onActivation.upgrade = true` turns that collision into a recurring, silent one: every
-`darwin-rebuild switch` runs `brew upgrade`, and whichever cask brew touches last re-installs its
-own symlinks over the other's. **`cleanup = "none"` means dropping a cask from the Nix lists never
-uninstalls it** — the config and the machine drift apart quietly.
-
-This actually happened. `docker-desktop` sat in the shared Darwin cask list from `b72fe6b`
-(2026-03-22, the commit that created dungeon's config) — as `"docker"`, which is easy to read as
-"the docker CLI"; `10d75fd` renamed it to `docker-desktop` on 2026-04-18 tracking the upstream
-cask rename, and `321ed35` carried it into `homebrew-base.nix`. `orbstack` arrived five days after
-dungeon's config was born (`ea2e06b`, 2026-03-27) and nobody removed the other one. On
-**2026-08-17 08:28** a cask bump to Docker Desktop 4.87.0 repointed `/usr/local/bin/docker` at
-`Docker.app`, which silently disabled a home-lab launchd watchdog that resolved `docker` through
-it (see home-lab `docs/runbooks/proton-port-sync-failed.md`).
-
-Docker Desktop was never even *running* on dungeon — `/var/run/docker.sock` has pointed at
-OrbStack throughout, and the active docker context is `orbstack`. Only the CLI symlink was taken,
-which is why nothing looked broken.
-
-**Check any Mac in one line** — a host should never print both:
+Dangerous specifically because `cleanup = "none"` with `upgrade = true` lets a stray
+cask drift in silently rather than failing. The guardrail is repeated inline at both
+edit sites (`homebrew-server.nix`, `hosts/macs/citadel/default.nix`).
 
 ```bash
-brew list --cask --versions | grep -iE "docker-desktop|orbstack"
-readlink /usr/local/bin/docker      # want …/OrbStack.app/… on dungeon and moria
+brew list --cask --versions | grep -iE "docker-desktop|orbstack"   # what is actually installed
+ls -l /usr/local/bin/docker
 ```
+
+Read the machine, not the nix config: `cleanup = "none"` is exactly the case where a
+stray cask sits on disk while the declared cask list looks clean.
 
 ## `just dr` re-prompts for a password at every cask — don't chase the sudo ticket
 
-Homebrew runs `sudo --reset-timestamp` **unconditionally at the top of every invocation**
-(`brew.sh`, "Reset sudo timestamp to avoid running unauthorized sudo commands"), with no
-env-var opt-out. It deliberately throws away the caller's ticket, so **nothing ticket-based
-survives `brew bundle`** — not a longer `timestamp_timeout`, not `timestamp_type=global`,
-not a `sudo -v` keep-alive wrapped around the rebuild in the justfile. All three were tried
-and all three fail. A sudoers rule is the only lever, and it does work because the prompt is
-a plain `/usr/bin/sudo` tty prompt, not a GUI Authorization dialog.
+Homebrew runs `sudo --reset-timestamp` unconditionally at the top of every invocation,
+with no env opt-out, so **nothing ticket-based survives `brew bundle`** — not a longer
+`timestamp_timeout`, not `timestamp_type=global`, not a `sudo -v` keep-alive. All three
+were tried. A sudoers rule is the only lever, and it works because the prompt is a
+plain tty prompt, not a GUI Authorization dialog.
 
-This is frequent, not occasional: any cask with an `uninstall launchctl:` stanza takes the
-sudo path **with no writability check** (the `booleans = [false, true]` loop in
-`cask/artifact/abstract_uninstall.rb`) — ~12 of the ~47 casks here. File ownership is a red
-herring; the app bundles are already user-owned.
+**Fixed** in `modules/darwin/common.nix`: NOPASSWD for only the binaries brew
+escalates, plus `security.pam.services.sudo_local.reattach = true` so Touch ID works
+from tmux. Not a security boundary — a speed bump.
 
-**Fixed** in `modules/darwin/common.nix` (`security.sudo.extraConfig`): NOPASSWD for only
-the binaries brew escalates. Interactive `sudo <anything else>` still prompts. Not a
-security boundary — root `cp`/`rm` converts to full root — it's a speed bump. Confirmed on
-moria, dungeon, and citadel.
-
-Related, same file: `security.pam.services.sudo_local.reattach = true`. `just dr` is run
-from tmux, where `pam_tid.so` can't reach the GUI bootstrap session and **silently** falls
-back to a typed password. `reattach` (pam_reattach) is what makes Touch ID actually work
-there. Inert on headless dungeon.
-
-When changing that sudoers block, check the generated file parses before deploying — a
-syntax error in `/etc/sudoers.d/` locks you out of sudo entirely:
+A syntax error in `/etc/sudoers.d/` locks you out of sudo entirely, so verify before
+deploying, and check each granted path exists (sudoers matches the resolved path):
 
 ```bash
 nix eval --raw '.#darwinConfigurations.<host>.config.environment.etc."sudoers.d/10-nix-darwin-extra-config".text' > /tmp/su
 visudo -c -f /tmp/su
 ```
-
-Also verify each granted path exists (`test -x /bin/launchctl`, …) — sudoers matches on the
-resolved absolute path, so a wrong one silently fails to match and the prompts quietly return.
 
 ## Darwin `postActivation` is ONE shared bash script — always use a subshell
 
@@ -607,55 +525,17 @@ Verify from the main checkout, or with the override above.
 
 ## Dev Container Validation
 
-A Docker dev container is available for validating configs without a NixOS host:
-
-```bash
-# Build image (one-time, from nixos/.devcontainer/)
-docker build -t nixos-devcontainer .
-
-# Validate all configs
-docker run --rm -v /path/to/nixos:/workspaces/nixos nixos-devcontainer just validate
-```
-
-**What it can do:** `nix flake check`, dry-run builds, catch config errors
-**What it cannot do:** `nixos-rebuild switch`, test services, hardware-specific behavior
-
-See [.devcontainer/README.md](.devcontainer/README.md) for details.
-
-If needed, see [README.md](README.md) for detailed documentation on repository structure, VM setup, and development workflows.
+See [.devcontainer/README.md](.devcontainer/README.md). It can `nix flake check` and
+dry-run builds; it cannot `nixos-rebuild switch` or test hardware behaviour.
 
 ## Automatic Nix Garbage Collection for Darwin Hosts — PROPOSED, NOT IMPLEMENTED
 
-> **Status: not done.** There is no `determinate` flake input and nothing imports
-> `determinate.darwinModules.default`. Scheduled GC is *not* currently running on any Mac;
-> reclaim space by hand with `just delete-all-old-generations`. The rest of this section is
-> the plan for adopting it, not a description of the current state.
-
-
-The darwin hosts run Determinate Nix (`nix.enable = false` in `modules/darwin/common.nix`),
-so nix-darwin's built-in `nix.gc` module can't be used (it asserts `nix.gc.automatic` requires
-`nix.enable`). **A hand-rolled `launchd.daemons.nix-gc` is no longer the right answer** —
-Determinate Nix ships **Determinate Nixd**, a daemon that performs garbage collection natively.
-
-To enable scheduled GC, adopt the Determinate nix-darwin module instead of writing custom
-launchd jobs:
-
-1. Add the flake input: `determinate.url = "github:DeterminateSystems/determinate"`.
-2. Import `inputs.determinate.darwinModules.default` in `modules/darwin/common.nix`.
-3. Configure the collector, e.g.:
-
-```nix
-{
-  determinate-nix.customSettings = { };
-  # GC strategy lives under the Determinate Nixd config:
-  #   /etc/determinate/config.json (written by the module)
-  # e.g. garbageCollector.strategy = "automatic";
-}
-```
-
-See <https://docs.determinate.systems/guides/nix-darwin/> for the current option names
-(`determinateNixd.garbageCollector.strategy`). This replaces — and is simpler than — the
-old custom-daemon approach, and is correctly disk-pressure aware.
+Darwin runs Determinate Nix (`nix.enable = false`), so nix-darwin's `nix.gc` module
+asserts out. **There is no scheduled GC on any Mac** — reclaim by hand with
+`just delete-all-old-generations`. Adopting Determinate's own collector is the
+intended fix — see <https://docs.determinate.systems/guides/nix-darwin/>. The
+step-by-step adoption plan was removed from here rather than relocated; it is
+recoverable from git history if wanted.
 
 ## Secret Management — Decision Record (1Password vs. agenix / sops-nix)
 
@@ -677,6 +557,11 @@ doesn't fit the otherwise declarative activation flow.
   headless. Tradeoff: re-keying when host keys change, and editing requires the `agenix` CLI.
 - **sops-nix** — same activation-time, key-based decryption but with `sops`/YAML/`age` and
   better ergonomics for *bundled* multi-key secret files. More machinery than we need today.
+
+**Note:** headless dungeon does *not* require the VNC dance — a 1Password service
+account token at `~/.config/op/service-account-token` (mode 600) is the preferred
+path and `just secrets` picks it up automatically (`nixos/justfile`). VNC is the
+fallback when no token exists. See the root `CLAUDE.md` → Secret Management.
 
 **Decision: defer.** 1Password stays the source of truth. The manual headless `just secrets`
 step is tolerable while dungeon is the only headless Darwin host. **Revisit (lean agenix)**

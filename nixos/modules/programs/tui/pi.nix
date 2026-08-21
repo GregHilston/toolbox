@@ -7,6 +7,14 @@
 }: let
   cfg = config.custom.programs.pi;
 
+  # A packages entry is either a source string or pi's filtering object form.
+  # `pi install` only ever takes the source, so unwrap it for the activation
+  # script while settings.json keeps the full entry.
+  packageSource = pkg:
+    if builtins.isString pkg
+    then pkg
+    else pkg.source;
+
   # One oMLX model entry. Everything except id/name has a sane default because
   # every model we serve shares the same shape, and `cost` is not an option at
   # all — local inference is free, so it is always zero.
@@ -85,26 +93,55 @@ in {
 
     # Packages installed via `pi install`. Pi resolves these at runtime.
     # Git-based packages are cloned to ~/.pi/agent/git/; npm packages go to
-    # the global node_modules. Local extensions (plan-mode) live in
-    # ~/.pi/agent/extensions/ managed by stow from dot/pi/.
+    # the global node_modules. Local extensions live in ~/.pi/agent/extensions/
+    # managed by stow from dot/pi/.
+    #
+    # Entries are either a plain source string, or pi's object form for
+    # filtering what a package loads (docs/packages.md -> "Package Filtering").
+    # The object form matters here: on a local model every tool schema and every
+    # line of injected system prompt is re-sent on EVERY request, so a package
+    # that ships 22 extensions is not free just because we only wanted three.
     packages = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
+      type = lib.types.listOf (lib.types.either lib.types.str (lib.types.attrsOf lib.types.anything));
       default = [
         # Rust-powered frecency-ranked, fuzzy, git-aware file search
         # https://github.com/dmtrKovalenko/fff
         "npm:@ff-labs/pi-fff"
 
-        # Context management: context-projection (hides stale tool output),
-        # context-overflow (proactive compaction), custom-compaction, subagents
+        # Context management, but it ships 22 extensions and we want three.
+        # Excluded, and why:
+        #   codex-*        OpenAI Codex quota/verbosity features. This host is
+        #                  strictly local oMLX, so they are dead weight.
+        #   mcp-wrapper    superseded by pi-mcp-adapter below; loading both
+        #                  gives two MCP layers.
         # https://github.com/n-r-w/pi-agent-suite
-        "npm:pi-agent-suite"
+        {
+          source = "npm:pi-agent-suite";
+          extensions = [
+            "extensions/context-projection/index.ts" # hides stale tool output
+            "extensions/custom-compaction/index.ts" # proactive compaction
+            "extensions/run-subagent/index.ts" # subagent_* tools
+          ];
+        }
 
-        # Read-before-write enforcement, directory containment, work modes
-        "https://github.com/galatolofederico/moonpi"
+        # Directory containment and path/bash permission gates. Replaces moonpi,
+        # whose guard skipped `bash` entirely (guards.ts: shouldCheckPath covers
+        # read/write/edit/grep/find/ls only) and so caught typos, not damage.
+        # https://github.com/gotgenes/pi-packages
+        "npm:@gotgenes/pi-permission-system"
+
+        # Read-only /plan mode. Replaces moonpi's plan/act modes and the local
+        # plan-mode extension, which had been failing to load since pi renamed
+        # its npm scope.
+        # https://www.npmjs.com/package/@narumitw/pi-plan-mode
+        "npm:@narumitw/pi-plan-mode"
 
         # Reddit JSON research tools + a matching skill: compact evidence packs
         # for opinions, bugs, fixes, comparisons. Needs a session cookie —
         # see reddit-research.json below.
+        # ~2,151 tok/request for 7 tools. Kept global deliberately: that is an
+        # eighth of what moonpi cost, and scoping it to a project fails silently
+        # under `pi -p`, which never prompts for project trust. See dot/pi/CLAUDE.md.
         # https://github.com/SaintNerona/pi-reddit-research
         "npm:pi-reddit-research"
       ];
@@ -172,8 +209,16 @@ in {
     # This runs after writeBoundary so settings.json is already in place.
     # Each install is idempotent — pi skips already-installed packages.
     home.activation.installPiPackages = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      # Home-manager activation runs with a minimal PATH. pi lives in Homebrew
+      # on Darwin and the user profile on NixOS, so neither is reachable by
+      # default and the `command -v pi` guard below silently skipped the whole
+      # block — the same stripped-PATH trap nixos/CLAUDE.md documents for stow.
+      # Symptom: activation prints "Activating installPiPackages", never prints
+      # the success line, and new packages are simply never installed.
+      export PATH="/opt/homebrew/bin:/run/current-system/sw/bin:$HOME/.nix-profile/bin:$PATH"
+
       if command -v pi &>/dev/null; then
-        ${builtins.concatStringsSep "\n        " (map (pkg: ''pi install "${pkg}" 2>/dev/null || true'') cfg.packages)}
+        ${builtins.concatStringsSep "\n        " (map (pkg: ''pi install "${packageSource pkg}" 2>/dev/null || true'') cfg.packages)}
         echo "✓ Pi packages installed"
       fi
     '';
