@@ -143,8 +143,16 @@ in {
         # Free under the token budget in dot/pi/CLAUDE.md: it registers no tools
         # and injects no system prompt, so it costs 0 tok/request. It is a UI
         # extension only. Configured under `powerline` in settings.json below.
+        #
+        # Pinned, like ccstatusline in claude.nix. This one replaces pi's editor
+        # component — not just the footer — so a float-to-latest has a wider
+        # blast radius than the other packages here. 0.15.1 also declares
+        # peerDependencies of >=0.81.0 <0.85.0 on @earendil-works/pi-*, and
+        # installed pi is 0.84.2: one minor bump from falling out of range, so
+        # a pi upgrade may need this version moved with it.
+        # Mirrored in hosts/macs/citadel/default.nix, which mkForces this list.
         # https://github.com/nicobailon/pi-powerline-footer
-        "npm:pi-powerline-footer"
+        "npm:pi-powerline-footer@0.15.1"
 
         # Reddit JSON research tools + a matching skill: compact evidence packs
         # for opinions, bugs, fixes, comparisons. Needs a session cookie —
