@@ -1,0 +1,21 @@
+{
+  "permission": {
+    "*": "allow",
+    "external_directory": {
+      "*": "ask",
+      "~/Git/toolbox/*": "allow",
+      "~/Git/home-lab/*": "allow",
+      "~/.pi/agent/*": "allow",
+      "/opt/homebrew/Cellar/pi-coding-agent/*": "allow"
+    },
+    "path": {
+      "*": "allow",
+      "*.env": "deny",
+      "~/.ssh/*": "deny",
+      "~/.config/pi-reddit-research/*": "deny"
+    },
+    "write": {
+      "*": "ask"
+    }
+  }
+}
