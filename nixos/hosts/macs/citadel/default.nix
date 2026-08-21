@@ -94,9 +94,18 @@
     custom.programs.pi.defaultModel = lib.mkForce "Qwen3.6-35B-A3B-6bit";
 
     # Exclude moonpi (cwd error on this host)
+    #
+    # NOTE: this mkForce replaces the module default outright, so anything added
+    # to `packages` in modules/programs/tui/pi.nix reaches moria, dungeon and
+    # rohan but silently skips citadel. It has already drifted — moonpi no
+    # longer exists, and the bare "npm:pi-agent-suite" here re-adds all 22 of
+    # its extensions, which the module default deliberately narrows to three.
+    # Worth converting to a subtractive override; until then, new packages have
+    # to be added in both places.
     custom.programs.pi.packages = lib.mkForce [
       "npm:@ff-labs/pi-fff"
       "npm:pi-agent-suite"
+      "npm:pi-powerline-footer@0.15.1" # keep in sync with modules/programs/tui/pi.nix
     ];
 
     # Disable modules not needed on this host

@@ -125,6 +125,10 @@ free just because it is popular. Measured on this host with
 | our stack, `~/Git/toolbox` | 11,652 |
 | our stack, `~/Git/home-lab` | 36,120 |
 
+These were taken before moonpi was dropped (b7b8bf6/9641740) and are now high:
+the same `~/Git/toolbox` measurement reads ~10,400 today. Re-measure the whole
+table rather than trusting a single row against it.
+
 Two things that are easy to misread:
 
 **`usage.input` is not the prompt size.** oMLX prefix-caches, so `input` is only
@@ -229,6 +233,60 @@ blocked, so a broken instance looks identical to a query with no matches. The
 `unresponsive_engines` field is the tell, and `web_search` surfaces it rather
 than reporting "no results". See `home-lab/searxng/settings.yml` — engines that
 block a self-hosted instance rotate over time.
+
+## Status line — pi-powerline-footer
+
+Replaces pi's footer with model, thinking level, context percentage and token
+counts. Declared in `nixos/modules/programs/tui/pi.nix`, both the package and its
+`powerline` config block — and again in `hosts/macs/citadel/default.nix`, which
+`mkForce`s the whole packages list, so anything added to the module default has
+to be added there too or citadel silently misses it.
+
+It is more than a footer: it also swaps pi's editor component, adds a sticky
+bash mode (`ctrl+shift+b`), an editor stash (`alt+s`), a prompt queue, and
+overrides `/compact`. The layout keeps `shell_mode` and `queue` for that reason —
+they self-hide when empty, and are the only indication you are in one of those
+modes.
+
+Chosen over `@narumitw/pi-statusline` on installs (23.3k/mo against 12.5k) and
+because its settings live in the `settings.json` pi.nix already generates rather
+than a second file.
+
+**It is free.** A/B'd on this host from the same cwd with only the package and
+its config differing: 10,395 / 10,406 tok/request without it, 10,388 / 10,389
+with. The delta is inside run-to-run thinking-token noise. It registers no tools
+and injects no system prompt, so there is nothing to re-send.
+
+**`workingVibe = "off"` is defensive, not required.** Vibes are already inert
+when the key is absent — `working-vibes.ts` derives a `theme` from it and every
+entry point returns early on a null theme, so `workingVibeMode` defaulting to
+`"generate"` against `openai-codex/gpt-5.4-mini` never fires by itself. Pinning
+`"off"` is what stops a stray `/vibe pirate` in one session from leaving later
+sessions calling a model oMLX does not serve. `"file"` mode is the zero-cost way
+to actually have the phrases.
+
+**Its slash commands cannot persist anything.** `/powerline <preset>`, `/vibe`
+and friends write back to `~/.pi/agent/settings.json`, which is a read-only
+`/nix/store` symlink. They apply for the current session, then warn
+`not persisted; check settings.json` and log an `EACCES` — pi does not crash, and
+the write cannot damage the symlink. Change the nix and re-activate instead.
+
+**Glyphs are picked per terminal, not per installed font.** `icons.ts`
+`hasNerdFonts()` checks `POWERLINE_NERD_FONTS`, then `GHOSTTY_RESOURCES_DIR`,
+then a `TERM_PROGRAM` allowlist (iterm, wezterm, kitty, ghostty, alacritty). So
+Ghostty gets glyphs and keeps them inside tmux, where `TERM_PROGRAM` is `tmux`
+but Ghostty's own variable survives. rohan's kmscon TTY and any ssh into dungeon
+get the ASCII fallback no matter which fonts are installed there, because neither
+variable is forwarded. Nothing forces it either way; `POWERLINE_NERD_FONTS=0`/`1`
+is the override. The `ascii` *preset* does not do this — it only changes
+separators, leaving the segment icons as Nerd Font glyphs.
+
+**`context_pct` disappears if another extension claims compaction.** Both context
+segments start with `if (ctx.customCompactionEnabled) return { visible: false }`,
+and that flag is set when an extension publishes a `compact-policy` status key.
+We run `pi-agent-suite`'s `custom-compaction`, which today publishes no such key —
+so the segment renders. If a future version does, the whole point of this
+extension silently vanishes and this is the first place to look.
 
 ## Gotcha: Context Window Errors
 

@@ -136,6 +136,24 @@ in {
         # https://www.npmjs.com/package/@narumitw/pi-plan-mode
         "npm:@narumitw/pi-plan-mode"
 
+        # Powerline-style footer: model, thinking level, context %, token counts.
+        # The most-installed pi status line by a wide margin (23.3k/mo, 394
+        # stars) versus @narumitw/pi-statusline at 12.5k/mo.
+        #
+        # Free under the token budget in dot/pi/CLAUDE.md: it registers no tools
+        # and injects no system prompt, so it costs 0 tok/request. It is a UI
+        # extension only. Configured under `powerline` in settings.json below.
+        #
+        # Pinned, like ccstatusline in claude.nix. This one replaces pi's editor
+        # component — not just the footer — so a float-to-latest has a wider
+        # blast radius than the other packages here. 0.15.1 also declares
+        # peerDependencies of >=0.81.0 <0.85.0 on @earendil-works/pi-*, and
+        # installed pi is 0.84.2: one minor bump from falling out of range, so
+        # a pi upgrade may need this version moved with it.
+        # Mirrored in hosts/macs/citadel/default.nix, which mkForces this list.
+        # https://github.com/nicobailon/pi-powerline-footer
+        "npm:pi-powerline-footer@0.15.1"
+
         # Reddit JSON research tools + a matching skill: compact evidence packs
         # for opinions, bugs, fixes, comparisons. Needs a session cookie —
         # see reddit-research.json below.
@@ -201,6 +219,57 @@ in {
         inherit (cfg) defaultModel;
         lastChangelogVersion = "0.67.6";
         inherit (cfg) packages;
+
+        # pi-powerline-footer. This file is a read-only /nix/store symlink, so
+        # its `/powerline` and `/vibe` slash commands cannot persist a change —
+        # they write back here and fail. Everything it should do is declared.
+        #
+        # Belt-and-braces, not load-bearing. Vibes are already inert when the
+        # key is absent: working-vibes.ts derives `theme` from this setting and
+        # every entry point returns early on a null theme, so `workingVibeMode`
+        # defaulting to "generate" against `openai-codex/gpt-5.4-mini` never
+        # fires on its own. Pinning "off" is what stops a stray `/vibe pirate`
+        # in one session from leaving every later session calling a model oMLX
+        # does not serve.
+        workingVibe = "off";
+
+        powerline = {
+          # Glyphs are chosen per terminal, NOT per installed font: icons.ts
+          # hasNerdFonts() reads POWERLINE_NERD_FONTS, then GHOSTTY_RESOURCES_DIR,
+          # then a TERM_PROGRAM allowlist. So Ghostty gets glyphs (its env var
+          # survives into tmux), while rohan's kmscon TTY and any ssh into
+          # dungeon get the ASCII fallback — the font being installed there is
+          # irrelevant. That degradation is per-host and automatic, which is why
+          # nothing here forces it either way.
+          preset = "default";
+          welcome = false; # no startup splash over the session
+
+          # Deliberately narrower than the ccstatusline layout, which does carry
+          # git: context pressure and token counts only. Branch state is in the
+          # shell prompt already, and local inference makes `cost` a permanent
+          # $0.00.
+          #
+          # `context_pct` already renders "10k/262k (4.0%)" — used, total and
+          # percentage in one segment — so `context_total` alongside it would
+          # only repeat the 262k.
+          #
+          # `shell_mode` and `queue` earn their place despite the trim: both
+          # self-hide when empty, and each is the only indicator for a mode this
+          # extension can silently put you in — ctrl+shift+b bash mode, and a
+          # prompt held back during compaction (which pi-agent-suite's
+          # custom-compaction makes a routine event here).
+          #
+          # All three groups are listed explicitly: a present array replaces
+          # that preset group exactly, an omitted one keeps the preset's.
+          # `secondary` keeps `extension_statuses`, the generic sink any
+          # extension's ctx.ui.setStatus writes to — clearing it would blank
+          # future extensions' output too, not just this one's.
+          layout = {
+            left = ["model" "thinking" "shell_mode" "queue"];
+            right = ["context_pct" "token_in" "token_out"];
+            secondary = ["extension_statuses"];
+          };
+        };
       };
     };
 
