@@ -8,10 +8,15 @@ target := env("HOME")
 # This is an explicit allowlist, NOT a `*/` glob — a glob silently deploys any
 # stale package nobody remembered to delete. Adding a new package? Add it here.
 #
-# Three packages in dot/ are deliberately excluded and must never be stowed:
+# Four packages in dot/ are deliberately excluded and must never be stowed:
 #
 #   claude/  deployed by direct symlink instead — see the link_repo helper in
 #            the root justfile and modules/programs/tui/claude.nix.
+#   ccstatusline/
+#            deployed by the same link_repo call in modules/programs/tui/claude.nix,
+#            for the same reason: ccstatusline's TUI saves back to its settings.json,
+#            so the target must be a writable symlink into this repo. link_repo also
+#            links the file itself, sidestepping the directory-folding hazard below.
 #   omlx/    deployed by direct `ln` in modules/darwin/omlx.nix, which explains
 #            why: "a bare `stow` from dot/ targets the parent (the repo), not
 #            $HOME". Stowing it creates toolbox/.omlx inside the working tree —

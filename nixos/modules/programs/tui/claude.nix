@@ -7,6 +7,16 @@
   toolboxDir = "${config.home.homeDirectory}/Git/toolbox";
   claudeDir = "${config.home.homeDirectory}/.claude";
   claudeBin = "${config.home.homeDirectory}/.local/bin/claude";
+
+  # Single source of truth for the ccstatusline pin (bump here to upgrade).
+  # https://github.com/sirmalloc/ccstatusline
+  ccstatuslineVersion = "2.2.27";
+  # A user-owned npm prefix, NOT the default one. A bare `npm i -g` resolves its
+  # prefix from whichever node wins $PATH: /opt/homebrew on the Macs (writable)
+  # but a read-only /nix/store path on NixOS hosts. An explicit prefix behaves
+  # the same everywhere.
+  npmPrefix = "${config.home.homeDirectory}/.npm-global";
+  ccstatuslineBin = "${npmPrefix}/bin/ccstatusline";
 in {
   # Declaratively symlink Claude Code user-level config from the toolbox repo so
   # any host that runs home-manager gets the same commands, skills, settings,
@@ -42,6 +52,11 @@ in {
     link_repo "${toolboxDir}/dot/claude/.claude/CLAUDE.md"     "${claudeDir}/CLAUDE.md"
     link_repo "${toolboxDir}/dot/claude/.claude/settings.json" "${claudeDir}/settings.json"
     link_repo "${toolboxDir}/dot/claude/.claude/hooks"         "${claudeDir}/hooks"
+
+    # ccstatusline keeps its own config outside ~/.claude. Same writable-symlink
+    # deal: its TUI saves back to this file, so tweaks land as git diffs.
+    mkdir -p "${config.home.homeDirectory}/.config/ccstatusline"
+    link_repo "${toolboxDir}/dot/ccstatusline/.config/ccstatusline/settings.json" "${config.home.homeDirectory}/.config/ccstatusline/settings.json"
   '';
 
   # Install the Claude Code CLI via Anthropic's official *native* installer —
@@ -61,6 +76,29 @@ in {
       echo "Installing Claude Code via native installer (https://claude.ai/install.sh)…"
       ${pkgs.curl}/bin/curl -fsSL https://claude.ai/install.sh | ${pkgs.bash}/bin/bash \
         || echo "WARNING: Claude Code native install failed (offline?). Re-run later: curl -fsSL https://claude.ai/install.sh | bash" >&2
+    fi
+  '';
+
+  # ccstatusline renders the Claude Code status line (context used/total/%,
+  # weekly quota, git state). It is an npm package with no nixpkgs derivation,
+  # so we install it imperatively — same spirit as the `uv tool install` calls
+  # elsewhere in this repo, and the curl|bash bootstrap directly above.
+  #
+  # Pinned rather than `npx ccstatusline@latest`: npx re-resolves the package on
+  # every status line refresh. The installed launcher is a plain
+  # `#!/usr/bin/env node` script, which is why nodejs_22 is in
+  # config/base-packages.nix — node has to be on $PATH when Claude renders.
+  #
+  # Idempotent + non-fatal: compares the installed package.json version against
+  # the pin, so bumping ccstatuslineVersion actually reinstalls, and a dead
+  # network only warns.
+  home.activation.ccstatuslineInstall = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    installed="$(${pkgs.jq}/bin/jq -r .version "${npmPrefix}/lib/node_modules/ccstatusline/package.json" 2>/dev/null || true)"
+    if [ ! -x "${ccstatuslineBin}" ] || [ "$installed" != "${ccstatuslineVersion}" ]; then
+      echo "Installing ccstatusline ${ccstatuslineVersion} into ${npmPrefix}…"
+      PATH="${pkgs.nodejs_22}/bin:$PATH" ${pkgs.nodejs_22}/bin/npm install -g \
+        --prefix "${npmPrefix}" "ccstatusline@${ccstatuslineVersion}" \
+        || echo "WARNING: ccstatusline install failed (offline?). Re-run later: npm install -g --prefix ~/.npm-global ccstatusline@${ccstatuslineVersion}" >&2
     fi
   '';
 }

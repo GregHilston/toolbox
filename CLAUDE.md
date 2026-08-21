@@ -62,7 +62,7 @@ It becomes available as `/my-skill` in any Claude Code session.
 
 **Nix-managed hosts** (NixOS / nix-darwin): automatic. The home-manager module at
 `nixos/modules/programs/tui/claude.nix` creates the symlinks during `home-manager`
-activation when you run `just fr <host>` or `just dr <host>`. It now manages five
+activation when you run `just fr <host>` or `just dr <host>`. It now manages six
 targets, all symlinked into this repo (so they're version-controlled and deploy to
 every host that imports `programs/tui`):
 
@@ -71,6 +71,7 @@ every host that imports `programs/tui`):
 - `~/.claude/CLAUDE.md`    → `dot/claude/.claude/CLAUDE.md`   (global, cross-repo memory)
 - `~/.claude/settings.json`→ `dot/claude/.claude/settings.json` (permissions, hooks, plugins)
 - `~/.claude/hooks/`       → `dot/claude/.claude/hooks/`      (e.g. the RTK rewrite hook)
+- `~/.config/ccstatusline/settings.json` → `dot/ccstatusline/…` (status line layout)
 
 The symlinks are **writable** (they point into the repo, not `/nix/store`) so Claude's
 own runtime writes to `settings.json` still work — those just show up as git diffs to
@@ -91,6 +92,19 @@ repo, so keep it lean and cross-cutting. Push project-specifics into a `./CLAUDE
 each repo. For repos that don't have one yet (e.g. `~/Git/ccs`, `~/Git/home-lab`), run
 `/init` once to generate a tight map of build/test/run commands + directory layout, so
 Claude stops re-deriving the structure every session.
+
+### Status Line — ccstatusline
+
+[ccstatusline](https://github.com/sirmalloc/ccstatusline) renders the status line
+(context used/window/%, weekly quota, git state). Wired up by `statusLine` in
+`dot/claude/.claude/settings.json`; layout in `dot/ccstatusline/`, symlinked by the
+same activation as `~/.claude` so it stays writable — run `ccstatusline` bare to open
+its TUI, then commit or discard the diff.
+
+Version pin and the `~/.npm-global` install live in `nixos/modules/programs/tui/claude.nix`
+(`ccstatuslineVersion`); bump there. It needs `node` on `$PATH`, hence `nodejs_22` in
+`nixos/config/base-packages.nix`. Use the plain `Context %` widget, not the "usable"
+variant — that one assumes an auto-compact cutoff, and we run `autoCompactEnabled: false`.
 
 ## Voice Input — Hold Caps Lock to Dictate
 
