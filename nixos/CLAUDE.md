@@ -426,9 +426,12 @@ cask drift in silently rather than failing. The guardrail is repeated inline at 
 edit sites (`homebrew-server.nix`, `hosts/macs/citadel/default.nix`).
 
 ```bash
-nix eval --json '.#darwinConfigurations.dungeon.config.homebrew.casks' | grep -i docker
+brew list --cask --versions | grep -iE "docker-desktop|orbstack"   # what is actually installed
 ls -l /usr/local/bin/docker
 ```
+
+Read the machine, not the nix config: `cleanup = "none"` is exactly the case where a
+stray cask sits on disk while the declared cask list looks clean.
 
 ## `just dr` re-prompts for a password at every cask — don't chase the sudo ticket
 
@@ -530,7 +533,9 @@ dry-run builds; it cannot `nixos-rebuild switch` or test hardware behaviour.
 Darwin runs Determinate Nix (`nix.enable = false`), so nix-darwin's `nix.gc` module
 asserts out. **There is no scheduled GC on any Mac** — reclaim by hand with
 `just delete-all-old-generations`. Adopting Determinate's own collector is the
-intended fix; that plan is a GitHub issue, not always-loaded context.
+intended fix — see <https://docs.determinate.systems/guides/nix-darwin/>. The
+step-by-step adoption plan was removed from here rather than relocated; it is
+recoverable from git history if wanted.
 
 ## Secret Management — Decision Record (1Password vs. agenix / sops-nix)
 
@@ -552,6 +557,11 @@ doesn't fit the otherwise declarative activation flow.
   headless. Tradeoff: re-keying when host keys change, and editing requires the `agenix` CLI.
 - **sops-nix** — same activation-time, key-based decryption but with `sops`/YAML/`age` and
   better ergonomics for *bundled* multi-key secret files. More machinery than we need today.
+
+**Note:** headless dungeon does *not* require the VNC dance — a 1Password service
+account token at `~/.config/op/service-account-token` (mode 600) is the preferred
+path and `just secrets` picks it up automatically (`nixos/justfile`). VNC is the
+fallback when no token exists. See the root `CLAUDE.md` → Secret Management.
 
 **Decision: defer.** 1Password stays the source of truth. The manual headless `just secrets`
 step is tolerable while dungeon is the only headless Darwin host. **Revisit (lean agenix)**
