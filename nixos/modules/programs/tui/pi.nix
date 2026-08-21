@@ -211,6 +211,40 @@ in {
         inherit (cfg) defaultModel;
         lastChangelogVersion = "0.67.6";
         inherit (cfg) packages;
+
+        # pi-powerline-footer. This file is a read-only /nix/store symlink, so
+        # its `/powerline` and `/vibe` slash commands cannot persist a change —
+        # they write back here and fail. Everything it should do is declared.
+        #
+        # `workingVibe = "off"` is the load-bearing line. The default is
+        # `workingVibeMode = "generate"`, which calls out to
+        # `openai-codex/gpt-5.4-mini` on every prompt to write a themed
+        # "Working…" message. This host is strictly local oMLX and has no such
+        # model, so the default buys a failed request per turn.
+        workingVibe = "off";
+
+        powerline = {
+          preset = "default";
+          welcome = false; # no startup splash over the session
+
+          # ascii, not powerline: the separator glyphs need a Nerd Font, and
+          # only the NixOS GUI hosts provably have one. Same call as the
+          # ccstatusline layout in dot/ccstatusline/.
+          separator = "ascii";
+
+          # Mirrors the ccstatusline layout: context pressure and token counts,
+          # no git and no cost. Git branch is already in the shell prompt, and
+          # local inference is free so `cost` is permanently $0.00.
+          #
+          # All three groups are listed explicitly: a present array replaces
+          # that preset group exactly, an omitted one keeps the preset's.
+          # `secondary = []` is what clears the preset's second row.
+          layout = {
+            left = ["model" "thinking"];
+            right = ["context_pct" "context_total" "token_in" "token_out"];
+            secondary = [];
+          };
+        };
       };
     };
 
