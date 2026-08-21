@@ -17,5 +17,12 @@
 .pi/agent/extensions/pi-permission-system/logs/
 # pi-fff's frecency database — binary runtime state, rewritten constantly
 .pi/agent/fff/
+# pi-powerline-footer's runtime state. Same folded-symlink reason as above, and
+# worse than most: stash-history.json and inbox.jsonl hold prompt text and
+# bash-history holds shell commands, so a `git add -A dot` would commit them.
+# Its theme.json override lives at .pi/agent/extensions/powerline-footer/ and
+# IS meant to be committed — same split as pi-permission-system above.
+.pi/agent/powerline-footer/
+.pi/agent/vibes/
 # Backup files from home-manager
 *.backup
