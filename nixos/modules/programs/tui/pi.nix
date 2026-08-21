@@ -216,36 +216,50 @@ in {
         # its `/powerline` and `/vibe` slash commands cannot persist a change —
         # they write back here and fail. Everything it should do is declared.
         #
-        # `workingVibe = "off"` is the load-bearing line. The default is
-        # `workingVibeMode = "generate"`, which calls out to
-        # `openai-codex/gpt-5.4-mini` on every prompt to write a themed
-        # "Working…" message. This host is strictly local oMLX and has no such
-        # model, so the default buys a failed request per turn.
+        # Belt-and-braces, not load-bearing. Vibes are already inert when the
+        # key is absent: working-vibes.ts derives `theme` from this setting and
+        # every entry point returns early on a null theme, so `workingVibeMode`
+        # defaulting to "generate" against `openai-codex/gpt-5.4-mini` never
+        # fires on its own. Pinning "off" is what stops a stray `/vibe pirate`
+        # in one session from leaving every later session calling a model oMLX
+        # does not serve.
         workingVibe = "off";
 
         powerline = {
-          # The default preset's separators and segment icons are Nerd Font
-          # glyphs. Every host has one: nerd-fonts.jetbrains-mono via
-          # modules/darwin/home.nix (all three Macs) and modules/home/default.nix
-          # plus stylix (NixOS). Verified by rendering the footer, not assumed.
+          # Glyphs are chosen per terminal, NOT per installed font: icons.ts
+          # hasNerdFonts() reads POWERLINE_NERD_FONTS, then GHOSTTY_RESOURCES_DIR,
+          # then a TERM_PROGRAM allowlist. So Ghostty gets glyphs (its env var
+          # survives into tmux), while rohan's kmscon TTY and any ssh into
+          # dungeon get the ASCII fallback — the font being installed there is
+          # irrelevant. That degradation is per-host and automatic, which is why
+          # nothing here forces it either way.
           preset = "default";
           welcome = false; # no startup splash over the session
 
-          # Mirrors the ccstatusline layout: context pressure and token counts,
-          # no git and no cost. Git branch is already in the shell prompt, and
-          # local inference is free so `cost` is permanently $0.00.
+          # Deliberately narrower than the ccstatusline layout, which does carry
+          # git: context pressure and token counts only. Branch state is in the
+          # shell prompt already, and local inference makes `cost` a permanent
+          # $0.00.
           #
           # `context_pct` already renders "10k/262k (4.0%)" — used, total and
           # percentage in one segment — so `context_total` alongside it would
           # only repeat the 262k.
           #
+          # `shell_mode` and `queue` earn their place despite the trim: both
+          # self-hide when empty, and each is the only indicator for a mode this
+          # extension can silently put you in — ctrl+shift+b bash mode, and a
+          # prompt held back during compaction (which pi-agent-suite's
+          # custom-compaction makes a routine event here).
+          #
           # All three groups are listed explicitly: a present array replaces
           # that preset group exactly, an omitted one keeps the preset's.
-          # `secondary = []` is what clears the preset's second row.
+          # `secondary` keeps `extension_statuses`, the generic sink any
+          # extension's ctx.ui.setStatus writes to — clearing it would blank
+          # future extensions' output too, not just this one's.
           layout = {
-            left = ["model" "thinking"];
+            left = ["model" "thinking" "shell_mode" "queue"];
             right = ["context_pct" "token_in" "token_out"];
-            secondary = [];
+            secondary = ["extension_statuses"];
           };
         };
       };
