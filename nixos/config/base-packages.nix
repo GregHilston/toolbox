@@ -53,6 +53,11 @@ pkgs: {
     yt-dlp
     ffmpeg # yt-dlp needs it to merge best-quality video+audio streams
     uv
+    # Node runtime for npm-installed CLIs. The Macs already get node from
+    # Homebrew (and /opt/homebrew/bin sorts ahead of the nix profiles on PATH,
+    # so this does not displace it); NixOS hosts had none, which broke
+    # ccstatusline — see modules/programs/tui/claude.nix.
+    nodejs_22
     git
     (python3.withPackages (ps:
       with ps; [

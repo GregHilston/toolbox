@@ -23,7 +23,7 @@ A `claude-skills/<name>/SKILL.md` with `name`/`description` frontmatter becomes
 
 **Nix-managed hosts** (NixOS / nix-darwin): automatic. The home-manager module at
 `nixos/modules/programs/tui/claude.nix` creates the symlinks during `home-manager`
-activation when you run `just fr <host>` or `just dr <host>`. It now manages five
+activation when you run `just fr <host>` or `just dr <host>`. It now manages six
 targets, all symlinked into this repo (so they're version-controlled and deploy to
 every host that imports `programs/tui`):
 
@@ -32,6 +32,7 @@ every host that imports `programs/tui`):
 - `~/.claude/CLAUDE.md`    → `dot/claude/.claude/CLAUDE.md`   (global, cross-repo memory)
 - `~/.claude/settings.json`→ `dot/claude/.claude/settings.json` (permissions, hooks, plugins)
 - `~/.claude/hooks/`       → `dot/claude/.claude/hooks/`      (e.g. the RTK rewrite hook)
+- `~/.config/ccstatusline/settings.json` → `dot/ccstatusline/…` (status line layout)
 
 The symlinks are **writable** (they point into the repo, not `/nix/store`) so Claude's
 own runtime writes to `settings.json` still work — those just show up as git diffs to
@@ -44,6 +45,19 @@ into `dot/claude/.claude/`, delete the original, then re-run home-manager.
 
 **Non-Nix hosts**: run `just setup-claude` once after cloning. Since everything is a
 symlink into the repo, pulling new commits picks up changes without re-running setup.
+
+### Status Line — ccstatusline
+
+[ccstatusline](https://github.com/sirmalloc/ccstatusline) renders the status line
+(context used/window/%, weekly quota, git state). Wired up by `statusLine` in
+`dot/claude/.claude/settings.json`; layout in `dot/ccstatusline/`, symlinked by the
+same activation as `~/.claude` so it stays writable — run `ccstatusline` bare to open
+its TUI, then commit or discard the diff.
+
+Version pin and the `~/.npm-global` install live in `nixos/modules/programs/tui/claude.nix`
+(`ccstatuslineVersion`); bump there. It needs `node` on `$PATH`, hence `nodejs_22` in
+`nixos/config/base-packages.nix`. Use the plain `Context %` widget, not the "usable"
+variant — that one assumes an auto-compact cutoff, and we run `autoCompactEnabled: false`.
 
 ## Voice Input — Hold Caps Lock to Dictate
 
