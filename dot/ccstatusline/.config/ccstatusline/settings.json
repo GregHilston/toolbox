@@ -14,18 +14,12 @@
       { "id": "10", "type": "flex-separator" },
       { "id": "11", "type": "tokens-input", "color": "brightBlack" },
       { "id": "12", "type": "separator" },
-      { "id": "13", "type": "tokens-output", "color": "brightBlack" },
-      { "id": "14", "type": "separator" },
-      { "id": "15", "type": "session-cost", "color": "green" }
+      { "id": "13", "type": "tokens-output", "color": "brightBlack" }
     ],
     [
-      { "id": "20", "type": "git-branch", "color": "magenta" },
-      { "id": "21", "type": "separator" },
       { "id": "22", "type": "git-status", "color": "yellow" },
       { "id": "23", "type": "separator" },
       { "id": "24", "type": "git-ahead-behind", "color": "cyan" },
-      { "id": "25", "type": "separator" },
-      { "id": "26", "type": "git-review", "color": "blue" },
       { "id": "27", "type": "flex-separator" },
       { "id": "28", "type": "weekly-opus-usage", "color": "brightMagenta" },
       { "id": "29", "type": "separator" },
