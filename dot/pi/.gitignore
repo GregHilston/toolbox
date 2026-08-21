@@ -11,6 +11,10 @@
 .pi/agent/npm/
 # Runtime session data
 .pi/agent/sessions/
+# pi-permission-system's decision log — runtime state, appended on every
+# permission check. Only lands in the repo because ~/.pi is a folded stow
+# symlink into it; the extension's config.json beside it IS committed.
+.pi/agent/extensions/pi-permission-system/logs/
 # pi-fff's frecency database — binary runtime state, rewritten constantly
 .pi/agent/fff/
 # Backup files from home-manager
