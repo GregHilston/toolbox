@@ -136,6 +136,16 @@ in {
         # https://www.npmjs.com/package/@narumitw/pi-plan-mode
         "npm:@narumitw/pi-plan-mode"
 
+        # Powerline-style footer: model, thinking level, context %, token counts.
+        # The most-installed pi status line by a wide margin (23.3k/mo, 394
+        # stars) versus @narumitw/pi-statusline at 12.5k/mo.
+        #
+        # Free under the token budget in dot/pi/CLAUDE.md: it registers no tools
+        # and injects no system prompt, so it costs 0 tok/request. It is a UI
+        # extension only. Configured under `powerline` in settings.json below.
+        # https://github.com/nicobailon/pi-powerline-footer
+        "npm:pi-powerline-footer"
+
         # Reddit JSON research tools + a matching skill: compact evidence packs
         # for opinions, bugs, fixes, comparisons. Needs a session cookie —
         # see reddit-research.json below.
