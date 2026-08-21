@@ -11,10 +11,6 @@
 .pi/agent/npm/
 # Runtime session data
 .pi/agent/sessions/
-# Model catalogues moonpi refetches and rewrites on a timer — regenerable, and
-# host-specific. It writes synthetic-models-cache.json and
-# wafer-models-cache.json, so the class is ignored rather than each name.
-.pi/agent/*-cache.json
 # pi-fff's frecency database — binary runtime state, rewritten constantly
 .pi/agent/fff/
 # Backup files from home-manager
