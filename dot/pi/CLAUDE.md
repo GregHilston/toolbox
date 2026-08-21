@@ -111,6 +111,106 @@ Nothing is needed on the PI WEB side: `pathAccess.allowedPaths` is already
 `~/Git`, so its file explorer can browse both. That setting only governs PI WEB's
 own UI/API, never what the agent can touch — the guard above is the real control.
 
+## The token budget (read this before adding an extension)
+
+pi runs here against **local** models via oMLX. Every tool schema and every line
+of injected system prompt is re-sent on **every request**, so an extension is not
+free just because it is popular. Measured on this host with
+`pi --mode json -p ... | jq .usage`:
+
+| Configuration | tokens/request |
+| --- | --- |
+| bare pi, no packages, empty dir | 1,644 |
+| our stack, empty dir | 7,957 |
+| our stack, `~/Git/toolbox` | 11,652 |
+| our stack, `~/Git/home-lab` | 36,120 |
+
+Two things that are easy to misread:
+
+**`usage.input` is not the prompt size.** oMLX prefix-caches, so `input` is only
+the *uncached* remainder; the real figure is `totalTokens` (or
+`input + cacheRead`). A reading of "1,356 tokens" that is really 34,139 will send
+you in exactly the wrong direction.
+
+**Caching hides latency, not capacity.** In `home-lab`, 36k of a 262k window is
+gone before you type. Cache hits never give that back. Most of that 36k is
+`home-lab/CLAUDE.md` itself — 103,738 bytes, ~25,934 tokens — loaded natively by
+pi. That is a real cost of a 1,600-line context file, and it is a deliberate
+choice rather than a bug.
+
+To measure after any change:
+
+```bash
+pi --mode json -p 'Reply with exactly: OK' 2>/dev/null \
+  | python3 -c "import sys,json;[print(json.loads(l).get('message',{}).get('usage')) for l in sys.stdin if '\"usage\"' in l][-1:]"
+```
+
+### Why moonpi was removed
+
+It cost ~21k tokens/request in toolbox and ~59k in home-lab, entirely from
+`contextFiles` — on by default, walking four directory levels and injecting every
+`README.md` it found into the system prompt. It bought none of the three things
+it was installed for: its guard never checked `bash`, its read-before-write was
+redundant with pi's `edit` (which needs a unique exact `oldText`), and its plan
+mode advertised tools it then blocked, costing a wasted round trip each time.
+Replaced by `@gotgenes/pi-permission-system` and `@narumitw/pi-plan-mode`.
+
+### Rejected, with reasons
+
+- **pi-lens** (42k/mo) — ~3,600–4,600 tok/request floor from 7 always-active
+  tools plus 4 skills, none individually disableable, and it spawns language
+  servers. Its own maintainer documents (issue #1453) that its lazy-tool
+  mechanism forces a full conversation-prefix rewrite on every non-Anthropic
+  provider, i.e. a full re-prefill here. `tsc --watch` in another terminal is
+  free.
+- **pi-cache-optimizer** (11k/mo) — its prompt-slimming targets
+  `<session-overview>` blocks and skill compression; we emit neither and have no
+  pi skills. Its `prompt_cache_key` reaches oMLX, which returns 200 and ignores
+  it. It would also hoist `CLAUDE.md` out of pi's `<project_instructions>`
+  wrapper, and its integrity guard cannot detect that (the regex only matches
+  attribute-less tags).
+- **pi-mcp-adapter** (548k/mo, the #1 pi package) — genuinely the right design
+  (~750–900 tok flat regardless of server count, versus 5,000+ for a natively
+  registered server). **Deferred, not rejected**: the only MCP servers configured
+  here are `sentry` and `godot`, neither worth bridging into pi. Install it the
+  day there is a server worth the ~800 tokens, with `scriptMode: false`,
+  `directTools: false`, and per-server `includeTools`.
+
+## Reddit tools: kept global, and how to scope them
+
+`pi-reddit-research` costs ~2,151 tok/request for 7 tools. It stays global
+because that is an eighth of what moonpi cost, and because the tool-selection
+worry did not materialise — asked "what does bin/reddit-cookie-sync.sh do when
+Firefox is logged out?", a prompt containing the word *reddit* about a local
+file, the model went straight to `read` rather than `reddit_search`.
+
+If it ever does become a problem, scope it to one repo:
+
+```jsonc
+// <repo>/.pi/settings.json   — commit this; per-repo, not global
+{ "packages": ["npm:pi-reddit-research"] }
+```
+
+and remove `"npm:pi-reddit-research"` from `packages` in
+`nixos/modules/programs/tui/pi.nix`. Three things must then line up, and two of
+them fail silently:
+
+1. **Trust the project.** pi only loads `.pi/settings.json` once the directory is
+   trusted. Non-interactive modes (`-p`, `--mode json`, `--mode rpc`) **never
+   prompt** — they fall back to `defaultProjectTrust: "ask"` and ignore the file
+   entirely. Use `/trust` once, or `--approve` for a single run.
+2. **Install it there.** A trusted project auto-installs missing project packages
+   at startup; `pi install -l npm:pi-reddit-research` is the explicit form.
+3. **Check the cookie.** Expired Reddit auth looks like empty results, not an
+   error. See the Reddit cookie refresh section above.
+
+Verify with a real tool call, not the slash command — in `-p` the model tends to
+go looking for `/reddit` in the repo instead of running it:
+
+```bash
+pi -p 'Use the reddit_search tool to search Reddit for "nixos flakes". Report the count.'
+```
+
 ## Web search
 
 `extensions/web-search.ts` registers a `web_search` tool against our self-hosted
@@ -121,24 +221,6 @@ The endpoint is not a literal in the extension. Only nix knows each host's answe
 (localhost on dungeon, the tailnet address everywhere else), so
 `custom.programs.pi.searxngBaseUrl` writes `~/.pi/agent/searxng.json` and the
 extension reads it. `PI_SEARXNG_URL` overrides for a one-off.
-
-### Gotcha: moonpi silently strips third-party tools
-
-moonpi calls `setActiveTools()` with a closed allowlist per mode. Before
-**v0.4**, that allowlist was hardcoded to moonpi's own tools, so *every*
-third-party tool — `web_search`, all the `reddit_*` tools, pi-fff — vanished
-with no error. The model simply reported it had no such tool, which reads like a
-bug in the extension rather than in moonpi.
-
-The fix is `"preserveExternalTools": true` in `moonpi.json`, which unions
-external tools into the allowlist. It needs moonpi ≥ v0.4 — the option parses on
-older versions but is never read, so it looks set and does nothing. If a tool
-disappears again, check moonpi's version first:
-
-```bash
-git -C ~/.pi/agent/git/github.com/galatolofederico/moonpi describe --tags
-pi update --extensions
-```
 
 ### Gotcha: SearXNG returning zero results for everything
 

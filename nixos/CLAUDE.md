@@ -354,6 +354,15 @@ Darwin host.
   *bare shell prompt* (no powerlevel10k) because `~/.zshrc` was never linked. Always call
   such tools by absolute nix path (`${pkgs.stow}/bin/stow`), never rely on PATH in an
   activation script.
+- **The same stripped PATH silently disabled pi's package install.**
+  `modules/programs/tui/pi.nix` guards its activation on `command -v pi`, and pi
+  lives at `/opt/homebrew/bin/pi` on Darwin — not on activation's minimal PATH.
+  The guard failed, the whole block was skipped, and nothing said so: activation
+  prints `Activating installPiPackages` and simply never prints its success line.
+  It went unnoticed for as long as it existed, because pi installs missing
+  packages from `settings.json` at startup anyway — it only surfaced when two
+  *new* packages failed to appear after a deploy. If an activation block guards
+  on `command -v`, give it an explicit PATH first.
 - **Claude Code on NixOS comes from nixpkgs `claude-code`**, added to
   `modules/home/default.nix` — *not* the `curl|bash` native installer in `tui/claude.nix`
   (that installer assumes `~/.local/bin` is on PATH, which it isn't on the VM, so it
