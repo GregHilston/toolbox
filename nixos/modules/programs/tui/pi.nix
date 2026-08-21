@@ -209,6 +209,14 @@ in {
     # This runs after writeBoundary so settings.json is already in place.
     # Each install is idempotent — pi skips already-installed packages.
     home.activation.installPiPackages = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      # Home-manager activation runs with a minimal PATH. pi lives in Homebrew
+      # on Darwin and the user profile on NixOS, so neither is reachable by
+      # default and the `command -v pi` guard below silently skipped the whole
+      # block — the same stripped-PATH trap nixos/CLAUDE.md documents for stow.
+      # Symptom: activation prints "Activating installPiPackages", never prints
+      # the success line, and new packages are simply never installed.
+      export PATH="/opt/homebrew/bin:/run/current-system/sw/bin:$HOME/.nix-profile/bin:$PATH"
+
       if command -v pi &>/dev/null; then
         ${builtins.concatStringsSep "\n        " (map (pkg: ''pi install "${packageSource pkg}" 2>/dev/null || true'') cfg.packages)}
         echo "✓ Pi packages installed"
