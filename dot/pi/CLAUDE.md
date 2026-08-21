@@ -230,6 +230,38 @@ blocked, so a broken instance looks identical to a query with no matches. The
 than reporting "no results". See `home-lab/searxng/settings.yml` — engines that
 block a self-hosted instance rotate over time.
 
+## Status line — pi-powerline-footer
+
+Replaces pi's footer with model, thinking level, context percentage and token
+counts. Declared in `nixos/modules/programs/tui/pi.nix`, both the package and its
+`powerline` config block.
+
+Chosen over `@narumitw/pi-statusline` on installs (23.3k/mo against 12.5k) and
+because its settings live in the `settings.json` pi.nix already generates rather
+than a second file.
+
+**It is free.** A/B'd on this host from the same cwd with only the package and
+its config differing: 10,395 / 10,406 tok/request without it, 10,388 / 10,389
+with. The delta is inside run-to-run thinking-token noise. It registers no tools
+and injects no system prompt, so there is nothing to re-send.
+
+**`workingVibe` must stay `"off"`.** The default `workingVibeMode` is
+`"generate"`, which calls `openai-codex/gpt-5.4-mini` once per prompt to write a
+themed "Working…" message. Inference here is strictly local oMLX and that model
+does not exist, so the default buys a failed request every turn. `"file"` mode is
+the other zero-cost option if you ever want the phrases.
+
+**Its slash commands cannot persist anything.** `/powerline <preset>`, `/vibe`
+and friends write back to `~/.pi/agent/settings.json`, which is a read-only
+`/nix/store` symlink. Change the nix and re-activate instead. They still work for
+the current session.
+
+The default preset's separators and segment icons are Nerd Font glyphs, which
+every host has — `nerd-fonts.jetbrains-mono` from `modules/darwin/home.nix` on
+the Macs and `modules/home/default.nix` plus stylix on NixOS. `POWERLINE_NERD_FONTS=0`
+degrades them to ASCII if a terminal ever lacks it; the `ascii` preset does not,
+it only changes the separators.
+
 ## Gotcha: Context Window Errors
 
 Pi's `models.json` declares per-model context windows, but oMLX enforces a **global** `sampling.max_context_window` in its own settings (`dot/omlx/.omlx/settings.json`). If pi reports "exceeds max context window" with a suspiciously low limit, check the oMLX server config — not just pi's model definitions.
