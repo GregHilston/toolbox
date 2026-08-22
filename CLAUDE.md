@@ -56,8 +56,30 @@ its TUI, then commit or discard the diff.
 
 Version pin and the `~/.npm-global` install live in `nixos/modules/programs/tui/claude.nix`
 (`ccstatuslineVersion`); bump there. It needs `node` on `$PATH`, hence `nodejs_22` in
-`nixos/config/base-packages.nix`. Use the plain `Context %` widget, not the "usable"
-variant — that one assumes an auto-compact cutoff, and we run `autoCompactEnabled: false`.
+`nixos/config/base-packages.nix`.
+
+**Widget choices, and why:**
+
+- `context-bar` alone, not `context-length` + `context-window` + `context-percentage`
+  beside it. The bar already renders `342k/1.0M (34%)`, so the other three only repeat it.
+- The plain `Context %` widget, never the "usable" variant — that one assumes an
+  auto-compact cutoff, and we run `autoCompactEnabled: false`.
+- `current-working-dir` (segments: 1) and `git-worktree`, so a glance identifies *which*
+  session you're typing into. With many concurrent sessions the git widgets alone show
+  `master` almost everywhere, and a worktree is indistinguishable from the main checkout.
+- `weekly-usage` (the `weekly_all` quota) and `session-usage` (the 5-hour block).
+  **Not** `weekly-opus-usage` / `weekly-sonnet-usage`: ccstatusline reads
+  `https://api.anthropic.com/api/oauth/usage`, which now returns `seven_day_opus: null`
+  and `seven_day_sonnet: null` — there is one combined weekly limit, no per-model split.
+  ccstatusline maps a null bucket to `0` rather than "absent", so those two widgets sit
+  at a permanent `0.0%` instead of hiding. Curl that endpoint with the OAuth token from
+  the `Claude Code-credentials` keychain item to see what your plan actually reports.
+
+Deliberately **not** enabled: powerline mode needs a Nerd Font present on every host
+(NixOS, darwin, Termux), which is a poor trade for a repo whose point is uniform deploys.
+To audit the other ~80 widgets, render them against a real session rather than guessing —
+pipe a Claude Code status payload into `ccstatusline` with `HOME` pointed at a throwaway
+config dir, so your live line is untouched.
 
 ## Voice Input — Hold Caps Lock to Dictate
 

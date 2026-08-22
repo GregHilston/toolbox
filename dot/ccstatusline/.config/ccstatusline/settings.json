@@ -4,12 +4,6 @@
     [
       { "id": "1", "type": "model", "color": "cyan", "bold": true },
       { "id": "2", "type": "separator" },
-      { "id": "3", "type": "context-length", "color": "brightBlack" },
-      { "id": "4", "type": "separator" },
-      { "id": "5", "type": "context-window", "color": "brightBlack" },
-      { "id": "6", "type": "separator" },
-      { "id": "7", "type": "context-percentage", "color": "yellow", "bold": true },
-      { "id": "8", "type": "separator" },
       { "id": "9", "type": "context-bar", "color": "green" },
       { "id": "10", "type": "flex-separator" },
       { "id": "11", "type": "tokens-input", "color": "brightBlack" },
@@ -17,13 +11,17 @@
       { "id": "13", "type": "tokens-output", "color": "brightBlack" }
     ],
     [
+      { "id": "40", "type": "current-working-dir", "color": "blue", "metadata": { "segments": "1" } },
+      { "id": "41", "type": "separator" },
+      { "id": "42", "type": "git-worktree", "color": "brightCyan" },
+      { "id": "43", "type": "separator" },
       { "id": "22", "type": "git-status", "color": "yellow" },
       { "id": "23", "type": "separator" },
       { "id": "24", "type": "git-ahead-behind", "color": "cyan" },
       { "id": "27", "type": "flex-separator" },
-      { "id": "28", "type": "weekly-opus-usage", "color": "brightMagenta" },
+      { "id": "28", "type": "session-usage", "color": "brightMagenta" },
       { "id": "29", "type": "separator" },
-      { "id": "30", "type": "weekly-sonnet-usage", "color": "brightBlue" },
+      { "id": "30", "type": "weekly-usage", "color": "brightBlue" },
       { "id": "31", "type": "separator" },
       { "id": "32", "type": "weekly-reset-timer", "color": "brightBlack" }
     ]
