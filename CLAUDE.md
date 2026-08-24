@@ -181,14 +181,23 @@ On **headless dungeon** that integration is GUI-gated, so `op inject` fails with
 plan) at `~/.config/op/service-account-token`, mode `600` — `just secrets` picks it up
 and needs no GUI. Without one, VNC in and unlock 1Password first.
 
-## Thread Fetchers — Convert HN & Reddit to Markdown/JSON
+## Thread Fetchers — Search & Convert HN & Reddit to Markdown/JSON
 
-`fetch-thread.py <url>` prints a Hacker News or Reddit thread as markdown
-(`--format json` for JSON); `-h` has the full reference.
+`reddit-search.py "<query>"` finds threads; `fetch-thread.py <url>` prints a Reddit
+or Hacker News thread as markdown (`--format json` for JSON). `-h` has the full
+reference for both.
 
-**Reddit needs auth** — it has required it on `.json` endpoints since mid-2026. The
-tool reads the same cookie as pi's reddit tools; a 403 means logging in to reddit.com
+**Reddit needs auth** — it has required it on `.json` endpoints since mid-2026. Both
+tools read the same cookie as pi's reddit tools; a 403 means logging in to reddit.com
 **in Firefox** and running `bin/reddit-cookie-sync.sh`. See `dot/pi/CLAUDE.md`.
+
+**Reddit's JSON search is dead, which is why `reddit-search.py` scrapes
+old.reddit.com instead.** `search.json` does not fail — it answers HTTP 200 with an
+empty `children` array, so callers just see "no results". That silently takes out
+pi's `reddit_search`, `reddit_pack` and `reddit_trends`, which call the same
+endpoint. `reddit-cookie-sync.sh` still reports OK because it probes a *listing*
+endpoint, so a healthy cookie is not evidence that search works. Listing endpoints
+and thread permalinks are unaffected.
 
 ## Local Diff & PR Viewers — diff2html & difit
 
