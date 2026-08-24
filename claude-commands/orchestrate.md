@@ -88,6 +88,39 @@ mkdir -p ../probe-xyz && echo ok > ../probe-xyz/x && rm -rf ../probe-xyz
 If that is `Operation not permitted`, put worktrees **inside** the repo at
 `worktrees/<name>` and add `worktrees/` to `.gitignore` as your first commit.
 
+### 2a-bis. Create every worktree with an ABSOLUTE path
+
+The Bash tool's cwd **persists between calls**, so `git worktree add
+worktrees/<name>` creates the worktree relative to wherever your shell happens to
+be — not the repo root. In one real run this silently produced
+`godot-client/worktrees/<name>`, a full nested copy of the repo inside the client
+project directory. It was gitignored, so nothing complained, and the agent working
+in it only mentioned the odd path in its final report.
+
+Write `git worktree add /abs/path/to/repo/worktrees/<name> -b <branch>` every
+time, and re-read `git worktree list` after creating one — the printed paths are
+the check.
+
+The same trap has three other faces during a run, and all three fail *silently*
+rather than loudly:
+
+- **`git merge <branch>` run from inside that branch's own worktree** reports
+  "Already up to date" and merges nothing. If a merge you expected to do work
+  reports that, check `pwd` and `git rev-parse --abbrev-ref HEAD` before believing
+  the branch was already in.
+- **`git status --porcelain <path>`** with a path that does not resolve from cwd
+  warns on stderr and **exits 0 with no output** — so
+  `git status --porcelain tests/goldens/ && echo "REGEN IS A NO-OP"` cheerfully
+  prints the success message for a directory it never looked at. Verification
+  commands are the worst possible place for this, because the failure mode is a
+  false pass on exactly the check you added to be careful.
+- **`awk '...' ROADMAP.md`** and friends fail with `can't open file`, which reads
+  as "the file is missing" and is actually "you are in the wrong directory".
+
+Treat any error naming a path with a doubled or missing prefix as a cwd problem
+first. Cheapest durable fix: prefix every orchestration command with
+`cd /abs/path/to/repo &&`, and never rely on where the last call left you.
+
 ### 2b. Does a worktree checkout even work sandboxed?
 
 ```bash
@@ -126,6 +159,29 @@ has hung will start using `--no-verify`).
 - **Gitignored test baselines** (e.g. screenshot baselines). If they are not
   committed, each agent must build its own before/after, and a diff against your
   baseline is meaningless.
+- **Gitignored databases and other untracked local state.** *Check this
+  explicitly — a worktree does not inherit it, and both possible mistakes are
+  silent.* If the repo's dev database is gitignored (`*.db` catches it and nobody
+  remembers), then **a fresh worktree has no database at all**. An agent told
+  "the database is shared, read it read-only" will find nothing where you said it
+  would; an agent told nothing will quietly create an empty one, derive numbers
+  from zero rows, and report a confidently wrong answer. Establish which it is
+  with `git check-ignore -v <path>` plus an `ls` in a probe worktree, and give
+  every agent that needs real data the **absolute path in the primary checkout**
+  along with a read-only access recipe (`sqlite3 'file:/abs/path?mode=ro'`, or
+  `sqlite3.connect('file:...?mode=ro', uri=True)`). Say plainly that this one
+  file is the sole exception to "never touch the primary checkout" — otherwise a
+  careful agent will refuse to read it and guess instead.
+
+  The corollary reshapes the queue: **untracked-and-gitignored state is per
+  worktree, so it is not a scheduling constraint.** A roadmap that says "these
+  two items both use the database, serialize them" is reasoning about the
+  single-checkout world. Two agents each running their own migrations and test
+  fixtures collide on nothing. Only *reads of the primary checkout's* copy
+  serialize — and then only against something that would rewrite that copy, which
+  no agent should be doing anyway. Same logic as the screenshot baselines above,
+  and worth re-deriving per repo rather than trusting the roadmap's own
+  scheduling notes.
 
 **Tear the probe down completely** and confirm `git status` is clean before
 proceeding.
@@ -268,16 +324,39 @@ these have silently destroyed work in a real run:
 The user also edits this file while you run, by hand, and appends to the end —
 so their entries land in that same trap. Check for them.
 
-After every roadmap edit, verify rather than assume:
+After every roadmap edit, verify rather than assume. **Run all three, every
+time — they fail differently, and the cheap one is not the one that catches the
+worst damage:**
 
 ```bash
+grep -n "^# "  ROADMAP.md                                    # the H1s MUST still be there
 grep -n "^## " ROADMAP.md                                    # every work item
 awk '/^# Deliberately not doing/{f=1} f && /^## /{print}' ROADMAP.md   # what is buried
 ```
 
-Confirm the first list is what you expected, and that the second contains only
-entries you genuinely mean to abandon. A dangling reference in the run-order list
-pointing at an entry that no longer exists is the usual first symptom.
+Confirm the H1 list is unchanged, the second list is what you expected, and the
+third contains only entries you genuinely mean to abandon. A dangling reference
+in the run-order list pointing at an entry that no longer exists is the usual
+first symptom.
+
+**The H1 check is not decorative, and skipping it once is enough.** In a real run
+a deletion of two adjacent entries ran past the last one and swallowed the
+`# Deliberately not doing` heading and its intro paragraph. The entries beneath
+it survived — so `grep "^## "` looked *fine*, the file still parsed as Markdown,
+and nothing was obviously wrong. But six entries meant to be closed silently
+became open work, including one the user had just decided against, and it stayed
+that way across four further commits before anyone noticed.
+
+Three properties made it invisible, and they will make the next one invisible
+too: the damage is a *deletion of a boundary*, not of content; the surviving
+content moves into a different meaning rather than disappearing; and the
+symptom only shows in the check most likely to be skipped as redundant. If the
+third command prints nothing, that is not "nothing is buried" — check whether the
+heading still exists before believing it.
+
+An empty result from a verification command deserves the same suspicion as an
+error. See the cwd note in 2a-bis: `git status --porcelain <bad-path>` also
+"passes" by printing nothing.
 
 ---
 
