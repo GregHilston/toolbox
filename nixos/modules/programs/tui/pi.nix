@@ -55,6 +55,26 @@ in {
       description = "Default model to use";
     };
 
+    # DeepSeek needs NO models.json entry: pi ships it as a built-in provider
+    # (docs/providers.md -> DEEPSEEK_API_KEY / `deepseek`), and
+    # `pi --list-models deepseek` lists deepseek-v4-pro and deepseek-v4-flash
+    # the moment the env var is present. Declaring a `deepseek` provider by hand
+    # — as api-docs.deepseek.com still instructs — SHADOWS that catalog and
+    # leaves us owning contextWindow/maxTokens/cost forever. Don't.
+    #
+    # The key comes from nixos/secrets/.env (op inject -> .zshrc), so this
+    # option only decides whether the models are offered in the picker. On
+    # citadel the key is not injected at all, which is the real control.
+    deepseek = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Offer DeepSeek's models in pi's model picker and Ctrl+P cycle.
+        Requires DEEPSEEK_API_KEY in the environment; the default local oMLX
+        provider is unaffected either way.
+      '';
+    };
+
     # models.json normally comes from stow + `just secrets` (it holds the oMLX
     # api key, so it is templated from 1Password). Hosts that talk to *another*
     # machine's oMLX server have no secret to inject and can declare the file
@@ -219,6 +239,12 @@ in {
         inherit (cfg) defaultModel;
         lastChangelogVersion = "0.67.6";
         inherit (cfg) packages;
+
+        # Which models Ctrl+P cycles through. Provider globs, same format as
+        # the --models flag. `defaultProvider`/`defaultModel` above still decide
+        # what a bare `pi` starts on — this only widens what you can switch TO
+        # without restarting, so the local model stays the default everywhere.
+        enabledModels = ["omlx/*"] ++ lib.optionals cfg.deepseek ["deepseek/*"];
 
         # pi-powerline-footer. This file is a read-only /nix/store symlink, so
         # its `/powerline` and `/vibe` slash commands cannot persist a change —

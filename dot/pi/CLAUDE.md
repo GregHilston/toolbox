@@ -13,6 +13,67 @@ hand-edited file. Reddit expires the cookie every few days, and `cookieFile` is
 re-read before every request — so refreshing it needs no rebuild, no
 `just secrets`, and no restart.
 
+## DeepSeek, and switching back to local
+
+The default is unchanged and stays unchanged: a bare `pi` is `omlx` +
+`defaultModel`, on this machine, free. DeepSeek is the opt-in alternative.
+
+**It needs no `models.json` entry.** pi ships `deepseek` as a *built-in*
+provider — `docs/providers.md` maps `DEEPSEEK_API_KEY` to it — so the moment the
+env var exists, `pi --list-models deepseek` reports `deepseek-v4-pro` and
+`deepseek-v4-flash` (1M context, 384K output, thinking, no images). Verified with
+a dummy key on pi 0.84.2.
+
+`api-docs.deepseek.com/quick_start/agent_integrations/pi_mono/` still tells you
+to write a `providers.deepseek` block into `models.json`. **Do not.** A
+hand-declared provider shadows the built-in catalog, and we would then own
+`contextWindow`, `maxTokens` and `cost` by hand for a model whose numbers move.
+The doc is written for a pi old enough to lack the catalog.
+
+The three ways to reach it, cheapest first:
+
+| | |
+| --- | --- |
+| In a session | Ctrl+P cycles `omlx` ↔ `deepseek`, or `/model` picks |
+| From the shell | `pid` (v4-pro) / `pidf` (v4-flash), aliased in `dot/zsh/.zshrc` |
+| One-off | `pi --provider deepseek --model deepseek-v4-flash` |
+
+Ctrl+P only offers what `enabledModels` lists, which `pi.nix` builds as
+`["omlx/*"] ++ optionals cfg.deepseek ["deepseek/*"]`.
+
+### The key, and why citadel does not have one
+
+`DEEPSEEK_API_KEY` follows `OMLX_API_KEY` exactly: a `op://` reference in
+`nixos/secrets/.env.tpl`, injected by `just secrets` into `secrets/.env`, which
+is gitignored and `set -a`-sourced by `.zshrc`. Nothing but the reference is
+committed.
+
+citadel is the Mozilla work machine and this is a personal metered key, so it is
+withheld there — and withheld at the *key*, not at the menu. `just secrets`
+`sed`s the line out of the template before injection on that host;
+`custom.programs.pi.deepseek = false` additionally hides the models from the
+picker so there is no dead menu entry. The justfile half is the load-bearing one.
+
+Its guard is `hostname -s` = `citadel`. If that host ever answers to something
+else, the key starts being injected there silently — the failure mode is quiet,
+so check it if you rename the machine.
+
+### Do not `/login deepseek`
+
+Credential resolution is `--api-key` → `auth.json` → env var → `models.json`. A
+`/login` writes to `~/.pi/agent/auth.json`, which would then outrank the env var
+and give you two sources of truth — one of them with no host guard on it. That
+file is a folded stow symlink into this repo; it is gitignored (root
+`.gitignore`), so a key there would not be committed, but it would live on
+citadel just fine.
+
+Check the credential without spending a token:
+
+```bash
+pi auth check --provider deepseek --json
+pi --list-models deepseek
+```
+
 ## Reddit cookie refresh
 
 `pi-reddit-research` needs a Reddit session cookie; Reddit has required auth on
@@ -113,7 +174,8 @@ own UI/API, never what the agent can touch — the guard above is the real contr
 
 ## The token budget (read this before adding an extension)
 
-pi runs here against **local** models via oMLX. Every tool schema and every line
+pi runs here against **local** models via oMLX by default. Every tool schema and
+every line
 of injected system prompt is re-sent on **every request**, so an extension is not
 free just because it is popular. Measured on this host with
 `pi --mode json -p ... | jq .usage`:
@@ -141,6 +203,13 @@ gone before you type. Cache hits never give that back. Most of that 36k is
 `home-lab/CLAUDE.md` itself — 103,738 bytes, ~25,934 tokens — loaded natively by
 pi. That is a real cost of a 1,600-line context file, and it is a deliberate
 choice rather than a bug.
+
+**On DeepSeek every token in that table is billed, every turn.** The numbers
+above are a latency-and-capacity argument while we are on oMLX; point pi at
+`deepseek` and the same numbers become a per-request bill, paid before you type.
+`home-lab`'s 36k floor is the one that stings, and most of it is that repo's own
+`CLAUDE.md`. Nothing in "Rejected, with reasons" gets *easier* to justify on a
+remote provider — read that section as stricter there, not looser.
 
 To measure after any change:
 

@@ -93,6 +93,13 @@
     # 6-bit is the best quality/memory balance for 48GB
     custom.programs.pi.defaultModel = lib.mkForce "Qwen3.6-35B-A3B-6bit";
 
+    # No DeepSeek on the work machine. This hides it from pi's model picker;
+    # the load-bearing half is in nixos/justfile, where `just secrets` strips
+    # DEEPSEEK_API_KEY out of secrets/.env on this host, so the key is never
+    # written here at all. Both, deliberately — the picker entry would only be
+    # a dead menu item without a key, and a key without this would be reachable.
+    custom.programs.pi.deepseek = false;
+
     # Exclude moonpi (cwd error on this host)
     #
     # NOTE: this mkForce replaces the module default outright, so anything added

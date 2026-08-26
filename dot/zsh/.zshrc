@@ -181,6 +181,14 @@ alias htop="btop"
 alias python='/usr/bin/python3'
 alias audio="pavucontrol"
 
+# pi against DeepSeek instead of the local oMLX default. Needs DEEPSEEK_API_KEY,
+# which `just secrets` injects everywhere except citadel — there these aliases
+# exist but fail with a credential error, which is the intended outcome.
+# zsh aliases pass args through, so `pid -p 'hi'` and `pid @file.ts` both work.
+# In-session you do not need them: Ctrl+P cycles omlx <-> deepseek, /model picks.
+alias pid='pi --provider deepseek --model deepseek-v4-pro'
+alias pidf='pi --provider deepseek --model deepseek-v4-flash'
+
 # Clipboard (pbcopy on macOS, xclip on Linux)
 if [[ "$OSTYPE" == "darwin"* ]]; then
   alias clip="pbcopy <"

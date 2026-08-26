@@ -2,6 +2,7 @@
 # Do not edit — update values in 1Password, then re-run `just secrets`.
 
 OMLX_API_KEY={{ op://Infra/oMLX/api_key }}
+DEEPSEEK_API_KEY={{ op://Infra/DeepSeek/api_key }}
 PUSHOVER_USER_KEY={{ op://Infra/Pushover/user_key }}
 PUSHOVER_WORK_API_KEY={{ op://Infra/Pushover/work_api_key }}
 FROM_EMAIL_ADDRESS_PASSWORD="{{ op://Infra/Gmail App Password/password }}"
