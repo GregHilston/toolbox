@@ -125,6 +125,25 @@ pi auth check --provider deepseek --json
 pi --list-models deepseek
 ```
 
+### And especially do not `/login` to Claude
+
+pi's `/login` menu offers **Claude Pro/Max** as a subscription provider, one
+keystroke from where you pick anything else. Taking it points a third-party
+harness at Claude on subscription credentials, which is a different arrangement
+from the one this repo is set up for: Anthropic banned it 2026-04-04, reinstated
+it 2026-05-13, and meters it against separate non-rollover *Agent SDK credits*
+($20/mo on Pro, $100 on Max 5x, $200 on Max 20x), after which it bills at API
+rates. Legitimate, but emphatically not "free with the subscription", and not
+what `defaultProvider = "omlx"` and the DeepSeek wiring here are for.
+
+The division this repo assumes: **Claude Code on Claude models** for interactive
+sessions, **pi on DeepSeek or oMLX** for everything pi does. Claude Code shelling
+out to pi is ordinary tool use and carries none of the above; pi holding an
+Anthropic credential is the thing to avoid. `/orchestrate-pi` is built on exactly
+that split.
+
+`auth.json` is `{}` today. Keeping it that way is the whole control.
+
 ## Reddit cookie refresh
 
 `pi-reddit-research` needs a Reddit session cookie; Reddit has required auth on
