@@ -6,3 +6,5 @@
 bench/omlx_key
 # Result files written into the harness dir by effort.py / longctx.py / lossless_check.py
 bench/*.json
+# Same, for the cross-engine harness (burst.py / sustained.py / prefill.py / lossless.py)
+bench/engines/*.json
