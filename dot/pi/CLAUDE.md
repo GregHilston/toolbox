@@ -41,6 +41,57 @@ The three ways to reach it, cheapest first:
 Ctrl+P only offers what `enabledModels` lists, which `pi.nix` builds as
 `["omlx/*"] ++ optionals cfg.deepseek ["deepseek/*"]`.
 
+### Where this fits against Claude Code
+
+They are not competing for the same job. **Claude Code on Claude models stays the
+interactive default** — the session you sit in front of and read step by step.
+**pi on DeepSeek is for long unattended runs**, and the reason is the window: 1M
+against oMLX's 262k. A wide refactor or a long combat-debugging run that would
+force compaction locally simply does not here.
+
+Cost is not the deciding axis at this scale (see below); latency and the window
+are.
+
+### Which model, and how much thinking
+
+Both models reason, but they expose **different** thinking levels — the catalog
+nulls the rest out, so Shift+Tab (`app.thinking.cycle`) cycles a shorter ring
+than pi's seven levels suggest:
+
+| | Shift+Tab cycles | in / out / cache-read per 1M |
+| --- | --- | --- |
+| **V4 Pro** | `off → high → max` | $0.435 / $0.87 / $0.003625 |
+| **V4 Flash** | `off → low → high → max` | $0.14 / $0.28 / $0.0028 |
+
+`--thinking <level>` sets the *starting* level for a session; Shift+Tab still
+cycles from there. pi-powerline-footer reserves that key
+(`APP_RESERVED_SHORTCUTS`) rather than consuming it, so the `think:` segment
+tracks the real level.
+
+For coding work in `~/Git/gridkeep`:
+
+| Task | Model | Thinking |
+| --- | --- | --- |
+| Mechanical edits — renames, moving code, a `data.jsonc` field plus its GDScript mirror | Flash | `off` |
+| Writing tests, docstrings, a script from an existing pattern | Flash | `low` |
+| Reading code to explain it — tracing a call path | Flash | `high` |
+| A failing golden test, or anything touching tick resolution / effect ordering | Pro | `high` |
+| Balance judgment, "why did this board lose", designing a mechanic | Pro | `max` |
+| Anything that should stay on the machine | omlx | — |
+
+**Cost is not the constraint; latency is.** gridkeep's `CLAUDE.md` is ~8k tokens
+and the stack ~7.8k, so every request there starts near **16k** before a file is
+read — and a 40-turn session on Pro at `high` still lands around $0.10–0.20,
+output-dominated, because thinking tokens bill as output. Flash is roughly a
+third. What you actually feel is Pro at `max` taking longer per turn, so spend
+thinking where a wrong answer costs a debugging cycle and skip it where you would
+catch the error on sight.
+
+The prices, windows and level maps above are read out of pi's built-in catalog,
+so they are exact. **The task assignments are judgment, not measurement** — no
+one has benchmarked Flash against Pro on this code. The honest test is the same
+failing golden at Flash/`high` and Pro/`high`, compared.
+
 ### The key, and why citadel does not have one
 
 `DEEPSEEK_API_KEY` follows `OMLX_API_KEY` exactly: a `op://` reference in
