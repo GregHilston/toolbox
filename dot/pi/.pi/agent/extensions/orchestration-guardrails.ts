@@ -121,10 +121,15 @@ export const DEFAULT_RULES: Required<Guardrails> = {
 				"yours to rewrite from the shell either.",
 		},
 		{
-			pattern: String.raw`^git\s+config\b.*core\.hooksPath`,
+			// Only the *set* forms. `git config core.hooksPath` with nothing after
+			// it is a query, and so is `--get`; blocking those refused a worker
+			// that was reading the hook path to understand the suite, which cost
+			// it a turn and taught it nothing. A write either supplies a value
+			// after the key, or is an --unset.
+			pattern: String.raw`^git\s+config\b(?:.*\bcore\.hooksPath\s+\S|.*(?:^|\s)--unset(?:-all)?(?:\s|$).*\bcore\.hooksPath)`,
 			reason:
 				"Never repoint core.hooksPath. The hooks run the suites; disabling them " +
-				"is the same as --no-verify.",
+				"is the same as --no-verify. Reading it is fine — this blocks only writes.",
 		},
 	],
 	paths: [

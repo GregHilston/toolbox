@@ -66,6 +66,20 @@ test("blocks shell routes around the write/edit path rules", () => {
 	assert.ok(bash("echo x > .pi/guardrails.json"), "redirect into scaffolding");
 	assert.ok(bash("rm -f .pi/guardrails.json"), "or deleting it");
 	assert.ok(bash("git config core.hooksPath /dev/null"), "which defeats --no-verify by another road");
+	assert.ok(bash("git config --unset core.hooksPath"), "unsetting it defeats them too");
+	assert.ok(bash("git config --global core.hooksPath /tmp/nope"), "and --global is the same write");
+});
+
+test("does not block reading core.hooksPath", () => {
+	// A worker reading the hook path to understand what a commit will run is
+	// doing the right thing. The first version of the rule matched the key
+	// anywhere and refused this, which cost a real worker a turn mid-run.
+	assert.ok(!bash("git config core.hooksPath"), "the bare query form");
+	assert.ok(!bash("git config --get core.hooksPath"), "and --get");
+	assert.ok(
+		!bash("git config core.hooksPath && cat .githooks/pre-commit"),
+		"the exact command that was wrongly refused",
+	);
 });
 
 test("blocks the other ways out of a worktree", () => {
