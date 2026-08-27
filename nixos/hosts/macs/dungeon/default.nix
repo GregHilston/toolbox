@@ -361,7 +361,7 @@ in {
 
   # Watch the settings that live OUTSIDE the home-lab repo and revert SILENTLY.
   #
-  # The other five agents here all watch infrastructure — is the tunnel up, is the port
+  # The other six agents here all watch infrastructure — is the tunnel up, is the port
   # synced, is NFS alive, is mains up, did the backup run. Between them they cover that
   # well. None of them can see a CONFIGURATION that has quietly become wrong, and that is
   # the class that has actually been costing time:
