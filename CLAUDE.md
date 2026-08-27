@@ -191,6 +191,18 @@ On **headless dungeon** that integration is GUI-gated, so `op inject` fails with
 plan) at `~/.config/op/service-account-token`, mode `600` — `just secrets` picks it up
 and needs no GUI. Without one, VNC in and unlock 1Password first.
 
+## Before a pi run — deepseek-preflight
+
+`bin/deepseek-preflight.py` answers "is it a good moment to start" in one call:
+is the key funded (default floor $2), and is DeepSeek in a peak window (double
+rate, 01:00–04:00 and 06:00–10:00 UTC Mon–Fri — which is 21:00–00:00 Eastern
+Sun–Thu, exactly when an overnight run gets started). Exit 0 clear, 1 needs a
+human, 2 could not tell.
+
+Both checks exist because a run died on a `402` mid-flight and three workers
+were killed with their work uncommitted, while still reporting completion.
+`dot/pi/CLAUDE.md` → "Pricing" carries the numbers.
+
 ## Watching pi Workers — pi-narrate, pi-workers, pi-rpc
 
 `bin/pi-narrate.py` (pi's JSON event stream → one readable line per event),
