@@ -70,3 +70,11 @@ nixos/secrets/.env
 # It is a symlink into /nix/store, so committing it pins a path that exists on exactly
 # one machine — and a `git add -A` sweeps it up silently.
 .pre-commit-config.yaml
+
+# Work-only Claude commands and skills. claude-commands/ is symlinked wholesale
+# into ~/.claude/commands and this repo is public, so anything carrying Mozilla
+# internals stays untracked, which also keeps it to the machine that wrote it.
+# A subdirectory namespaces its commands, so these are invoked /mozilla:<name>.
+claude-commands/mozilla/
+# Skills are found as top-level dirs, so they take a prefix instead of a subdir.
+claude-skills/mozilla-*/
