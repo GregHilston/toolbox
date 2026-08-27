@@ -182,30 +182,34 @@ class Wedged(Harness):
 
         thread = threading.Thread(target=supervisor.start, args=("go",), daemon=True)
         thread.start()
-        # Wait until the supervisor is past its own opening write, not merely
-        # until the agent settled. Grabbing the lock before that write would
-        # wedge `command()` itself and hang the test rather than the shutdown.
         deadline = time.time() + 20
-        while time.time() < deadline and not (
-            supervisor.settled.is_set() and not supervisor.pending
-        ):
+        while time.time() < deadline and not supervisor.pointer.exists():
             time.sleep(0.05)
-        self.assertTrue(supervisor.settled.is_set(), "the fake never got going")
-        self.assertFalse(supervisor.pending, "the opening prompt is still in flight")
+        self.assertTrue(supervisor.pointer.exists(), "the control socket never came up")
 
-        # Wedge the write path the way a large steer into a full pipe would.
-        supervisor.stdin_lock.acquire()
-        held = True
-        try:
-            started = time.time()
-            # 5s bounded lock acquire + 20s wait + 10s terminate is the design
-            # worst case; before the fix this never finished at all.
-            thread.join(timeout=90)
-            self.assertFalse(thread.is_alive(), "the supervisor never exited")
-            self.assertLess(time.time() - started, 60, "it exited, but not by the design path")
-        finally:
-            if held:
-                supervisor.stdin_lock.release()
+        # Wedge the write path the way the real thing does: a steer larger than
+        # the pipe buffer, into a pi that is not draining it. The supervisor's
+        # own `command()` then blocks inside `write` while holding stdin_lock.
+        # (Faking this by taking the lock from the test races the opening
+        # prompt, and wedges `command()` instead of the shutdown.)
+        big = "x" * (512 * 1024)
+        threading.Thread(
+            target=rpc.client_request,
+            args=(self.root, {"op": "steer", "message": big}),
+            daemon=True,
+        ).start()
+
+        deadline = time.time() + 20
+        while time.time() < deadline and not supervisor.stdin_lock.locked():
+            time.sleep(0.05)
+        self.assertTrue(supervisor.stdin_lock.locked(), "the write never wedged; test is not valid")
+
+        started = time.time()
+        # 5s bounded lock acquire + 20s wait + 10s terminate is the design worst
+        # case. Before the fix this never finished at all.
+        thread.join(timeout=90)
+        self.assertFalse(thread.is_alive(), "the supervisor never exited")
+        self.assertLess(time.time() - started, 60, "it exited, but not by the design path")
         self.assertIn("stuck", self.narration(), "and it says why, rather than hanging silently")
 
     def test_a_slow_ack_does_not_kill_a_working_worker(self):
