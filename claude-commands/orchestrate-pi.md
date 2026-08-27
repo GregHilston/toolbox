@@ -546,6 +546,31 @@ look at; the orchestrator looks and says what is there.** That is the whole reas
 this command pairs a blind implementer with a sighted reviewer, and it only works
 if the worker does not try to do both halves.
 
+### pi's bash tool times out at 180s — so some things you ask for cannot be done
+
+A worker's `bash` call is killed at three minutes. Two consequences bite in this
+repo, and both look like the worker failing rather than the instruction being
+impossible:
+
+- **A full `./run_ui_screenshots.sh --sweep` (289 shots) exceeds it.** Asking a
+  worker to "check it across the sweep" is asking for something it cannot run in
+  one call. Either scope the capture (`--only=<group>`, or `--sizes=1024x640` for
+  the one resolution that matters), or **run the sweep yourself** and hand back
+  the `DIFF.md` — the orchestrator has no such limit.
+- **A headless Godot probe that never calls `get_tree().quit()` runs forever**
+  and eats the whole three minutes. If you tell a worker to measure something with
+  `godot --headless -s probe.gd`, tell it to quit at the end.
+
+The full GUT suite (~50s) and pytest with coverage (~110s) both fit, but a commit
+touching both runs them back to back through the hook and lands near three
+minutes — so a *commit* can time out even though each suite would not. Warn the
+worker that a hook-driven timeout is not a test failure, and that re-running the
+commit is safe.
+
+**Scratch files a probe leaves behind are the worker's to clean up.** Say so: a
+`probe_*.gd` at the repo root is not part of the change and must not reach the
+diff.
+
 ### Do not change model mid-session — it collapses the cache
 
 `--continue` resumes a warm session, but **the cache is keyed on the model.**
