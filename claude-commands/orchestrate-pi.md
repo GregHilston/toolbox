@@ -246,8 +246,11 @@ tool call — atomically, so it is always safe to read mid-write:
 
 ```json
 { "phase": "tool", "pid": 51035, "turn": 42, "toolCalls": 26,
-  "currentTool": "bash", "lastActivityAt": "2026-08-27T16:24:03.114Z",
-  "lastBlocked": "bash @ turn 12",
+  "currentTool": "bash", "lastToolBrief": "godot --headless --script tests/run.gd",
+  "lastText": "Tests pass. Now updating the docstring.",
+  "lastActivityAt": "2026-08-27T16:24:03.114Z",
+  "lastBlocked": "bash @ turn 12", "blockedCount": 1,
+  "recent": ["▸ bash godot --headless", "» Tests pass. Now updating the docstring."],
   "usage": { "totalTokens": 3562885, "cacheRead": 3453824, "costUsd": 0.0316 } }
 ```
 
@@ -256,30 +259,51 @@ from outside.** A worker that dies on spawn writes a 0-byte JSONL; one thinking
 hard for four minutes also writes nothing new. In the run this was built from,
 two dead workers were reported as "still running" twice before anyone ran `ps`.
 
-Poll all workers at once:
+Poll every worker at once with `pi-workers.py` (on `$PATH` from `bin/`):
 
 ```bash
-for f in <repo>/worktrees/*/.pi/status.json; do
-  python3 - "$f" <<'EOF'
-import json,sys,datetime
-s=json.load(open(sys.argv[1]))
-age=(datetime.datetime.now(datetime.UTC)-datetime.datetime.fromisoformat(s["lastActivityAt"].replace("Z","+00:00"))).total_seconds()
-print(f'{sys.argv[1].split("/")[-3]:24} {s["phase"]:9} turn {s["turn"]:>3}  {s.get("currentTool") or "-":8} {age:6.0f}s ago  ${s["usage"]["costUsd"]:.4f}')
-EOF
-done
+pi-workers.py --root <repo>            # the table
+pi-workers.py --root <repo> --json     # for you
+pi-workers.py --root <repo> --strict   # exit 1 if anything needs attention
+pi-workers.py --root <repo> --watch    # live, for a human in a second terminal
 ```
 
-Read it like this:
+```
+worker               state     turn tools     age      cost  doing
+issue-95             ▸tool       18    11      3s   $0.0151  bash godot --headless --script tests/run_gut.gd
+issue-96             ⏸stalled    42    26    603s   $0.0316  no activity for 603s while phase=thinking
+issue-97             ✗dead        5     2      3s   $0.0009  process 51035 is gone — read the log before respawning
+issue-98             ∅nostart     -     -       -         -  no status file — it never started
+issue-99             ✓done        2     1     38s   $0.0000  » I looked at the directory listing.
 
-- **No file at all** — it never started. This is the spawn bug, not a slow turn.
-- **`lastActivityAt` older than ~120s while `phase` is not `settled`** — genuinely
-  stuck. Read the log before killing.
-- **`lastBlocked` set** — the guardrails refused something; the worker may be
-  improvising around a boundary and is worth a look.
-- **`phase: "settled"` or `"shutdown"`** — done; go verify the branch.
+Needs attention: issue-96, issue-97, issue-98
+```
+
+The five states are the whole product, and three of them are absences that a
+human reading a log directory cannot tell apart:
+
+- **`nostart`** — a `.pi/` with no `status.json` beside it. It never started;
+  this is the spawn bug in Step P2, not a slow turn.
+- **`dead`** — the recorded `pid` is gone. This is the one that fooled us twice.
+  Read the log before respawning.
+- **`stalled`** — quiet for longer than `--stall-seconds` (default 120) while
+  still claiming to work.
+- **`done`** — `settled` or `shutdown`; go verify the branch.
+- anything else — the live phase, with `doing` showing the current tool's actual
+  command, or the last thing the worker said.
+
+`lastBlocked` / `blockedCount` being set means the guardrails refused something
+and the worker may be improvising around a boundary. Worth a look even when the
+run otherwise looks healthy.
 
 It also retires log-scraping for telemetry: `usage` here is the running total, so
 `.claude/pi-usage.py` becomes a cross-check rather than the only source.
+
+**The same file drives the status line.** `pi-workers.py --from-statusline
+--oneline` is wired into ccstatusline as a third row, so the user sees
+`pi 4w 2▸ 1~ 1✓ $0.0912 ⚠1 stalled` at a glance for the whole run, without
+asking you and without spending a token. It renders nothing when no workers
+exist, so the row is invisible outside a run.
 
 ---
 
@@ -290,15 +314,56 @@ prompts are Markdown full of backticks and newlines, and shell quoting mangles t
 quietly. Same lesson as `gh issue create --body-file`.
 
 ```bash
+set -o pipefail
 cd /abs/path/to/worktrees/issue-16 && \
   PI_STATUS_FILE=/abs/path/to/worktrees/issue-16/.pi/status.json pi \
   --provider deepseek --model deepseek-v4-pro --thinking high \
   --approve \
   --session-id issue-16 \
   --mode json \
-  -p "$(cat /abs/path/to/.claude/pi-prompts/issue-16.md)" \
-  > /abs/path/to/.claude/pi-logs/issue-16.jsonl 2>&1
+  -p "$(cat /abs/path/to/.claude/pi-prompts/issue-16.md)" 2>&1 \
+  | pi-narrate.py --label issue-16 \
+      --raw /abs/path/to/.claude/pi-logs/issue-16.jsonl \
+      --alerts /abs/path/to/.claude/pi-logs/alerts.log
 ```
+
+### Never redirect the whole stream to a file
+
+**`> issue-16.jsonl 2>&1` is what made every worker a black box, and it was our
+own doing.** Claude Code captures a background command's output from a PTY, so a
+full redirect means the harness sees zero bytes and the task row reads *"no
+output available"* for the entire run. The information was never missing — pi
+emits a rich, line-buffered event stream in `--mode json`. We were throwing it
+away and then reading a 13MB log back with `jq` to recover a fraction of it.
+
+`pi-narrate.py` sits in the pipe instead. It writes the untouched JSONL to
+`--raw` itself (so no `tee`), and emits one compact line per thing that
+happened:
+
+```
+issue-16 t42   6m12s ▸ bash godot --headless --script tests/run_gut.gd
+issue-16 t42   6m55s ✓ bash ok (43s)
+issue-16 t43   6m56s » Tests pass. Now updating the docstring.
+issue-16 t44   7m02s ✗ edit FAILED after 0s: no match for oldText in src/foo.gd
+issue-16 t50   9m10s · 50 turns, 31 tools, $0.0212
+```
+
+The harness shows the most recent line as the task's status, so four workers
+become four live rows; `Read` the task's output file for the whole narration at
+any point. Three details that matter:
+
+- **`set -o pipefail`**, or the shell reports the narrator's exit status and
+  pi's failure disappears.
+- **`2>&1` before the pipe.** pi's stderr — the settings-lock warning, provider
+  errors — used to vanish into the log. The narrator surfaces non-JSON lines
+  with a `!` prefix rather than dropping them.
+- **`--alerts` should be one shared file for the whole run**, not one per
+  worker. Step P2-bis watches it, and `tail -F` over a glob only picks up files
+  that already exist.
+
+Thinking is *not* narrated by default — it is long and mostly restates the task.
+`--thinking` turns it on when a worker is behaving strangely and you want to see
+why.
 
 **Write the prompt file in a separate, earlier call.** A heredoc and a backgrounded
 `pi` in one command silently produces nothing: the file is written, the harness
@@ -310,6 +375,32 @@ call is a bare `pi` invocation and nothing else.
 Run it with `run_in_background: true` — you are re-invoked when it exits, which is
 what keeps worker slots rotating. Absolute paths everywhere; the Bash cwd persists
 between calls and `/orchestrate`'s Step 2a-bis catalogues what that has already cost.
+
+---
+
+## Step P2-bis — Arm one monitor for the whole run
+
+After the first worker is up, start a single `Monitor` on the shared alerts file:
+
+```
+Monitor(command: "tail -n +1 -F /abs/path/to/.claude/pi-logs/alerts.log",
+        description: "pi worker failures, blocks and completions",
+        persistent: true)
+```
+
+Each line becomes a chat notification, so a guardrail block or a dead worker
+interrupts you and the user rather than waiting to be discovered on the next
+poll.
+
+**Watch the alerts file, never the narration.** The narration is ~150 lines per
+worker; a monitor fed that gets rate-limited and auto-stopped, and you lose the
+alerting entirely. `pi-narrate.py` already makes the split: only tool failures,
+guardrail blocks, retries, compaction, orchestrator interventions and
+completion reach `--alerts`.
+
+Create the file before arming the monitor (`mkdir -p` its directory and
+`touch` it), or `tail -F` spends the run waiting for a path that the first
+worker has not written yet.
 
 **The prompt is `/orchestrate`'s Step 4 prompt, unchanged**, minus the parts that
 assume a subagent. Keep every one of: the verbatim issue body, "check whether it
@@ -327,9 +418,55 @@ Three additions specific to pi:
   to touch pi's own configuration, and one that does can change the next worker's
   behaviour.
 
-### Iterating with a live worker
+### Steering a worker that is still running
 
-To push back on a worker without re-sending its whole context:
+`-p` is a closed box: everything you learn from the narration while a worker
+works is unusable until it finishes. `pi-rpc.py` closes that gap by driving the
+same agent over pi's RPC protocol, which accepts a message mid-flight.
+
+Spawn it exactly as above, with `pi-rpc.py run` in place of the `pi | narrate`
+pipeline:
+
+```bash
+PI_STATUS_FILE=/abs/path/to/worktrees/issue-16/.pi/status.json \
+pi-rpc.py run --dir /abs/path/to/worktrees/issue-16 --label issue-16 \
+  --prompt-file /abs/path/to/.claude/pi-prompts/issue-16.md \
+  --raw /abs/path/to/.claude/pi-logs/issue-16.jsonl \
+  --alerts /abs/path/to/.claude/pi-logs/alerts.log \
+  -- --provider deepseek --model deepseek-v4-pro --thinking high --approve
+```
+
+Narration and lifecycle are identical — it still runs backgrounded, still exits
+on `agent_settled`, still notifies you on completion. That is deliberate: a
+supervisor that outlived its work would trade the completion notification for
+the steering, and the notification is what keeps worker slots rotating. What you
+gain is a control socket:
+
+```bash
+pi-rpc.py state --dir <worktree>                      # is it streaming? how many messages?
+pi-rpc.py steer --dir <worktree> 'You are editing the wrong file; see src/foo.gd'
+pi-rpc.py follow-up --dir <worktree> 'When done, also update the CHANGELOG'
+pi-rpc.py abort --dir <worktree>                      # cleanly, rather than kill(1)
+```
+
+`steer` lands after the current tool calls finish and before the next model
+call, so it redirects the worker without corrupting a half-finished turn.
+Measured: a worker three steps into a four-step task abandoned the remainder and
+complied on the next turn. `follow-up` waits for it to finish instead.
+
+**Steer on evidence, not on nerves.** The narration is now detailed enough to
+watch a worker think, and the temptation is to intervene on the first line that
+looks wrong. A worker that is mid-exploration often looks lost and is not. Steer
+when the *narration shows a fact you have and it does not* — the wrong file, an
+issue it has misread, a script you know hangs. Otherwise let it finish and use
+the review loop, which is cheaper and has a better record.
+
+Every intervention is written into the narration and the alerts file, so a diff
+that changed direction mid-run has the reason recorded beside it.
+
+### Iterating with a finished worker
+
+To push back on a worker after it has settled, without re-sending its context:
 
 ```bash
 cd <worktree> && pi --approve --continue \
@@ -354,11 +491,14 @@ way, so the agent that enacts them still has its own reasoning in context.
 
 `/orchestrate`'s Step 5 applies in full. Two things change the weighting:
 
-**You cannot see the worker think.** With a subagent you at least get a coherent
-narrative. Here you get a JSONL log and a final message. Treat the report as a
-claim, and let the diff be the evidence — read it yourself. Spot-checking the
-highest-consequence claim stops being good practice and becomes the load-bearing
-step.
+**You can now watch the worker, but watching is not verifying.** The narration
+in Step P2 gives you what a subagent's transcript would: what it said, what it
+ran, what failed. That is a real improvement over the JSONL-and-a-final-message
+this command used to describe — but it is still the worker's account of its own
+work. Treat the report as a claim and let the diff be the evidence; read it
+yourself. Spot-checking the highest-consequence claim stops being good practice
+and becomes the load-bearing step. A convincing narration makes this *easier to
+skip*, which is the new failure mode to watch for in yourself.
 
 **Review with a Claude subagent, not another pi.** One adversarial review of
 `git diff main...HEAD` is a single cheap read where judgement matters most, and it
@@ -398,7 +538,9 @@ under two cents. If you are ever tempted to trade it away, trade away a worker s
 instead.
 
 Before merging, confirm the worker left no scaffolding: the `.pi/` config from P1b,
-stray log files, `--session-id` artifacts.
+stray log files, `--session-id` artifacts. `pi-rpc.py` removes its own `.pi/rpc.json`
+and socket on exit, but a worker killed with `SIGKILL` cannot — a leftover
+`rpc.json` is a hint that something ended badly, not a file to commit.
 
 ### Report what it cost
 
@@ -433,4 +575,11 @@ Everything under `/orchestrate`'s "Hard rules", plus:
   silently changes every interactive pi session afterwards.
 - **If a worker stalls with no output for a long stretch, read the log before
   killing it.** A blocked permission gate and a long thinking turn look identical
-  from outside, and only one of them is fixed by restarting.
+  from outside, and only one of them is fixed by restarting. `pi-workers.py`
+  separates them now — `stalled` versus `dead` versus `nostart` — but it tells
+  you *which* question to ask, not the answer.
+- **Never redirect a worker's stdout to a file.** That is what made every run a
+  black box; pipe it through `pi-narrate.py` instead, which writes the raw log
+  itself. See Step P2.
+- **The monitor watches the alerts file, never the narration.** A monitor fed
+  the full stream is rate-limited and stopped, and then nothing alerts at all.
