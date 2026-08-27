@@ -36,6 +36,7 @@ export interface StatusUsage {
 	output: number;
 	reasoning: number;
 	cacheRead: number;
+	cacheWrite: number;
 	totalTokens: number;
 	costUsd: number;
 }
@@ -64,6 +65,7 @@ const EMPTY_USAGE: StatusUsage = {
 	output: 0,
 	reasoning: 0,
 	cacheRead: 0,
+	cacheWrite: 0,
 	totalTokens: 0,
 	costUsd: 0,
 };
@@ -88,16 +90,10 @@ export function accumulate(total: StatusUsage, usage: unknown): StatusUsage {
 		output: total.output + num("output"),
 		reasoning: total.reasoning + num("reasoning"),
 		cacheRead: total.cacheRead + num("cacheRead"),
+		cacheWrite: total.cacheWrite + num("cacheWrite"),
 		totalTokens: total.totalTokens + num("totalTokens"),
 		costUsd: total.costUsd + costTotal,
 	};
-}
-
-/** Seconds since the status was last touched. The orchestrator's staleness test. */
-export function secondsSince(lastActivityAt: string, now: Date = new Date()): number {
-	const then = Date.parse(lastActivityAt);
-	if (Number.isNaN(then)) return Number.POSITIVE_INFINITY;
-	return (now.getTime() - then) / 1000;
 }
 
 export function writeStatusAtomic(path: string, status: Status): void {
@@ -147,9 +143,17 @@ export default function orchestrationStatus(pi: ExtensionAPI): void {
 	});
 
 	pi.on("message_end", async (event: unknown) => {
-		const message = (event as { message?: { usage?: unknown; provider?: string; model?: string } })
-			?.message;
+		const message = (
+			event as {
+				message?: { role?: string; usage?: unknown; provider?: string; model?: string };
+			}
+		)?.message;
 		if (!message) return;
+		// Assistant messages only. `message_end` also fires for toolResult messages,
+		// whose `usage` is the tool's own nested-model spend and is explicitly not
+		// part of main-context accounting - counting it would inflate the very
+		// number this extension exists to publish.
+		if (message.role !== "assistant") return;
 		status.usage = accumulate(status.usage, message.usage);
 		if (message.provider) status.provider = message.provider;
 		if (message.model) status.model = message.model;

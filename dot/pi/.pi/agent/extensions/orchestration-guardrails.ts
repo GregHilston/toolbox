@@ -42,65 +42,104 @@ export interface Guardrails {
 }
 
 /**
+ * Flags git accepts *before* its verb. Without these, `git -C /repo push` and
+ * `git --git-dir=x --work-tree=y push` sail past a rule anchored on `^git\s+push`,
+ * which is the commonest real bypass rather than an exotic one.
+ */
+const GIT_FLAGS =
+	"(?:(?:-[cC]\\s+\\S+|--(?:git-dir|work-tree|exec-path)(?:=\\S+|\\s+\\S+)|--no-pager|-p)\\s+)*";
+
+/**
  * The defaults exist so a worktree can arm the guardrails with `{}` and still
  * get the rules that matter. Every one of these is a prohibition that was
  * previously only prose in the worker prompt.
+ *
+ * **Threat model: a careless worker, not an adversarial one.** These stop an
+ * agent that reaches for a forbidden command in the ordinary course of its work.
+ * They are not a security boundary and do not pretend to be: `bash -c "git push"`,
+ * `eval`, backticks and `$(...)` all defeat them trivially, and closing that would
+ * mean parsing the shell rather than reading it. Real confinement is the sandbox
+ * extension's job (see docs), not this file's.
  */
 export const DEFAULT_RULES: Required<Guardrails> = {
 	bash: [
 		{
-			pattern: String.raw`^git\s+push\b`,
+			// GIT_FLAGS covers what may sit between `git` and its verb: `git -C /repo
+			// push` and `git --git-dir=… push` reach the same place as a bare push,
+			// and a rule anchored on `^git\s+push` misses both.
+			pattern: `^git\\s+${GIT_FLAGS}push(\\s|$)`,
 			reason:
 				"Never push. A pre-push hook deploys the API, so a push is a deploy. " +
 				"Stop after your last commit; the orchestrator pushes.",
 			terminate: true,
 		},
 		{
-			pattern: String.raw`^git\s+(checkout|switch)\s+(main|master)\b`,
+			// `(\s|$)` not `\b`: `\b` matches before a dot, so `git checkout main.py`
+			// - a real file in this repo - was refused as "leaving your branch".
+			pattern: String.raw`^git\s+(checkout|switch)\s+(main|master)(\s|$)`,
 			reason:
 				"Never leave your branch. You are in a worktree; main is checked out " +
 				"elsewhere and this cannot succeed. The orchestrator merges.",
 		},
 		{
-			pattern: String.raw`^git\s+(merge|rebase)\b`,
+			// Same trap: `\b` here refused the read-only `git merge-base` and
+			// `git merge-tree`. `--abort` and `--quit` are recovery, not merging.
+			pattern: String.raw`^git\s+(merge|rebase)(\s+(?!--abort|--quit|--continue)|$)`,
 			reason: "Never merge or rebase. The orchestrator does that after reviewing your diff.",
 		},
 		{
-			pattern: String.raw`^git\s+commit\b.*(--no-verify|(^|\s)-n(\s|$))`,
+			// Only up to the first `-m`, so a commit *message* mentioning
+			// `--no-verify` or `-n` is not itself refused. Writing about the hooks
+			// is exactly what a worker in this repo does.
+			pattern: `^git\\s+${GIT_FLAGS}commit(\\s+(?!-m|--message)\\S+)*\\s+(--no-verify|-n)(\\s|$)`,
 			reason:
 				"Never bypass the hooks. They run the suites and are slow, not hung — " +
 				"budget 60-90s per commit and let them finish.",
 		},
 		{
-			pattern: String.raw`^gh\s+\w+\s+(create|edit|close|reopen|comment|merge|delete|review)\b`,
+			pattern: String.raw`^gh\s+\w+\s+(create|edit|close|reopen|comment|merge|delete|review|ready|develop|run|set)(\s|$)`,
 			reason:
 				"Never write to GitHub. The orchestrator owns every gh mutation, including " +
 				"the issue trailer. Read-only `gh issue view` is fine.",
 		},
 		{
-			pattern: String.raw`^gh\s+api\b.*-X\s*(POST|PATCH|PUT|DELETE)`,
+			pattern: String.raw`^gh\s+api\b.*(-X|--method)\s*(POST|PATCH|PUT|DELETE)`,
 			reason: "Never write to GitHub. `gh api` with a write method is a mutation.",
 		},
 		{
-			pattern: String.raw`^pi\s+(install|remove|uninstall|update)\b`,
+			pattern: String.raw`^(npx\s+)?pi\s+(install|remove|uninstall|update)(\s|$)`,
 			reason:
 				"Never change pi's own configuration. It would alter the next worker's behaviour.",
 		},
 		{
-			pattern: String.raw`(^|\s)/login\b`,
+			// The shell cannot reach `.pi/` through write/edit rules, so the bash
+			// side needs its own. `git config core.hooksPath` is here because it
+			// defeats the --no-verify rule by another route.
+			pattern: String.raw`(^|\s)(>|>>|tee\b|rm\b|mv\b|cp\b|truncate\b).*(^|/|\s)\.pi/`,
 			reason:
-				"Never /login. This worker's provider is deepseek, billed to its own key, " +
-				"and that is deliberate.",
+				"`.pi/` is orchestrator scaffolding, not part of your change, and not " +
+				"yours to rewrite from the shell either.",
+		},
+		{
+			pattern: String.raw`^git\s+config\b.*core\.hooksPath`,
+			reason:
+				"Never repoint core.hooksPath. The hooks run the suites; disabling them " +
+				"is the same as --no-verify.",
 		},
 	],
 	paths: [
 		{
-			pattern: String.raw`(^|/)\.pi/`,
-			reason: "`.pi/` is orchestrator scaffolding, not part of your change.",
+			// pi's own configuration must be tested BEFORE the scaffolding rule.
+			// Ordered the other way, `~/.pi/agent/settings.json` matched the generic
+			// `.pi/` rule first and the model was told it had touched "orchestrator
+			// scaffolding" - a misleading reason for the case that matters most.
+			// Not /Users/-anchored, so it holds on Linux too.
+			pattern: String.raw`(^|/)(home|Users)/[^/]+/\.pi/|^~/\.pi/`,
+			reason: "Never edit pi's own configuration; it would change the next worker's behaviour.",
 		},
 		{
-			pattern: String.raw`^([~]|/Users/[^/]+)/\.pi/`,
-			reason: "Never edit pi's own configuration; it would change the next worker's behaviour.",
+			pattern: String.raw`(^|/)\.pi/`,
+			reason: "`.pi/` is orchestrator scaffolding, not part of your change.",
 		},
 	],
 };
@@ -115,24 +154,70 @@ export const DEFAULT_RULES: Required<Guardrails> = {
 export function stripHeredocs(command: string): string {
 	const lines = command.split("\n");
 	const out: string[] = [];
-	let terminator: string | null = null;
+	// Several heredocs may open on one line (`cat <<A <<B`); bash consumes their
+	// bodies in order, so track a queue rather than a single terminator.
+	let pending: { word: string; dashed: boolean }[] = [];
 
 	for (const line of lines) {
-		if (terminator !== null) {
-			// A heredoc terminator may be indented when <<- was used.
-			if (line.trim() === terminator) terminator = null;
+		if (pending.length > 0) {
+			const current = pending[0];
+			// Only `<<-` permits an indented terminator. Treating every heredoc as
+			// dashed ended bodies early and let a body line be scanned as a command.
+			const ended = current.dashed ? line.trim() === current.word : line === current.word;
+			if (ended) pending = pending.slice(1);
 			continue;
 		}
-		// <<EOF, <<-EOF, <<'EOF', <<"EOF"
-		const open = line.match(/<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/);
-		if (open) {
-			terminator = open[2];
-			out.push(line.slice(0, open.index));
+		const openers = findHeredocOpeners(line);
+		if (openers.length > 0) {
+			pending = openers.map((o) => ({ word: o.word, dashed: o.dashed }));
+			out.push(line.slice(0, openers[0].index));
 			continue;
 		}
 		out.push(line);
 	}
+
+	// An unterminated heredoc means the rest of the command was swallowed. Bash
+	// would not run that body either, so dropping it is right - but a *quoted*
+	// `<<EOF` is not a heredoc at all, which is what findHeredocOpeners guards.
 	return out.join("\n");
+}
+
+/**
+ * Find heredoc openers on one line, ignoring any that sit inside quotes.
+ *
+ * This guard is the whole point. `grep -rn '<<EOF' docs/ && git push` has no
+ * heredoc in it — but a naive match treats `<<EOF` as one, discards everything
+ * after it, and the guardrails then see no `git push` at all. A worker grepping
+ * documentation for heredoc examples would have silently disarmed the checker
+ * for the rest of that command.
+ */
+function findHeredocOpeners(line: string): { word: string; dashed: boolean; index: number }[] {
+	const found: { word: string; dashed: boolean; index: number }[] = [];
+	let quote: string | null = null;
+
+	for (let i = 0; i < line.length; i++) {
+		const ch = line[i];
+		if (quote) {
+			if (ch === quote && line[i - 1] !== "\\") quote = null;
+			continue;
+		}
+		if (ch === "'" || ch === '"') {
+			quote = ch;
+			continue;
+		}
+		if (ch !== "<" || line[i + 1] !== "<") continue;
+		// `<<<` is a here-string, not a heredoc: it has no body to skip.
+		if (line[i + 2] === "<") {
+			i += 2;
+			continue;
+		}
+		const rest = line.slice(i);
+		const match = rest.match(/^<<(-?)\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\2/);
+		if (!match) continue;
+		found.push({ word: match[3], dashed: match[1] === "-", index: i });
+		i += match[0].length - 1;
+	}
+	return found;
 }
 
 /**
@@ -143,22 +228,28 @@ export function stripHeredocs(command: string): string {
 export function commandSegments(command: string): string[] {
 	const withoutHeredocs = stripHeredocs(command);
 	return withoutHeredocs
-		.split(/\|\||&&|[;\n|]/)
+		.split(/\|\||&&|[;\n|&]/)
 		.map((segment) => segment.trim())
 		.filter(Boolean)
 		.map(stripLeadingWrappers);
 }
 
-const WRAPPERS = /^(sudo|command|env|nohup|time|xargs|nice)\b(\s+-\S+)*\s+/;
+const WRAPPERS = /^(sudo|command|env|nohup|time|xargs|nice|then|do|else|elif)\b(\s+-\S+)*\s+/;
+const ASSIGNMENT = /^([A-Za-z_][A-Za-z0-9_]*=\S*\s+)+/;
+const GROUPING = /^[({]\s*/;
 
+/**
+ * Strip the leading noise that hides the real command, until nothing more comes
+ * off. The loop matters: `env FOO=bar git push` needs the wrapper removed, then
+ * the assignment, then nothing. Stripping assignments once before the loop - as
+ * this did originally - left `FOO=bar git push` unmatched and allowed the push.
+ */
 function stripLeadingWrappers(segment: string): string {
-	let out = segment.replace(/^\(\s*/, "");
-	// Leading VAR=value assignments precede the command they apply to.
-	out = out.replace(/^([A-Za-z_][A-Za-z0-9_]*=\S*\s+)+/, "");
+	let out = segment;
 	let previous: string;
 	do {
 		previous = out;
-		out = out.replace(WRAPPERS, "");
+		out = out.replace(GROUPING, "").replace(ASSIGNMENT, "").replace(WRAPPERS, "");
 	} while (out !== previous);
 	return out;
 }
@@ -169,11 +260,42 @@ export interface Verdict {
 	terminate?: boolean;
 }
 
+/**
+ * Drop rules that cannot be trusted, loudly, rather than letting them through.
+ *
+ * A rule with no `pattern` compiles to `new RegExp(undefined)` — which is
+ * `/(?:)/`, and matches *everything*. A hand-edited guardrails.json missing one
+ * key would therefore refuse every tool call the worker made, all night, with a
+ * reason that never mentions the config. An invalid regex is the mirror: it
+ * throws on every bash call. Both are silent-until-you-read-the-log failures,
+ * which is the exact class this extension exists to remove.
+ */
+export function compileRules(rules: Rule[]): { rule: Rule; regex: RegExp }[] {
+	const out: { rule: Rule; regex: RegExp }[] = [];
+	for (const rule of rules) {
+		if (typeof rule?.pattern !== "string" || rule.pattern === "") {
+			console.error("[guardrails] ignoring a rule with no pattern:", JSON.stringify(rule));
+			continue;
+		}
+		if (typeof rule.reason !== "string" || rule.reason === "") {
+			console.error(`[guardrails] ignoring rule ${rule.pattern}: it has no reason text.`);
+			continue;
+		}
+		try {
+			out.push({ rule, regex: new RegExp(rule.pattern, "i") });
+		} catch (error) {
+			console.error(`[guardrails] ignoring rule ${rule.pattern}: not a valid regex.`, error);
+		}
+	}
+	return out;
+}
+
 /** Decide whether a bash command may run. Pure, so the tests can reach it. */
 export function checkBash(command: string, rules: Rule[]): Verdict | null {
+	const compiled = compileRules(rules);
 	for (const segment of commandSegments(command)) {
-		for (const rule of rules) {
-			if (new RegExp(rule.pattern, "i").test(segment)) {
+		for (const { rule, regex } of compiled) {
+			if (regex.test(segment)) {
 				return { block: true, reason: rule.reason, terminate: rule.terminate };
 			}
 		}
@@ -183,8 +305,8 @@ export function checkBash(command: string, rules: Rule[]): Verdict | null {
 
 /** Decide whether a write/edit may touch a path. Pure, so the tests can reach it. */
 export function checkPath(path: string, rules: Rule[]): Verdict | null {
-	for (const rule of rules) {
-		if (new RegExp(rule.pattern, "i").test(path)) {
+	for (const { rule, regex } of compileRules(rules)) {
+		if (regex.test(path)) {
 			return { block: true, reason: rule.reason, terminate: rule.terminate };
 		}
 	}

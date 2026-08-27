@@ -14,7 +14,6 @@ import {
 	type Status,
 	type StatusUsage,
 	accumulate,
-	secondsSince,
 	writeStatusAtomic,
 } from "../.pi/agent/extensions/orchestration-status.ts";
 
@@ -23,6 +22,7 @@ const ZERO: StatusUsage = {
 	output: 0,
 	reasoning: 0,
 	cacheRead: 0,
+	cacheWrite: 0,
 	totalTokens: 0,
 	costUsd: 0,
 };
@@ -47,7 +47,13 @@ test("accumulates across turns rather than replacing", () => {
 	assert.equal(second.input, 150, "a running total, not the latest message");
 	assert.equal(second.cacheRead, 1400, "cache reads dominate cost here, so they must be summed");
 	assert.equal(second.totalTokens, 1565);
+	assert.equal(second.cacheWrite, 0, "absent cacheWrite must sum to zero, not NaN");
 	assert.equal(second.costUsd, 0.75, "cost comes from pi's own per-turn object");
+});
+
+test("sums cacheWrite, which was silently dropped before review", () => {
+	const out = accumulate(ZERO, { cacheWrite: 128, cost: { total: 0 } });
+	assert.equal(out.cacheWrite, 128, "a real field on Usage; leaving it out understated the run");
 });
 
 test("survives a message with no usage at all", () => {
@@ -63,19 +69,6 @@ test("ignores non-finite and non-numeric fields instead of producing NaN", () =>
 		cost: { total: null },
 	});
 	assert.deepEqual(out, ZERO, "a NaN here would poison every later sum");
-});
-
-test("secondsSince is the staleness test the orchestrator polls on", () => {
-	const now = new Date("2026-08-27T12:00:30Z");
-	assert.equal(secondsSince("2026-08-27T12:00:00Z", now), 30);
-});
-
-test("an unparseable timestamp reads as infinitely stale, not as fresh", () => {
-	assert.equal(
-		secondsSince("not a date", new Date()),
-		Number.POSITIVE_INFINITY,
-		"a corrupt status must look dead, because guessing 'alive' is the dangerous default",
-	);
 });
 
 test("writes valid JSON and leaves no temp file behind", () => {
