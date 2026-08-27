@@ -11,9 +11,14 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 import {
+	RECENT_LIMIT,
 	type Status,
 	type StatusUsage,
 	accumulate,
+	assistantText,
+	briefArgs,
+	flatten,
+	pushRecent,
 	writeStatusAtomic,
 } from "../.pi/agent/extensions/orchestration-status.ts";
 
@@ -84,6 +89,8 @@ test("writes valid JSON and leaves no temp file behind", () => {
 			turn: 7,
 			toolCalls: 3,
 			currentTool: "bash",
+			blockedCount: 0,
+			recent: [],
 			usage: { ...ZERO },
 		};
 		writeStatusAtomic(path, status);
@@ -111,6 +118,8 @@ test("overwrites in place, so a poller always sees one whole document", () => {
 			lastActivityAt: "2026-08-27T12:00:00Z",
 			turn: 1,
 			toolCalls: 0,
+			blockedCount: 0,
+			recent: [],
 			usage: { ...ZERO },
 		};
 		writeStatusAtomic(path, base);
@@ -123,4 +132,80 @@ test("overwrites in place, so a poller always sees one whole document", () => {
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
+});
+
+/**
+ * The helpers below exist so one read of the status file answers "what is it
+ * doing", not just "is it alive". All of it runs on every event of an
+ * unattended run, so what is worth testing is that none of it can throw and
+ * none of it can grow without bound.
+ */
+
+test("flatten collapses model prose to something a table row can hold", () => {
+	assert.equal(flatten("  Now   updating\n\nthe docstring  "), "Now updating the docstring");
+	assert.equal(flatten(undefined), "", "a missing field is not an error");
+	assert.equal(flatten(42), "", "and neither is a non-string one");
+});
+
+test("flatten truncates with an ellipsis rather than growing the status file", () => {
+	const out = flatten("x".repeat(500));
+	assert.equal(out.length, 200, "the cap is what keeps a constantly-polled file small");
+	assert.ok(out.endsWith("…"), "and the truncation must be visible, not silent");
+});
+
+test("briefArgs shows the argument that identifies the call", () => {
+	assert.equal(briefArgs({ command: "godot --headless" }), "godot --headless");
+	assert.equal(briefArgs({ path: "src/foo.gd" }), "src/foo.gd");
+	assert.equal(
+		briefArgs({ path: "src/foo.gd", command: "ls" }),
+		"ls",
+		"command wins: it is the more specific description of what is happening",
+	);
+});
+
+test("briefArgs falls back to the whole object rather than saying nothing", () => {
+	assert.equal(briefArgs({ weird: 1 }), '{"weird":1}');
+	assert.equal(briefArgs(undefined), "");
+	assert.equal(briefArgs("not an object"), "");
+});
+
+test("briefArgs survives an argument object that cannot be serialised", () => {
+	const cyclic: Record<string, unknown> = {};
+	cyclic.self = cyclic;
+	assert.equal(briefArgs(cyclic), "", "a JSON.stringify throw must not take the run down");
+});
+
+test("assistantText reads text blocks and ignores thinking and tool calls", () => {
+	const content = [
+		{ type: "thinking", thinking: "the user wants me to" },
+		{ type: "text", text: "Adding the flag now." },
+		{ type: "toolCall", id: "1", name: "edit", arguments: {} },
+	];
+	assert.equal(
+		assistantText(content),
+		"Adding the flag now.",
+		"only what the worker actually said out loud",
+	);
+});
+
+test("assistantText handles the shapes that are not an array of blocks", () => {
+	assert.equal(assistantText("plain string content"), "plain string content");
+	assert.equal(assistantText(undefined), "");
+	assert.equal(assistantText([{ type: "text" }]), "", "a text block with no text is not a crash");
+});
+
+test("pushRecent keeps the newest entries and drops the oldest", () => {
+	const recent: string[] = [];
+	for (let i = 0; i < RECENT_LIMIT + 5; i++) {
+		pushRecent(recent, `line ${i}`);
+	}
+	assert.equal(recent.length, RECENT_LIMIT, "an unattended run must not grow this forever");
+	assert.equal(recent[recent.length - 1], `line ${RECENT_LIMIT + 4}`, "newest last");
+	assert.equal(recent[0], "line 5", "oldest dropped");
+});
+
+test("pushRecent ignores empty lines instead of padding the buffer with them", () => {
+	const recent: string[] = ["kept"];
+	pushRecent(recent, "");
+	assert.deepEqual(recent, ["kept"], "a tool with no useful argument must not evict history");
 });
