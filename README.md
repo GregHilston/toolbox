@@ -13,8 +13,9 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 ├── claude-skills/                          # Global Claude Code agent skills (→ ~/.claude/skills/).
 ├── dot/                                    # Dotfiles to configure a slew of programs and environments.
 ├── nixos/                                  # NixOS and nix-darwin configurations for all hosts.
+├── tests/                                  # Tests for bin/ scripts (`just test`). Not under bin/, which is on $PATH.
 ├── windows/                                # Windows provisioning (autounattend.xml, scoop/winget lists).
-├── justfile                                # Root recipes (e.g. `just setup-claude` for non-nix hosts).
+├── justfile                                # Root recipes (`just setup-claude`, `just test`).
 ├── CLAUDE.md                               # Repo guide for Claude Code (and humans).
 ├── README.md                               # This documentation.
 ```

@@ -154,7 +154,7 @@ keyboard.
 
 | Extension | Armed by | What it does |
 | --- | --- | --- |
-| `orchestration-status.ts` | `PI_STATUS_FILE=<path>` | Rewrites a small JSON status file every turn and tool call: phase, turn, current tool, `lastActivityAt`, `lastBlocked`, running tokens and cost. |
+| `orchestration-status.ts` | `PI_STATUS_FILE=<path>` | Rewrites a small JSON status file every turn and tool call: phase, turn, current tool *and its command*, the last thing the worker said, a short ring buffer of recent activity, `lastActivityAt`, `lastBlocked`, running tokens and cost. |
 | `orchestration-guardrails.ts` | `<cwd>/.pi/guardrails.json` exists, or `PI_GUARDRAILS=1` | Blocks `git push`, `checkout main`, `merge`/`rebase`, `--no-verify`, `gh` writes, `pi install`, `/login`, and edits under `.pi/` — via `tool_call`, with a reason the model reads. |
 | `extensions-available/sandbox/` | **parked, loaded by nobody** | Official pi example on `@anthropic-ai/sandbox-runtime`. Deliberately outside the auto-discovery root — see below. |
 
@@ -164,6 +164,14 @@ workers were reported as "still running" before anyone ran `ps`. Now the worker
 says so itself, and a *missing* status file means it never started — the case
 that actually fooled us. Writes are atomic (temp + rename) so a poller reading
 mid-write never sees half a document.
+
+Liveness was the first question; *what is it doing* is the one asked every time
+after, and `phase: "tool", currentTool: "bash"` does not answer it. So the file
+also carries `lastToolBrief` (the command, not just the tool name), `lastText`
+(the last thing the worker said out loud) and `recent`, a capped ring buffer of
+the last eight actions. All of it is truncated and bounded on purpose: this file
+is rewritten on every event and polled continuously, including by the status
+line, so it must stay small no matter how long the run goes.
 
 **Why guardrails exist.** "Never push, never merge, never `gh` write" were English
 sentences in a 141-line prompt. That is a request, not a boundary, and nobody is
@@ -202,13 +210,91 @@ pi -e ~/Git/toolbox/dot/pi/extensions-available/sandbox   # needs npm install fi
 `node_modules` is gitignored, so a fresh checkout needs `npm install` in that
 directory before the `-e` will resolve. Tracked as gridkeep issue #82.
 
+### Seeing what an unattended worker is doing
+
+Three scripts in `bin/` turn a pi worker from a black box into something
+readable. They are separate from the extensions because they run in the
+*orchestrator's* process, not the worker's.
+
+| Script | Reads | Answers |
+| --- | --- | --- |
+| `pi-narrate.py` | pi's `--mode json` stream, on stdin | "what is happening, right now, in words" |
+| `pi-workers.py` | every `.pi/status.json` under a root | "which of my four workers needs me" |
+| `pi-rpc.py` | pi's `--mode rpc` protocol | "change what this one is doing, without waiting for it" |
+
+**The bug they were written for was ours, not pi's.** `/orchestrate-pi` spawned
+workers as `pi ... > log.jsonl 2>&1`. Claude Code captures a background
+command's output from a PTY, so redirecting everything to a file meant the
+harness saw zero bytes and reported *"no output available"* for the entire run —
+while pi had been emitting a fully detailed, line-buffered event stream the whole
+time. We were discarding it at the shell and then reading a 13MB log back with
+`jq` to recover a fraction of what we had thrown away.
+
+`pi-narrate.py` goes in the pipe where the redirect was. It writes the raw JSONL
+itself, so nothing is lost, and prints one line per event worth seeing. Two
+non-obvious things it handles:
+
+- **It splits records on LF only.** pi's `docs/rpc.md` is explicit that a generic
+  line reader is not protocol-compliant, because it also splits on U+2028 and
+  U+2029 — both legal inside a JSON string, and both of which appear in real
+  model output. A text-mode `for line in stdin` corrupts records.
+- **Non-JSON lines are surfaced, not dropped.** With `2>&1` those are pi's own
+  stderr: the settings-lock warning, provider errors, stack traces. They used to
+  vanish into the log unread.
+
+`pi-rpc.py` is the one worth understanding before reaching for it. It runs the
+worker under `--mode rpc` and holds a control socket open, so `pi-rpc.py steer`
+reaches an agent that is *still working* — the message lands after the current
+tool calls and before the next model call. Verified against a live worker: three
+steps into a four-step task, a steer made it abandon the rest and comply on the
+next turn. It deliberately keeps `-p`'s lifecycle (exit on `agent_settled`), so a
+backgrounded run still ends and still notifies; `--keep-alive` opts out for
+attended use. The socket lives in `$TMPDIR` under a hash of the worktree path,
+not in the worktree, because macOS caps a Unix socket path at 104 bytes and a
+worktree path plus `.pi/rpc.sock` gets close enough to matter.
+
+**What adversarial review found in the supervisor, and why it is worth knowing.**
+Every serious defect was in the interaction between its three threads, its
+subprocess and its socket — none of it reachable from the pure functions, all of
+it reachable against a stand-in process that speaks the protocol badly
+(`tests/fake_pi.py`, driven by `PI_RPC_BIN`). Four are worth remembering because
+each has a general shape:
+
+- **A daemon thread and a closed file handle lose your log.** The event and
+  stderr readers wrote into handles the main thread closed on return, silently
+  truncating both the JSONL and the alerts file — the exact loss this tool
+  exists to prevent. They are joined before the handles close now.
+- **A lock held across a blocking write deadlocks the shutdown that wants it.**
+  `command()` holds the stdin lock across `write`, which blocks once pi stops
+  draining the pipe; `shutdown()` took the same lock, so the terminate/kill
+  escalation never ran and only `SIGKILL` cleared it. The acquire is bounded.
+- **A timeout is not a rejection.** Treating an unacknowledged opening prompt as
+  a refusal killed workers that were visibly working. Only a correlated
+  `success: false`, or a dead process, aborts a run now; streaming events are
+  evidence against a refusal.
+- **`agent_end` is not completion.** pi documents it as *one low-level run*, and
+  it repeats across retries and compaction, so narrating it as "done" reported
+  completion several times in a retried run — and never at all in RPC mode,
+  where `agent_settled` is what arrives. `agent_settled` is the signal, the
+  closing line is idempotent, and the supervisor emits one even for a worker
+  that died, because the alerts monitor is counting on exactly one per worker.
+
+None of this substitutes for reading the diff. A worker's narration is still the
+worker's account of its own work, and a *convincing* narration makes the review
+loop below easier to skip — which is the new failure mode, not the old one.
+
 ### Tests
 
 ```bash
-cd ~/Git/toolbox/dot/pi && node --test 'tests/*.test.ts'
+just test                                              # both suites
+cd ~/Git/toolbox/dot/pi && node --test 'tests/*.test.ts'   # extensions only
+cd ~/Git/toolbox/tests && python3 -m unittest discover     # bin/ scripts only
 ```
 
-Node 26 strips types natively, so there is no build step and no dependency.
+Node 26 strips types natively, so there is no build step and no dependency; the
+Python suite is stdlib `unittest` for the same reason. The `bin/` tests live in
+`tests/` at the repo root rather than under `bin/`, because the recursive `$PATH`
+glob in `.zshrc` would otherwise put a test directory on `$PATH`.
 
 **Test files must not live in `.pi/agent/extensions/`.** pi scans that directory
 and tries to load every `.ts` in it as an extension — a `*.test.ts` there is

@@ -24,18 +24,21 @@ pi @file.png "what's this?"     # vision input (Qwen3.6 supports it)
 
 ## Installed Extensions
 
-**Local** (stow-managed, `dot/pi/.pi/agent/extensions/`):
+**Local** (stow-managed, `dot/pi/.pi/agent/extensions/`) — `ls` it for the
+current set. The orchestration ones are inert unless armed, and
+[CLAUDE.md](CLAUDE.md) → "Extensions written here for orchestration" explains
+what arms each and why it is off by default.
 
-- `plan-mode/` — `/plan` toggle for read-only exploration → numbered plan → tracked execution. From pi-mono's official examples
-- `current-date.ts` — injects today's date into system prompt (~20 tokens)
-- `claude-md.ts` — loads `CLAUDE.md` files from cwd up to git root
-- `clear.ts` — context clearing
+**Packages** (installed via `pi install`) are declared in
+[pi.nix](../../nixos/modules/programs/tui/pi.nix), which is the list worth
+reading — it is the one that deploys.
 
-**Packages** (installed via `pi install`, declared in pi.nix):
+## Watching an unattended run
 
-- [`@ff-labs/pi-fff`](https://github.com/dmtrKovalenko/fff) — frecency-ranked, fuzzy, git-aware file search
-- [`pi-agent-suite`](https://github.com/n-r-w/pi-agent-suite) — context-projection (hides stale tool output), context-overflow (proactive compaction), custom-compaction, subagents
-- [`moonpi`](https://github.com/galatolofederico/moonpi) — read-before-write enforcement, directory containment
+`/orchestrate-pi` drives workers through `bin/pi-narrate.py` (readable narration
+instead of a discarded stream), `bin/pi-workers.py` (a table of every worker's
+state) and `bin/pi-rpc.py` (steer one mid-run). See
+[CLAUDE.md](CLAUDE.md) → "Seeing what an unattended worker is doing".
 
 ## Tips
 

@@ -24,6 +24,16 @@
       { "id": "30", "type": "weekly-usage", "color": "brightBlue" },
       { "id": "31", "type": "separator" },
       { "id": "32", "type": "weekly-reset-timer", "color": "brightBlack" }
+    ],
+    [
+      {
+        "id": "45",
+        "type": "custom-command",
+        "color": "brightYellow",
+        "commandPath": "$HOME/Git/toolbox/bin/pi-workers.py --from-statusline --oneline 2>/dev/null || true",
+        "timeout": 2000,
+        "maxWidth": 120
+      }
     ]
   ],
   "flexMode": "full-minus-40",

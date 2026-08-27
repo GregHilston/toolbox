@@ -67,6 +67,16 @@ Version pin and the `~/.npm-global` install live in `nixos/modules/programs/tui/
 - `current-working-dir` (segments: 1) and `git-worktree`, so a glance identifies *which*
   session you're typing into. With many concurrent sessions the git widgets alone show
   `master` almost everywhere, and a worktree is indistinguishable from the main checkout.
+- A `custom-command` widget on **a line of its own**, running
+  `pi-workers.py --from-statusline --oneline`, so an `/orchestrate-pi` run is
+  visible without asking Claude: `pi 5w 2▸ 1~ 1✓ $0.0912 ⚠1 stalled`.
+  The dedicated line is not cosmetic — ccstatusline does **not** drop a
+  separator adjacent to a widget that renders nothing, so putting it inline left
+  either a dangling `|` when idle or no gap when active. On its own line the
+  whole row disappears when the script prints nothing, which is every session
+  that is not orchestrating. Verified by rendering both states, per the advice
+  at the end of this section. The script must also never exit non-zero in this
+  mode: ccstatusline renders `[Exit: N]` in the bar if it does.
 - `weekly-usage` (the `weekly_all` quota) and `session-usage` (the 5-hour block).
   **Not** `weekly-opus-usage` / `weekly-sonnet-usage`: ccstatusline reads
   `https://api.anthropic.com/api/oauth/usage`, which now returns `seven_day_opus: null`
@@ -180,6 +190,19 @@ On **headless dungeon** that integration is GUI-gated, so `op inject` fails with
 `authorization timeout`. Put a 1Password **service account token** (Business/Teams
 plan) at `~/.config/op/service-account-token`, mode `600` — `just secrets` picks it up
 and needs no GUI. Without one, VNC in and unlock 1Password first.
+
+## Watching pi Workers — pi-narrate, pi-workers, pi-rpc
+
+`bin/pi-narrate.py` (pi's JSON event stream → one readable line per event),
+`bin/pi-workers.py` (every worker's status file → a table, a status-bar line, or
+JSON) and `bin/pi-rpc.py` (steer a worker that is still running). Together they
+are why an `/orchestrate-pi` run is no longer a black box; `-h` documents each.
+
+`dot/pi/CLAUDE.md` → "Seeing what an unattended worker is doing" owns the design
+and the reasoning. The short version: workers were spawned with their stdout
+redirected to a file, Claude Code captures background output from a PTY, and so
+the TUI reported "no output available" for entire runs while pi was emitting a
+detailed event stream the whole time.
 
 ## Thread Fetchers — Search & Convert HN & Reddit to Markdown/JSON
 
