@@ -1,6 +1,8 @@
 {
+  inputs,
   vars,
   lib,
+  pkgs,
   ...
 }: {
   imports = [
@@ -93,13 +95,6 @@
     # 6-bit is the best quality/memory balance for 48GB
     custom.programs.pi.defaultModel = lib.mkForce "Qwen3.6-35B-A3B-6bit";
 
-    # No DeepSeek on the work machine. This hides it from pi's model picker;
-    # the load-bearing half is in nixos/justfile, where `just secrets` strips
-    # DEEPSEEK_API_KEY out of secrets/.env on this host, so the key is never
-    # written here at all. Both, deliberately — the picker entry would only be
-    # a dead menu item without a key, and a key without this would be reachable.
-    custom.programs.pi.deepseek = false;
-
     # Exclude moonpi (cwd error on this host)
     #
     # NOTE: this mkForce replaces the module default outright, so anything added
@@ -120,6 +115,14 @@
 
     # Disable mflux activation
     home.activation.install-mflux = lib.mkForce "";
+
+    # runlayer — Mozilla's MCP gateway CLI, PyPI-only (no nixpkgs package).
+    # Fronts Slack/Jira/Drive MCP connectors behind mozilla.runlayer.com, so it
+    # belongs on the work machine only. `runlayer setup install` then wires the
+    # chosen connectors into ~/.claude.json.
+    home.activation.install-runlayer = inputs.home-manager.lib.hm.dag.entryAfter ["installPackages"] ''
+      ${pkgs.uv}/bin/uv tool install --upgrade runlayer 2>/dev/null || true
+    '';
 
     # Citadel is the Mozilla work machine: attribute commits to the Mozilla identity and
     # sign them with the on-host SSH key (added to the GregHilstonMozilla GitHub account),
