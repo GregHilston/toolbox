@@ -316,6 +316,15 @@ closes both, `Closes #16, #17` closes only the first. Tell the agent this
 verbatim; it is the whole bookkeeping mechanism and it is easy to get subtly
 wrong.
 
+**Keep the prompt's prefix byte-stable, and put anything variable at the end.**
+Prompt caches match an exact prefix from the very first token, so a single changed
+token near the top invalidates the whole cache for that turn. Never inject a
+timestamp, a run id, a worker count or a "you are agent 3 of 5" line near the
+beginning of a worker prompt. Order it stable-to-variable: standing rules and
+repo facts first, the issue body and anything run-specific last. And **verify hits
+by reading the numbers rather than assuming** — `pi-workers.py` shows a cache-hit
+column for exactly this reason.
+
 **Write the prompt to remove turns, not to add context.** This is worth its own
 paragraph because the obvious move is wrong.
 
@@ -357,11 +366,19 @@ loudly rather than silently substituting your own."
   them to the end** — an agent that dies mid-run keeps only what it committed, and
   in one `/orchestrate-pi` run three workers were killed by a provider error and
   lost everything they had done, while still reporting completion.
-- **Read line ranges, not whole files.** `grep -n` for the anchor, then read the
-  40 lines around it. This is the single biggest lever on cost and it compounds:
-  every tool result stays in context for the rest of the session, so a 600-line
-  file read whole is ~8k tokens re-sent on *every remaining turn*. A worker that
-  reads thirty files whole is carrying all thirty, forever.
+- **Read line ranges, not whole files, and truncate every tool result at the
+  source.** `grep -n` for the anchor, then read the 40 lines around it. Pipe long
+  output through `head`/`tail`; grep a suite run for its summary lines rather than
+  dumping it. This is the single biggest lever on cost and it compounds: every
+  tool result stays in context for the rest of the session, so a 600-line file
+  read whole is ~8k tokens re-sent on *every remaining turn*, and a worker that
+  reads thirty files whole is carrying all thirty, forever. Measured: context grew
+  **9-15x** over a worker's life, ~20k on turn one to 175-295k at the end.
+
+  The counter-intuitive part, and the reason this is a *prevention* rule rather
+  than a cleanup one: with prompt caching, **keeping context is usually cheaper
+  than compacting it**, so the answer is not to summarise later — it is not to
+  load the bloat in the first place.
 - Let hooks run. **Never `--no-verify`.** State the expected duration.
 - Coverage gates, formatters, and any repo-specific requirements.
 - UI work must be *looked at*, not just tested — run the screenshot harness,
@@ -371,6 +388,14 @@ loudly rather than silently substituting your own."
   harness scored the very screen the ticket was about at 0.27% while unrelated
   screens moved 15–20%, and that number *was* the finding — the rows had been
   added below the fold, where the tests could see them and the player could not.
+- **If your change lowers the test count, justify every deletion by name.** A
+  rewrite legitimately kills tests for behaviour that no longer exists — but the
+  same diff quietly drops coverage for behaviour that *does*. One worker went
+  1875 to 1869 describing it as "replaced 11 tween tests with 5 clock-driven
+  ones"; review found four of the deletions covered live behaviour (pause,
+  resume, speed and a multi-cell layout case) and nothing had replaced them. List
+  each deleted test and say what still covers it, or say plainly that nothing
+  does.
 - **Never run a `gh` write command** — no `issue edit`, `issue close`,
   `issue comment`, `pr create`. You own every mutation of GitHub state.
   Read-only `gh issue view` is fine if it genuinely needs more context.
@@ -410,6 +435,13 @@ The loop is: worker commits → you verify → a **fresh review subagent** reads
 
 Two details make it work:
 
+- **Tell the reviewer it may correct you.** Your brief names failure modes to
+  hunt for, and some of them will be wrong. On one issue the brief asserted that
+  4x replay speed would multiply a per-frame cost; the reviewer established that
+  frame count is set by the display, not the speed multiplier, so 4x does *less*
+  total work. Say "if a premise in this brief is wrong, say so" — and pass the
+  correction on to the worker rather than quietly dropping it, or the worker acts
+  on your error.
 - **The reviewer must be fresh, and it must not be the worker.** An agent
   reviewing its own diff is the weakest possible check: it re-reads its own
   reasoning and finds it convincing. Spawn a separate agent, give it the worktree

@@ -507,6 +507,74 @@ Three additions specific to pi:
   lost everything they had done this way, and the loss is invisible until you look
   at `git log` rather than at the completion event.
 
+### A pi worker cannot see, and will try anyway — say so in the prompt
+
+`pi --list-models deepseek` reports **`images: no`** for both `deepseek-v4-pro`
+and `deepseek-v4-flash`. That is a hard capability fact, not a preference: the
+model cannot be shown a PNG. Only `deepseek-v4-flash-vision-exp` can, and it is
+not what these runs use.
+
+**Left unsaid, a worker will try to read the image anyway**, and it is expensive.
+In one run a worker faced a screenshot diff it could not explain and spent about
+eight turns on `python -c "from PIL import Image"` (not installed), then
+`magick ... txt:-` piped through `awk` over a per-pixel colour dump, trying to
+reconstruct a 1280x720 image from statistics. It concluded "nearly identical
+statistics but every pixel differs", which is true and useless. The orchestrator
+opened the file and read the answer in one glance: the worker's new HUD control
+had overflowed the top bar and was clipped mid-word, pushing the whole layout
+sideways.
+
+So put this in every prompt, in these words:
+
+- **Never try to read an image.** No PIL, no ImageMagick, no `txt:` pixel dumps,
+  no `awk` over colour maps, no compare/statistics arithmetic. You cannot see it
+  and the numbers will not tell you what a glance would.
+- **`DIFF.md` is text and you *can* read it.** Percentages, bounding boxes and
+  shot names are yours. Use them to decide *which* shots matter.
+- **When a percentage confuses you, stop and say so.** Name the shot, say what you
+  changed and what you expected to move, and hand it to the orchestrator. That is
+  a finished piece of work, not a failure.
+- **Never assert what a screenshot shows.** Say what you *predict* and mark it
+  unverified. In the same run another worker's report described "a green +1 food
+  and an orange -1 food stacked, each on a dark rounded plate" in a shot that
+  contained **no popups at all** — it described what the code should produce and
+  offered it as evidence the issue was fixed. Write "I expect X; I cannot confirm
+  it", and the orchestrator will confirm or correct it.
+
+The division of labour is: **the worker produces the evidence and names what to
+look at; the orchestrator looks and says what is there.** That is the whole reason
+this command pairs a blind implementer with a sighted reviewer, and it only works
+if the worker does not try to do both halves.
+
+### Do not change model mid-session — it collapses the cache
+
+`--continue` resumes a warm session, but **the cache is keyed on the model.**
+Resuming a Pro session with `--model deepseek-v4-flash` re-sends the entire
+context as fresh input: measured on a resumed worker, turn 2 showed a **1% cache
+hit rate and a $0.049 cold read** of its ~200k context, against the ~99% it had
+been running at.
+
+It still paid off there — Flash's cheaper rate earns the one cold read back within
+a few turns — but decide the model **before** the first spawn and keep it. Prompt
+caches match on an exact prefix from the first token, so anything that perturbs
+the prefix costs a full re-read.
+
+The same rule applies to the prompt itself: **keep it byte-stable across turns and
+put anything variable at the end.** Never inject a timestamp, a run id or a
+worker count near the top of a worker prompt.
+
+### `--only=<group>` makes the diff look catastrophic, and it is an artifact
+
+`./run_ui_screenshots.sh --only=combat` regenerates *only* the combat shots into
+`out/`, while `baseline/` still holds all 289. The differ then reports every shot
+it did not capture as `_removed_`. That is not a signal and it has cost a worker
+four turns.
+
+Either run the full capture so both sides hold the same set, or keep `--only` and
+read just the rows for the shots actually captured. **A grep that returns nothing
+after filtering out `_removed_` is the good outcome.** Put this in the prompt of
+any worker doing UI work.
+
 ### Steering a worker that is still running
 
 `-p` is a closed box: everything you learn from the narration while a worker
@@ -561,6 +629,13 @@ To push back on a worker after it has settled, without re-sending its context:
 cd <worktree> && pi --approve --continue \
   -p 'The GUT suite fails on <file>. Fix it and re-run; do not disable the test.'
 ```
+
+**A resumed worker cannot be steered.** `pi-rpc.py run` opens a control socket;
+a bare `pi --continue` does not, so `pi-rpc.py steer` has nothing to talk to and
+the only intervention left is kill-and-`--continue`. That is survivable — the
+session and the working tree both persist — but it costs a turn and loses the
+in-flight reasoning. **If you expect to intervene, resume through `pi-rpc.py run`
+rather than a bare `--continue`.**
 
 **Do not add `--session-id` here.** pi refuses the pair outright —
 `Error: --session-id cannot be combined with --continue`. `--session-id` is
