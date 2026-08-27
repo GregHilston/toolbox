@@ -16,13 +16,50 @@ a subagent. Two copies of the preflight would drift within a month.
 ```
 /orchestrate-pi --label prep:ready              # the default queue
 /orchestrate-pi 16 23 41                        # these issues
-/orchestrate-pi --workers 3                     # concurrency (default 2)
+/orchestrate-pi --workers 6                     # concurrency (default 4, ceiling 8)
 /orchestrate-pi --model flash                   # pro (default) | flash
 /orchestrate-pi --thinking max                  # off | low* | high (default) | max
 ```
 
 `low` exists on Flash only — Pro's ring is `off → high → max`. See the model table
 in `~/Git/toolbox/dot/pi/CLAUDE.md`.
+
+### How many workers, and what actually binds
+
+**The default is 4 and the ceiling is 8.** Raised from 2 once the work moved to a
+metered DeepSeek key on a 16-core M4 Max with 128GB — but the machine was never
+the binding constraint, and reaching for 8 because the hardware allows it is how a
+run ends with eight branches nobody has read.
+
+Three things bind, in ascending order of how often they actually bite:
+
+- **The host, and it binds last.** Each commit runs the pre-commit hook: gdlint
+  plus a headless Godot GUT suite for `.gd`/`.tscn`/`data.jsonc` (~50s), pytest
+  with coverage for Python (~110s), about three minutes for a commit touching
+  both. These are near enough single-threaded, so N workers want N cores and 16
+  is not the wall. Memory is not the wall either. Two host-level collisions are
+  real, though, and neither is about core count: anything that starts the dev
+  server collides on **port 8000** (which the oMLX model server may also own —
+  see `doctor.py`), and `run_ui_screenshots.sh` opens a rendering context per
+  run, which is fine at small N and untested at 8.
+- **Merge conflicts, which scale with subsystem overlap and not with N.** Eight
+  workers across eight unrelated modules merge cleanly; three inside
+  `godot-client/scenes/game/` will fight, and you merge them serially regardless.
+  `/orchestrate`'s Step 3 already says to serialize issues touching the same
+  subsystem — at higher N that stops being advice and becomes the thing that
+  decides your real concurrency. Count *disjoint subsystems* in the queue, and
+  set `--workers` to that, not to the core count.
+- **Your own review throughput, which is the one that actually binds.** Every
+  finished worker costs you a diff to read, a Claude review subagent, a feedback
+  pass back through `--continue`, and a merge. That is Claude tokens and your
+  attention, and it does not parallelize the way the workers do. Eight workers
+  landing together is eight diffs queued behind one reviewer.
+
+So: **pick N from the queue's shape, not the machine's.** Four disjoint issues,
+four workers. Eight issues that all live in the combat screen, still two or three.
+And if you are ever tempted to raise N to finish sooner, the cheaper trade is
+almost always to keep N where it is and not skip the review loop in Step P3 —
+that loop costs under two cents and has caught things the green suite did not.
 
 ## Why this split exists
 
