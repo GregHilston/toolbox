@@ -290,7 +290,12 @@ class Rendering(unittest.TestCase):
         self.assertNotIn("Needs attention: issue-30", table)
 
     def test_the_table_says_something_useful_when_there_are_no_workers(self):
-        self.assertIn("No pi workers found", workers.render_table([], 200))
+        empty = workers.render_table([], 200)
+        self.assertIn("No pi workers found", empty)
+        # It must name the real rule. Saying "a directory containing .pi/" sent
+        # anyone debugging a missing worker looking in the wrong place.
+        for marker in workers.WORKER_MARKERS:
+            self.assertIn(marker, empty)
 
     def test_table_rows_are_truncated_to_the_given_width(self):
         write_worker(self.root, "issue-30", working_status(lastToolBrief="x" * 400))

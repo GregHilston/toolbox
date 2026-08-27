@@ -271,7 +271,12 @@ def gather(paths: list[Path], stall_seconds: float) -> list[dict[str, Any]]:
 
 def render_table(workers: list[dict[str, Any]], width: int) -> str:
     if not workers:
-        return "No pi workers found. Looked for directories containing a .pi/ directory."
+        # Name the actual rule: someone debugging a missing worker will have
+        # created `.pi/` and be wondering why it does not show up.
+        return (
+            "No pi workers found. A worker is a directory whose .pi/ holds "
+            "status.json or guardrails.json."
+        )
     header = f"{'worker':<20} {'state':<9} {'turn':>4} {'tools':>5} {'age':>7} {'cost':>9}  doing"
     rows = [header, "-" * min(len(header) + 20, width)]
     for worker in workers:
