@@ -17,12 +17,42 @@ a subagent. Two copies of the preflight would drift within a month.
 /orchestrate-pi --label prep:ready              # the default queue
 /orchestrate-pi 16 23 41                        # these issues
 /orchestrate-pi --workers 6                     # concurrency (default 4, ceiling 8)
-/orchestrate-pi --model flash                   # pro (default) | flash
+/orchestrate-pi --model pro                     # flash (default) | pro
 /orchestrate-pi --thinking max                  # off | low* | high (default) | max
 ```
 
 `low` exists on Flash only — Pro's ring is `off → high → max`. See the model table
 in `~/Git/toolbox/dot/pi/CLAUDE.md`.
+
+### Flash is the default. Escalating to Pro is a decision you have to justify
+
+Measured on one nine-issue run: the same tokens cost **$1.59 on Flash against
+$4.87 on Pro**, a uniform 3x on every axis since DeepSeek's 2026-08-16 repricing.
+That gap used to be pennies and is now most of a run's bill.
+
+What Pro buys over Flash on a *first pass* is unmeasured, and this workflow is
+built so that it should not matter: **every worker's diff goes through an
+adversarial Claude review before it is merged**, and in that nine-issue run every
+single reviewed issue came back with a material finding — a regression the worker
+had just introduced, a missed code path, rows rendered below the fold, a rotation
+that never re-snapped. Pro's first pass was never sufficient on its own. The
+review runs on the Claude subscription and costs this key nothing, so the cheap
+worker is not a cheap outcome.
+
+**Reach for `--model pro` only when the issue is one where a wrong answer is
+expensive to detect**, which in this repo means:
+
+- combat tick resolution, effect ordering, or a failing golden — the places where
+  a plausible-but-wrong diff passes the suite;
+- balance judgment, where the answer is a number nobody can eyeball;
+- anything the review agent has already sent back twice, which is evidence the
+  first pass is genuinely out of its depth.
+
+Everything else — UI, layout, focus, audio, tests, docs, mechanical edits — is
+Flash work. **If you escalate, say so in the closing report and say why**, so the
+next run has evidence rather than habit. And if Flash's diffs come back visibly
+worse in review, that is the benchmark this repo has wanted and never run: record
+it and change the default back.
 
 ### How many workers, and what actually binds
 
@@ -369,7 +399,7 @@ quietly. Same lesson as `gh issue create --body-file`.
 set -o pipefail
 cd /abs/path/to/worktrees/issue-16 && \
   PI_STATUS_FILE=/abs/path/to/worktrees/issue-16/.pi/status.json pi \
-  --provider deepseek --model deepseek-v4-pro --thinking high \
+  --provider deepseek --model deepseek-v4-flash --thinking high \
   --approve \
   --session-id issue-16 \
   --mode json \
@@ -463,7 +493,9 @@ scripts, and the other agents' issue numbers.
 Three additions specific to pi:
 
 - **State the model and that thinking is on.** A worker that does not know it has a
-  thinking budget will not use it.
+  thinking budget will not use it. Say `deepseek-v4-flash` when that is what it
+  is — a prompt that claims Pro while Flash is running is a small lie that makes
+  the transcript useless as evidence for the Flash-versus-Pro question.
 - **Ask for the final report as the last message**, in the shape Step 4 requires.
   There is no return value here — you read it out of the log.
 - **Forbid `/login`, `pi install`, and any edit to `~/.pi`.** A worker has no reason
@@ -490,7 +522,7 @@ pi-rpc.py run --dir /abs/path/to/worktrees/issue-16 --label issue-16 \
   --prompt-file /abs/path/to/.claude/pi-prompts/issue-16.md \
   --raw /abs/path/to/.claude/pi-logs/issue-16.jsonl \
   --alerts /abs/path/to/.claude/pi-logs/alerts.log \
-  -- --provider deepseek --model deepseek-v4-pro --thinking high --approve
+  -- --provider deepseek --model deepseek-v4-flash --thinking high --approve
 ```
 
 Narration and lifecycle are identical — it still runs backgrounded, still exits

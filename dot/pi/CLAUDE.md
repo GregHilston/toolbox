@@ -35,7 +35,7 @@ The three ways to reach it, cheapest first:
 | | |
 | --- | --- |
 | In a session | Ctrl+P cycles `omlx` ↔ `deepseek`, or `/model` picks |
-| From the shell | `pid` (v4-pro) / `pidf` (v4-flash), aliased in `dot/zsh/.zshrc` |
+| From the shell | `pidf` (v4-flash, the default choice) / `pid` (v4-pro), aliased in `dot/zsh/.zshrc` |
 | One-off | `pi --provider deepseek --model deepseek-v4-flash` |
 
 Ctrl+P only offers what `enabledModels` lists, which `pi.nix` builds as
@@ -90,7 +90,13 @@ The old note called it free on the strength of one run where it was $0.010 of
 $0.032, which was the same ratio read as a small absolute number. Buy thinking
 where a wrong answer costs a debugging cycle; do not buy it by default.
 
-**Prefer Flash for the first pass when a Claude review will follow.** Across
+**Flash is the default; Pro is the exception you justify.** Reach for Pro only
+where a wrong answer is expensive to *detect* — tick resolution, effect ordering,
+a failing golden, balance judgment — because those are the places a
+plausible-but-wrong diff passes the suite. UI, layout, focus, audio, tests, docs
+and mechanical edits are Flash work.
+
+**That holds most strongly when a Claude review will follow.** Across
 that same run every single reviewed issue came back with a material finding — a
 voice-steal regression, a missed first-launch code path, four rows rendered
 below the fold, a rotation that never re-snapped, a vertical clip at the minimum
