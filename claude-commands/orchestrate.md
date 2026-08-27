@@ -16,11 +16,26 @@ preflight, spawning, verifying, merging, and bookkeeping.
 /orchestrate --label prep:ready                        # everything /prep marked ready
 /orchestrate --workers 4                               # concurrency (default 2)
 /orchestrate --max 4                                   # stop after 4 issues (usage-limit friendly)
+/orchestrate --model opus                              # sonnet (default) | opus | haiku
 ```
 
 Numbers, `#16`, and full URLs are all accepted. With no issues named, default to
 `--label prep:ready` rather than to every open issue — picking up an unprepped
 backlog wholesale is the main way an overnight run is wasted.
+
+### This command and `/orchestrate-pi` are the same job, two engines
+
+`/orchestrate-pi` runs the *implementation* on local `pi` processes talking to
+DeepSeek, billed to a metered key, while you stay the orchestrator. Everything
+else — issue selection, the worktree preflight, queue planning, the review loop,
+merge verification, `Closes #N` trailers, filing agent findings, the closing
+report — is meant to be **identical**, and that file says so: it covers only what
+differs and defers here for the rest.
+
+So a change to the shared half belongs *here*, and `/orchestrate-pi` inherits it.
+Only put something there if it is genuinely about pi: the balance and peak-hour
+preflight, the status file, the guardrails, `--continue` instead of SendMessage.
+Two copies of the shared half would drift within a month.
 
 ## `gh` and the sandbox
 
@@ -68,10 +83,26 @@ two sentences contradicting each other.
 Ask these with `AskUserQuestion` in ONE call. They change what you do, and the
 user is usually about to walk away, so getting them wrong costs the whole run.
 
-1. **Model / effort.** The Agent tool takes `model` (family only: `opus`,
-   `sonnet`, `haiku`, `fable`) and has **no effort parameter** — per-agent effort
-   exists only inside a `Workflow` script. You cannot pin a point release like
-   "Opus 4.8". Say so plainly rather than pretending you can.
+1. **Model.** **Default to `sonnet` for the workers and `opus` for the review
+   agents**, and ask only whether the user wants to override that. The split is
+   deliberate and mirrors `/orchestrate-pi`: the cheap model does the
+   implementation, the expensive one does the judging, because the review is
+   where defects are actually caught. On a nine-issue run of gridkeep *every*
+   reviewed issue came back with a material finding — a regression the worker had
+   just introduced, a missed code path, rows rendered below the fold — so the
+   first pass being cheaper costs less than it looks, and the review being good
+   matters more than it looks.
+
+   Escalate the workers to `opus` for issues where a wrong answer is expensive to
+   *detect* rather than merely wrong: anything touching combat tick resolution,
+   effect ordering, a failing golden, or balance judgment, where a
+   plausible-but-wrong diff passes the suite. Say which issues you escalated and
+   why, in the closing report.
+
+   The Agent tool takes `model` (family only: `opus`, `sonnet`, `haiku`, `fable`)
+   and has **no effort parameter** — per-agent effort exists only inside a
+   `Workflow` script. You cannot pin a point release like "Opus 4.8". Say so
+   plainly rather than pretending you can.
 2. **Items with no implementable spec.** If you are running unprepped issues,
    some will be one vague line, or will say outright that they are the user's
    design call. Offer: design-doc-only / full autonomous implementation / skip.
@@ -278,12 +309,19 @@ loudly rather than silently substituting your own."
 
 **Standing rules:**
 - Conventional atomic commits; docs and tests updated *in the same commit* as the
-  change they describe.
+  change they describe. **Commit each one as it goes green rather than batching
+  them to the end** — an agent that dies mid-run keeps only what it committed, and
+  in one `/orchestrate-pi` run three workers were killed by a provider error and
+  lost everything they had done, while still reporting completion.
 - Let hooks run. **Never `--no-verify`.** State the expected duration.
 - Coverage gates, formatters, and any repo-specific requirements.
 - UI work must be *looked at*, not just tested — run the screenshot harness,
   build a before baseline first if baselines are gitignored, and check the
-  tightest resolution.
+  tightest resolution. **Report the diff percentages and name the shots a human
+  should open.** A percentage is evidence in both directions: on one issue the
+  harness scored the very screen the ticket was about at 0.27% while unrelated
+  screens moved 15–20%, and that number *was* the finding — the rows had been
+  added below the fold, where the tests could see them and the player could not.
 - **Never run a `gh` write command** — no `issue edit`, `issue close`,
   `issue comment`, `pr create`. You own every mutation of GitHub state.
   Read-only `gh issue view` is fine if it genuinely needs more context.
@@ -295,11 +333,9 @@ loudly rather than silently substituting your own."
 - Name the issues assigned to *other* agents so it leaves them alone.
 - Leave the branch green.
 
-**Self-review.** When green, spawn ONE review subagent to adversarially review
-`git diff main...HEAD`, given the worktree path and the sandbox rule. Tell it what
-failure modes to hunt for *in this specific issue* — generic "review this" gets
-generic results. Enact all feedback it agrees with as further commits; report what
-it rejected and why.
+**Stop when green.** The agent does not review itself and does not spawn its own
+reviewer — you do that, in Step 5. Tell it so, and tell it to expect findings
+back in the same conversation.
 
 **The final report is the return value** — the user never sees the transcript, so
 it must stand alone: issue number, branch, what changed and why, design calls
@@ -314,6 +350,43 @@ answered or needs a residual note.**
 **Verify before merging. Do not take the report at face value.** Agents are
 usually right and occasionally confidently wrong.
 
+### Always close the review loop back to the original agent
+
+**Do this on every issue. It is the highest-value step in the command, and the
+agent reviewing its own work is not a substitute for it.**
+
+The loop is: worker commits → you verify → a **fresh review subagent** reads
+`git diff main...HEAD` → its findings go back to the **same worker** via
+`SendMessage` → the worker enacts what it agrees with → you re-verify → merge.
+
+Two details make it work:
+
+- **The reviewer must be fresh, and it must not be the worker.** An agent
+  reviewing its own diff is the weakest possible check: it re-reads its own
+  reasoning and finds it convincing. Spawn a separate agent, give it the worktree
+  path, the sandbox rule, and **the failure modes to hunt for in this specific
+  issue** — generic "review this" gets generic results. Ask it to verify the
+  worker's highest-consequence claim by running something, not by reading.
+- **The findings go back to the original worker, not to a new one.** Keep the
+  `agentId` from each spawn and `SendMessage` the findings to it; it still holds
+  its own reasoning and can say "I disagree, here is why". Frame it as a
+  *decision, not a work order*, and say that disagreement is a valid outcome —
+  across several runs workers have rejected reviewer suggestions and been right,
+  once catching that a proposed one-line guard would have broken an unrelated
+  path on first use.
+
+What this loop caught in one nine-issue run, with every suite green throughout: a
+voice-stealing regression the worker had introduced in the same function whose
+docstring promised the opposite; a fix wired to one of two code paths, leaving the
+bug reproducible on the first screen a new player sees; four rows added below the
+fold where the tests could see them and the player could not; a verdict line that
+picked its cause by branch order rather than magnitude; and a layout fix that paid
+for horizontal space out of the vertical and re-clipped the thing it had fixed.
+
+**Do not skip it to save time.** It roughly doubles wall-clock per issue and is a
+small fraction of the worker that preceded it. If you are tempted to trade it
+away, trade away a worker slot instead.
+
 1. `git log --oneline main..<branch>` and `git diff --stat main...<branch>` —
    does the shape match the story? Is the worktree clean?
 2. **Spot-check the highest-consequence claim** by reading that diff. If it cites
@@ -323,15 +396,23 @@ usually right and occasionally confidently wrong.
    `git log main..<branch> --format=%B | grep -i '^closes #'`. A missing or
    misnumbered trailer is silent until you notice the issue never closed — or
    until it closes the wrong one.
-4. Check overlap with what has landed since it branched:
+4. **Check your own baselines before trusting a diff against them.** If you
+   seeded anything for the agents — screenshot baselines, a golden set, a
+   recorded suite count — verify it was built from the commit you think it was.
+   In one run the screenshot baselines were seeded from a stale `out/` directory,
+   so two agents reported large diffs on screens they had never touched and one
+   nearly changed code to chase them. The check is cheap: regenerate in an idle
+   worktree at the base commit and confirm the diff is empty. An unverified
+   baseline makes every visual judgement downstream of it worthless.
+5. Check overlap with what has landed since it branched:
    ```bash
    comm -12 <(git diff --name-only $(git merge-base main <b>)...<b> | sort) \
             <(git diff --name-only $(git merge-base main <b>)...main | sort)
    ```
-5. Merge with `--no-ff` and a message explaining *why*, not just what.
-6. **Re-run every suite on the merged result yourself**, and any project guard
+6. Merge with `--no-ff` and a message explaining *why*, not just what.
+7. **Re-run every suite on the merged result yourself**, and any project guard
    (balance, benchmarks, lint). A branch green in isolation can break on merge.
-7. Remove the worktree, delete the branch, rotate the slot, update the state file.
+8. Remove the worktree, delete the branch, rotate the slot, update the state file.
 
 ### Resolving conflicts in generated files
 

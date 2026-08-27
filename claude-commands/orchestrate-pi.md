@@ -595,36 +595,23 @@ is the right place to spend Claude tokens in a design whose whole point is spend
 them sparingly. Give it the worktree path, the sandbox rule, and the failure modes
 specific to *this* issue — generic "review this" gets generic results.
 
-### Always close the loop back to the original worker
+### Closing the review loop — same loop, different resume mechanism
 
-**Do this on every issue. It is the highest-value thing in this command and it is
-very nearly free.**
+**`/orchestrate`'s "Always close the review loop back to the original agent" owns
+this**, including why the reviewer must be fresh, why the findings go back to the
+*original* worker, why it is framed as a decision rather than a work order, and
+what it has caught. Read it there; none of that changes because the worker is pi.
 
-The loop is: pi worker commits → you verify → a **fresh Claude subagent** reviews
-`git diff main...HEAD` → its findings go back to the **same pi session** via
-`--continue` → the worker enacts what it agrees with → you re-verify → merge.
+Two things are specific here:
 
-Feed the findings back to the *original* worker rather than a new one, because it
-still holds its own reasoning and can say "I disagree, here is why". Measured over
-three issues, a feedback pass costs **$0.005–$0.014** and runs at a **99.4% cache
-hit rate** — `--continue` resumes a warm session, so billed input collapses (3,993
-tokens on one feedback pass against 44,113 for the worker that preceded it). It is
-the cheapest work in the entire run.
-
-**Frame it as a decision, not a work order.** Tell the worker to enact only what it
-agrees with and to say why it rejects the rest. Disagreement is a valid outcome and
-you want it: across three issues the workers rejected two suggestions, and were
-right both times — once catching that the reviewer's proposed one-line guard would
-have broken an unrelated code path on first use.
-
-What this loop actually caught, in one short run: a test that would have passed
-against a component rendering nothing at all, a fix-shaped-like-the-bug
-anti-pattern, and seven stale comments and captions describing behaviour that no
-longer existed. None of it was found by the suite, which was green throughout.
-
-**Do not skip it to save time.** It roughly doubles wall-clock per issue and adds
-little. If you are ever tempted to trade it away, trade away a worker slot
-instead.
+- **You resume the worker with `pi --continue`, not `SendMessage`.** From the
+  worktree's own cwd, with no `--session-id` (pi refuses the pair). See "Iterating
+  with a finished worker" above.
+- **It is very nearly free, which is worth knowing before you consider skipping
+  it.** `--continue` resumes a warm session, so billed input collapses — measured
+  at a **99.4-99.8% cache hit rate**, with one feedback pass billing 3,993 fresh
+  input tokens against 44,113 for the worker that preceded it. A feedback round is
+  a small fraction of the worker it corrects.
 
 Before merging, confirm the worker left no scaffolding: the `.pi/` config from P1b,
 stray log files, `--session-id` artifacts. `pi-rpc.py` removes its own `.pi/rpc.json`
