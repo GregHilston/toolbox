@@ -67,9 +67,13 @@ class RecordFraming(unittest.TestCase):
         self.assertEqual(json.loads(records[0])["text"], "before\u2028and\u2029after")
 
     def test_does_not_split_on_bare_carriage_return(self):
-        payload = json.dumps({"text": "a\rb"}).encode("utf-8")
+        # Built as raw bytes on purpose. `json.dumps({"text": "a\rb"})` escapes
+        # the CR, so the encoded payload holds no CR byte at all and the test
+        # would pass against a reader that splits on one.
+        payload = b'{"text": "a\rb"}'
+        self.assertIn(b"\r", payload, "the fixture must carry a real CR byte")
         records = list(narrate.records(io.BytesIO(payload + b"\n")))
-        self.assertEqual(len(records), 1)
+        self.assertEqual(records, [payload], "LF is the only delimiter")
 
     def test_yields_a_trailing_record_with_no_final_newline(self):
         records = list(narrate.records(io.BytesIO(b'{"a":1}')))
@@ -190,6 +194,48 @@ class Narration(unittest.TestCase):
         self.assertNotIn("·", out.getvalue())
 
 
+class Completion(unittest.TestCase):
+    """Exactly one closing line per run, and the alerts monitor depends on it."""
+
+    def test_agent_settled_is_what_finishes_a_run(self):
+        # pi defines agent_settled as "no automatic retry, compaction retry, or
+        # queued continuation remains". agent_end is one low-level run.
+        narrator, out, _ = make()
+        feed(narrator, {"type": "agent_settled"})
+        self.assertIn("■ done", out.getvalue())
+
+    def test_agent_end_alone_does_not_claim_the_run_is_over(self):
+        narrator, out, _ = make()
+        feed(narrator, {"type": "agent_end", "willRetry": True})
+        self.assertNotIn("■", out.getvalue(), "a retry is coming; this is not completion")
+
+    def test_a_retried_run_still_reports_completion_once(self):
+        narrator, out, _ = make()
+        feed(
+            narrator,
+            {"type": "agent_end", "willRetry": True},
+            {"type": "auto_retry_start"},
+            {"type": "agent_end"},
+            {"type": "agent_settled"},
+        )
+        self.assertEqual(out.getvalue().count("■ done"), 1)
+
+    def test_finish_is_idempotent(self):
+        narrator, out, _ = make()
+        narrator.finish()
+        narrator.finish()
+        feed(narrator, {"type": "agent_settled"})
+        self.assertEqual(out.getvalue().count("■ done"), 1)
+
+    def test_a_run_that_dies_before_settling_still_gets_a_closing_line(self):
+        # Under pi-rpc.py this is what the alerts monitor sees for a crash; the
+        # supervisor calls finish() when pi's stdout closes.
+        narrator, out, _ = make()
+        feed(narrator, {"type": "turn_start"})
+        narrator.finish()
+        self.assertIn("■ done — 1 turns", out.getvalue())
+
+
 class Resilience(unittest.TestCase):
     def test_non_json_output_is_surfaced_rather_than_dropped(self):
         # With `2>&1` this is pi's own stderr — the settings-lock warning, a
@@ -232,7 +278,7 @@ class Alerts(unittest.TestCase):
             {"type": "tool_execution_start", "toolCallId": "c1", "toolName": "read", "args": {"path": "a"}},
             {"type": "message_update", "assistantMessageEvent": {"type": "text_end", "content": "hi"}},
             {"type": "tool_execution_end", "toolCallId": "c1", "toolName": "read", "isError": True, "result": "boom"},
-            {"type": "agent_end"},
+            {"type": "agent_settled"},
         )
         lines = [line for line in alerts.getvalue().splitlines() if line]
         self.assertEqual(len(lines), 2, "the failure and the completion; not the routine narration")

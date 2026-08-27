@@ -33,7 +33,7 @@
  * exactly like the corruption it is meant to rule out.
  */
 
-import { renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -170,7 +170,13 @@ export function accumulate(total: StatusUsage, usage: unknown): StatusUsage {
 export function writeStatusAtomic(path: string, status: Status): void {
 	// Same directory, so the rename cannot cross a filesystem boundary and fall
 	// back to a non-atomic copy.
-	const temp = join(dirname(path), `.status.${process.pid}.tmp`);
+	const directory = dirname(path);
+	// Without this, a PI_STATUS_FILE whose directory does not exist yet fails
+	// with ENOENT on every write - and `publish()` swallows the error, so a
+	// perfectly healthy worker publishes nothing and the orchestrator reads it
+	// as "never started". Silent, and indistinguishable from the real bug.
+	mkdirSync(directory, { recursive: true });
+	const temp = join(directory, `.status.${process.pid}.tmp`);
 	writeFileSync(temp, `${JSON.stringify(status, null, 2)}\n`, "utf8");
 	renameSync(temp, path);
 }
