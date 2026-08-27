@@ -72,25 +72,275 @@ For coding work in `~/Git/gridkeep`:
 
 | Task | Model | Thinking |
 | --- | --- | --- |
-| Mechanical edits — renames, moving code, a `data.jsonc` field plus its GDScript mirror | Flash | `off` |
-| Writing tests, docstrings, a script from an existing pattern | Flash | `low` |
+| Mechanical edits — renames, moving code, a `data.jsonc` field plus its GDScript mirror | Flash | `high` |
+| Writing tests, docstrings, a script from an existing pattern | Flash | `high` |
 | Reading code to explain it — tracing a call path | Flash | `high` |
+| Anything unattended that will be merged | Pro | `high` |
 | A failing golden test, or anything touching tick resolution / effect ordering | Pro | `high` |
 | Balance judgment, "why did this board lose", designing a mechanic | Pro | `max` |
 | Anything that should stay on the machine | omlx | — |
 
-**Cost is not the constraint; latency is.** gridkeep's `CLAUDE.md` is ~8k tokens
-and the stack ~7.8k, so every request there starts near **16k** before a file is
-read — and a 40-turn session on Pro at `high` still lands around $0.10–0.20,
-output-dominated, because thinking tokens bill as output. Flash is roughly a
-third. What you actually feel is Pro at `max` taking longer per turn, so spend
-thinking where a wrong answer costs a debugging cycle and skip it where you would
-catch the error on sight.
+**Thinking is effectively free here; buy it.** The old advice was to spend
+thinking only where a wrong answer costs a debugging cycle. That was written
+against an estimate that turned out to be ~30x too high (see the measurements
+below), so the levels above have been raised and `off` has been dropped
+entirely. **Correctness of the merged diff is worth more than iteration speed.**
+An unattended worker that thinks for an extra four minutes and lands a right
+answer beats one that returns in two and needs a review round.
+
+### What a run actually costs — measured 2026-08-27
+
+Two gridkeep issues implemented unattended by `/orchestrate-pi`, Flash at
+`high`, each in its own worktree, each running the full GUT suite per commit:
+
+Three gridkeep issues, each: worker → Claude review subagent → the *same* worker
+enacting review feedback via `--continue` → merged. Six pi passes total.
+
+| | #64 one-line fix | #30 flag + 8 sites | #65 shared component |
+| --- | --- | --- | --- |
+| worker turns | 52 | 67 | 116 |
+| worker cost | $0.0103 | $0.0151 | $0.0316 |
+| worker wall | 3.6 min | 6.2 min | 8.7 min |
+| review-pass turns | 45 | 22 | 39 |
+| **review-pass cost** | **$0.0095** | **$0.0046** | **$0.0139** |
+| cache hit, worker | 95.2% | 96.3% | 98.2% |
+| cache hit, review pass | 99.4% | 99.4% | 99.5% |
+
+**Three issues implemented, reviewed, revised and merged for $0.085.** All six
+passes on Flash at `high`. Final suite 1855/1855, up from 1853.
+
+**The review pass is the cheapest work in the run** — $0.0046 to enact three
+fixes on #30. A `--continue` resumes a warm session, so billed input collapses
+(3,993 tokens for #30's review pass against 44,113 for its worker) and nearly
+everything is a cache read. Treat an adversarial review plus a feedback round as
+effectively free; it is the highest-value token spend available here, and it
+caught a vacuous test, a one-line-deletion anti-pattern and five stale comments
+across the three issues.
+
+**The cache is the whole story, and it inverts the old advice.** The ~16k floor
+per request is real and it *is* re-sent every turn — but it is re-sent as a
+**cache read**, at $0.0028/M on Flash against $0.14/M for fresh input, a 50x
+discount. Hit rates were 95% and 98%, and they climb as a session lengthens,
+so the longest runs are the cheapest per token. The floor is a latency story,
+not a cost one.
+
+Scaling that to Pro: Pro is 3.1x Flash on input, 3.1x on output, and 1.3x on
+cache read. A #65-shaped run on Pro at `high` lands near **$0.06–0.09** — still
+under a dime for an issue implemented, tested and self-reviewed. **There is no
+budget argument for Flash.** Choose Pro when the diff will be merged, and Flash
+when you want an answer fast and will read it yourself.
+
+Thinking tokens bill as output and are the one thing that genuinely scales with
+the level, but on the observed ratio (#65 spent 35.7k thinking tokens, $0.010 of
+its $0.032) even `max` on Pro stays in cents.
+
+**Speed, for planning a queue:** ~4.5 s/turn on Flash at `high`, near-flat
+across both runs, and roughly 4.5 turns per minute of wall clock. A small issue
+is ~50 turns, a medium one ~115. Budget **4–10 minutes of model time per issue**,
+plus ~55s of GUT suite per commit, which is wall clock the model is idle for.
 
 The prices, windows and level maps above are read out of pi's built-in catalog,
-so they are exact. **The task assignments are judgment, not measurement** — no
-one has benchmarked Flash against Pro on this code. The honest test is the same
-failing golden at Flash/`high` and Pro/`high`, compared.
+so they are exact. **Flash has still not been benchmarked against Pro on this
+code.** What is now known is that the cost difference does not matter, so the
+honest test is a quality comparison, not a cost one: the same issue at
+Flash/`high` and Pro/`high`, diffed against each other.
+
+### Extensions written here for orchestration
+
+Three extensions in `dot/pi/.pi/agent/extensions/` exist for unattended
+`/orchestrate-pi` runs. All three are **inert unless armed**, because a global
+extension also loads in every interactive session and none of this belongs at a
+keyboard.
+
+| Extension | Armed by | What it does |
+| --- | --- | --- |
+| `orchestration-status.ts` | `PI_STATUS_FILE=<path>` | Rewrites a small JSON status file every turn and tool call: phase, turn, current tool, `lastActivityAt`, `lastBlocked`, running tokens and cost. |
+| `orchestration-guardrails.ts` | `<cwd>/.pi/guardrails.json` exists, or `PI_GUARDRAILS=1` | Blocks `git push`, `checkout main`, `merge`/`rebase`, `--no-verify`, `gh` writes, `pi install`, `/login`, and edits under `.pi/` — via `tool_call`, with a reason the model reads. |
+| `extensions-available/sandbox/` | **parked, loaded by nobody** | Official pi example on `@anthropic-ai/sandbox-runtime`. Deliberately outside the auto-discovery root — see below. |
+
+**Why status exists.** A pi worker that dies on spawn writes a 0-byte log; one
+thinking hard writes nothing new. They are identical from outside, and two dead
+workers were reported as "still running" before anyone ran `ps`. Now the worker
+says so itself, and a *missing* status file means it never started — the case
+that actually fooled us. Writes are atomic (temp + rename) so a poller reading
+mid-write never sees half a document.
+
+**Why guardrails exist.** "Never push, never merge, never `gh` write" were English
+sentences in a 141-line prompt. That is a request, not a boundary, and nobody is
+awake at 3am. `tool_call` can block, so they are boundaries now. The model
+receives the reason verbatim, which is why the reasons say what to do instead.
+
+The hard part was **not blocking the wrong thing**: a worker editing documentation
+*about* pushing writes "git push" into a file, and a naive substring match blocks
+that and gets itself diagnosed as broken. So commands are split into the segments a
+shell would run, with heredoc bodies stripped first. Most of
+`dot/pi/tests/orchestration-guardrails.test.ts` is about those false positives.
+
+**Sandbox, measured 2026-08-27, and why it is parked.** It keeps the host
+toolchain (`godot`, `uv`) because it sandboxes the bash tool rather than the pi
+process — which is why building a Linux container image for this would have been
+the wrong call. Filesystem confinement genuinely works: a write outside
+`allowWrite` did not land.
+
+It lives in `dot/pi/extensions-available/`, **outside** `.pi/agent/extensions/`,
+and that placement is the whole point. Its `package.json` carries a `pi`
+manifest, and pi auto-loads *any subdirectory with one* — no `-e` required. Its
+`DEFAULT_CONFIG` is `enabled: true`. So simply having it in the extensions
+directory turns OS-level bash sandboxing on for **every pi session on this
+machine, in every project**. Worse, a global `sandbox.json` of
+`{"enabled": false}` does **not** switch it off: sessions still hung with it in
+place, and only removing the directory restored them.
+
+Two measured failures keep it parked: a **denied write hangs the worker** rather
+than erroring, and **network domain filtering hung a run outright**. To work on
+it, load it explicitly:
+
+```bash
+pi -e ~/Git/toolbox/dot/pi/extensions-available/sandbox   # needs npm install first
+```
+
+`node_modules` is gitignored, so a fresh checkout needs `npm install` in that
+directory before the `-e` will resolve. Tracked as gridkeep issue #82.
+
+### Tests
+
+```bash
+cd ~/Git/toolbox/dot/pi && node --test 'tests/*.test.ts'
+```
+
+Node 26 strips types natively, so there is no build step and no dependency.
+
+**Test files must not live in `.pi/agent/extensions/`.** pi scans that directory
+and tries to load every `.ts` in it as an extension — a `*.test.ts` there is
+loaded, *executed*, and then errors with "does not export a valid factory
+function", which pollutes every pi session on the machine. They live in
+`dot/pi/tests/` and import across.
+
+### The review loop is practically free — use it every time
+
+The single highest-value habit found in the 2026-08-27 run, and the one most
+likely to be skipped for looking like overhead:
+
+> worker commits → **fresh Claude subagent reviews the diff** → findings go back
+> to the **same pi session** via `--continue` → worker enacts what it agrees with
+> → verify → merge
+
+A feedback pass costs **$0.005–$0.014** and hits **99.4% cache**, because
+`--continue` resumes a session whose context is already warm — billed input drops
+by an order of magnitude against the worker run that preceded it (3,993 tokens vs
+44,113 on the same issue). Three issues cost $0.085 *including* all three review
+passes.
+
+Two details that make it work:
+
+- **Back to the original worker, not a new one.** It still holds its own
+  reasoning, so it can push back. Tell it to enact only what it agrees with and
+  to justify what it rejects — across three issues the workers rejected two
+  reviewer suggestions and were right both times.
+- **The reviewer is Claude, not another pi.** One adversarial read is where
+  judgement matters most, and it is a single cheap call.
+
+Green suites do not substitute for it. In one short run it caught a test that
+would have passed against a component that rendered nothing, a fix shaped like
+the bug it was fixing, and seven stale comments describing removed behaviour —
+with the suite green the whole time.
+
+### Running pi unattended — what bites, and in what order
+
+Found the hard way on 2026-08-27, driving `/orchestrate-pi` over gridkeep. Every
+one of these fails **silently or misleadingly**; none announces itself.
+
+**`--session-id` cannot be combined with `--continue`.** pi rejects the pair
+outright: `Error: --session-id cannot be combined with --continue`. To push back
+on a live worker, use bare `--continue` from the worktree's cwd (sessions are
+keyed by project directory, so one worktree has exactly one session and it is
+unambiguous), or address it explicitly with `--session <id>`. `--session-id` is
+create-if-missing and is for *starting* an addressable session, not resuming one.
+
+**A worker cannot create new files by default.** The global permission config
+(`~/.pi/agent/extensions/pi-permission-system/config.json`) sets
+`"write": {"*": "ask"}`, and `ask` with no UI resolves to
+`confirmation_unavailable` — **blocked**, not queued and not prompted. The worker
+can `edit` existing files but not `write` a new one, and it surfaces as the model
+improvising around a denial mid-task. Fix per worktree with
+`<worktree>/.pi/extensions/pi-permission-system/config.json` containing
+`{ "yoloMode": true }`. Yolo is an ask→allow rewrite only — the `*.env`,
+`~/.ssh/*` and reddit-cookie **denies survive it**, which is the whole reason to
+prefer it over `--no-extensions`.
+
+**That config needs `--approve` to load at all.** Non-interactive modes never
+show a trust prompt, and `defaultProjectTrust` is unset (so: `ask`), which in
+`-p`/`--mode json` means *silently ignore every project resource*. `trust.json`
+currently trusts only `~/Git/notes`. **Pass `--approve` on every worker
+invocation** or the per-worktree permission config is not read and nothing says so.
+
+**`DEEPSEEK_API_KEY` is not in Claude Code's Bash environment**, even though
+`.zshrc` exports it — the tool's shell does not pick it up. Source it explicitly
+at spawn:
+
+```bash
+set -a; . ~/Git/toolbox/nixos/secrets/.env; set +a
+```
+
+Note the path is `$TOOLBOX_HOME/nixos/secrets/.env`, i.e.
+**`~/Git/toolbox/nixos/secrets/.env`** — not `~/Git/nixos/secrets/.env`, which
+does not exist and is the obvious wrong guess.
+
+**`Invalid settings file … EPERM: mkdir settings.json.lock` is Claude Code's
+sandbox, not pi.** `settings.json` is a read-only nix-store symlink and pi wants
+a lockfile beside it. Under Claude Code's Bash sandbox that write is denied and
+pi warns. Re-run with the sandbox off and it is silent. Do not go "fixing"
+settings.json on the strength of it.
+
+**Never combine a heredoc with a backgrounded `pi` in one shell command.** Writing
+the prompt file and spawning the worker in the same `run_in_background` call
+**silently produces nothing**: the heredoc writes fine, the harness reports the
+command as running, no `pi` process ever starts, the redirect target is created at
+**0 bytes**, and no completion notification arrives. It looks exactly like a worker
+thinking for a long time. This cost two stalled workers in one run before anyone
+looked at `ps`.
+
+Write the prompt file in one call, spawn `pi` in the next as a bare invocation with
+nothing else on the line. The diagnostic that settles it in seconds:
+
+```bash
+for p in $(pgrep -f "pi --provider deepseek"); do
+  echo "pid $p  cwd: $(lsof -a -p $p -d cwd -Fn 2>/dev/null | grep '^n' | cut -c2-)"
+done
+```
+
+An empty result plus a 0-byte log means it never started — that is a spawn bug, not
+a slow turn. A live pid with a growing log means wait. `lsof` on `cwd` also catches
+the other half of the trap: a worker started from an inherited working directory
+rather than an explicit `cd`, which is how one ends up running in the wrong worktree.
+
+**Reading usage out of `--mode json`.** Usage lands on `message_end` events, one
+per assistant turn; sum those. `turn_end` and `agent_end` repeat the same
+numbers, so counting them double-counts. Each event carries pi's own `cost`
+object — prefer it to recomputing from a price table, which rots. `input` is
+only the **uncached remainder**: read `totalTokens`, and read `cacheRead`
+separately or you will conclude the run was expensive when it was not.
+`gridkeep/.claude/pi-usage.py` does all of this.
+
+**pi has no *built-in* sandbox, by design.** `docs/security.md` is explicit:
+built-in tools read, write and run shell commands with the pi process's full
+permissions. A git worktree is a merge-conflict boundary, not a security one.
+
+An earlier version of this note said "no extension can add isolation". That is
+wrong, and the official `sandbox` example disproves it: an extension can replace
+the `bash` tool and route it through `sandbox-exec`, which confines the commands
+without confining pi. What remains true is that extensions run with the pi
+process's permissions, so an extension cannot contain *itself* — and prompt
+injection through repo content is still expected local-agent risk. The documented options are in
+`docs/containerization.md`: Gondolin (host pi, tools routed into a Linux
+micro-VM — needs QEMU, **not installed here**), plain Docker/OrbStack (both
+present), or OpenShell. For gridkeep specifically the blocker is the toolchain:
+both Linux options mean the worker loses `godot` and `uv`, so it can no longer
+run the suites that prove its own work. Real isolation there means **building an
+image carrying godot 4.x + uv + python + dprint**, not flipping a flag.
+`sandbox-exec` (macOS Seatbelt, what Claude Code itself uses) is the middle path
+— filesystem confinement while keeping the host toolchain — but its network
+control is all-or-nothing without a proxy.
 
 ### The key, and why citadel does not have one
 
