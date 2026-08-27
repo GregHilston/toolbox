@@ -359,6 +359,57 @@ in {
     };
   };
 
+  # Watch the settings that live OUTSIDE the home-lab repo and revert SILENTLY.
+  #
+  # The other five agents here all watch infrastructure — is the tunnel up, is the port
+  # synced, is NFS alive, is mains up, did the backup run. Between them they cover that
+  # well. None of them can see a CONFIGURATION that has quietly become wrong, and that is
+  # the class that has actually been costing time:
+  #
+  #   • Prowlarr's app sync pointed at `sonarr:8989` after gluetun's DOT=off removed local
+  #     name resolution. Dead for a day; /api/v1/health returned [] the whole time.
+  #   • Ombi's Sonarr/Radarr integration pointed at a DHCP address dungeon had lost, with
+  #     Ssl:true and an Ip already containing "http://" — it was building
+  #     https://http://192.168.1.174:8082 and could never have worked. Broken for MONTHS.
+  #   • SABnzbd's host_whitelist had no `gluetun` entry, so exportarr was one deploy from
+  #     losing 27 metric series to a 403 — a *successful* HTTP transaction.
+  #
+  # Every one is a healthy service faithfully doing the wrong thing: no probe moves, no
+  # restart count changes, no cAdvisor metric shifts.
+  #
+  # 🚨 READ-ONLY BY CONSTRUCTION, and that is the whole licence to run it unattended. It
+  # never restarts a container, never PUTs to an app, never writes outside its own state
+  # dir. The other agents auto-heal because restarting a container is cheap, idempotent and
+  # obviously reversible; repairing config drift means writing to app databases, and drift
+  # usually means something ELSE changed — which you want to know about rather than have
+  # papered over at 06:15. So it reports and the repair stays a command you approve.
+  # scripts/tests/config-drift-check.test.sh asserts the read-only property against the
+  # source rather than trusting the comment.
+  #
+  # Daily, not hourly: these settings change when a human or a deploy changes them, so a
+  # tighter interval would buy nothing and cost a Pushover throttle. A persisting finding
+  # re-alerts only every 72h; a NEW finding alerts immediately.
+  # Rationale + per-finding fixes: home-lab/docs/runbooks/config-drift.md.
+  launchd.user.agents.config-drift-check = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/config-drift-check.sh"
+      ];
+      # false: a nix-darwin rebuild is not a reason to audit config, and RunAtLoad would
+      # fire it mid-deploy when services are legitimately half-up.
+      RunAtLoad = false;
+      StartCalendarInterval = [
+        {
+          Hour = 6;
+          Minute = 15;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/config-drift-check.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/config-drift-check.log";
+    };
+  };
+
   # Deploy oMLX with dungeon-specific settings (8GB hot cache for M3 Pro 36GB).
   # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
