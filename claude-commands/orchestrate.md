@@ -254,6 +254,21 @@ proceeding.
   issue is paired with a 3-hour one. With `--workers N`, the invariant is: while
   the queue is non-empty, N agents are in flight.
 
+### Scout once, so N workers do not each rediscover the same thing
+
+Before spawning, spend **one** agent (or your own reads, if the repo is familiar)
+producing a **small shared map**: where the relevant subsystems live, the key call
+paths, the handful of facts every worker on this queue will otherwise go looking
+for. Put it in every worker prompt.
+
+The arithmetic is the point. Rediscovery is paid once per worker; a map is written
+once and carried cheaply. Keep it **under ~2k tokens** — it rides along on every
+turn of every worker, so a bloated map is worse than no map. See "Write the prompt
+to remove turns" in Step 4 for the break-even.
+
+Skip it when the queue's issues share no subsystem — there is nothing to
+amortise, and the map becomes pure overhead.
+
 Write the queue into a state file (`.claude/orchestrate-state.md`, gitignored) —
 issue number, branch, status, notes. If your context is compacted mid-run, this
 is the only thing that lets you pick up cleanly. Update it at every transition.
@@ -301,6 +316,35 @@ closes both, `Closes #16, #17` closes only the first. Tell the agent this
 verbatim; it is the whole bookkeeping mechanism and it is easy to get subtly
 wrong.
 
+**Write the prompt to remove turns, not to add context.** This is worth its own
+paragraph because the obvious move is wrong.
+
+Measured over one nine-issue run: **24% of all tokens were spent before the
+worker's first edit** — pure exploration — and context grew **9-15x** over a
+worker's life, from ~20k on turn one to 175-295k at the end. Since every turn
+re-sends the whole context, cost is roughly *turns x average context*, and both
+halves of that product are things the prompt controls.
+
+The trap: **anything you add to the prompt is re-sent every turn.** A 5k-token
+briefing across 100 turns is 500k extra cache-reads per worker. So a pack of
+pre-digested context only pays if it **removes more turns than it adds context** —
+roughly break-even at five exploration turns saved, a clear win past twenty.
+
+So do not paste files in. Paste *coordinates and conclusions*:
+
+- **Exact paths with line ranges**, not just filenames. In that run every prompt
+  already carried a "Where to look" list of the right files, and workers still
+  explored for 12 to 49 turns before their first edit. Paths alone are not enough
+  to stop someone reading the file to find out where the thing is.
+- **The two or three facts that make reading unnecessary** — "`focus_first()` is
+  defined at `menu_button_row.gd:82` and called nowhere", "`_remembered_focus` is
+  assigned only in `build()`". A sentence you already know saves a worker a
+  read-and-scan cycle whose file then sits in its context forever.
+- **What you already ruled out**, so it is not re-derived.
+
+Keep the whole addition under ~2k tokens. If it is bigger than that, it is a file
+paste wearing a disguise.
+
 **The decisions it must make alone**, named explicitly, with "take the
 conservative option and flag it in your report." Nobody is awake; an agent that
 stalls on a design question wastes the whole slot. If the body is detailed, say
@@ -313,6 +357,11 @@ loudly rather than silently substituting your own."
   them to the end** — an agent that dies mid-run keeps only what it committed, and
   in one `/orchestrate-pi` run three workers were killed by a provider error and
   lost everything they had done, while still reporting completion.
+- **Read line ranges, not whole files.** `grep -n` for the anchor, then read the
+  40 lines around it. This is the single biggest lever on cost and it compounds:
+  every tool result stays in context for the rest of the session, so a 600-line
+  file read whole is ~8k tokens re-sent on *every remaining turn*. A worker that
+  reads thirty files whole is carrying all thirty, forever.
 - Let hooks run. **Never `--no-verify`.** State the expected duration.
 - Coverage gates, formatters, and any repo-specific requirements.
 - UI work must be *looked at*, not just tested — run the screenshot harness,
@@ -410,9 +459,13 @@ away, trade away a worker slot instead.
             <(git diff --name-only $(git merge-base main <b>)...main | sort)
    ```
 6. Merge with `--no-ff` and a message explaining *why*, not just what.
-7. **Re-run every suite on the merged result yourself**, and any project guard
+7. **Note the turn count, and treat a high one as a finding.** Turns are the cost
+   driver, and an agent that took 118 turns where a sibling took 42 is usually
+   telling you its prompt was vague, not that its issue was hard. Feed that back
+   into the next prompt rather than absorbing it.
+8. **Re-run every suite on the merged result yourself**, and any project guard
    (balance, benchmarks, lint). A branch green in isolation can break on merge.
-8. Remove the worktree, delete the branch, rotate the slot, update the state file.
+9. Remove the worktree, delete the branch, rotate the slot, update the state file.
 
 ### Resolving conflicts in generated files
 

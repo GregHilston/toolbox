@@ -644,6 +644,13 @@ Measured over one nine-issue run on **Pro at `high`**, four workers rolling:
 | output (871k, 81% thinking) | | $1.73 |
 | **total** | **$1.62** | **$4.87** |
 
+Where those tokens go, measured on the same run: **24% were spent before the
+worker's first edit**, and context grew **9-15x** over a worker's life (~20k on
+turn one, 175-295k at the end). `/orchestrate`'s "Write the prompt to remove
+turns, not to add context" and its scout-once step are the levers for both, and
+they are shared rather than pi-specific — but this is where the meter is, so it is
+worth knowing the numbers here.
+
 Three things follow, and they invert the advice that used to be here:
 
 - **Cache reads are half the bill, so turn count is the lever.** 111M cache reads
