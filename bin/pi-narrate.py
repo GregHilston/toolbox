@@ -136,12 +136,17 @@ class Narrator:
         self.tool_calls = 0
         self.cost = 0.0
         self.errors = 0
+        self.finished = False
         self.pending: dict[str, tuple[str, float]] = {}
 
     def emit(self, symbol: str, text: str) -> None:
         stamp = f"{self.label} t{self.turn:<3} {elapsed(self.clock() - self.started):>6}"
         line = f"{stamp} {symbol} {text}"[: self.width]
-        print(line, file=self.out, flush=True)
+        # One write, not print()'s two. Under pi-rpc.py the event reader and the
+        # stderr reader share this stream, and a separate newline write lets one
+        # thread's line land inside another's.
+        self.out.write(line + "\n")
+        self.out.flush()
         if self.alerts is not None and symbol in ALERT_SYMBOLS:
             # O_APPEND keeps concurrent workers from interleaving mid-line, so
             # every worker in a run can share one alerts file.
@@ -188,12 +193,28 @@ class Narrator:
             self.emit("⚠", f'retrying after an API error: {flatten(str(event.get("error", "")))}')
         elif kind == "extension_error":
             self.emit("!", f'extension error: {flatten(str(event.get("error", "")))}')
-        elif kind == "agent_end":
-            self.emit(
-                "■",
-                f"done — {self.turn} turns, {self.tool_calls} tools, "
-                f"{self.errors} failed, ${self.cost:.4f}",
-            )
+        elif kind == "agent_settled":
+            # The real completion signal: pi's docs define it as "no automatic
+            # retry, compaction retry, or queued continuation remains".
+            self.finish()
+
+    def finish(self) -> None:
+        """The one completion line, however the run got here. Idempotent.
+
+        Not driven by `agent_end`, which pi documents as *one low-level run*
+        and which repeats across retries and compaction — narrating that as
+        "done" reported completion several times in a retried run. Callers also
+        invoke this when the stream ends, so a worker that dies before settling
+        still gets exactly one closing line, and the alerts monitor still fires.
+        """
+        if self.finished:
+            return
+        self.finished = True
+        self.emit(
+            "■",
+            f"done — {self.turn} turns, {self.tool_calls} tools, "
+            f"{self.errors} failed, ${self.cost:.4f}",
+        )
 
     def on_message_update(self, inner: dict[str, Any]) -> None:
         kind = inner.get("type")
@@ -245,6 +266,14 @@ def records(stream: BinaryIO):
     they also split on U+2028/U+2029 — both of which are legal inside a JSON
     string, and both of which appear in real model output.
     """
+    # `read1` returns whatever has arrived rather than waiting for a full
+    # buffer, which is what makes the narration live. A plain `read(65536)`
+    # would block until 64KB accumulated and stall the narration behind it, so
+    # this requires read1 rather than silently falling back to it.
+    read = getattr(stream, "read1", None)
+    if read is None:  # pragma: no cover - both call sites pass a BufferedReader
+        raise TypeError(f"{type(stream).__name__} has no read1; narration would not be live")
+
     buffer = b""
     # Where the last unsuccessful search reached. Without it, every 64KB chunk
     # rescans the whole buffer from zero, which is quadratic on exactly the
@@ -252,7 +281,7 @@ def records(stream: BinaryIO):
     # to megabytes on one line.
     searched = 0
     while True:
-        chunk = stream.read1(65536) if hasattr(stream, "read1") else stream.read(65536)
+        chunk = read(65536)
         if not chunk:
             break
         buffer += chunk
@@ -307,7 +336,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.raw:
             os.makedirs(os.path.dirname(os.path.abspath(args.raw)), exist_ok=True)
-            raw = open(args.raw, "wb")
+            # Append, not truncate: a re-run or a `--continue` feedback pass
+            # points at the same path, and losing the first run's log is
+            # exactly the outcome this tool exists to prevent.
+            raw = open(args.raw, "ab")
         if args.alerts:
             os.makedirs(os.path.dirname(os.path.abspath(args.alerts)), exist_ok=True)
             alerts = open(args.alerts, "a", encoding="utf-8")
@@ -329,6 +361,10 @@ def main(argv: list[str] | None = None) -> int:
                 raw.write(record + b"\n")
                 raw.flush()
             narrator.feed(record.decode("utf-8", errors="replace"))
+        # The stream ended. If pi never settled — it crashed, or was killed —
+        # this is still the end of the run, and the alerts monitor is watching
+        # for exactly one closing line per worker.
+        narrator.finish()
     except KeyboardInterrupt:
         return 130
     except BrokenPipeError:

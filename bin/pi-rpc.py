@@ -79,6 +79,34 @@ CLIENT_TIMEOUT = 30.0
 # hash of the worker directory, and the worker directory holds a pointer to it.
 SOCKET_NAME_LENGTH = 16
 
+# A steer is a sentence, not a payload. Bounding the read stops a client that
+# opens a connection and never sends a newline from growing the buffer forever.
+MAX_REQUEST_BYTES = 1 << 20
+
+
+def read_line(connection: socket.socket, limit: int = MAX_REQUEST_BYTES) -> bytes:
+    """One LF-terminated record off a socket, without unbounded buffering."""
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = connection.recv(65536)
+        if not chunk:
+            break
+        newline = chunk.find(b"\n")
+        if newline >= 0:
+            chunks.append(chunk[:newline])
+            break
+        chunks.append(chunk)
+        total += len(chunk)
+        if total > limit:
+            raise ValueError(f"request exceeded {limit} bytes with no newline")
+    return b"".join(chunks)
+
+
+def read_request(connection: socket.socket) -> dict[str, Any]:
+    payload = json.loads(read_line(connection) or b"{}")
+    return payload if isinstance(payload, dict) else {}
+
 
 def control_paths(directory: Path) -> tuple[Path, Path]:
     """(pointer file inside the worker, socket path in the temp directory)."""
@@ -113,6 +141,12 @@ class Supervisor:
         self.counter = 0
         self.server: socket.socket | None = None
         self.pointer, self.socket_path = control_paths(directory)
+        # Joined before the output handles close, so the log keeps its tail.
+        self.readers: list[threading.Thread] = []
+        # Evidence that pi is alive and working, used instead of a bare timeout
+        # to decide whether the opening prompt was actually refused.
+        self.saw_event = threading.Event()
+        self.owns_socket = False
 
     # ---- talking to pi -------------------------------------------------
 
@@ -171,6 +205,7 @@ class Supervisor:
             if isinstance(event, dict) and event.get("type") == "response":
                 self.route_response(event)
                 continue
+            self.saw_event.set()
             self.narrator.feed(text)
             if isinstance(event, dict) and event.get("type") == "agent_settled":
                 self.settled.set()
@@ -215,15 +250,50 @@ class Supervisor:
 
     # ---- the control socket --------------------------------------------
 
+    def socket_is_live(self) -> bool:
+        """Is another supervisor already serving this directory?"""
+        if not self.socket_path.exists():
+            return False
+        probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        probe.settimeout(2)
+        with probe:
+            try:
+                probe.connect(str(self.socket_path))
+            except OSError:
+                return False  # Stale file from a supervisor that died.
+        return True
+
     def serve(self) -> None:
+        # Unguarded, a failed bind or unlink would kill this daemon thread with
+        # a bare traceback and leave the run going with no control socket and
+        # nothing saying so. Losing steering must be reported, not silent.
+        try:
+            self.bind_and_serve()
+        except Exception as exc:  # noqa: BLE001 - the run continues without steering
+            self.narrator.emit("!", f"no control socket; steering is unavailable: {exc}")
+
+    def bind_and_serve(self) -> None:
         self.socket_path.parent.mkdir(parents=True, exist_ok=True)
-        # A socket left behind by a crashed supervisor would make bind() fail.
+        if self.socket_is_live():
+            # Unlinking here would take over a live supervisor's socket, and
+            # then *its* exit would delete ours — leaving a working worker
+            # permanently unreachable. Refuse instead.
+            raise RuntimeError(
+                f"another supervisor is already serving {self.directory}; "
+                "stop it before starting a second one"
+            )
+        # Only now is the file provably stale.
         self.socket_path.unlink(missing_ok=True)
         server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         server.bind(str(self.socket_path))
+        # The socket accepts `prompt` and `steer` for an agent running with
+        # --approve. On macOS $TMPDIR is already per-user and 0700, but on Linux
+        # this lands in a shared /tmp, where anyone could otherwise drive it.
+        os.chmod(self.socket_path, 0o600)
         server.listen(8)
         server.settimeout(0.5)
         self.server = server
+        self.owns_socket = True
 
         self.pointer.parent.mkdir(parents=True, exist_ok=True)
         self.pointer.write_text(
@@ -254,14 +324,7 @@ class Supervisor:
         with connection:
             try:
                 connection.settimeout(CLIENT_TIMEOUT + 5)
-                chunks = []
-                while b"\n" not in b"".join(chunks):
-                    chunk = connection.recv(65536)
-                    if not chunk:
-                        break
-                    chunks.append(chunk)
-                request = json.loads(b"".join(chunks).split(b"\n", 1)[0] or b"{}")
-                response = self.dispatch(request if isinstance(request, dict) else {})
+                response = self.dispatch(read_request(connection))
             except (ValueError, OSError) as exc:
                 response = {"success": False, "error": str(exc)}
             try:
@@ -292,21 +355,50 @@ class Supervisor:
 
     # ---- lifecycle ------------------------------------------------------
 
+    def refused(self, answer: dict[str, Any]) -> bool:
+        """Did pi actually reject the prompt, or did we merely not hear back?
+
+        Only a correlated `success: false` — or a dead process — is a refusal.
+        Treating a bare timeout as one killed workers that were visibly working:
+        an ack that arrives late, or not at all, is not evidence of rejection,
+        and the events already streaming in are evidence against it.
+        """
+        if answer.get("error") == "pi is not running":
+            return True
+        if self.settled.is_set() or self.saw_event.is_set():
+            return False
+        process = self.process
+        if process is not None and process.poll() is None:
+            # Alive and silent. Nothing has gone wrong that we can prove; let it
+            # run and let the settle-or-exit loop below decide.
+            self.narrator.emit(
+                "⚠",
+                f"pi has not acknowledged the opening prompt after {CLIENT_TIMEOUT:g}s; "
+                "carrying on because the process is still alive",
+            )
+            return False
+        return True
+
     def start(self, prompt: str) -> int:
+        # PI_RPC_BIN exists so the supervisor's own lifecycle can be tested
+        # against a stand-in that speaks the protocol. It also lets a run pin a
+        # specific pi build without touching $PATH.
         self.process = subprocess.Popen(
-            ["pi", "--mode", "rpc", *self.pi_args],
+            [os.environ.get("PI_RPC_BIN", "pi"), "--mode", "rpc", *self.pi_args],
             cwd=str(self.directory),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        reader = threading.Thread(target=self.read_events, daemon=True)
+        reader = threading.Thread(target=self.read_events, name="pi-events", daemon=True)
+        stderr_reader = threading.Thread(target=self.read_stderr, name="pi-stderr", daemon=True)
+        self.readers = [reader, stderr_reader]
         reader.start()
-        threading.Thread(target=self.read_stderr, daemon=True).start()
-        threading.Thread(target=self.serve, daemon=True).start()
+        stderr_reader.start()
+        threading.Thread(target=self.serve, name="pi-control", daemon=True).start()
 
         opened = self.command({"type": "prompt", "message": prompt})
-        if not opened.get("success", False):
+        if not opened.get("success", False) and self.refused(opened):
             self.narrator.emit("!", f"pi refused the opening prompt: {opened.get('error')}")
             self.shutdown()
             return 1
@@ -324,17 +416,33 @@ class Supervisor:
             self.narrator.emit("⚠", "interrupted; shutting the worker down")
         return self.shutdown()
 
+    def close_stdin(self, process: subprocess.Popen[bytes]) -> None:
+        """Close pi's stdin without letting a stuck writer wedge the shutdown.
+
+        `command()` holds `stdin_lock` across the write, and that write blocks
+        once pi stops draining the pipe. Taking the lock unconditionally here
+        meant a wedged pi deadlocked the supervisor *before* the terminate/kill
+        escalation below could run — leaving a process only SIGKILL could clear.
+        """
+        if process.stdin is None:
+            return
+        acquired = self.stdin_lock.acquire(timeout=5)
+        if not acquired:
+            self.narrator.emit("!", "a write to pi is stuck; skipping the clean stdin close")
+            return
+        try:
+            process.stdin.close()
+        except OSError:
+            pass
+        finally:
+            self.stdin_lock.release()
+
     def shutdown(self) -> int:
         self.stopping.set()
         process = self.process
         code = 0
         if process is not None and process.poll() is None:
-            try:
-                if process.stdin is not None:
-                    with self.stdin_lock:
-                        process.stdin.close()
-            except OSError:
-                pass
+            self.close_stdin(process)
             try:
                 code = process.wait(timeout=20)
             except subprocess.TimeoutExpired:
@@ -347,13 +455,41 @@ class Supervisor:
                     code = process.wait()
         elif process is not None:
             code = process.returncode or 0
+
+        # Drain before the caller closes the log handles. These threads are
+        # daemons writing into `self.raw` and the narrator's streams; returning
+        # while they are mid-flush truncated the JSONL and the alerts file, and
+        # raised "I/O operation on closed file" out of a thread nobody watches.
+        for reader in self.readers:
+            reader.join(timeout=10)
+            if reader.is_alive():
+                self.narrator.emit("!", f"{reader.name} did not finish; its output may be short")
+
+        # The readers are done with them now. Left open, each worker leaks two
+        # descriptors, which matters when an orchestrator runs eight at a time.
+        if process is not None:
+            for pipe in (process.stdout, process.stderr, process.stdin):
+                try:
+                    if pipe is not None:
+                        pipe.close()
+                except OSError:
+                    pass
+
+        # Exactly one closing line per worker, whether it settled or died. The
+        # alerts monitor in Step P2-bis is watching for it.
+        self.narrator.finish()
+
         if self.server is not None:
             try:
                 self.server.close()
             except OSError:
                 pass
-        self.socket_path.unlink(missing_ok=True)
-        self.pointer.unlink(missing_ok=True)
+        # Only clean up what we actually own. A second supervisor is refused at
+        # bind time, but if one ever does exist, deleting its socket here would
+        # leave a live worker permanently unreachable.
+        if self.owns_socket:
+            self.socket_path.unlink(missing_ok=True)
+            self.pointer.unlink(missing_ok=True)
         return code
 
 
@@ -381,14 +517,17 @@ def client_request(directory: Path, request: dict[str, Any]) -> dict[str, Any]:
                     "Is it running under `pi-rpc.py run`?"
                 ),
             }
-        connection.sendall((json.dumps(request) + "\n").encode("utf-8"))
-        chunks = []
-        while b"\n" not in b"".join(chunks):
-            chunk = connection.recv(65536)
-            if not chunk:
-                break
-            chunks.append(chunk)
-    payload = b"".join(chunks).split(b"\n", 1)[0]
+        # Send and receive are guarded too. A wedged supervisor made this raise
+        # TimeoutError out of recv, so a caller expecting the documented JSON
+        # result got a traceback on stderr instead.
+        try:
+            connection.sendall((json.dumps(request) + "\n").encode("utf-8"))
+            payload = read_line(connection)
+        except OSError as exc:
+            return {
+                "success": False,
+                "error": f"the worker at {directory} accepted the connection but did not reply: {exc}",
+            }
     try:
         return json.loads(payload or b"{}")
     except ValueError:
@@ -401,7 +540,12 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"pi-rpc: {directory} is not a directory", file=sys.stderr)
         return 2
     if args.prompt_file:
-        prompt = Path(os.path.expanduser(args.prompt_file)).read_text(encoding="utf-8")
+        try:
+            prompt = Path(os.path.expanduser(args.prompt_file)).read_text(encoding="utf-8")
+        except OSError as exc:
+            # A bad --dir gets a clean message two lines up; this should too.
+            print(f"pi-rpc: cannot read {args.prompt_file}: {exc}", file=sys.stderr)
+            return 2
     elif args.prompt:
         prompt = args.prompt
     else:
@@ -414,7 +558,10 @@ def cmd_run(args: argparse.Namespace) -> int:
     alerts = None
     if args.raw:
         os.makedirs(os.path.dirname(os.path.abspath(args.raw)), exist_ok=True)
-        raw = open(args.raw, "wb")
+        # Append, not truncate: the doc's per-issue naming means a re-run or a
+        # feedback pass points at the same path, and losing the first run's log
+        # is exactly the outcome this tool exists to prevent.
+        raw = open(args.raw, "ab")
     if args.alerts:
         os.makedirs(os.path.dirname(os.path.abspath(args.alerts)), exist_ok=True)
         alerts = open(args.alerts, "a", encoding="utf-8")
