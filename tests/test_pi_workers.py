@@ -13,6 +13,7 @@ import datetime as dt
 import io
 import json
 import os
+import pathlib
 import sys
 import tempfile
 import unittest
@@ -358,3 +359,41 @@ class Cli(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+def _worker_from_usage(usage):
+    """Read one worker whose status file carries exactly this usage block."""
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp) / "issue-1"
+        (d / ".pi").mkdir(parents=True)
+        (d / ".pi" / "status.json").write_text(
+            json.dumps({"phase": "thinking", "pid": os.getpid(), "turn": 1, "usage": usage})
+        )
+        return workers.read_worker(d, dt.datetime.now(dt.timezone.utc), 120.0)
+
+
+class TestCostAndCacheHit(unittest.TestCase):
+    """pi's own cost number is stale, so the table must not show it uncritically.
+
+    DeepSeek repriced on 2026-08-16; pi 0.84.3's catalog predates that and
+    under-reports by roughly 3x. The orchestration-status extension prices each
+    turn itself into `costRealUsd`, and that is what a human should be reading.
+    """
+
+    def test_prefers_the_real_cost_over_pi_s_reported_one(self):
+        usage = {"costUsd": 1.62, "costRealUsd": 4.87, "cacheRead": 99, "input": 1}
+        worker = _worker_from_usage(usage)
+        self.assertAlmostEqual(worker["costRealUsd"], 4.87)
+
+    def test_falls_back_to_pi_s_number_for_an_older_status_file(self):
+        """A worker started before the extension was updated still renders."""
+        worker = _worker_from_usage({"costUsd": 0.5})
+        self.assertAlmostEqual(worker["costRealUsd"], 0.5)
+
+    def test_hit_pct_is_the_share_of_input_served_from_cache(self):
+        self.assertAlmostEqual(workers.hit_pct({"cacheRead": 99, "input": 1}), 99.0)
+        self.assertAlmostEqual(workers.hit_pct({"cacheRead": 0, "input": 10}), 0.0)
+
+    def test_hit_pct_says_nothing_rather_than_dividing_by_zero(self):
+        self.assertIsNone(workers.hit_pct({}), "a worker with no usage yet")
+        self.assertIsNone(workers.hit_pct({"cacheRead": 0, "input": 0}), "or one with zero of both")
+

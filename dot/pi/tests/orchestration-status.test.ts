@@ -15,6 +15,9 @@ import {
 	type Status,
 	type StatusUsage,
 	accumulate,
+	cacheHitPct,
+	isPeak,
+	priceTurn,
 	assistantText,
 	briefArgs,
 	flatten,
@@ -30,6 +33,7 @@ const ZERO: StatusUsage = {
 	cacheWrite: 0,
 	totalTokens: 0,
 	costUsd: 0,
+	costRealUsd: 0,
 };
 
 test("accumulates across turns rather than replacing", () => {
@@ -208,4 +212,53 @@ test("pushRecent ignores empty lines instead of padding the buffer with them", (
 	const recent: string[] = ["kept"];
 	pushRecent(recent, "");
 	assert.deepEqual(recent, ["kept"], "a tool with no useful argument must not evict history");
+});
+
+test("prices a turn from the real table, not pi's stale catalog", () => {
+	// 1M cache reads + 1M fresh input + 1M output on Pro, off-peak.
+	const off = new Date(Date.UTC(2026, 7, 27, 20, 0)); // Thursday 20:00 UTC
+	const cost = priceTurn(
+		"deepseek-v4-pro",
+		{ cacheRead: 1_000_000, input: 1_000_000, output: 1_000_000 },
+		off,
+	);
+	assert.equal(cost.toFixed(3), "2.662", "0.022 + 0.66 + 1.98");
+});
+
+test("peak costs exactly double, which is the reason to check the clock", () => {
+	const usage = { cacheRead: 1_000_000, input: 1_000_000, output: 1_000_000 };
+	const off = priceTurn("deepseek-v4-pro", usage, new Date(Date.UTC(2026, 7, 27, 20)));
+	const peak = priceTurn("deepseek-v4-pro", usage, new Date(Date.UTC(2026, 7, 27, 2)));
+	assert.equal(peak, off * 2);
+});
+
+test("an unknown model prices at zero rather than guessing", () => {
+	const usage = { cacheRead: 1e6, input: 1e6, output: 1e6 };
+	assert.equal(priceTurn("gpt-nope", usage, new Date()), 0);
+	assert.equal(priceTurn(undefined, usage, new Date()), 0, "and so does a missing one");
+});
+
+test("isPeak reads the UTC weekday, which is the Eastern trap", () => {
+	// 2026-08-31 01:00 UTC is Monday - and 21:00 Eastern on Sunday evening.
+	assert.equal(isPeak(new Date(Date.UTC(2026, 7, 31, 1))), true, "Sunday evening ET is Monday UTC");
+	assert.equal(isPeak(new Date(Date.UTC(2026, 7, 29, 2))), false, "Saturday is never peak");
+	assert.equal(isPeak(new Date(Date.UTC(2026, 7, 27, 4))), false, "the window end is exclusive");
+	assert.equal(isPeak(new Date(Date.UTC(2026, 7, 27, 20))), false, "the measured run was off-peak");
+});
+
+test("accumulate carries a real cost alongside pi's reported one", () => {
+	const off = new Date(Date.UTC(2026, 7, 27, 20));
+	const out = accumulate(
+		ZERO,
+		{ input: 1_000_000, output: 1_000_000, cacheRead: 1_000_000, cost: { total: 0.5 } },
+		"deepseek-v4-pro",
+		off,
+	);
+	assert.equal(out.costUsd, 0.5, "pi's number is kept, so the gap stays visible");
+	assert.equal(out.costRealUsd.toFixed(3), "2.662", "and the real one sits beside it");
+});
+
+test("cacheHitPct answers the question a long run actually asks", () => {
+	assert.equal(cacheHitPct({ input: 1, cacheRead: 99 }), 99);
+	assert.equal(cacheHitPct({ input: 0, cacheRead: 0 }), 0, "no division by zero on a fresh worker");
 });

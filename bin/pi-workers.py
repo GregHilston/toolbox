@@ -143,6 +143,21 @@ def parse_timestamp(value: Any) -> dt.datetime | None:
 WORKER_MARKERS = ("status.json", "guardrails.json")
 
 
+def hit_pct(usage: dict[str, Any]) -> float | None:
+    """Share of input tokens served from cache, or None when nothing is known.
+
+    Worth a column of its own: cache reads are half the bill on a long run, so a
+    worker whose hit rate is falling is a worker whose context keeps changing
+    underneath it — which is a cost problem before it is anything else.
+    """
+    reads = number(usage.get("cacheRead"))
+    fresh = number(usage.get("input"))
+    if reads is None and fresh is None:
+        return None
+    total = (reads or 0.0) + (fresh or 0.0)
+    return (reads or 0.0) / total * 100 if total else None
+
+
 def is_worker(directory: Path) -> bool:
     try:
         return any((directory / ".pi" / marker).exists() for marker in WORKER_MARKERS)
@@ -184,6 +199,8 @@ def read_worker(directory: Path, now: dt.datetime, stall_seconds: float) -> dict
         "toolCalls": None,
         "ageSeconds": None,
         "costUsd": None,
+        "costRealUsd": None,
+        "cacheHitPct": None,
         "doing": "no status file — it never started",
         "pid": None,
         "needsAttention": True,
@@ -216,6 +233,13 @@ def read_worker(directory: Path, now: dt.datetime, stall_seconds: float) -> dict
             "turn": count(status.get("turn")),
             "toolCalls": count(status.get("toolCalls")),
             "costUsd": number(usage.get("costUsd")),
+            # What it really costs. pi's own catalog is stale since DeepSeek
+            # repriced on 2026-08-16 and under-reports by ~3x, so the
+            # orchestration-status extension prices each turn itself and this is
+            # the number worth showing. Falls back to pi's when absent, so a
+            # status file written by an older extension still renders.
+            "costRealUsd": number(usage.get("costRealUsd")) or number(usage.get("costUsd")),
+            "cacheHitPct": hit_pct(usage),
             "totalTokens": count(usage.get("totalTokens")),
             "pid": status.get("pid"),
             "model": status.get("model"),
@@ -277,17 +301,21 @@ def render_table(workers: list[dict[str, Any]], width: int) -> str:
             "No pi workers found. A worker is a directory whose .pi/ holds "
             "status.json or guardrails.json."
         )
-    header = f"{'worker':<20} {'state':<9} {'turn':>4} {'tools':>5} {'age':>7} {'cost':>9}  doing"
+    header = (
+        f"{'worker':<20} {'state':<9} {'turn':>4} {'tools':>5} {'age':>7} "
+        f"{'hit':>5} {'cost':>9}  doing"
+    )
     rows = [header, "-" * min(len(header) + 20, width)]
     for worker in workers:
         symbol = STATE_SYMBOLS.get(worker["state"], " ")
         turn = "-" if worker["turn"] is None else str(worker["turn"])
         tools = "-" if worker["toolCalls"] is None else str(worker["toolCalls"])
         age = "-" if worker["ageSeconds"] is None else f"{int(worker['ageSeconds'])}s"
-        cost = "-" if worker["costUsd"] is None else f"${worker['costUsd']:.4f}"
+        cost = "-" if worker["costRealUsd"] is None else f"${worker['costRealUsd']:.4f}"
+        hit = "-" if worker.get("cacheHitPct") is None else f"{worker['cacheHitPct']:.0f}%"
         prefix = (
             f"{worker['name'][:20]:<20} {symbol}{worker['state']:<8} "
-            f"{turn:>4} {tools:>5} {age:>7} {cost:>9}  "
+            f"{turn:>4} {tools:>5} {age:>7} {hit:>5} {cost:>9}  "
         )
         rows.append((prefix + worker["doing"])[:width])
     trouble = [w["name"] for w in workers if w["needsAttention"]]
@@ -315,7 +343,7 @@ def render_oneline(workers: list[dict[str, Any]]) -> str:
     for state, total in sorted(counts.items()):
         if state not in known and state not in ("stalled", "dead", "nostart"):
             parts.append(f"{total} {state}")
-    cost = sum(w["costUsd"] or 0.0 for w in workers)
+    cost = sum(w.get("costRealUsd") or 0.0 for w in workers)
     if cost:
         parts.append(f"${cost:.4f}")
     for state in ("stalled", "dead", "nostart"):

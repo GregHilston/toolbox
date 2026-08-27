@@ -45,7 +45,10 @@ export interface StatusUsage {
 	cacheRead: number;
 	cacheWrite: number;
 	totalTokens: number;
+	/** What pi's built-in catalog says. Stale since DeepSeek repriced 2026-08-16. */
 	costUsd: number;
+	/** What it really costs, priced from PRICES below. Use this one. */
+	costRealUsd: number;
 }
 
 export interface Status {
@@ -139,7 +142,62 @@ const EMPTY_USAGE: StatusUsage = {
 	cacheWrite: 0,
 	totalTokens: 0,
 	costUsd: 0,
+	costRealUsd: 0,
 };
+
+/**
+ * Official DeepSeek prices per 1M tokens: [cacheHit, inputMiss, output].
+ *
+ * These exist because **pi's built-in catalog is stale**. DeepSeek repriced at
+ * 16:00 UTC on 2026-08-16 and introduced peak/off-peak rates; pi 0.84.3 still
+ * carries the old numbers, so the `cost` object on every message under-reports
+ * by about 3x - worst on cache hits, which it prices at a sixth of the truth
+ * and which are half the bill on a long run. A nine-issue orchestration that
+ * pi reported as $1.62 really cost $4.87.
+ *
+ * Hand-copied on purpose, and the copy is the lesser evil: a `providers.deepseek`
+ * block in models.json would fix pi's arithmetic but shadow the built-in catalog
+ * entirely, making contextWindow and maxTokens ours to maintain by hand for a
+ * model whose numbers move. Prices move more slowly than model metadata does.
+ *
+ * Source: api-docs.deepseek.com/quick_start/pricing/, read 2026-08-27.
+ */
+export const PRICES: Record<string, { off: [number, number, number]; peak: [number, number, number] }> = {
+	"deepseek-v4-pro": { off: [0.022, 0.66, 1.98], peak: [0.044, 1.32, 3.96] },
+	"deepseek-v4-flash": { off: [0.007, 0.22, 0.66], peak: [0.014, 0.44, 1.32] },
+};
+
+/**
+ * Is `at` inside a DeepSeek peak window? 01:00-04:00 and 06:00-10:00 UTC, Mon-Fri.
+ *
+ * The UTC weekday decides it, which is the trap for a US caller: 01:00 UTC on
+ * Monday is 21:00 Eastern on Sunday, so an overnight run started after dinner
+ * bills at double.
+ */
+export function isPeak(at: Date): boolean {
+	const day = at.getUTCDay();
+	if (day === 0 || day === 6) return false;
+	const h = at.getUTCHours();
+	return (h >= 1 && h < 4) || (h >= 6 && h < 10);
+}
+
+/** Price one turn in USD. Unknown models cost 0 rather than guessing. */
+export function priceTurn(
+	model: string | undefined,
+	usage: { input: number; output: number; cacheRead: number },
+	at: Date,
+): number {
+	const rates = model ? PRICES[model] : undefined;
+	if (!rates) return 0;
+	const [hit, miss, out] = isPeak(at) ? rates.peak : rates.off;
+	return (usage.cacheRead * hit + usage.input * miss + usage.output * out) / 1_000_000;
+}
+
+/** Share of input tokens served from cache, 0-100. */
+export function cacheHitPct(u: { input: number; cacheRead: number }): number {
+	const total = u.input + u.cacheRead;
+	return total > 0 ? (u.cacheRead / total) * 100 : 0;
+}
 
 /**
  * Sum one turn's usage into the running total.
@@ -148,7 +206,12 @@ const EMPTY_USAGE: StatusUsage = {
  * total off the last one: pi reports usage per assistant message, so the last
  * message knows about itself and nothing before it.
  */
-export function accumulate(total: StatusUsage, usage: unknown): StatusUsage {
+export function accumulate(
+	total: StatusUsage,
+	usage: unknown,
+	model?: string,
+	at: Date = new Date(),
+): StatusUsage {
 	const u = (usage ?? {}) as Record<string, unknown>;
 	const num = (key: string): number => {
 		const value = u[key];
@@ -156,14 +219,16 @@ export function accumulate(total: StatusUsage, usage: unknown): StatusUsage {
 	};
 	const cost = (u.cost ?? {}) as Record<string, unknown>;
 	const costTotal = typeof cost.total === "number" && Number.isFinite(cost.total) ? cost.total : 0;
+	const turn = { input: num("input"), output: num("output"), cacheRead: num("cacheRead") };
 	return {
-		input: total.input + num("input"),
-		output: total.output + num("output"),
+		input: total.input + turn.input,
+		output: total.output + turn.output,
 		reasoning: total.reasoning + num("reasoning"),
-		cacheRead: total.cacheRead + num("cacheRead"),
+		cacheRead: total.cacheRead + turn.cacheRead,
 		cacheWrite: total.cacheWrite + num("cacheWrite"),
 		totalTokens: total.totalTokens + num("totalTokens"),
 		costUsd: total.costUsd + costTotal,
+		costRealUsd: total.costRealUsd + priceTurn(model, turn, at),
 	};
 }
 
@@ -233,9 +298,11 @@ export default function orchestrationStatus(pi: ExtensionAPI): void {
 		// part of main-context accounting - counting it would inflate the very
 		// number this extension exists to publish.
 		if (message.role !== "assistant") return;
-		status.usage = accumulate(status.usage, message.usage);
-		if (message.provider) status.provider = message.provider;
+		// Model first, so this turn is priced with the right table even on the
+		// turn where the model is first learned.
 		if (message.model) status.model = message.model;
+		status.usage = accumulate(status.usage, message.usage, status.model);
+		if (message.provider) status.provider = message.provider;
 		// The worker's own narration of what it is doing, which is the single
 		// most useful line in the file and costs nothing to keep.
 		const said = assistantText((message as { content?: unknown }).content);
