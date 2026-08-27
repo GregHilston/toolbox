@@ -48,3 +48,15 @@ setup-claude:
     else
         echo "WARNING: npm not found — skipping ccstatusline install; the status line will be blank." >&2
     fi
+
+# Run both test suites: the pi extensions (TypeScript, node --test) and the
+# bin/ scripts (Python, stdlib unittest). Neither needs a build step or a
+# dependency install.
+test:
+    #!/usr/bin/env zsh
+    set -eu
+    repo="$(pwd)"
+    echo "== pi extensions =="
+    ( cd "$repo/dot/pi" && node --test 'tests/*.test.ts' )
+    echo "== bin/ scripts =="
+    ( cd "$repo/tests" && python3 -m unittest discover -s . -p 'test_*.py' )

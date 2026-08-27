@@ -51,6 +51,17 @@ a new terminal.
 2. Make it executable (`chmod +x`)
 3. Optionally add a convenience alias in `dot/zsh/.zshrc`
 
+### Tests
+
+Tests for these scripts live in `tests/` **at the repo root**, not here — the
+recursive `$PATH` glob in `.zshrc` would otherwise put a test directory on
+`$PATH`. Run them with `just test` (which also runs the pi extension suite), or
+`cd tests && python3 -m unittest discover`.
+
+They are stdlib `unittest`, no dependencies. Because executables here are
+kebab-case and so are not importable by name, `tests/_loader.py` imports them by
+path; use it rather than renaming a script or adding a wrapper module.
+
 ## Subdirectories
 
 Subdirectories group related scripts and are added to `$PATH` automatically via the recursive glob in `.zshrc` — no manual PATH update needed when adding a new subdirectory. Explore `bin/` to see what's available.
