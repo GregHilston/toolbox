@@ -10,7 +10,6 @@ supervisor with no live process answers instead of hanging.
 from __future__ import annotations
 
 import io
-import json
 import queue
 import tempfile
 import unittest
@@ -144,6 +143,29 @@ class ResponseRouting(unittest.TestCase):
     def test_request_ids_are_unique(self):
         ids = {self.supervisor.next_id() for _ in range(50)}
         self.assertEqual(len(ids), 50, "a reused id would deliver a response to the wrong waiter")
+
+    def test_pi_exiting_fails_every_waiter_instead_of_making_them_time_out(self):
+        # A pi that dies during startup is already known to have failed. Without
+        # this, the opening prompt blocks for the full CLIENT_TIMEOUT before
+        # reporting it, and every spawn failure costs 30 seconds.
+        class DeadProcess:
+            stdout = io.BytesIO(b"")
+            stderr = io.BytesIO(b"")
+
+            def poll(self):
+                return 1
+
+        self.supervisor.process = DeadProcess()
+        inbox: queue.Queue = queue.Queue(maxsize=1)
+        self.supervisor.pending["sup-1"] = inbox
+
+        self.supervisor.read_events()
+
+        answer = inbox.get_nowait()
+        self.assertFalse(answer["success"])
+        self.assertIn("pi exited", answer["error"])
+        self.assertTrue(self.supervisor.settled.is_set())
+        self.assertEqual(self.supervisor.pending, {}, "and the waiter is not left registered")
 
 
 class ArgumentHandling(unittest.TestCase):

@@ -246,17 +246,24 @@ def records(stream: BinaryIO):
     string, and both of which appear in real model output.
     """
     buffer = b""
+    # Where the last unsuccessful search reached. Without it, every 64KB chunk
+    # rescans the whole buffer from zero, which is quadratic on exactly the
+    # biggest event: `agent_end` carries every message in the session and runs
+    # to megabytes on one line.
+    searched = 0
     while True:
         chunk = stream.read1(65536) if hasattr(stream, "read1") else stream.read(65536)
         if not chunk:
             break
         buffer += chunk
         while True:
-            index = buffer.find(b"\n")
+            index = buffer.find(b"\n", searched)
             if index < 0:
+                searched = len(buffer)
                 break
             yield buffer[:index]
             buffer = buffer[index + 1 :]
+            searched = 0
     if buffer:
         yield buffer
 

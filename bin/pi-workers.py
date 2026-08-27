@@ -89,9 +89,16 @@ def parse_timestamp(value: Any) -> dt.datetime | None:
     if not isinstance(value, str) or not value:
         return None
     try:
-        return dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+        stamp = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
+    if stamp.tzinfo is None:
+        # The extension writes toISOString(), which always carries the Z. A
+        # naive stamp means a hand-edited or foreign file, and subtracting it
+        # from an aware `now` raises TypeError — which would take down the whole
+        # table over one bad file. Assume UTC, which is what the writer means.
+        return stamp.replace(tzinfo=dt.UTC)
+    return stamp
 
 
 def discover(roots: list[Path]) -> list[Path]:

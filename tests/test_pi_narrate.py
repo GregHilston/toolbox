@@ -75,6 +75,26 @@ class RecordFraming(unittest.TestCase):
         records = list(narrate.records(io.BytesIO(b'{"a":1}')))
         self.assertEqual(records, [b'{"a":1}'], "a truncated log must not lose its last event")
 
+    def test_reassembles_a_record_far_larger_than_one_read(self):
+        # `agent_end` carries every message in the session and runs to megabytes
+        # on a single line, so it spans many reads. The incremental-search
+        # bookkeeping that keeps this from being quadratic must not lose bytes.
+        big = json.dumps({"type": "agent_end", "messages": ["x" * 400_000]}).encode("utf-8")
+        records = list(narrate.records(io.BytesIO(big + b"\n" + b'{"type":"agent_settled"}\n')))
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0], big, "not one byte off")
+        self.assertEqual(json.loads(records[1])["type"], "agent_settled")
+
+    def test_a_newline_split_across_two_reads_still_ends_the_record(self):
+        class Trickle(io.BytesIO):
+            """One byte per read, the worst case for buffered scanning."""
+
+            def read1(self, _size=-1):  # noqa: D102
+                return super().read(1)
+
+        records = list(narrate.records(Trickle(b'{"a":1}\n{"b":2}\n')))
+        self.assertEqual(records, [b'{"a":1}', b'{"b":2}'])
+
 
 class Narration(unittest.TestCase):
     def test_reports_tool_calls_with_the_argument_that_identifies_them(self):

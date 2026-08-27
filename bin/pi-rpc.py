@@ -174,7 +174,18 @@ class Supervisor:
             self.narrator.feed(text)
             if isinstance(event, dict) and event.get("type") == "agent_settled":
                 self.settled.set()
-        # pi's stdout closed: it exited, cleanly or otherwise.
+        # pi's stdout closed: it exited, cleanly or otherwise. Fail every
+        # waiting client now rather than letting each burn the full timeout —
+        # a pi that dies during startup would otherwise make the opening prompt
+        # take CLIENT_TIMEOUT seconds to report a failure that is already known.
+        with self.pending_lock:
+            waiting = list(self.pending.values())
+            self.pending.clear()
+        for inbox in waiting:
+            try:
+                inbox.put_nowait({"success": False, "error": "pi exited"})
+            except queue.Full:
+                pass
         self.settled.set()
         self.stopping.set()
 

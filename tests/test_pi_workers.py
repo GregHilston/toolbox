@@ -167,6 +167,20 @@ class Robustness(unittest.TestCase):
         write_worker(self.root, "issue-87", working_status(lastActivityAt="not-a-time"))
         self.assertEqual(snapshot(self.root)["issue-87"]["state"], "tool")
 
+    def test_a_naive_timestamp_is_read_as_utc_rather_than_crashing(self):
+        # The extension always writes toISOString(), so this means a hand-edited
+        # or foreign file. Subtracting a naive stamp from an aware `now` raises
+        # TypeError, which would take down the whole table over one bad file.
+        naive = (dt.datetime.now(dt.UTC) - dt.timedelta(seconds=600)).replace(tzinfo=None)
+        write_worker(
+            self.root,
+            "issue-86",
+            working_status(phase="thinking", lastActivityAt=naive.isoformat()),
+        )
+        worker = snapshot(self.root)["issue-86"]
+        self.assertEqual(worker["state"], "stalled")
+        self.assertGreater(worker["ageSeconds"], 500)
+
     def test_process_alive_reports_unknown_rather_than_guessing(self):
         self.assertIsNone(workers.process_alive(None))
         self.assertIsNone(workers.process_alive(0))
