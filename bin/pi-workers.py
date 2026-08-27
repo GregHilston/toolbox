@@ -70,7 +70,12 @@ STATE_SYMBOLS = {
 
 
 def process_alive(pid: Any) -> bool | None:
-    """None when we cannot tell — a missing pid is not evidence of death."""
+    """None when we cannot tell — a missing pid is not evidence of death.
+
+    Pid reuse is unhandled and degrades safely: a recycled pid reads as alive,
+    so the worker shows as live until `lastActivityAt` goes cold and it is
+    called `stalled`. That is a slower diagnosis, never a wrong "healthy".
+    """
     if not isinstance(pid, int) or pid <= 0:
         return None
     try:
@@ -97,6 +102,17 @@ def number(value: Any) -> float | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
     return float(value) if math.isfinite(value) else None
+
+
+def count(value: Any) -> int | None:
+    """A count, kept an int.
+
+    `turn` and `toolCalls` are integers in the extension's `Status` and in the
+    documented schema. Reading them through `number()` alone published
+    `"turn": 42.0` in `--json`, which is a different shape for any consumer.
+    """
+    parsed = number(value)
+    return None if parsed is None else int(parsed)
 
 
 def parse_timestamp(value: Any) -> dt.datetime | None:
@@ -197,10 +213,10 @@ def read_worker(directory: Path, now: dt.datetime, stall_seconds: float) -> dict
     usage = status.get("usage") if isinstance(status.get("usage"), dict) else {}
     worker.update(
         {
-            "turn": number(status.get("turn")),
-            "toolCalls": number(status.get("toolCalls")),
+            "turn": count(status.get("turn")),
+            "toolCalls": count(status.get("toolCalls")),
             "costUsd": number(usage.get("costUsd")),
-            "totalTokens": number(usage.get("totalTokens")),
+            "totalTokens": count(usage.get("totalTokens")),
             "pid": status.get("pid"),
             "model": status.get("model"),
             "lastBlocked": status.get("lastBlocked"),
@@ -230,7 +246,10 @@ def describe(status: dict[str, Any], worker: dict[str, Any]) -> str:
     """The 'doing' column: the most specific thing we can say in one line."""
     state = worker["state"]
     if state == "dead":
-        return f"process {status.get('pid')} is gone — read the log before respawning"
+        # Not necessarily broken: a worker that finished its work but exited
+        # without pi firing `agent_settled` also lands here. Read the log and
+        # the branch before assuming the work was lost.
+        return f"process {status.get('pid')} is gone — check the log and the branch"
     if state == "stalled":
         return f"no activity for {int(worker['ageSeconds'] or 0)}s while phase={status.get('phase')}"
     tool = status.get("currentTool")
@@ -257,8 +276,8 @@ def render_table(workers: list[dict[str, Any]], width: int) -> str:
     rows = [header, "-" * min(len(header) + 20, width)]
     for worker in workers:
         symbol = STATE_SYMBOLS.get(worker["state"], " ")
-        turn = "-" if worker["turn"] is None else str(int(worker["turn"]))
-        tools = "-" if worker["toolCalls"] is None else str(int(worker["toolCalls"]))
+        turn = "-" if worker["turn"] is None else str(worker["turn"])
+        tools = "-" if worker["toolCalls"] is None else str(worker["toolCalls"])
         age = "-" if worker["ageSeconds"] is None else f"{int(worker['ageSeconds'])}s"
         cost = "-" if worker["costUsd"] is None else f"${worker['costUsd']:.4f}"
         prefix = (
@@ -282,9 +301,15 @@ def render_oneline(workers: list[dict[str, Any]]) -> str:
     for worker in workers:
         counts[worker["state"]] = counts.get(worker["state"], 0) + 1
     parts = [f"pi {len(workers)}w"]
-    for state in ("tool", "thinking", "starting", "done"):
+    known = ("tool", "thinking", "starting", "done")
+    for state in known:
         if counts.get(state):
             parts.append(f"{counts[state]}{STATE_SYMBOLS.get(state, state)}")
+    # Any live phase the extension grows later would otherwise be counted in the
+    # worker total and then never shown, leaving `pi 3w $0.01` with no detail.
+    for state, total in sorted(counts.items()):
+        if state not in known and state not in ("stalled", "dead", "nostart"):
+            parts.append(f"{total} {state}")
     cost = sum(w["costUsd"] or 0.0 for w in workers)
     if cost:
         parts.append(f"${cost:.4f}")

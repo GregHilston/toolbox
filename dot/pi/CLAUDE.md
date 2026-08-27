@@ -253,6 +253,32 @@ attended use. The socket lives in `$TMPDIR` under a hash of the worktree path,
 not in the worktree, because macOS caps a Unix socket path at 104 bytes and a
 worktree path plus `.pi/rpc.sock` gets close enough to matter.
 
+**What adversarial review found in the supervisor, and why it is worth knowing.**
+Every serious defect was in the interaction between its three threads, its
+subprocess and its socket — none of it reachable from the pure functions, all of
+it reachable against a stand-in process that speaks the protocol badly
+(`tests/fake_pi.py`, driven by `PI_RPC_BIN`). Four are worth remembering because
+each has a general shape:
+
+- **A daemon thread and a closed file handle lose your log.** The event and
+  stderr readers wrote into handles the main thread closed on return, silently
+  truncating both the JSONL and the alerts file — the exact loss this tool
+  exists to prevent. They are joined before the handles close now.
+- **A lock held across a blocking write deadlocks the shutdown that wants it.**
+  `command()` holds the stdin lock across `write`, which blocks once pi stops
+  draining the pipe; `shutdown()` took the same lock, so the terminate/kill
+  escalation never ran and only `SIGKILL` cleared it. The acquire is bounded.
+- **A timeout is not a rejection.** Treating an unacknowledged opening prompt as
+  a refusal killed workers that were visibly working. Only a correlated
+  `success: false`, or a dead process, aborts a run now; streaming events are
+  evidence against a refusal.
+- **`agent_end` is not completion.** pi documents it as *one low-level run*, and
+  it repeats across retries and compaction, so narrating it as "done" reported
+  completion several times in a retried run — and never at all in RPC mode,
+  where `agent_settled` is what arrives. `agent_settled` is the signal, the
+  closing line is idempotent, and the supervisor emits one even for a worker
+  that died, because the alerts monitor is counting on exactly one per worker.
+
 None of this substitutes for reading the diff. A worker's narration is still the
 worker's account of its own work, and a *convincing* narration makes the review
 loop below easier to skip — which is the new failure mode, not the old one.

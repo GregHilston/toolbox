@@ -62,6 +62,19 @@ They are stdlib `unittest`, no dependencies. Because executables here are
 kebab-case and so are not importable by name, `tests/_loader.py` imports them by
 path; use it rather than renaming a script or adding a wrapper module.
 
+Two things there are worth copying if you write a script with moving parts:
+
+- `tests/fake_pi.py` is a stand-in for `pi --mode rpc` that misbehaves on
+  request — no acknowledgement, no settle, floods stderr, stops reading stdin.
+  `pi-rpc.py` selects it with `PI_RPC_BIN`. Every serious defect review found in
+  that script was in thread/subprocess/socket interaction, invisible to unit
+  tests of its pure functions and trivially reachable this way. The lifecycle
+  tests spawn processes and bind sockets, so the suite takes about a minute.
+- `tests/fixtures/real-pi-session.jsonl` is a captured real pi run, replayed
+  through the narrator. The hand-written fixtures elsewhere are self-consistent
+  and would all be wrong together if pi's schema moved; this one is the check
+  that notices.
+
 ## Subdirectories
 
 Subdirectories group related scripts and are added to `$PATH` automatically via the recursive glob in `.zshrc` — no manual PATH update needed when adding a new subdirectory. Explore `bin/` to see what's available.

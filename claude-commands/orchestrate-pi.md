@@ -272,7 +272,7 @@ pi-workers.py --root <repo> --watch    # live, for a human in a second terminal
 worker               state     turn tools     age      cost  doing
 issue-95             ▸tool       18    11      3s   $0.0151  bash godot --headless --script tests/run_gut.gd
 issue-96             ⏸stalled    42    26    603s   $0.0316  no activity for 603s while phase=thinking
-issue-97             ✗dead        5     2      3s   $0.0009  process 51035 is gone — read the log before respawning
+issue-97             ✗dead        5     2      3s   $0.0009  process 51035 is gone — check the log and the branch
 issue-98             ∅nostart     -     -       -         -  no status file — it never started
 issue-99             ✓done        2     1     38s   $0.0000  » I looked at the directory listing.
 
@@ -296,16 +296,42 @@ human reading a log directory cannot tell apart:
 - anything else — the live phase, with `doing` showing the current tool's actual
   command, or the last thing the worker said.
 
-`lastBlocked` / `blockedCount` being set means the guardrails refused something
-and the worker may be improvising around a boundary. Worth a look even when the
-run otherwise looks healthy.
+There is a sixth state, `unknown`: a status file that is present but not valid
+JSON, or not an object. It also flags for attention. It should not happen —
+writes are atomic — so treat it as corruption rather than a torn read.
+
+`lastBlocked` / `blockedCount` count **any failed tool call**, not only
+guardrail refusals. A refusal is one — the guardrails block via an error result,
+and one extension cannot see another's return value — but so is a failing test
+command or an `edit` whose `oldText` did not match. So a rising `blockedCount`
+means "this worker is hitting errors", and only the log says which kind. Worth a
+look either way; do not read it as "it is fighting the boundaries" without
+checking.
+
+**Delete stale status files before the run starts.** Nothing removes
+`status.json` on its own, so a worker killed in a previous run leaves a
+non-terminal phase with a dead pid behind forever. The next run then opens with
+a permanent `⚠1 dead`, `--strict` never exits 0 again, and the status-line row
+never clears — a false alarm that trains you to ignore the real one:
+
+```bash
+rm -f <repo>/worktrees/*/.pi/status.json
+```
+
+Do this once in P1, after the worktrees exist and before the first spawn.
 
 It also retires log-scraping for telemetry: `usage` here is the running total, so
 `.claude/pi-usage.py` becomes a cross-check rather than the only source.
 
+**A `dead` worker has not necessarily failed.** The state means the process is
+gone while the last published phase was non-terminal, and pi only publishes a
+terminal phase from `agent_settled` / `session_shutdown`. A worker that finished
+its work and then died — a crash on exit, a `SIGKILL`, a provider abort — lands
+here too. Read the log and the branch before concluding the work was lost.
+
 **The same file drives the status line.** `pi-workers.py --from-statusline
 --oneline` is wired into ccstatusline as a third row, so the user sees
-`pi 4w 2▸ 1~ 1✓ $0.0912 ⚠1 stalled` at a glance for the whole run, without
+`pi 5w 2▸ 1~ 1✓ $0.0912 ⚠1 stalled` at a glance for the whole run, without
 asking you and without spending a token. It renders nothing when no workers
 exist, so the row is invisible outside a run.
 
