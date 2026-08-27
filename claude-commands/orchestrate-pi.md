@@ -59,7 +59,8 @@ So: **pick N from the queue's shape, not the machine's.** Four disjoint issues,
 four workers. Eight issues that all live in the combat screen, still two or three.
 And if you are ever tempted to raise N to finish sooner, the cheaper trade is
 almost always to keep N where it is and not skip the review loop in Step P3 —
-that loop costs under two cents and has caught things the green suite did not.
+that loop is a small fraction of the worker before it, and has caught things the
+green suite did not.
 
 ## Why this split exists
 
@@ -222,21 +223,42 @@ Measured 2026-08-27: **filesystem confinement works** — a write to a path outs
 So: worth using attended, worth watching, not yet worth trusting overnight. See
 issue #82 in gridkeep for the open work.
 
-### P1d. Establish the token floor
+### P1d. Check the balance and the clock BEFORE spawning anything
 
-Every tool schema and context file is re-sent on every request, and now it is
-billed. Measure before spawning:
+**Run this first. It is the cheapest step in the command, and it is the one that
+was missing when a run died halfway through.**
 
 ```bash
-cd <worktree> && pi --approve --mode json -p 'Reply with exactly: OK' 2>/dev/null \
-  | python3 -c "import sys,json;[print(json.loads(l).get('message',{}).get('usage')) for l in sys.stdin if '\"usage\"' in l][-1:]"
+set -a; . ~/Git/toolbox/nixos/secrets/.env; set +a
+deepseek-preflight.py            # exit 0 clear, 1 needs a human, 2 could not tell
 ```
 
-Read `totalTokens`, not `input` — `input` is only the uncached remainder and will
-understate the real prompt by an order of magnitude. In `~/Git/gridkeep` expect
-~16k. Multiply by your expected turn count per issue and tell the user the estimate
-before the run, not after — but see the cost note in Step P3: cache reads make the
-real figure roughly 30x lower than that arithmetic suggests.
+It answers the two questions that stay invisible until the bill arrives:
+
+**Is there money?** A run that starts under-funded does not fail cleanly. It dies
+mid-flight on a `402 Insufficient Balance`, and **pi still emits `agent_settled`,
+so `pi-workers.py` reports the worker `done` rather than `dead`.** In the run this
+step comes from, three workers were killed that way and reported completion with
+turn counts and a cost; all three had zero commits and five modified files sitting
+uncommitted. About $1.45 of real spend that produced nothing committable — 30% of
+the run. The default floor is $2; raise it with `--min-balance` for a big queue.
+
+**Is it peak?** DeepSeek bills **01:00–04:00 and 06:00–10:00 UTC, Monday–Friday**
+at double. Everything else, weekends included, is off-peak. That is only 35 of 168
+hours, so this is a trap to avoid rather than a discount to chase — and the trap is
+that those windows are **21:00–00:00 Eastern, Sunday through Thursday** (20:00–23:00
+in winter). "Kick off an overnight run after dinner" walks straight into the first
+window and then into the second before morning, at 2x throughout. The script warns
+when a window opens within 90 minutes, because a run started just before one pays
+peak for its second half.
+
+If it reports a problem, **tell the user and stop** rather than spending into it.
+
+**On the token floor**, which used to be this step: every tool schema and context
+file is re-sent on every request as a cache read, and in `~/Git/gridkeep` that
+floor is ~16k tokens. It is not the small number the old note claimed — see
+"Report what it cost" — so the arithmetic that matters is turns × context, and the
+lever is fewer turns.
 
 ### P1e. Set PI_STATUS_FILE, and never diagnose a worker by log size again
 
@@ -447,6 +469,11 @@ Three additions specific to pi:
 - **Forbid `/login`, `pi install`, and any edit to `~/.pi`.** A worker has no reason
   to touch pi's own configuration, and one that does can change the next worker's
   behaviour.
+- **Tell it to commit each atomic change as it goes green, not to batch them.** A
+  pi worker can be killed mid-run by something that is nobody's fault — a 402, a
+  provider abort — and it keeps only what it committed. Three workers in one run
+  lost everything they had done this way, and the loss is invisible until you look
+  at `git log` rather than at the completion event.
 
 ### Steering a worker that is still running
 
@@ -564,7 +591,7 @@ anti-pattern, and seven stale comments and captions describing behaviour that no
 longer existed. None of it was found by the suite, which was green throughout.
 
 **Do not skip it to save time.** It roughly doubles wall-clock per issue and adds
-under two cents. If you are ever tempted to trade it away, trade away a worker slot
+little. If you are ever tempted to trade it away, trade away a worker slot
 instead.
 
 Before merging, confirm the worker left no scaffolding: the `.pi/` config from P1b,
@@ -572,24 +599,51 @@ stray log files, `--session-id` artifacts. `pi-rpc.py` removes its own `.pi/rpc.
 and socket on exit, but a worker killed with `SIGKILL` cannot — a leftover
 `rpc.json` is a hint that something ended badly, not a file to commit.
 
-### Report what it cost
+### Report what it cost — and do not trust pi's own number
 
 `--mode json` emits usage per turn, on `message_end` events — sum those, not
-`turn_end`/`agent_end`, which repeat the same numbers. Each carries pi's own
-`cost` object; prefer it to recomputing from a price table.
+`turn_end`/`agent_end`, which repeat the same numbers.
 
-**Read `cacheRead`, not just `input`.** Measured over two gridkeep issues on
-Flash/`high`: 95% and 98% cache hit rates, and cache reads bill at $0.0028/M
-against $0.14/M for fresh input. The two issues cost **$0.0103 and $0.0316** —
-four cents for both, against a pre-run estimate of $0.15–0.35 *each*. A cost
-line that reads only `input` will overstate a run by more than an order of
-magnitude.
+**pi's `cost` object is stale and under-reports by about 3x.** DeepSeek repriced
+at 16:00 UTC on 2026-08-16 and introduced peak/off-peak rates; pi 0.84.3's
+built-in catalog predates that. The worst error is on cache hits, which it prices
+at a sixth of the truth — and cache reads are half the bill on a long run, so the
+error compounds exactly where the spend is. An earlier version of this file
+repeated the catalog's numbers as fact. They were, until they weren't.
 
-`gridkeep/.claude/pi-usage.py` prints the whole table — tokens, hit rate, cost,
-seconds per turn — from a worker log. Put the figure in the closing report: an
-overnight run with no cost line is how the next one gets approved without anyone
-knowing what it costs. And see `dot/pi/CLAUDE.md` for why these numbers argue for
-Pro at `high` rather than Flash.
+Use `gridkeep/.claude/pi-usage.py`, which prices each turn from the official table
+at the rate in force when that turn ran and prints both numbers, so the gap stays
+visible. `pi-workers.py` shows the same corrected figure live, plus a cache-hit
+column.
+
+Measured over one nine-issue run on **Pro at `high`**, four workers rolling:
+
+| | pi reported | real, off-peak |
+| --- | ---: | ---: |
+| fresh input (1.05M) | | $0.69 |
+| **cache read (111.4M)** | | **$2.45** |
+| output (871k, 81% thinking) | | $1.73 |
+| **total** | **$1.62** | **$4.87** |
+
+Three things follow, and they invert the advice that used to be here:
+
+- **Cache reads are half the bill, so turn count is the lever.** 111M cache reads
+  over ~750 worker turns is ~148k re-sent every turn, growing as the session
+  lengthens — cost is roughly *quadratic* in turns. The old note said "the longest
+  runs are the cheapest per token"; that was an artefact of the 6x cache-price
+  error. Trim the prompt, and pre-digest what a worker would otherwise spend turns
+  discovering.
+- **Prefer Flash for the first pass.** Uniformly 3x cheaper now; the same tokens
+  cost $1.59 instead of $4.87. Every reviewed issue in that run came back with a
+  material finding, so Pro's first pass was never sufficient on its own — what it
+  buys *ahead of a review* is unmeasured, and the review runs on the Claude
+  subscription and costs this key nothing.
+- **Thinking is ~29% of spend** (703k of 871k output tokens were reasoning). Buy it
+  where a wrong answer costs a debugging cycle, not by default. Flash has a `low`
+  rung Pro lacks.
+
+Put the real figure in the closing report. An overnight run with no cost line is
+how the next one gets approved without anyone knowing what it costs.
 
 ---
 

@@ -49,19 +49,22 @@ interactive default** — the session you sit in front of and read step by step.
 against oMLX's 262k. A wide refactor or a long combat-debugging run that would
 force compaction locally simply does not here.
 
-Cost is not the deciding axis at this scale (see below); latency and the window
-are.
+Latency and the window are the reasons to reach for it. Cost used to be a
+rounding error and is not any more — DeepSeek repriced on 2026-08-16 and an
+unattended run is now dollars rather than cents, so read the pricing section
+below before planning a queue.
 
 ### Which model, and how much thinking
 
 Both models reason, but they expose **different** thinking levels — the catalog
 nulls the rest out, so Shift+Tab (`app.thinking.cycle`) cycles a shorter ring
-than pi's seven levels suggest:
+than pi's seven levels suggest. Flash having a `low` rung that Pro lacks is a
+cost lever, not a footnote.
 
-| | Shift+Tab cycles | in / out / cache-read per 1M |
-| --- | --- | --- |
-| **V4 Pro** | `off → high → max` | $0.435 / $0.87 / $0.003625 |
-| **V4 Flash** | `off → low → high → max` | $0.14 / $0.28 / $0.0028 |
+| | Shift+Tab cycles |
+| --- | --- |
+| **V4 Pro** | `off → high → max` |
+| **V4 Flash** | `off → low → high → max` |
 
 `--thinking <level>` sets the *starting* level for a session; Shift+Tab still
 cycles from there. pi-powerline-footer reserves that key
@@ -72,67 +75,130 @@ For coding work in `~/Git/gridkeep`:
 
 | Task | Model | Thinking |
 | --- | --- | --- |
-| Mechanical edits — renames, moving code, a `data.jsonc` field plus its GDScript mirror | Flash | `high` |
+| Mechanical edits — renames, moving code, a `data.jsonc` field plus its GDScript mirror | Flash | `low` |
 | Writing tests, docstrings, a script from an existing pattern | Flash | `high` |
-| Reading code to explain it — tracing a call path | Flash | `high` |
-| Anything unattended that will be merged | Pro | `high` |
+| Reading code to explain it — tracing a call path | Flash | `low` |
+| Anything unattended that will be merged **and reviewed** | Flash | `high` |
 | A failing golden test, or anything touching tick resolution / effect ordering | Pro | `high` |
 | Balance judgment, "why did this board lose", designing a mechanic | Pro | `max` |
 | Anything that should stay on the machine | omlx | — |
 
-**Thinking is effectively free here; buy it.** The old advice was to spend
-thinking only where a wrong answer costs a debugging cycle. That was written
-against an estimate that turned out to be ~30x too high (see the measurements
-below), so the levels above have been raised and `off` has been dropped
-entirely. **Correctness of the merged diff is worth more than iteration speed.**
-An unattended worker that thinks for an extra four minutes and lands a right
-answer beats one that returns in two and needs a review round.
+**Thinking is not free, and the line that said it was has been deleted.**
+Measured over a full nine-issue orchestration on Pro at `high`: 703k of 871k
+output tokens were reasoning — **81% of output, and ~29% of the whole bill**.
+The old note called it free on the strength of one run where it was $0.010 of
+$0.032, which was the same ratio read as a small absolute number. Buy thinking
+where a wrong answer costs a debugging cycle; do not buy it by default.
+
+**Prefer Flash for the first pass when a Claude review will follow.** Across
+that same run every single reviewed issue came back with a material finding — a
+voice-steal regression, a missed first-launch code path, four rows rendered
+below the fold, a rotation that never re-snapped, a vertical clip at the minimum
+window. Pro's first pass was never sufficient on its own, so what Pro buys over
+Flash *ahead of a review* is unmeasured, while what it costs is 3x. The reviews
+run on the Claude subscription and cost this key nothing, which makes
+cheap-worker/thorough-review the structure to reach for.
+
+### Pricing — and pi's catalog is stale, so its own numbers are wrong
+
+**DeepSeek repriced at 16:00 UTC on 2026-08-16 and introduced peak/off-peak
+rates. pi 0.84.3's built-in catalog predates that**, so the `cost` object on
+every `message_end` event — and therefore everything downstream of it: the
+status file, the status line, `pi-workers.py` — **under-reports by about 3x.**
+An earlier version of this file said the catalog's prices "are exact". They
+were, until they weren't.
+
+Official rates, per 1M tokens
+([api-docs.deepseek.com](https://api-docs.deepseek.com/quick_start/pricing/)):
+
+| | cache hit | input (miss) | output |
+| --- | ---: | ---: | ---: |
+| **V4 Pro** off-peak | $0.022 | $0.66 | $1.98 |
+| **V4 Pro** peak | $0.044 | $1.32 | $3.96 |
+| **V4 Flash** off-peak | $0.007 | $0.22 | $0.66 |
+| **V4 Flash** peak | $0.014 | $0.44 | $1.32 |
+
+What pi still believes: Pro `$0.435 / $0.87 / $0.003625`, Flash
+`$0.14 / $0.28 / $0.0028`. The worst error is the **cache hit, 6x cheaper in
+the catalog than in reality** — and cache reads are the largest line item on a
+long run, so the error compounds exactly where the spend is.
+
+Do not hand-declare a `providers.deepseek` block to fix this. It shadows the
+built-in catalog and makes `contextWindow`/`maxTokens` ours to maintain by hand,
+which is the trap DeepSeek's own integration doc already walks people into. Read
+real cost out of `gridkeep/.claude/pi-usage.py` instead, which prices from the
+table above and takes `--peak`.
+
+#### Peak hours, in UTC and in Eastern
+
+**Peak is 01:00–04:00 and 06:00–10:00 UTC, Monday–Friday.** Everything else —
+including all of Saturday and Sunday — is off-peak at half price. That is 35 of
+168 hours, so most work is off-peak by default and this is a **trap to avoid
+rather than a discount to chase**.
+
+The trap is that those UTC hours land badly for Eastern, and the UTC *weekday*
+is what counts, so a Sunday evening here is already Monday there:
+
+| UTC window (Mon–Fri) | Eastern, EDT (Mar–Nov) | Eastern, EST (Nov–Mar) |
+| --- | --- | --- |
+| 01:00–04:00 | **21:00–00:00, Sun–Thu evening** | **20:00–23:00, Sun–Thu evening** |
+| 06:00–10:00 | 02:00–06:00, Mon–Fri morning | 01:00–05:00, Mon–Fri morning |
+
+So **"kick off an overnight run after dinner" is the most expensive thing you
+can do with this key.** A Sunday-through-Thursday evening start walks straight
+into the first window at double rate, and a long run then walks into the second
+before morning. Friday and Saturday evenings clear both, and any weekday
+afternoon is off-peak.
+
+Measured: the nine-issue run started Thursday 20:24 UTC (16:24 EDT) and was
+off-peak throughout. Three hours later and it would have crossed into peak and
+cost twice as much.
 
 ### What a run actually costs — measured 2026-08-27
 
-Two gridkeep issues implemented unattended by `/orchestrate-pi`, Flash at
-`high`, each in its own worktree, each running the full GUT suite per commit:
+Nine issues queued, eight worked, on **Pro at `high`**, four workers rolling,
+each in its own worktree running the full GUT suite per commit. Five Claude
+review agents and four pi feedback passes on top. It ran the key to zero, which
+is how the stale catalog was found.
 
-Three gridkeep issues, each: worker → Claude review subagent → the *same* worker
-enacting review feedback via `--continue` → merged. Six pi passes total.
+| | pi reported | real, off-peak |
+| --- | ---: | ---: |
+| fresh input (1.05M) | | $0.69 |
+| **cache read (111.4M)** | | **$2.45** |
+| output (871k, 81% thinking) | | $1.73 |
+| **total** | **$1.62** | **$4.87** |
 
-| | #64 one-line fix | #30 flag + 8 sites | #65 shared component |
-| --- | --- | --- | --- |
-| worker turns | 52 | 67 | 116 |
-| worker cost | $0.0103 | $0.0151 | $0.0316 |
-| worker wall | 3.6 min | 6.2 min | 8.7 min |
-| review-pass turns | 45 | 22 | 39 |
-| **review-pass cost** | **$0.0095** | **$0.0046** | **$0.0139** |
-| cache hit, worker | 95.2% | 96.3% | 98.2% |
-| cache hit, review pass | 99.4% | 99.4% | 99.5% |
+**Cache reads were half the bill.** 111M cache-read tokens over ~750 worker
+turns is ~148k re-sent per turn, and it grows as a session lengthens — so cost
+is roughly *quadratic* in turn count, not linear. The previous note here said
+"the longest runs are the cheapest per token" and "the floor is a latency story,
+not a cost one". Both were artefacts of the 6x cache-price error. The opposite
+is true: **turn count is the thing to control.**
 
-**Three issues implemented, reviewed, revised and merged for $0.085.** All six
-passes on Flash at `high`. Final suite 1855/1855, up from 1853.
+In descending order of measured effect:
 
-**The review pass is the cheapest work in the run** — $0.0046 to enact three
-fixes on #30. A `--continue` resumes a warm session, so billed input collapses
-(3,993 tokens for #30's review pass against 44,113 for its worker) and nearly
-everything is a cache read. Treat an adversarial review plus a feedback round as
-effectively free; it is the highest-value token spend available here, and it
-caught a vacuous test, a one-line-deletion anti-pattern and five stale comments
-across the three issues.
+- **Flash instead of Pro.** Uniformly 3x cheaper on all three axes now. The same
+  tokens cost **$1.59 instead of $4.87**.
+- **Fewer turns.** #34 ran 118 turns for $1.05 real; #81 ran 42 for $0.30. Every
+  turn re-sends the whole grown context. The repo's `CLAUDE.md` is ~8k tokens
+  and a worker prompt another ~4k, both re-sent every single turn — so trimming
+  the prompt and pre-digesting what the worker would otherwise discover is a
+  direct cost lever, not just courtesy.
+- **Thinking level.** ~29% of spend, and the only knob that scales purely with
+  output.
+- **Do not start in a peak window.** 2x, entirely avoidable.
 
-**The cache is the whole story, and it inverts the old advice.** The ~16k floor
-per request is real and it *is* re-sent every turn — but it is re-sent as a
-**cache read**, at $0.0028/M on Flash against $0.14/M for fresh input, a 50x
-discount. Hit rates were 95% and 98%, and they climb as a session lengthens,
-so the longest runs are the cheapest per token. The floor is a latency story,
-not a cost one.
+The review pass is still the best value in the run — a `--continue` resumes a
+warm session at ~99.8% cache hit, so a feedback round is a small fraction of the
+worker before it. That has not changed, and it is still the highest-value token
+available here. What changed is that "effectively free" was never quite true and
+is now plainly false.
 
-Scaling that to Pro: Pro is 3.1x Flash on input, 3.1x on output, and 1.3x on
-cache read. A #65-shaped run on Pro at `high` lands near **$0.06–0.09** — still
-under a dime for an issue implemented, tested and self-reviewed. **There is no
-budget argument for Flash.** Choose Pro when the diff will be merged, and Flash
-when you want an answer fast and will read it yourself.
-
-Thinking tokens bill as output and are the one thing that genuinely scales with
-the level, but on the observed ratio (#65 spent 35.7k thinking tokens, $0.010 of
-its $0.032) even `max` on Pro stays in cents.
+**Check the balance before starting.** The run above died mid-flight on a
+`402 Insufficient Balance`, and three workers were killed with their work
+uncommitted — about $1.45 of real spend that produced nothing committable, 30%
+of the run. `/orchestrate-pi`'s preflight now probes
+`https://api.deepseek.com/user/balance`.
 
 **Speed, for planning a queue:** ~4.5 s/turn on Flash at `high`, near-flat
 across both runs, and roughly 4.5 turns per minute of wall clock. A small issue
