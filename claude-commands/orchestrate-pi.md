@@ -282,8 +282,12 @@ Needs attention: issue-96, issue-97, issue-98
 The five states are the whole product, and three of them are absences that a
 human reading a log directory cannot tell apart:
 
-- **`nostart`** — a `.pi/` with no `status.json` beside it. It never started;
-  this is the spawn bug in Step P2, not a slow turn.
+- **`nostart`** — provisioned but no `status.json`. It never started; this is
+  the spawn bug in Step P2, not a slow turn. Discovery keys off
+  `.pi/status.json` **or** `.pi/guardrails.json`, which is why arming the
+  guardrails in P1b-bis is what makes a never-started worker visible at all —
+  and why a bare `.pi/` is deliberately not enough (`~/.pi` is pi's own config
+  directory, and counting it reported `$HOME` as a dead worker).
 - **`dead`** — the recorded `pid` is gone. This is the one that fooled us twice.
   Read the log before respawning.
 - **`stalled`** — quiet for longer than `--stall-seconds` (default 120) while

@@ -46,8 +46,14 @@ def ago(seconds: float) -> str:
 
 
 def write_worker(root: Path, name: str, status: dict | None) -> Path:
+    """Provision a worker the way the orchestrator does.
+
+    `guardrails.json` goes in before spawning (Step P1b-bis), which is what
+    makes a worker that never wrote a status file still discoverable.
+    """
     directory = root / "worktrees" / name
     (directory / ".pi").mkdir(parents=True, exist_ok=True)
+    (directory / ".pi" / "guardrails.json").write_text("{}", encoding="utf-8")
     if status is not None:
         (directory / ".pi" / "status.json").write_text(json.dumps(status), encoding="utf-8")
     return directory
@@ -181,6 +187,24 @@ class Robustness(unittest.TestCase):
         self.assertEqual(worker["state"], "stalled")
         self.assertGreater(worker["ageSeconds"], 500)
 
+    def test_a_non_numeric_cost_does_not_crash_the_report(self):
+        # Every number here is either formatted with `:.4f` or summed, so a
+        # string where a float belongs raises — and takes the whole table, and
+        # the status line with it, down over one malformed file.
+        write_worker(self.root, "issue-85", working_status(usage={"costUsd": "0.03"}))
+        write_worker(self.root, "issue-84", working_status())
+        found = list(snapshot(self.root).values())
+        self.assertIsNone(snapshot(self.root)["issue-85"]["costUsd"])
+        table = workers.render_table(found, 200)
+        self.assertIn("issue-85", table)
+        self.assertIn("issue-84", table, "one bad file must not hide the healthy workers")
+        self.assertIn("$0.0151", workers.render_oneline(found), "and the total still adds up")
+
+    def test_a_boolean_is_not_mistaken_for_a_number(self):
+        # bool is an int subclass, so a naive isinstance check renders `$1.0000`.
+        write_worker(self.root, "issue-83", working_status(usage={"costUsd": True}))
+        self.assertIsNone(snapshot(self.root)["issue-83"]["costUsd"])
+
     def test_process_alive_reports_unknown_rather_than_guessing(self):
         self.assertIsNone(workers.process_alive(None))
         self.assertIsNone(workers.process_alive(0))
@@ -200,8 +224,28 @@ class Discovery(unittest.TestCase):
         write_worker(self.root, "issue-16", working_status())
         self.assertEqual([p.name for p in workers.discover([self.root])], ["issue-16"])
 
-    def test_the_root_itself_counts_when_it_holds_a_pi_directory(self):
+    def test_a_bare_pi_directory_is_not_a_worker(self):
+        # `~/.pi` is pi's own configuration directory. Treating "has a .pi/" as
+        # the test reported $HOME as a worker that never started — and because
+        # the status line runs from whatever the session's cwd is, that showed
+        # up as a permanent phantom `⚠1 nostart` in the bar.
+        (self.root / "worktrees" / "looks-like-home" / ".pi" / "agent").mkdir(parents=True)
+        self.assertEqual(workers.discover([self.root]), [])
+
+    def test_a_provisioned_worker_that_never_started_is_still_found(self):
+        # guardrails.json is written before spawning, so this is the nostart
+        # case — the one the whole tool exists to name. Narrowing discovery must
+        # not lose it.
+        directory = self.root / "worktrees" / "issue-98"
+        (directory / ".pi").mkdir(parents=True)
+        (directory / ".pi" / "guardrails.json").write_text("{}", encoding="utf-8")
+        self.assertEqual([p.name for p in workers.discover([self.root])], ["issue-98"])
+        self.assertEqual(snapshot(self.root)["issue-98"]["state"], "nostart")
+
+    def test_the_root_itself_counts_when_it_is_the_worker(self):
+        # `--root <worktree>` should report that worktree, not nothing.
         (self.root / ".pi").mkdir()
+        (self.root / ".pi" / "status.json").write_text(json.dumps(working_status()))
         self.assertIn(self.root, workers.discover([self.root]))
 
     def test_a_directory_reachable_twice_is_only_reported_once(self):
@@ -295,10 +339,15 @@ class Cli(unittest.TestCase):
 
     def test_from_statusline_survives_a_payload_it_cannot_parse(self):
         # A broken payload must render an empty widget, never an error message
-        # pinned to the status bar.
+        # pinned to the status bar. `--root` is pinned at an empty directory so
+        # the assertion is about the payload and not about whatever the test
+        # runner's cwd happens to contain.
         with contextlib.redirect_stdout(io.StringIO()) as captured:
             with stdin_of("not json"):
-                self.assertEqual(workers.main(["--from-statusline", "--oneline"]), 0)
+                exit_code = workers.main(
+                    ["--from-statusline", "--oneline", "--root", str(self.root)]
+                )
+        self.assertEqual(exit_code, 0)
         self.assertEqual(captured.getvalue(), "")
 
 

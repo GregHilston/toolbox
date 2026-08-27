@@ -40,6 +40,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import math
 import os
 import shutil
 import signal
@@ -85,6 +86,19 @@ def process_alive(pid: Any) -> bool | None:
     return True
 
 
+def number(value: Any) -> float | None:
+    """Read a numeric field without trusting it.
+
+    Every number here is formatted (`${:.4f}`) or summed, and a string where a
+    float was expected raises — which would take down the whole table, and the
+    status line with it, over one malformed file. bool is excluded because it is
+    an int subclass and `$True` is not a cost.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value) if math.isfinite(value) else None
+
+
 def parse_timestamp(value: Any) -> dt.datetime | None:
     if not isinstance(value, str) or not value:
         return None
@@ -101,13 +115,27 @@ def parse_timestamp(value: Any) -> dt.datetime | None:
     return stamp
 
 
-def discover(roots: list[Path]) -> list[Path]:
-    """Directories that look like a pi worker: they have a `.pi/` in them.
+# A worker directory is identified by one of these inside its `.pi/`. A bare
+# `.pi/` directory is NOT enough: `~/.pi` is pi's own configuration directory,
+# so "has a .pi/" reports $HOME as a worker that never started — and the status
+# line, which runs from whatever the session's cwd happens to be, would then
+# show a permanent phantom `⚠1 nostart`.
+#
+# `status.json` means it ran; `guardrails.json` is what the orchestrator writes
+# before spawning, so a provisioned worker that never started is still found —
+# which is the case worth reporting.
+WORKER_MARKERS = ("status.json", "guardrails.json")
 
-    `.pi/` is what the orchestrator writes before spawning (the permission
-    config and the guardrails file), so it exists even for a worker that never
-    started — which is exactly the case worth reporting.
-    """
+
+def is_worker(directory: Path) -> bool:
+    try:
+        return any((directory / ".pi" / marker).exists() for marker in WORKER_MARKERS)
+    except OSError:
+        return False
+
+
+def discover(roots: list[Path]) -> list[Path]:
+    """Directories the orchestrator provisioned as pi workers."""
     found: list[Path] = []
     seen: set[Path] = set()
     for root in roots:
@@ -115,9 +143,9 @@ def discover(roots: list[Path]) -> list[Path]:
         for pattern in ("worktrees/*", ".claude/worktrees/*"):
             candidates.extend(sorted(root.glob(pattern)))
         for candidate in candidates:
+            if not is_worker(candidate):
+                continue
             try:
-                if not (candidate / ".pi").is_dir():
-                    continue
                 resolved = candidate.resolve()
             except OSError:
                 continue
@@ -169,10 +197,10 @@ def read_worker(directory: Path, now: dt.datetime, stall_seconds: float) -> dict
     usage = status.get("usage") if isinstance(status.get("usage"), dict) else {}
     worker.update(
         {
-            "turn": status.get("turn"),
-            "toolCalls": status.get("toolCalls"),
-            "costUsd": usage.get("costUsd"),
-            "totalTokens": usage.get("totalTokens"),
+            "turn": number(status.get("turn")),
+            "toolCalls": number(status.get("toolCalls")),
+            "costUsd": number(usage.get("costUsd")),
+            "totalTokens": number(usage.get("totalTokens")),
             "pid": status.get("pid"),
             "model": status.get("model"),
             "lastBlocked": status.get("lastBlocked"),
@@ -229,8 +257,8 @@ def render_table(workers: list[dict[str, Any]], width: int) -> str:
     rows = [header, "-" * min(len(header) + 20, width)]
     for worker in workers:
         symbol = STATE_SYMBOLS.get(worker["state"], " ")
-        turn = "-" if worker["turn"] is None else str(worker["turn"])
-        tools = "-" if worker["toolCalls"] is None else str(worker["toolCalls"])
+        turn = "-" if worker["turn"] is None else str(int(worker["turn"]))
+        tools = "-" if worker["toolCalls"] is None else str(int(worker["toolCalls"]))
         age = "-" if worker["ageSeconds"] is None else f"{int(worker['ageSeconds'])}s"
         cost = "-" if worker["costUsd"] is None else f"${worker['costUsd']:.4f}"
         prefix = (
