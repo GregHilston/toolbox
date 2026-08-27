@@ -93,11 +93,21 @@ echo '{}' > <worktree>/.pi/guardrails.json
 ```
 
 That arms `orchestration-guardrails`, which turns the prompt's prohibitions into
-`tool_call` blocks: no `git push` (and it terminates the run, because a push here
-is a deploy), no `checkout main`/`merge`/`rebase`, no `--no-verify`, no `gh` write
-subcommand, no `pi install`, no `/login`, no edits under `.pi/` or `~/.pi`. The
-model gets the reason, not a bare refusal — *"Never push. A pre-push hook deploys
-the API… the orchestrator pushes."*
+`tool_call` blocks: no `git push`, no `checkout main`/`merge`/`rebase`, no
+`--no-verify`, no `gh` write subcommand, no `pi install`, no repointing
+`core.hooksPath`, and no rewriting `.pi/` from either the write tool or the
+shell. The model gets the reason, not a bare refusal — *"Never push. A pre-push
+hook deploys the API… the orchestrator pushes."*
+
+The push rule asks to terminate the run, but **that is conditional**: pi stops
+early only when *every* finalized call in a batch is terminating, and parallel
+tool execution is the default. A push issued alongside another tool call is
+blocked but does not stop the run. The block always holds; the stop is a
+best-effort extra.
+
+**The threat model is a careless worker, not an adversarial one.** `bash -c "git
+push"`, `eval` and `$(...)` all defeat these, and closing that would mean parsing
+the shell rather than reading it. Confinement is the sandbox's job.
 
 `{}` is the right content: rules merge onto the defaults, so a worktree that adds
 one rule still gets the eight that ship. Add project-specific ones only when the
@@ -140,9 +150,19 @@ the **bash tool** while pi runs on the host, so the worker keeps `godot`, `uv` a
 the rest of the host toolchain — which is why an earlier plan to build a Linux
 container image for this was wrong.
 
+It is **parked outside the auto-discovery root**, at
+`~/Git/toolbox/dot/pi/extensions-available/sandbox`, and must be loaded by hand:
+
 ```bash
-cd <worktree> && pi -e ~/.pi/agent/extensions/sandbox …
+cd <worktree> && pi -e ~/Git/toolbox/dot/pi/extensions-available/sandbox …
 ```
+
+That placement is deliberate. Its `package.json` carries a `pi` manifest and pi
+auto-loads any subdirectory that has one — no `-e` needed — while its
+`DEFAULT_CONFIG` is `enabled: true`. Left in the extensions directory it turned
+sandboxing on for every pi session on the machine, and a global
+`{"enabled": false}` did **not** turn it back off; only removing the directory
+did. `node_modules` is gitignored, so run `npm install` there first.
 
 with `<worktree>/.pi/sandbox.json`:
 
@@ -158,6 +178,7 @@ Measured 2026-08-27: **filesystem confinement works** — a write to a path outs
   silent-death failure for a silent-hang failure, which is the exact class the
   status file was built to remove. `orchestration-status` makes the hang *visible*
   now, so this is diagnosable rather than mysterious — but it is not solved.
+- **It cannot be disabled by config**, only by not loading it. See above.
 - **Network domain filtering hung a run outright** and was not investigated. Use
   filesystem-only config until someone does.
 

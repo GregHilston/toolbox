@@ -156,7 +156,7 @@ keyboard.
 | --- | --- | --- |
 | `orchestration-status.ts` | `PI_STATUS_FILE=<path>` | Rewrites a small JSON status file every turn and tool call: phase, turn, current tool, `lastActivityAt`, `lastBlocked`, running tokens and cost. |
 | `orchestration-guardrails.ts` | `<cwd>/.pi/guardrails.json` exists, or `PI_GUARDRAILS=1` | Blocks `git push`, `checkout main`, `merge`/`rebase`, `--no-verify`, `gh` writes, `pi install`, `/login`, and edits under `.pi/` — via `tool_call`, with a reason the model reads. |
-| `sandbox/` | `-e ~/.pi/agent/extensions/sandbox` + `.pi/sandbox.json` | Official pi example on `@anthropic-ai/sandbox-runtime`. OS-level confinement of the bash tool. See the caveats below. |
+| `extensions-available/sandbox/` | **parked, loaded by nobody** | Official pi example on `@anthropic-ai/sandbox-runtime`. Deliberately outside the auto-discovery root — see below. |
 
 **Why status exists.** A pi worker that dies on spawn writes a 0-byte log; one
 thinking hard writes nothing new. They are identical from outside, and two dead
@@ -176,12 +176,31 @@ that and gets itself diagnosed as broken. So commands are split into the segment
 shell would run, with heredoc bodies stripped first. Most of
 `dot/pi/tests/orchestration-guardrails.test.ts` is about those false positives.
 
-**Sandbox, measured 2026-08-27.** Filesystem confinement works — a write outside
-`allowWrite` did not land. But a **denied write hangs the worker** rather than
-erroring, and network domain filtering hung a run outright. It keeps the host
-toolchain (`godot`, `uv`) because it sandboxes the bash tool rather than the
-process, which is why building a Linux container image for this would have been
-the wrong call. Attended: useful. Unattended: not yet.
+**Sandbox, measured 2026-08-27, and why it is parked.** It keeps the host
+toolchain (`godot`, `uv`) because it sandboxes the bash tool rather than the pi
+process — which is why building a Linux container image for this would have been
+the wrong call. Filesystem confinement genuinely works: a write outside
+`allowWrite` did not land.
+
+It lives in `dot/pi/extensions-available/`, **outside** `.pi/agent/extensions/`,
+and that placement is the whole point. Its `package.json` carries a `pi`
+manifest, and pi auto-loads *any subdirectory with one* — no `-e` required. Its
+`DEFAULT_CONFIG` is `enabled: true`. So simply having it in the extensions
+directory turns OS-level bash sandboxing on for **every pi session on this
+machine, in every project**. Worse, a global `sandbox.json` of
+`{"enabled": false}` does **not** switch it off: sessions still hung with it in
+place, and only removing the directory restored them.
+
+Two measured failures keep it parked: a **denied write hangs the worker** rather
+than erroring, and **network domain filtering hung a run outright**. To work on
+it, load it explicitly:
+
+```bash
+pi -e ~/Git/toolbox/dot/pi/extensions-available/sandbox   # needs npm install first
+```
+
+`node_modules` is gitignored, so a fresh checkout needs `npm install` in that
+directory before the `-e` will resolve. Tracked as gridkeep issue #82.
 
 ### Tests
 
@@ -303,10 +322,16 @@ only the **uncached remainder**: read `totalTokens`, and read `cacheRead`
 separately or you will conclude the run was expensive when it was not.
 `gridkeep/.claude/pi-usage.py` does all of this.
 
-**pi has no sandbox, by design.** `docs/security.md` is explicit: built-in tools
-read, write and run shell commands with the pi process's full permissions, and
-extensions run there too — so **no extension can add isolation**. A git worktree
-is a merge-conflict boundary, not a security one. The documented options are in
+**pi has no *built-in* sandbox, by design.** `docs/security.md` is explicit:
+built-in tools read, write and run shell commands with the pi process's full
+permissions. A git worktree is a merge-conflict boundary, not a security one.
+
+An earlier version of this note said "no extension can add isolation". That is
+wrong, and the official `sandbox` example disproves it: an extension can replace
+the `bash` tool and route it through `sandbox-exec`, which confines the commands
+without confining pi. What remains true is that extensions run with the pi
+process's permissions, so an extension cannot contain *itself* — and prompt
+injection through repo content is still expected local-agent risk. The documented options are in
 `docs/containerization.md`: Gondolin (host pi, tools routed into a Linux
 micro-VM — needs QEMU, **not installed here**), plain Docker/OrbStack (both
 present), or OpenShell. For gridkeep specifically the blocker is the toolchain:
