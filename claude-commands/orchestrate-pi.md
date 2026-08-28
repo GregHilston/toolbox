@@ -571,16 +571,45 @@ look at; the orchestrator looks and says what is there.** That is the whole reas
 this command pairs a blind implementer with a sighted reviewer, and it only works
 if the worker does not try to do both halves.
 
+### `--continue` resumes the session for the CURRENT DIRECTORY, so always `cd` first
+
+**`PI_STATUS_FILE` does not select the session. The working directory does.**
+Sessions are keyed by project directory, so a resume without an explicit `cd`
+lands on whatever session matches wherever the shell happens to be — which, with
+a persistent cwd across tool calls, is almost never where you assume.
+
+This is not hypothetical. In one run a review written for issue #81 was sent with
+`PI_STATUS_FILE` pointing at the issue-81 worktree and no `cd`, and it **resumed
+the issue-55 session instead**. That worker read a work order for a different
+branch, said so — *"I'm the issue-55 session … I'll flag that rather than act on
+someone else's work order"* — and refused it. It was right, and it was the only
+thing standing between a misrouted brief and a worker editing the wrong branch.
+
+Write every resume as `cd <abs worktree> && … pi --continue …`, and put a `pwd`
+in front of it while you are debugging. The status file still needs setting; it
+just does not do the routing.
+
+The cost when it goes wrong is not only the wasted call: the misrouted prompt is
+now in the wrong worker's context for the rest of its session, re-sent on every
+turn.
+
 ### A `--continue` that never makes its first API call — kill it, do not wait
 
 **Signature, and it is unmistakable once you know it:** a live pid, `phase`
 stuck at `starting`, `turn 0`, `$0.0000`, and a raw log of **27 bytes**. The
 process is up, the status file exists, and no API call has ever completed.
 
-It happened **three times in one run** — on resumes of three different worktrees —
-while structurally identical `--continue` invocations against two other worktrees
-succeeded, and while `curl https://api.deepseek.com/user/balance` answered in
-half a second. So it is not the network, not the key, and not the command.
+It happened **twice in one run on resumes that were otherwise correct** — both
+with an explicit `cd` into the right worktree — while structurally identical
+`--continue` invocations against two other worktrees succeeded, and while
+`curl https://api.deepseek.com/user/balance` answered in half a second. So it is
+not the network, not the key, and not the command.
+
+**A third apparent case was not this bug at all**: it was a resume issued without
+a `cd` (see the section above), so pi was asked to continue a session that did
+not exist for that directory. Before concluding you have hit this, check that the
+command actually `cd`'d — the two failures look identical from the status file
+and have completely different fixes.
 
 **`pi-workers.py` reports it as `stalled`**, which is correct but reads the same
 as a worker thinking hard. The distinguishing facts are `turn 0` and the 27-byte
