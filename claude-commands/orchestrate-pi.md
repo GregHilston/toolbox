@@ -571,6 +571,33 @@ look at; the orchestrator looks and says what is there.** That is the whole reas
 this command pairs a blind implementer with a sighted reviewer, and it only works
 if the worker does not try to do both halves.
 
+### A `--continue` that never makes its first API call — kill it, do not wait
+
+**Signature, and it is unmistakable once you know it:** a live pid, `phase`
+stuck at `starting`, `turn 0`, `$0.0000`, and a raw log of **27 bytes**. The
+process is up, the status file exists, and no API call has ever completed.
+
+It happened **three times in one run** — on resumes of three different worktrees —
+while structurally identical `--continue` invocations against two other worktrees
+succeeded, and while `curl https://api.deepseek.com/user/balance` answered in
+half a second. So it is not the network, not the key, and not the command.
+
+**`pi-workers.py` reports it as `stalled`**, which is correct but reads the same
+as a worker thinking hard. The distinguishing facts are `turn 0` and the 27-byte
+log: a worker that is genuinely deep in thought has turns behind it and a log
+with content. **Stalled at turn 0 with an empty log is a failed start, and the
+fix is to kill and relaunch, not to be patient.** Waiting cost 28 minutes on the
+first occurrence and 36 on the third before anyone checked the byte count.
+
+```bash
+pkill -f "PI_STATUS_FILE=<worktree>/.pi/status.json"
+# then re-run the same command; it starts normally
+```
+
+Relaunching is cheap and safe: the session persists on disk, the working tree is
+untouched, and the prompt file is still there. Every relaunch in that run came up
+and produced turns immediately.
+
 ### A worker's bash call gets killed on a timeout you cannot predict
 
 **Do not rely on a specific number.** One run produced *both*
