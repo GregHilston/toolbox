@@ -304,6 +304,15 @@ and they cluster:
 - **What is the render and clip chain?** A control that draws correctly can still
   be invisible. One branch's popups rendered perfectly at 79% alpha and were
   clipped entirely by an ancestor's `clip_contents`.
+- **Does anything here react to its own output?** A handler connected to a signal
+  it can itself cause is a fixed point waiting to be perturbed. In this repo
+  `ContentWidth._ready` does `resized.connect(_apply)` while `_apply` sets margin
+  overrides — which resize the container. It converges only because the computed
+  margin settles, and a change that made the size move on every pass turned it
+  into a stack overflow 1024 frames deep. Ask the question for resize, focus,
+  visibility and value-changed handlers along the path being touched: **the
+  planner can see this from the code; the worker only sees it after the suite
+  hangs.**
 - **Who are all the callers?** A fix wired to one entry point leaves the others.
 - **What happens at the minimum window?** Read it from the project settings, not
   from the design size.
@@ -432,6 +441,11 @@ loudly rather than silently substituting your own."
   them to the end** — an agent that dies mid-run keeps only what it committed, and
   in one `/orchestrate-pi` run three workers were killed by a provider error and
   lost everything they had done, while still reporting completion.
+- **Never redirect unbounded output to a file.** Pipe through `tail -50` or
+  `grep`; if you must keep a file, cap it. A worker teed a hanging test suite to a
+  log to work around a tool timeout, and the runaway recursion behind the hang
+  wrote **12 GB** before anyone noticed. The workaround was reasonable; the
+  unbounded sink was not.
 - **Read line ranges, not whole files, and truncate every tool result at the
   source.** `grep -n` for the anchor, then read the 40 lines around it. Pipe long
   output through `head`/`tail`; grep a suite run for its summary lines rather than
@@ -446,6 +460,13 @@ loudly rather than silently substituting your own."
   than compacting it**, so the answer is not to summarise later — it is not to
   load the bloat in the first place.
 - Let hooks run. **Never `--no-verify`.** State the expected duration.
+- **A suite that blows past its known baseline is hung, not slow — go and read
+  why.** You are told what the suites cost (Step 2d). When one that takes ~50s is
+  still going at 300, re-running it is the wrong move; the second and third
+  attempts cost the same and tell you nothing new. Read the tail of its output and
+  look for `Stack overflow`, a repeated frame, or the same line number over and
+  over. One worker spent fifteen minutes and three timed-out runs treating an
+  infinite recursion as slowness, and the answer was in the output the whole time.
 - Coverage gates, formatters, and any repo-specific requirements.
 - UI work must be *looked at*, not just tested — run the screenshot harness,
   build a before baseline first if baselines are gitignored, and check the
