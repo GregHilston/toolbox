@@ -254,20 +254,86 @@ proceeding.
   issue is paired with a 3-hour one. With `--workers N`, the invariant is: while
   the queue is non-empty, N agents are in flight.
 
-### Scout once, so N workers do not each rediscover the same thing
+### Plan each issue before you spawn it — the highest-leverage step in the command
 
-Before spawning, spend **one** agent (or your own reads, if the repo is familiar)
-producing a **small shared map**: where the relevant subsystems live, the key call
-paths, the handful of facts every worker on this queue will otherwise go looking
-for. Put it in every worker prompt.
+**The ticket says what and why. The plan says where and how, and you write it
+fresh, at spawn time, against current HEAD.** That split is the whole design:
+`/prep` produces something durable that a human argues with, and this produces
+something perishable that an agent executes.
 
-The arithmetic is the point. Rediscovery is paid once per worker; a map is written
-once and carried cheaply. Keep it **under ~2k tokens** — it rides along on every
-turn of every worker, so a bloated map is worse than no map. See "Write the prompt
-to remove turns" in Step 4 for the break-even.
+Why it is worth a step of its own, measured on a nine-issue run: **24% of all
+tokens were spent before the worker's first edit**, and workers explored between
+**12 and 49 turns** each — even though every prompt already carried a "Where to
+look" list of the right files. **File paths alone do not stop exploration.** They
+tell an agent where to start reading, and everything it reads then sits in its
+context for the rest of the session.
 
-Skip it when the queue's issues share no subsystem — there is nothing to
-amortise, and the map becomes pure overhead.
+#### Produce it with one `Plan` agent per issue
+
+Spawn a `Plan` subagent (or do it yourself for a repo you know cold), given the
+issue body and the worktree. Ask it for **at most ~2k tokens**, because whatever
+it writes rides along on every turn of that worker — a bloated plan is worse than
+none. See "Write the prompt to remove turns" for the break-even.
+
+It should return:
+
+- **Exact anchors: `path:line-range`, verified against HEAD right now.** This is
+  the half `/prep` deliberately does not write, because line numbers rot between
+  prepping and running.
+- **The two or three facts that make reading unnecessary** — "`focus_first()` is
+  defined here and called nowhere", "`_remembered_focus` is only ever assigned in
+  `build()`, which runs before any button exists".
+- **What is already ruled out**, so it is not re-derived.
+- **The shape of the change**, not the code. Where the seam is; which file owns
+  the fix. Not a diff — a worker handed a diff stops thinking.
+
+#### Give the planner this checklist
+
+These are drawn from what adversarial review actually caught after the fact.
+Roughly half of a run's findings are things a planner could have surfaced first,
+and they cluster:
+
+- **Does the asset exist?** A glyph, an icon, a font codepoint, a sound. One
+  branch shipped `⏸` as its only mouse affordance; the codepoint is not in the
+  project's font at all and was being drawn by whatever the host OS supplied.
+  Check the actual file, not the block it belongs to — coverage is per codepoint.
+- **Who else handles this input, and in which handler?** Binding a key is not
+  local. One branch bound `P` and silently broke typing the letter "p" in the
+  bug-report field, because that screen handles the action in `_input` — ahead of
+  the GUI — deliberately, to protect the player's paragraph.
+- **What is the render and clip chain?** A control that draws correctly can still
+  be invisible. One branch's popups rendered perfectly at 79% alpha and were
+  clipped entirely by an ancestor's `clip_contents`.
+- **Who are all the callers?** A fix wired to one entry point leaves the others.
+- **What happens at the minimum window?** Read it from the project settings, not
+  from the design size.
+
+#### One shared map when the queue overlaps
+
+If several issues touch the same subsystem, hoist the common half into one map
+included in every prompt — rediscovery is paid per worker, a map is written once.
+Skip it when the issues share nothing; then it is pure overhead.
+
+#### Tell the worker the plan is evidence, not scripture
+
+Include this in the prompt: *the anchors were verified at spawn, but the file may
+have moved; if a line number is wrong, say so and continue from what you can
+actually see.* A worker that trusts a stale anchor over the file in front of it is
+a worse failure than one that explores.
+
+#### Measure whether it worked
+
+Record turns-before-first-edit per worker and compare against the run that
+motivated this: **24% of tokens pre-edit, 12–49 turns**. If planning does not move
+that, it is costing you a step and buying nothing — and you will only know if you
+wrote the number down.
+
+**Planning does not replace the review loop, and must not be sold as doing so.**
+On the run above, about half the findings were things no plan could have seen —
+a regression introduced by the fix itself, a rotation path that never re-snapped,
+a container that traded a horizontal overflow for a vertical one, four rows added
+below the fold. Those do not exist until the code does. Planning halves the
+exploration and some of the defects; review catches the rest.
 
 Write the queue into a state file (`.claude/orchestrate-state.md`, gitignored) —
 issue number, branch, status, notes. If your context is compacted mid-run, this

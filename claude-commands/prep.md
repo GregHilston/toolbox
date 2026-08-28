@@ -226,6 +226,21 @@ This is the part that matters.
 - **Say what is out of scope**, explicitly.
 - Fix rotted file and symbol references while you are in there.
 - Keep the title honest. If the body changed meaning, `gh issue edit N --title`.
+- **Write file paths and symbol names. Do not write line numbers.** This is the
+  one place a prepped body reliably rots. Issue #83's body said
+  `components/menu_button_row.gd:34: func focus_first()`; by the time an agent ran
+  it the function was at **line 85**, because the file had grown in between. The
+  agent noticed and corrected it, which is the good case — the bad case is a
+  confident wrong anchor sending someone to the wrong place. A path plus a symbol
+  name survives any edit that does not rename the symbol; a line number survives
+  until the next commit above it.
+
+  **What belongs here instead is the *why*** — the fact that makes the file worth
+  opening. "`gamepad_focus_claim.gd` only re-claims on a transition *to* GAMEPAD,
+  so a player already holding a pad never triggers it" is durable, is the actual
+  insight, and is worth more than any coordinate. Exact line ranges are generated
+  fresh against HEAD at spawn time by `/orchestrate`'s plan phase, where they
+  cannot be stale.
 
 A prepped body wants roughly this shape — enough structure that an agent can find
 the parts, not so much that a two-line bug report becomes a document:
@@ -243,7 +258,7 @@ the parts, not so much that a two-line bug report becomes a document:
 - …
 
 ## Where to look
-`path/to/file.gd:120` — …
+`path/to/file.gd` — what lives here, and why it is implicated
 ```
 
 Drop any heading that would be empty. A `## Still needs` section replaces

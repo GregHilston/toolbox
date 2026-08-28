@@ -496,6 +496,11 @@ Three additions specific to pi:
   thinking budget will not use it. Say `deepseek-v4-flash` when that is what it
   is — a prompt that claims Pro while Flash is running is a small lie that makes
   the transcript useless as evidence for the Flash-versus-Pro question.
+- **Include the plan, and say what it is worth.** Paste the planning agent's brief
+  under its own heading, and tell the worker plainly: *these anchors were verified
+  against HEAD at spawn, but the file may have moved since; if a line number is
+  wrong, say so and work from what you can see.* A worker that trusts a stale
+  anchor over the file in front of it fails worse than one that explores.
 - **Ask for the final report as the last message**, in the shape Step 4 requires.
   There is no return value here — you read it out of the log.
 - **Forbid `/login`, `pi install`, and any edit to `~/.pi`.** A worker has no reason
@@ -506,6 +511,26 @@ Three additions specific to pi:
   provider abort — and it keeps only what it committed. Three workers in one run
   lost everything they had done this way, and the loss is invisible until you look
   at `git log` rather than at the completion event.
+
+### Plan every issue before spawning — it matters more here than anywhere
+
+**`/orchestrate`'s "Plan each issue before you spawn it" owns the mechanism**, the
+2k cap, the planner checklist and the measurement. Do not duplicate it. Two
+reasons it is worth more on this side:
+
+- **The exploration is metered.** On the Claude side a worker that spends fifteen
+  turns finding a file costs subscription tokens; here it costs the key. 24% of a
+  run's tokens went before the first edit, and every one of those turns re-sent a
+  context that had just grown.
+- **The planner is a better model than the worker, which is the point.** Flash is
+  strong at executing a precise brief and weaker at deciding what the brief should
+  be. Claude plans, Flash implements, Claude reviews — each model doing the half it
+  is better at, and only the middle half is billed to DeepSeek.
+
+The planning pass is Claude work and costs this key nothing, so there is no budget
+argument against it. The only cost is the ~2k tokens the plan itself adds to every
+turn of that worker, which pays for itself against about five saved exploration
+turns.
 
 ### A pi worker cannot see, and will try anyway — say so in the prompt
 
