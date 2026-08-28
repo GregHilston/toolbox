@@ -571,17 +571,22 @@ look at; the orchestrator looks and says what is there.** That is the whole reas
 this command pairs a blind implementer with a sighted reviewer, and it only works
 if the worker does not try to do both halves.
 
-### pi's bash tool times out at 180s — so some things you ask for cannot be done
+### A worker's bash call gets killed on a timeout you cannot predict
 
-A worker's `bash` call is killed at three minutes. Two consequences bite in this
-repo, and both look like the worker failing rather than the instruction being
-impossible:
+**Do not rely on a specific number.** One run produced *both*
+`Command timed out after 180 seconds` (five times) and `after 420 seconds` (four),
+so the ceiling is not a fixed three minutes and an earlier version of this file
+was wrong to say so. Treat it as "a long command will be killed, sooner than you
+think, and you will not know the limit in advance".
 
-- **A full `./run_ui_screenshots.sh --sweep` (289 shots) exceeds it.** Asking a
-  worker to "check it across the sweep" is asking for something it cannot run in
-  one call. Either scope the capture (`--only=<group>`, or `--sizes=1024x640` for
-  the one resolution that matters), or **run the sweep yourself** and hand back
-  the `DIFF.md` — the orchestrator has no such limit.
+Two consequences bite in this repo, and both look like the worker failing rather
+than the instruction being impossible:
+
+- **A full `./run_ui_screenshots.sh --sweep` (289 shots) is at or over it.**
+  Asking a worker to "check it across the sweep" may be asking for something it
+  cannot finish in one call. Either scope the capture (`--only=<group>`, or
+  `--sizes=1024x640` for the one resolution that matters), or **run the sweep
+  yourself** and hand back the `DIFF.md` — the orchestrator has no such limit.
 - **A headless Godot probe that never calls `get_tree().quit()` runs forever**
   and eats the whole three minutes. If you tell a worker to measure something with
   `godot --headless -s probe.gd`, tell it to quit at the end.
@@ -595,6 +600,14 @@ commit is safe.
 **Scratch files a probe leaves behind are the worker's to clean up.** Say so: a
 `probe_*.gd` at the repo root is not part of the change and must not reach the
 diff.
+
+**Some reads outside the worktree are refused even under `yoloMode`.** A worker
+that ran `ls -la /tmp/*.gd` got
+`[pi-permission-system] This 'external_directory' call ... requires approval`, and
+with no UI to approve it that is a hard refusal. Yolo rewrites `ask` to `allow`
+inside the project; it does not open the whole filesystem, which is the intended
+behaviour and worth one line in the prompt so a worker does not lose a turn
+discovering it. Writing to `/tmp` worked; globbing it did not.
 
 ### Do not change model mid-session — it collapses the cache
 
