@@ -16,6 +16,7 @@ import os
 import pathlib
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 
@@ -397,3 +398,65 @@ class TestCostAndCacheHit(unittest.TestCase):
         self.assertIsNone(workers.hit_pct({}), "a worker with no usage yet")
         self.assertIsNone(workers.hit_pct({"cacheRead": 0, "input": 0}), "or one with zero of both")
 
+
+
+class TestOrphanDetection(unittest.TestCase):
+    """A worker whose shell died keeps running, and every status file lies about it.
+
+    Killing a backgrounded pi kills the wrapper shell; pi is reparented to init
+    and carries on spending. One run collected five, two of them sharing a
+    worktree with the live worker for over an hour. The status file cannot show
+    this — the worker is writing it happily — so the check reads the process
+    table instead.
+    """
+
+    def test_a_pid_that_is_not_a_pid_is_unknowable(self):
+        self.assertIsNone(workers.process_orphaned(None))
+        self.assertIsNone(workers.process_orphaned(0))
+        self.assertIsNone(workers.process_orphaned("1"), "a string pid is not a pid")
+
+    def test_a_dead_process_is_not_an_orphan(self):
+        """Dead is its own state and already reported; do not double-flag it."""
+        self.assertFalse(workers.process_orphaned(999999))
+
+    def test_our_own_process_has_a_real_parent(self):
+        self.assertFalse(workers.process_orphaned(os.getpid()),
+                         "this test's own process was launched by a shell")
+
+    def test_a_ppid_of_1_is_the_tell(self):
+        """The real check is `ps -o ppid=` returning 1. Driven directly.
+
+        Deliberately not asserted against pid 1 itself: on macOS init's own ppid
+        is 0, so `process_orphaned(1)` is False. That is correct and it is also
+        the trap — the first version of this test asserted the opposite and
+        failed, which is the useful kind of wrong.
+        """
+        real = workers.subprocess.run
+        try:
+            workers.subprocess.run = lambda *a, **k: types.SimpleNamespace(stdout=" 1\n")
+            self.assertTrue(workers.process_orphaned(os.getpid()))
+            workers.subprocess.run = lambda *a, **k: types.SimpleNamespace(stdout=" 51471\n")
+            self.assertFalse(workers.process_orphaned(os.getpid()))
+            workers.subprocess.run = lambda *a, **k: types.SimpleNamespace(stdout="")
+            self.assertIsNone(workers.process_orphaned(os.getpid()),
+                              "unparseable ps output is unknowable, not healthy")
+        finally:
+            workers.subprocess.run = real
+
+    def test_an_orphan_needs_attention_even_when_it_looks_healthy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = pathlib.Path(tmp) / "issue-1"
+            (d / ".pi").mkdir(parents=True)
+            (d / ".pi" / "status.json").write_text(json.dumps({
+                "phase": "thinking", "pid": os.getpid(), "turn": 40,
+                "lastActivityAt": dt.datetime.now(dt.timezone.utc).isoformat(),
+            }))
+            real = workers.subprocess.run
+            try:
+                workers.subprocess.run = lambda *a, **k: types.SimpleNamespace(stdout=" 1\n")
+                w = workers.read_worker(d, dt.datetime.now(dt.timezone.utc), 120.0)
+            finally:
+                workers.subprocess.run = real
+            self.assertTrue(w["orphaned"], "ppid 1 is the tell")
+            self.assertTrue(w["needsAttention"],
+                            "a busy-looking orphan is still spending with nobody reading it")

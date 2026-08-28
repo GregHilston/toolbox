@@ -571,6 +571,45 @@ look at; the orchestrator looks and says what is there.** That is the whole reas
 this command pairs a blind implementer with a sighted reviewer, and it only works
 if the worker does not try to do both halves.
 
+### Killing a worker leaves it running — check `ppid`, not just the task
+
+**A backgrounded worker is a grandchild: shell wraps `pi` wraps the narrator.
+Stopping the task kills the *shell*. `pi` is reparented to init and keeps
+running** — keeps spending, keeps holding the session, keeps writing into a
+worktree you believe is finished with. Nothing you normally look at shows this.
+The task says failed. The status file keeps updating, because the worker is
+perfectly happy. `pi-workers.py` reads status files keyed to worktrees, so an
+orphan idling in the **repo root** is not even enumerated.
+
+One run accumulated five. Two shared a single worktree with the live worker for
+over an hour, running the GUT suite concurrently against the same `.godot/` and
+the same screenshot-harness scratch HOME — which is a real interference source,
+not a tidiness complaint. One recreated a worktree *seconds after*
+`git worktree remove --force` reported success, so a directory I had just deleted
+was back on disk. Two sat in the repo root doing nothing but billing.
+
+`pi-workers.py` now flags them: `ORPHANED (ppid 1) — pid N outlived its shell and
+is still spending; kill it`, and an orphan always `needsAttention` even when its
+row looks healthy. Check by hand with:
+
+```bash
+for p in $(pgrep -f "pi --approve"); do
+  ps -o pid=,ppid=,etime= -p $p
+  lsof -a -p $p -d cwd -Fn 2>/dev/null | grep '^n' | cut -c2-
+done
+```
+
+**`ppid 1` means orphan.** A live worker is a child of the harness shell and
+shares its ppid with its siblings.
+
+Kill orphans with `kill -9 <pid>` on the pi process itself — not the wrapper,
+which is already dead. And **verify after every stop**, because "I killed it" and
+"it is dead" turned out to be different sentences repeatedly in one evening.
+
+**Never `git worktree remove` while a process might still live there.** Kill
+first, confirm by ppid, then remove — otherwise the removal succeeds, the process
+writes the path back, and the next `git worktree list` disagrees with the disk.
+
 ### `--continue` resumes the session for the CURRENT DIRECTORY, so always `cd` first
 
 **`PI_STATUS_FILE` does not select the session. The working directory does.**

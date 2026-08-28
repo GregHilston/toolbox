@@ -42,6 +42,7 @@ import datetime as dt
 import json
 import math
 import os
+import subprocess
 import shutil
 import signal
 import sys
@@ -89,6 +90,43 @@ def process_alive(pid: Any) -> bool | None:
     except OSError:
         return None
     return True
+
+
+def process_orphaned(pid: Any) -> bool | None:
+    """Has this worker outlived the shell that launched it? None when unknowable.
+
+    A backgrounded `pi` is a grandchild of the harness: shell wraps pi wraps the
+    narrator. Killing the *shell* — which is what a task-stop or a `pkill` on the
+    wrapper does — leaves pi running and reparented to init, where it keeps
+    burning tokens, keeps holding the session, and keeps writing to a worktree
+    the orchestrator believes it has finished with.
+
+    That is not hypothetical. One run accumulated five of them: two in a single
+    worktree for over an hour, running suites concurrently with the live worker
+    and sharing its `.godot/` and the screenshot harness's scratch HOME; one that
+    recreated a worktree seconds after `git worktree remove --force` reported
+    success; and two idling in the repo root, which is not a worktree at all and
+    so is invisible to every status file this script reads.
+
+    ppid 1 is the tell, and it is cheap. Everything else here reads a file the
+    worker wrote about itself; this reads the process table, so it still works
+    when the worker has stopped writing — which is exactly when it matters.
+    """
+    if not isinstance(pid, int) or pid <= 0:
+        return None
+    if process_alive(pid) is not True:
+        return False
+    try:
+        out = subprocess.run(
+            ["ps", "-o", "ppid=", "-p", str(pid)],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    ppid = out.stdout.strip()
+    if not ppid.isdigit():
+        return None
+    return int(ppid) == 1
 
 
 def number(value: Any) -> float | None:
@@ -200,6 +238,7 @@ def read_worker(directory: Path, now: dt.datetime, stall_seconds: float) -> dict
         "ageSeconds": None,
         "costUsd": None,
         "costRealUsd": None,
+        "orphaned": None,
         "cacheHitPct": None,
         "doing": "no status file — it never started",
         "pid": None,
@@ -240,6 +279,7 @@ def read_worker(directory: Path, now: dt.datetime, stall_seconds: float) -> dict
             # status file written by an older extension still renders.
             "costRealUsd": number(usage.get("costRealUsd")) or number(usage.get("costUsd")),
             "cacheHitPct": hit_pct(usage),
+            "orphaned": process_orphaned(status.get("pid")),
             "totalTokens": count(usage.get("totalTokens")),
             "pid": status.get("pid"),
             "model": status.get("model"),
@@ -261,7 +301,12 @@ def read_worker(directory: Path, now: dt.datetime, stall_seconds: float) -> dict
     else:
         worker["state"] = phase
 
-    worker["needsAttention"] = worker["state"] in ("dead", "stalled", "nostart", "unknown")
+    worker["needsAttention"] = (
+        worker["state"] in ("dead", "stalled", "nostart", "unknown")
+        # An orphan is always worth a look even when it looks perfectly healthy —
+        # it is spending, and nobody is reading what it produces.
+        or worker.get("orphaned") is True
+    )
     worker["doing"] = describe(status, worker)
     return worker
 
@@ -276,6 +321,14 @@ def describe(status: dict[str, Any], worker: dict[str, Any]) -> str:
         return f"process {status.get('pid')} is gone — check the log and the branch"
     if state == "stalled":
         return f"no activity for {int(worker['ageSeconds'] or 0)}s while phase={status.get('phase')}"
+    if worker.get("orphaned") is True:
+        # Said before anything else, because it changes what every other number
+        # on the row means: this worker's shell is gone, so nothing is reading
+        # its output and no completion will ever be noticed.
+        return (
+            f"ORPHANED (ppid 1) — pid {status.get('pid')} outlived its shell and is "
+            "still spending; kill it"
+        )
     tool = status.get("currentTool")
     if state == "tool" and tool:
         detail = str(status.get("lastToolBrief") or "").strip()
