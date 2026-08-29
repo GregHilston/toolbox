@@ -100,6 +100,57 @@ stays blocked.
 
 ---
 
+## What every prepped issue must carry
+
+Three things, on every single issue, with no exceptions. This is the checklist
+the user asks for by name, and an issue missing any one of them is not prepped.
+
+1. **The problem or the desire, stated plainly.** Not the solution — the thing
+   that is wrong, or the thing that is wanted, and who said so. If a playtester
+   or a bug report is behind it, quote them. An implementer who understands *why*
+   will make better calls on the hundred small forks you did not anticipate; one
+   who only has a task list will guess.
+
+2. **How to check the work is done.** A `## Done when` list of checkable
+   statements — not aspirations. "The Buildings tab opens showing only the
+   player's faction, doctrine and generic buildings" is checkable. "Encyclopedia
+   is less overwhelming" is not. Name the command that proves it where one
+   exists (`./run_tests.sh`, `./run_ui_screenshots.sh --diff`,
+   `uv run pytest`, `balance_guard.py`), and say which tests should be added.
+
+3. **The clarifying questions, asked and answered.** Every fork you hit while
+   researching goes to the user — see Step 4 — and **the answer is written into
+   the body with its reasoning**. A question you resolved by picking a sensible
+   default still gets recorded, under `## Decided`, so the next reader does not
+   reopen it. A question the user declined to answer makes the issue
+   `prep:blocked`; it never becomes an agent's judgement call.
+
+### Write for the least capable reader
+
+**Assume the implementer is a weaker model than you, working alone, with no
+access to this conversation and no chance to ask a follow-up.** That is the
+actual bar, and it is the whole reason `/prep` exists.
+
+Concretely, that means:
+
+- **Name the files.** An issue that says "fix the encyclopedia" is a research
+  task; one that says "`godot-client/scenes/encyclopedia/encyclopedia_panel.gd`
+  owns the tab bar and the filter checkboxes" is an implementation task. Paths
+  and symbol names, never line numbers — see Step 5.
+- **Say what already exists.** The single highest-value thing research produces.
+  If half the feature ships already, say which half and name the function, or the
+  agent will rebuild it beside the working copy.
+- **Correct the issue's own claims.** Issue bodies carry diagnoses written before
+  anyone looked. If the stated cause is wrong, strike it and say what is
+  actually true — a `prep:ready` label asserts that you checked.
+- **Leave nothing to taste.** Where a choice is genuinely free, write
+  "implementer's call" explicitly. Silence reads as an omission, and an agent
+  will either stall on it or invent something you would not have picked.
+- **Bound it.** `## Out of scope` is not optional padding. It is what stops an
+  agent from turning a gold-readout fix into a shop redesign.
+
+---
+
 ## Step 0 — Labels
 
 State lives in labels, because `gh issue list --label prep:ready` filters
