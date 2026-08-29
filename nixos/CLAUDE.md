@@ -99,11 +99,20 @@ for an ARM host.
 
 Menu-bar apps have to already be running to do anything, and they fail *silently* when
 they aren't — no Handy means Caps Lock still behaves and nothing dictates; no Ice means
-the stock cluttered menu bar. So each gets a launchd user agent: `modules/darwin/handy.nix`
-(imported per-host by citadel and moria; headless dungeon has the cask but no use for a
-dictation app) and `modules/darwin/ice.nix` (imported from `modules/darwin/common.nix`, so
-all three Macs). The Linux equivalent is a home-manager `systemd.user.services.*` unit
-bound to `graphical-session.target` — see handy in `modules/home/default.nix`.
+the stock cluttered menu bar. So each gets a launchd user agent:
+
+- `modules/darwin/ice.nix` — imported from `modules/darwin/common.nix`, so all three Macs.
+- `modules/darwin/handy.nix` — per-host (citadel, moria); headless dungeon has the cask but
+  no use for a dictation app.
+- `modules/darwin/vorssaint.nix` — per-host (citadel, moria), for the same reason. The one
+  that does more than launch: its script also seeds Vorssaint's Features hub the first time,
+  because the app has no config file, only a UserDefaults domain. That is *why* the seed
+  lives in the agent — a launchd user agent runs as the user, and `defaults write` from
+  root-at-activation would have configured root's copy. Its own header has the full
+  reasoning, including why the keys are seeded once rather than enforced every rebuild.
+
+The Linux equivalent is a home-manager `systemd.user.services.*` unit bound to
+`graphical-session.target` — see handy in `modules/home/default.nix`.
 
 The shape is always the same, and *why* is the part worth remembering:
 

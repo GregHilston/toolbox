@@ -132,3 +132,32 @@ See `modules/darwin/pi-web.nix`.
       **off** — the launchd agent owns that, and both would double-register.
 - [ ] Arrange the menu bar in Ice: drag icons above/below the divider with ⌘-drag to choose
       what stays visible vs. hidden
+- [ ] **Vorssaint** (moria, citadel) - the menu-bar utility suite. Like Ice, it is launched
+      at login by `modules/darwin/vorssaint.nix`, and unlike Ice it also seeds its own
+      Features hub, so there is nothing to pick on first launch — only permissions to grant.
+      Leave its Settings → "Launch at login" **off**; the launchd agent owns that.
+      Grant these, in rough order of how much stops working without them:
+      - **Accessibility** — the volume mixer, keep awake, ⌘X/⌘V in Finder, quit-on-close,
+        smooth scrolling and Cleaning Mode. This is the one that matters.
+      - **Screen Recording** — the screenshot tool and copy-text-from-screen.
+      - **System Audio Recording** — per-app volume and per-app output. Without it every
+        app just rides the normal system output.
+      - **Automation → Finder** — emptying the Trash from Quick Toggles, ⌘X/⌘V, and the
+        uninstaller. Prompts on first use rather than up front.
+      - **Full Disk Access**, optional — lets the Cleaner and Uninstaller see more than the
+        reachable places. Skippable; both work without it.
+      > Nothing is broken while a grant is missing — a feature that needs one sits inert
+      > and says so on Vorssaint's own Permissions page, which also lists which features
+      > use each grant. Nothing here can be declared: TCC is outside nix's reach.
+- [ ] Confirm the seed actually ran: `grep vorssaint ~/Library/Logs/vorssaint.log` should
+      say `seeding the Features hub with mixer, keepAwake, …` on the first activation and
+      `already set up` on every one after. On a brand-new host the first line can instead be
+      `Unable to find application named 'Vorssaint'` — the agent bootstrapped before
+      Homebrew installed the cask. Harmless: the seed still landed, and the next `just dr`
+      (or the next login) launches it.
+      > To re-seed deliberately after editing the feature list — it is otherwise a
+      > once-per-Mac write, so an edit alone changes nothing on a host already set up:
+      > ```
+      > defaults delete com.vorssaint.utils hasOnboarded
+      > launchctl kickstart -k "gui/$(id -u)/org.nixos.vorssaint"
+      > ```

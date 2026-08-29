@@ -106,6 +106,33 @@ Launching, permissions, and why the app's own "launch at login" stays off are al
 `modules/darwin/homebrew-base.nix`, launched by `modules/darwin/ice.nix` — same
 launchd pattern as Handy, documented in `nixos/CLAUDE.md`.
 
+## Mac Utilities — Vorssaint
+
+[Vorssaint](https://github.com/vorssaint/vorssaint-utils) is a PowerToys-shaped menu bar
+suite: per-app volume and output, keep-awake with the lid closed, a better screenshot and
+text-from-screen, ⌘X/⌘V in Finder, quit-on-close, system stats, a file shelf. **moria and
+citadel only** — dungeon is headless.
+
+`nixos/modules/darwin/vorssaint.nix` owns it and explains itself at length. The two things
+worth knowing from here:
+
+- **There is no config file.** The Features hub is GUI-only and its settings export goes
+  through a save panel. What it does have is a plain UserDefaults domain
+  (`com.vorssaint.utils`), one bool per feature, so the module seeds the whole set with
+  `defaults write` from its launchd agent before the app's first launch. That is a
+  **one-time** seed gated on the app's own `hasOnboarded` marker, not a rebuild-time
+  rewrite — editing the feature list does nothing to a Mac already set up until you
+  `defaults delete com.vorssaint.utils hasOnboarded` and kickstart the agent.
+- **It overlaps four things already deployed here**, and the module's default list is
+  picked to dodge them: no `superKey` (Karabiner owns Caps Lock), no window features
+  (AeroSpace), no command bar or clipboard history (Raycast), and no `scrollInverter`
+  (it would double-invert against `com.apple.swipescrolldirection = false` in
+  `modules/darwin/common.nix`). The `monitor*` features *do* overlap the `stats` cask,
+  deliberately and reversibly.
+
+Permissions are still manual — TCC is outside nix's reach. See
+`nixos/docs/darwin-post-deploy.md`.
+
 ## Dotfiles
 
 **Pattern:** dotfiles are portable, plain-syntax, and stow-deployed (the source of
