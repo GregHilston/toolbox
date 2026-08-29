@@ -125,6 +125,15 @@ The shape is always the same, and *why* is the part worth remembering:
 - **`RunAtLoad` only, never `KeepAlive`.** `open` exits as soon as LaunchServices takes
   over, so KeepAlive reads that as a crash and respawns forever. The tradeoff: a real
   crash isn't restarted. Fine — the missing menu-bar icon is the tell.
+  > `vorssaint.nix` is the one exception, and it is the narrow form:
+  > `KeepAlive = { SuccessfulExit = false; }` retries only while the script *fails*, and
+  > its script fails only while the cask is missing, so the job stops restarting itself
+  > the moment Homebrew has installed the app. It needs that because there is no other
+  > recovery: nix-darwin reloads a user agent only when its generated plist differs from
+  > the installed one, so on an unchanged config the agent is never re-bootstrapped and
+  > `RunAtLoad` never fires again — a `just dr` does **not** re-run these scripts. That
+  > only matters for an agent that does work beyond `open`, which is why ice and handy
+  > can stay on the plain rule.
 - **Not the app's own "Launch at login" toggle.** Those register an `SMAppService` login
   item in app-written state (e.g. Handy's `settings_store.json`) that nix neither owns nor
   can assert. Keep the in-app toggle **off** so the two don't double-register.
