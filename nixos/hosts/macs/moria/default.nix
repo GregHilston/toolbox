@@ -12,6 +12,11 @@
     # Launch Handy at login so the Caps-Lock-hold → F18 dictation hotkey works
     # without opening the app by hand.
     ../../../modules/darwin/handy.nix
+    # Vorssaint — the menu-bar utility suite. Per-host (citadel, moria) rather
+    # than from common.nix: headless dungeon has no one sitting at a menu bar,
+    # and almost every feature is an interactive one. The feature set it comes
+    # up with is the module's `features` default.
+    ../../../modules/darwin/vorssaint.nix
     # PI WEB — supervise pi sessions from a browser. moria only: it is the
     # 128GB box and already runs oMLX, so sessions and inference stay together.
     ../../../modules/darwin/pi-web.nix
@@ -53,6 +58,12 @@
     enable = true;
     cacheSize = "32GB";
   };
+
+  # Vorssaint — menu-bar utility suite (imported above). Seeds its Features hub
+  # once on a Mac that has never run it; after that the hub owns the choice.
+  # The feature list, and what it deliberately leaves out to stay clear of
+  # Karabiner, AeroSpace and Raycast, is in modules/darwin/vorssaint.nix.
+  services.vorssaint.enable = true;
 
   # Keep pi's Reddit session cookie current by copying it out of Firefox.
   #

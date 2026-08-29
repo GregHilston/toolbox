@@ -132,3 +132,32 @@ See `modules/darwin/pi-web.nix`.
       **off** — the launchd agent owns that, and both would double-register.
 - [ ] Arrange the menu bar in Ice: drag icons above/below the divider with ⌘-drag to choose
       what stays visible vs. hidden
+- [ ] **Vorssaint** (moria, citadel) - the menu-bar utility suite. Like Ice, it is launched
+      at login by `modules/darwin/vorssaint.nix`, and unlike Ice it also seeds its own
+      Features hub, so there is nothing to pick on first launch — only permissions to grant.
+      Leave its Settings → "Launch at login" **off**; the launchd agent owns that.
+      Grant these, in rough order of how much stops working without them:
+      - **Accessibility** — the app switcher, Dock previews, quit-on-close, ⌘X/⌘V in
+        Finder, paste-as-plain-text, the volume mixer and external-display brightness.
+        This is the one that matters.
+      - **Screen Recording** — the switcher's and Dock preview's window thumbnails, plus
+        the screenshot, screen-recording and copy-text-from-screen tools.
+      - **System Audio Recording** — per-app volume and per-app output. Without it every
+        app just rides the normal system output.
+      - **Automation → Finder** — ⌘X/⌘V in Finder.
+      - **Camera** — the camera preview mirror. **Microphone** — the optional voice track
+        in screen recordings. Both prompt the first time you use them.
+      > Nothing is broken while a grant is missing — a feature that needs one sits inert
+      > and says so on Vorssaint's own Permissions page, which also lists which features
+      > use each grant. Nothing here can be declared: TCC is outside nix's reach.
+- [ ] Confirm the seed ran. It happens during `just dr` itself, after Homebrew, so the
+      output is in the rebuild's own log: `seeding the Features hub with mixer, keepAwake,
+      …` the first time and `already set up, leaving the Features hub alone` on every
+      rebuild after. A `WARNING: the Vorssaint seed did not finish` line means it fell
+      back to the app's own wizard — the rebuild is not failed by it.
+      > To re-seed deliberately after editing the feature list — it is otherwise a
+      > once-per-Mac write, so an edit alone changes nothing on a host already set up:
+      > ```
+      > defaults delete com.vorssaint.utils hasOnboarded
+      > launchctl kickstart -k "gui/$(id -u)/org.nixos.vorssaint"
+      > ```

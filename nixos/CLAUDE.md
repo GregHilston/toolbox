@@ -99,11 +99,21 @@ for an ARM host.
 
 Menu-bar apps have to already be running to do anything, and they fail *silently* when
 they aren't — no Handy means Caps Lock still behaves and nothing dictates; no Ice means
-the stock cluttered menu bar. So each gets a launchd user agent: `modules/darwin/handy.nix`
-(imported per-host by citadel and moria; headless dungeon has the cask but no use for a
-dictation app) and `modules/darwin/ice.nix` (imported from `modules/darwin/common.nix`, so
-all three Macs). The Linux equivalent is a home-manager `systemd.user.services.*` unit
-bound to `graphical-session.target` — see handy in `modules/home/default.nix`.
+the stock cluttered menu bar. So each gets a launchd user agent:
+
+- `modules/darwin/ice.nix` — imported from `modules/darwin/common.nix`, so all three Macs.
+- `modules/darwin/handy.nix` — per-host (citadel, moria); headless dungeon has the cask but
+  no use for a dictation app.
+- `modules/darwin/vorssaint.nix` — per-host (citadel, moria), for the same reason. Plain
+  `open -a` like the other two; its *other* job, seeding Vorssaint's Features hub (the app
+  has no config file, only a UserDefaults domain), deliberately does **not** live in the
+  agent. Activation order is agents → Homebrew → postActivation, so an agent-hosted seed
+  runs before the cask exists and then has to race whoever opens the app first — a race it
+  lost on moria's first deploy, permanently, because the app's wizard sets the same
+  "already set up" marker the seed is gated on. Its header has the full reasoning.
+
+The Linux equivalent is a home-manager `systemd.user.services.*` unit bound to
+`graphical-session.target` — see handy in `modules/home/default.nix`.
 
 The shape is always the same, and *why* is the part worth remembering:
 
@@ -116,6 +126,12 @@ The shape is always the same, and *why* is the part worth remembering:
 - **`RunAtLoad` only, never `KeepAlive`.** `open` exits as soon as LaunchServices takes
   over, so KeepAlive reads that as a crash and respawns forever. The tradeoff: a real
   crash isn't restarted. Fine — the missing menu-bar icon is the tell.
+  > Worth knowing when you are tempted to put real work in one of these: nix-darwin
+  > reloads a user agent only when its generated plist *differs* from the installed
+  > one, so on an unchanged config the agent is never re-bootstrapped and `RunAtLoad`
+  > never fires again. A `just dr` does **not** re-run these scripts. That is fine for
+  > `open -a`, which the next login handles, and it is one of the reasons `vorssaint.nix`
+  > does its preference seeding from `postActivation` instead.
 - **Not the app's own "Launch at login" toggle.** Those register an `SMAppService` login
   item in app-written state (e.g. Handy's `settings_store.json`) that nix neither owns nor
   can assert. Keep the in-app toggle **off** so the two don't double-register.
