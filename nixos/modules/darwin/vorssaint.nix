@@ -54,35 +54,38 @@
 # does not re-seed; `brew uninstall --zap --cask vorssaint` is the one that
 # takes the plist with it.
 #
-# ## Why the seed lives in the launchd agent rather than postActivation
+# ## Why the seed runs in postActivation and not in the login agent
 #
-# `system.activationScripts.postActivation` runs as root, and `defaults write`
-# resolves its domain from the effective user, so a naive seed there would
-# configure root's Vorssaint rather than the one with a menu bar. That much is
-# only half an argument, and worth being honest about: nix-darwin's own
-# `system.defaults` path solves exactly this with
-# `launchctl asuser … sudo --user=…`, and so could a postActivation block.
+# It ran in the agent first, and moria proved that wrong on its first deploy —
+# worth writing down, because the failure is invisible until it has already
+# cost you the one chance the seed gets.
 #
-# The reason it lives here anyway is ordering. A launchd user agent already
-# runs as the user, and folding the seed and the launch into ONE script makes
-# it impossible for the app to start before its features are chosen — which
-# matters, because a first launch with nothing written runs the app's own
-# Essentials preset and opens the wizard
-# (Sources/Vorssaint/Core/FeaturePresets.swift). The tradeoff is that agents
-# activate before Homebrew, handled just below.
+# nix-darwin's activation order (modules/system/activation-scripts.nix) is:
+# user agents, then Homebrew, then postActivation. So an agent-hosted seed
+# always fires on a Mac where the cask has not been installed yet, and every
+# option from there is bad. Seeding blind is wrong on its own terms: the
+# update-tour markers below are read out of the app bundle, so there is
+# nothing to read. Waiting and retrying — what this did — leaves a window
+# between `just dr` finishing and the retry in which the app is installed,
+# unconfigured, and one click away in Spotlight. Whoever opens it gets the
+# wizard, and the wizard sets `hasOnboarded` itself, so the seed is locked out
+# for good. A seed that only gets one chance must not spend it racing a human.
 #
-# Its one cost is ordering: nix-darwin activates user agents BEFORE it runs
-# Homebrew, so on a fresh host the first run finds no app. The script treats
-# that as "not yet" and exits non-zero rather than seeding blind, and the
-# `KeepAlive`/`ThrottleInterval` pair below is what brings it back a few
-# minutes later once the cask has landed. Waiting is not optional: the update-
-# tour markers are read out of the app bundle, so a seed with nothing to read
-# would write the wrong ones.
+# postActivation has none of that: Homebrew has already run, and the person who
+# typed `just dr` is still watching it finish.
 #
-# Why `open -g -j -a` and not the inner binary, why RunAtLoad without KeepAlive,
-# and why the app's own launch-at-login toggle stays off: nixos/CLAUDE.md →
-# "Launching GUI apps at login". This is the third user of that pattern, after
-# ./ice.nix and ./handy.nix; it is the only one that also writes preferences.
+# The root objection to postActivation is real but solved upstream — activation
+# runs as root and `defaults` resolves its domain from the effective user, so
+# an unwrapped write configures root's Vorssaint. nix-darwin's own
+# `system.defaults` path answers it with
+# `launchctl asuser "$(id -u -- user)" sudo --user=user --`
+# (modules/system/defaults-write.nix), and that is exactly what is copied here.
+#
+# What is left in the agent is only the launch, in the plain shape ./ice.nix
+# and ./handy.nix use. Why `open -g -j -a` and not the inner binary, why
+# RunAtLoad without KeepAlive, and why the app's own launch-at-login toggle
+# stays off: nixos/CLAUDE.md → "Launching GUI apps at login". This is that
+# pattern's third user, and it needs no exception to it.
 #
 # ## Permissions are still manual
 #
@@ -137,6 +140,7 @@
 {
   config,
   lib,
+  pkgs,
   vars,
   ...
 }: let
@@ -268,6 +272,71 @@
 
   # Only ever reaches ~/Library/Logs/vorssaint.log, but it is the one place a
   # host says out loud which set it came up with.
+  userArg = lib.escapeShellArg user;
+
+  # Runs AS THE USER — see the postActivation block below for how, and why it
+  # is not in the login agent.
+  seedScript = pkgs.writeShellScript "vorssaint-seed" ''
+    # `set -e` matters more than it looks: without it a `defaults write` that
+    # fails part way through still falls through to the `hasOnboarded` write at
+    # the end, marking a half-seeded Mac as done for ever.
+    set -eu
+
+    DOMAIN="${domain}"
+    APP="/Applications/Vorssaint.app"
+
+    # Reached only after Homebrew has run, so a missing app means the cask
+    # failed rather than "not yet". Nothing to do, and not our error to raise.
+    if [ ! -d "$APP" ]; then
+      echo "vorssaint: $APP is not installed, skipping the seed"
+      exit 0
+    fi
+
+    # `hasOnboarded` is the app's own "setup is finished" marker. Absent (a Mac
+    # that has never run it) or false is the only state we write in — so a hub
+    # you have since curated by hand is never overwritten.
+    if [ "$(/usr/bin/defaults read "$DOMAIN" hasOnboarded 2>/dev/null || echo 0)" = "1" ]; then
+      echo "vorssaint: already set up, leaving the Features hub alone"
+    else
+      echo "vorssaint: seeding the Features hub with ${chosen}"
+
+    ${featureWrites}
+
+    ${enableWrites}
+
+      # Setting `hasOnboarded` behind the app's back skips the setup wizard but
+      # lands on the other branch of its first-launch check, which is the post-
+      # UPDATE path: a release-notes tour and a support ask whose window
+      # deliberately has no close button. The app's own markOnboardingComplete()
+      # suppresses all three for a clean install; this does the same by hand.
+      #
+      # Each is gated on `appVersion == <a constant compiled into that build> &&
+      # lastSeen != <same constant>`, so writing the running version into
+      # `lastSeen` makes both readings false whatever the version is — no
+      # release number to keep up to date here, and a genuine tour after a
+      # genuine future update still shows, because this only ever runs once.
+      VERSION="$(/usr/bin/defaults read "$APP/Contents/Info" CFBundleShortVersionString)"
+      for KEY in updateHighlightsSeenVersion supportUpdateIntroVersion updateShowcaseIntroVersion; do
+        /usr/bin/defaults write "$DOMAIN" "$KEY" -string "$VERSION"
+      done
+
+      # The in-app launch-at-login toggle registers an SMAppService login item
+      # that nix neither owns nor can assert, and the agent below already does
+      # the job. Pin it off so the two never both register. See nixos/CLAUDE.md
+      # → "Launching GUI apps at login".
+      /usr/bin/defaults write "$DOMAIN" launchAtLoginWanted -bool false
+
+      # Last, deliberately: it is the marker that stops the next run. A seed
+      # that dies before here leaves it unset and simply redoes the whole thing.
+      /usr/bin/defaults write "$DOMAIN" hasOnboarded -bool true
+    fi
+
+    # So a fresh `just dr` ends with the app running and configured, rather than
+    # configured but not visible until the next login. Idempotent: `open` on a
+    # running app just activates it, and -g/-j keep it quiet and hidden.
+    exec /usr/bin/open -g -j -a "$APP"
+  '';
+
   chosen =
     if cfg.features == []
     then "nothing"
@@ -362,98 +431,46 @@ in {
   config = lib.mkIf cfg.enable {
     homebrew.casks = ["vorssaint"];
 
+    # Seed the Features hub here, and NOT from the login agent below, because
+    # ordering is the whole problem. nix-darwin's activation runs
+    # `userLaunchd` (agents) BEFORE `homebrew`, and `postActivation` after it
+    # — modules/system/activation-scripts.nix, in that order. A seed in the
+    # agent therefore fires on a Mac with no app yet, and whatever it does
+    # next is a race: launch the app unseeded, or wait and retry and lose to
+    # whoever opens Vorssaint first. Losing that race is permanent, because
+    # the wizard sets `hasOnboarded` itself and the seed never runs again.
+    #
+    # From here the cask is already installed and the human is still watching
+    # `just dr` finish, so there is no race left to lose.
+    #
+    # `launchctl asuser … sudo --user=…` is nix-darwin's own idiom for this
+    # (modules/system/defaults-write.nix): activation runs as root, and
+    # `defaults` resolves its domain from the effective user, so an unwrapped
+    # write would configure root's Vorssaint rather than the one with a menu
+    # bar.
+    #
+    # Never fatal. The activation script runs under `set -e`, and a Mac that
+    # cannot be seeded — no GUI session to attach to, Homebrew failed earlier
+    # — is not a reason to fail the whole rebuild. The app just shows its own
+    # wizard, which is exactly where this started.
+    system.activationScripts.postActivation.text = lib.mkAfter ''
+      if ! launchctl asuser "$(id -u -- ${userArg})" sudo --user=${userArg} -- ${seedScript}; then
+        echo "WARNING: the Vorssaint seed did not finish (see above)." >&2
+        echo "         Vorssaint will show its own setup wizard on first launch." >&2
+      fi
+    '';
+
+    # Plain ./ice.nix shape, now that the seed has moved out: RunAtLoad, no
+    # KeepAlive, `open -a` rather than the inner binary. See nixos/CLAUDE.md →
+    # "Launching GUI apps at login" for why each of those.
     launchd.user.agents.vorssaint = {
-      script = ''
-        # `set -e` matters more than it looks: without it a `defaults write`
-        # that fails part way through still falls through to the `hasOnboarded`
-        # write at the end, marking a half-seeded Mac as done forever.
-        set -eu
-
-        DOMAIN="${domain}"
-        APP="/Applications/Vorssaint.app"
-
-        # Do nothing at all until the cask has landed. nix-darwin activates user
-        # agents BEFORE it runs Homebrew, so on a fresh host this is the first
-        # run's normal outcome, not an error. Seeding anyway would be worse than
-        # waiting: the version markers below are read out of the bundle, so a
-        # seed with no app to read would write the wrong ones and let the update
-        # tour through on the very launch this exists to keep clean. Exiting
-        # non-zero is what gets us called again — see KeepAlive below.
-        if [ ! -d "$APP" ]; then
-          echo "vorssaint: $APP is not installed yet, retrying later"
-          exit 1
-        fi
-
-        # `hasOnboarded` is the app's own "setup is finished" marker. Absent (a
-        # Mac that has never run it) or false is the only state we write in.
-        if [ "$(/usr/bin/defaults read "$DOMAIN" hasOnboarded 2>/dev/null || echo 0)" = "1" ]; then
-          echo "vorssaint: already set up, leaving the Features hub alone"
-        else
-          echo "vorssaint: seeding the Features hub with ${chosen}"
-
-        ${featureWrites}
-
-        ${enableWrites}
-
-          # Setting `hasOnboarded` behind the app's back skips the setup wizard
-          # but lands on the other branch of its first-launch check, which is
-          # the post-UPDATE path: a release-notes tour and a support ask whose
-          # window deliberately has no close button. The app's own
-          # markOnboardingComplete() suppresses all three for a clean install;
-          # this does the same by hand.
-          #
-          # Each is gated on `appVersion == <a constant compiled into that
-          # build> && lastSeen != <same constant>`, so writing the running
-          # version into `lastSeen` makes both readings false whatever the
-          # version is — no release number to keep up to date here, and a
-          # genuine tour after a genuine future update still shows, because
-          # this whole block only ever runs once.
-          VERSION="$(/usr/bin/defaults read "$APP/Contents/Info" CFBundleShortVersionString)"
-          for KEY in updateHighlightsSeenVersion supportUpdateIntroVersion updateShowcaseIntroVersion; do
-            /usr/bin/defaults write "$DOMAIN" "$KEY" -string "$VERSION"
-          done
-
-          # The in-app launch-at-login toggle registers an SMAppService login
-          # item that nix neither owns nor can assert, and the agent this script
-          # runs from already does the job. Pin it off so the two never both
-          # register. See nixos/CLAUDE.md → "Launching GUI apps at login".
-          /usr/bin/defaults write "$DOMAIN" launchAtLoginWanted -bool false
-
-          # Last, deliberately: it is the marker that stops the next run. A seed
-          # that dies before here leaves it unset and simply redoes the whole
-          # thing.
-          /usr/bin/defaults write "$DOMAIN" hasOnboarded -bool true
-        fi
-
-        # `open` on a running app just activates it, so this is safe to re-run
-        # on every activation. -g = don't steal focus, -j = launch hidden.
-        exec /usr/bin/open -g -j -a "$APP"
-      '';
-
+      command = "/usr/bin/open -g -j -a /Applications/Vorssaint.app";
       serviceConfig = {
         RunAtLoad = true;
-
-        # The one place this departs from ./ice.nix and ./handy.nix, and it is
-        # narrower than the "never KeepAlive" those two carry. What that rule
-        # forbids is a bare `KeepAlive = true`, which reads `open`'s immediate
-        # exit as a crash and respawns for ever. `SuccessfulExit = false` is the
-        # opposite: retry only while the script FAILS, which here means only
-        # while the cask is missing. The moment Homebrew installs it the seed
-        # runs, `open` succeeds, and the job stops being restarted.
-        #
-        # It is needed because the alternative recovery does not exist.
-        # nix-darwin only reloads a user agent when its generated plist differs
-        # from the installed one, so an unchanged config means the agent is
-        # never re-bootstrapped and RunAtLoad never fires again: without this,
-        # a fresh host whose first activation ran before Homebrew would stay
-        # unseeded until the next login, and `just dr` would not fix it.
-        KeepAlive = {
-          SuccessfulExit = false;
-        };
-        ThrottleInterval = 300;
-
-        # Where the seed says whether it ran, which set it wrote, or that it is
-        # still waiting on the cask.
+        # Where "Unable to find application named 'Vorssaint'" shows up if the
+        # cask hasn't installed yet on a fresh host — the agent is bootstrapped
+        # before Homebrew runs, so that is the normal first-deploy outcome and
+        # the postActivation seed above is what launches it that time round.
         StandardOutPath = "/Users/${user}/Library/Logs/vorssaint.log";
         StandardErrorPath = "/Users/${user}/Library/Logs/vorssaint.log";
       };

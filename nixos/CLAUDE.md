@@ -104,12 +104,13 @@ the stock cluttered menu bar. So each gets a launchd user agent:
 - `modules/darwin/ice.nix` — imported from `modules/darwin/common.nix`, so all three Macs.
 - `modules/darwin/handy.nix` — per-host (citadel, moria); headless dungeon has the cask but
   no use for a dictation app.
-- `modules/darwin/vorssaint.nix` — per-host (citadel, moria), for the same reason. The one
-  that does more than launch: its script also seeds Vorssaint's Features hub the first time,
-  because the app has no config file, only a UserDefaults domain. That is *why* the seed
-  lives in the agent — a launchd user agent runs as the user, and `defaults write` from
-  root-at-activation would have configured root's copy. Its own header has the full
-  reasoning, including why the keys are seeded once rather than enforced every rebuild.
+- `modules/darwin/vorssaint.nix` — per-host (citadel, moria), for the same reason. Plain
+  `open -a` like the other two; its *other* job, seeding Vorssaint's Features hub (the app
+  has no config file, only a UserDefaults domain), deliberately does **not** live in the
+  agent. Activation order is agents → Homebrew → postActivation, so an agent-hosted seed
+  runs before the cask exists and then has to race whoever opens the app first — a race it
+  lost on moria's first deploy, permanently, because the app's wizard sets the same
+  "already set up" marker the seed is gated on. Its header has the full reasoning.
 
 The Linux equivalent is a home-manager `systemd.user.services.*` unit bound to
 `graphical-session.target` — see handy in `modules/home/default.nix`.
@@ -125,15 +126,12 @@ The shape is always the same, and *why* is the part worth remembering:
 - **`RunAtLoad` only, never `KeepAlive`.** `open` exits as soon as LaunchServices takes
   over, so KeepAlive reads that as a crash and respawns forever. The tradeoff: a real
   crash isn't restarted. Fine — the missing menu-bar icon is the tell.
-  > `vorssaint.nix` is the one exception, and it is the narrow form:
-  > `KeepAlive = { SuccessfulExit = false; }` retries only while the script *fails*, and
-  > its script fails only while the cask is missing, so the job stops restarting itself
-  > the moment Homebrew has installed the app. It needs that because there is no other
-  > recovery: nix-darwin reloads a user agent only when its generated plist differs from
-  > the installed one, so on an unchanged config the agent is never re-bootstrapped and
-  > `RunAtLoad` never fires again — a `just dr` does **not** re-run these scripts. That
-  > only matters for an agent that does work beyond `open`, which is why ice and handy
-  > can stay on the plain rule.
+  > Worth knowing when you are tempted to put real work in one of these: nix-darwin
+  > reloads a user agent only when its generated plist *differs* from the installed
+  > one, so on an unchanged config the agent is never re-bootstrapped and `RunAtLoad`
+  > never fires again. A `just dr` does **not** re-run these scripts. That is fine for
+  > `open -a`, which the next login handles, and it is one of the reasons `vorssaint.nix`
+  > does its preference seeding from `postActivation` instead.
 - **Not the app's own "Launch at login" toggle.** Those register an `SMAppService` login
   item in app-written state (e.g. Handy's `settings_store.json`) that nix neither owns nor
   can assert. Keep the in-app toggle **off** so the two don't double-register.

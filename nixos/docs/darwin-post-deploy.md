@@ -152,13 +152,11 @@ See `modules/darwin/pi-web.nix`.
       > Nothing is broken while a grant is missing — a feature that needs one sits inert
       > and says so on Vorssaint's own Permissions page, which also lists which features
       > use each grant. Nothing here can be declared: TCC is outside nix's reach.
-- [ ] Confirm the seed actually ran: `grep vorssaint ~/Library/Logs/vorssaint.log` should
-      say `seeding the Features hub with mixer, keepAwake, …` on the first activation and
-      `already set up` on every one after. On a brand-new host the first line is instead
-      `/Applications/Vorssaint.app is not installed yet, retrying later` — nix-darwin
-      activates user agents before it runs Homebrew, so the first pass finds no app. It
-      deliberately seeds nothing in that case and retries every 5 minutes, so the line to
-      wait for is the `seeding` one a few minutes after `just dr` finishes.
+- [ ] Confirm the seed ran. It happens during `just dr` itself, after Homebrew, so the
+      output is in the rebuild's own log: `seeding the Features hub with mixer, keepAwake,
+      …` the first time and `already set up, leaving the Features hub alone` on every
+      rebuild after. A `WARNING: the Vorssaint seed did not finish` line means it fell
+      back to the app's own wizard — the rebuild is not failed by it.
       > To re-seed deliberately after editing the feature list — it is otherwise a
       > once-per-Mac write, so an edit alone changes nothing on a host already set up:
       > ```

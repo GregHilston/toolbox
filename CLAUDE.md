@@ -119,7 +119,9 @@ worth knowing from here:
 - **There is no config file.** The Features hub is GUI-only and its settings export goes
   through a save panel. What it does have is a plain UserDefaults domain
   (`com.vorssaint.utils`), one bool per feature, so the module seeds the whole set with
-  `defaults write` from its launchd agent before the app's first launch. That is a
+  `defaults write` during activation, after Homebrew has installed the cask and before
+  anyone has opened the app. (Not from the launchd agent: agents activate *before*
+  Homebrew, so that version raced the cask and then raced the human — and lost.) It is a
   **one-time** seed gated on the app's own `hasOnboarded` marker, not a rebuild-time
   rewrite — editing the feature list does nothing to a Mac already set up until you
   `defaults delete com.vorssaint.utils hasOnboarded` and kickstart the agent.
