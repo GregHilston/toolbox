@@ -125,12 +125,14 @@ worth knowing from here:
   **one-time** seed gated on the app's own `hasOnboarded` marker, not a rebuild-time
   rewrite — editing the feature list does nothing to a Mac already set up until you
   `defaults delete com.vorssaint.utils hasOnboarded` and kickstart the agent.
-- **It overlaps four things already deployed here**, and the module's default list is
-  picked to dodge them: no `superKey` (Karabiner owns Caps Lock), no window features
-  (AeroSpace), no command bar or clipboard history (Raycast), and no `scrollInverter`
-  (it would double-invert against `com.apple.swipescrolldirection = false` in
-  `modules/darwin/common.nix`). The `monitor*` features *do* overlap the `stats` cask,
-  deliberately and reversibly.
+- **It overlaps four things already deployed here**, and the list only dodges some of
+  them on purpose. Out for good: `superKey` (Karabiner owns Caps Lock — two event taps
+  on one key is broken, not just redundant) and `scrollInverter` (it would double-invert
+  against `com.apple.swipescrolldirection = false` in `modules/darwin/common.nix`).
+  Deliberately in, despite overlapping: the app switcher and Dock previews (AeroSpace),
+  the command bar and clipboard history (Raycast), and the `monitor*` readouts (the
+  `stats` cask). The command bar is installed with its shortcut left **off**, because its
+  default is ⌥Space — Raycast's hotkey.
 
 Permissions are still manual — TCC is outside nix's reach. See
 `nixos/docs/darwin-post-deploy.md`.

@@ -94,49 +94,63 @@
 # ../../docs/darwin-post-deploy.md. Features that need a grant simply sit inert
 # until it is given, so a half-configured host is quiet rather than broken.
 #
-# ## Conflicts with what these Macs already run
+# ## Overlap with what these Macs already run
 #
-# Vorssaint's feature list is wide enough to collide with four things already
-# deployed here. Three of the collisions are settled by simply not installing
-# the feature — an uninstalled feature does not merely sit idle, it never
-# instantiates its service — so they cost nothing but need to stay uninstalled:
+# Vorssaint is wide enough to reach into four things already deployed here.
+# The list below does not dodge all of them, and that is a choice made at the
+# machine rather than an oversight — worth knowing before reading it as an
+# accident:
 #
-#   * `superKey` reimplements the Caps Lock hold this repo already does in
-#     ../../../dot/karabiner (macOS) and ../common/keyd.nix (NixOS): hold for a
-#     modifier, tap for Escape. Two event taps grabbing the same key is the one
-#     conflict here that is genuinely broken rather than merely redundant.
-#   * `switcher`, `windowLayout`, `windowMaximizer`, `dockPreview` and
-#     `dockClick` are a window manager, and the `aerospace` cask is already the
-#     window manager. Edge snapping and drag-to-move in particular fight tiling.
-#   * `commandBar`, `quickLauncher`, `clipboardHistory` and `textSnippets`
-#     duplicate the `raycast` cask, down to competing for global shortcuts.
+#   * `switcher` and `dockPreview` overlap the `aerospace` cask. AeroSpace
+#     tiles; these replace ⌘Tab and add Dock hover previews, which is a
+#     different job, so they coexist. The tiling-hostile half of Vorssaint —
+#     `windowLayout` (edge snapping, drag-to-move) and `windowMaximizer` — is
+#     the part left out.
+#   * `commandBar` and `clipboardHistory` overlap the `raycast` cask outright.
+#     See the shortcut note below; this is the overlap most likely to bite.
+#   * The `monitor*` features overlap the `stats` cask. Both put CPU, GPU,
+#     memory, network and battery readouts in the menu bar, so this is two sets
+#     of samplers for one set of numbers. If Vorssaint's version earns its
+#     place — it carries the speed test, disk health and battery power draw in
+#     the same panel — dropping `stats` from ./homebrew-base.nix is the
+#     follow-up.
 #
-# The fourth is a real choice rather than an obvious no: the `monitor*` features
-# below overlap the `stats` cask in ./homebrew-base.nix. Both put CPU, GPU,
-# memory, network and battery readouts in the menu bar, and running both means
-# two sets of samplers for one set of numbers. They are enabled here because
-# Vorssaint's version carries the speed test, disk health and battery power draw
-# in the same panel — but if they earn their place, dropping `stats` from
-# ./homebrew-base.nix is the follow-up, and if they do not, delete the six ids.
+# `superKey` is the one genuine incompatibility and stays out for good. It
+# reimplements the Caps Lock hold this repo already does in
+# ../../../dot/karabiner (macOS) and ../common/keyd.nix (NixOS): hold for a
+# modifier, tap for Escape. Two event taps grabbing one key is broken rather
+# than merely redundant.
 #
-# `scrollInverter` is the subtle one, and it is deliberately absent. Its whole
-# purpose is to invert the wheel for a mouse *only*, leaving natural scrolling
-# on for the trackpad. But ./common.nix sets
+# ## The one shortcut this deliberately leaves off
+#
+# `commandBar` is installed but its shortcut is NOT switched on, and it is the
+# only chosen feature treated that way. Its default binding is ⌥Space, which is
+# also Raycast's default hotkey — turning it on from here would quietly take
+# over the launcher key on both Macs. The bar still opens from the menu panel,
+# and picking a combination for it is a decision to make in Settings with
+# Raycast's own binding in view. Everything else that needed switching on got
+# switched on; see `featureEnableKeys`.
+#
+# `scrollInverter` is absent for a different reason, and it is the subtle one.
+# Its whole purpose is to invert the wheel for a mouse *only*, leaving natural
+# scrolling on for the trackpad. But ./common.nix sets
 # `NSGlobalDomain."com.apple.swipescrolldirection" = false`, which already
 # inverts both, so adding the feature on top would invert the mouse twice and
 # hand back exactly the behavior it exists to fix. To adopt it properly, flip
 # that global back to `true` (trackpad returns to natural scrolling) and add
-# "scrollInverter" to the list below in the same commit — one or the other
-# alone is a regression.
+# "scrollInverter" to the list in the same commit — one or the other alone is
+# a regression.
 #
 # ## Where the feature list came from
 #
-# The default below is the set https://youtu.be/s8dzlv4WuNk singles out as the
-# ones actually worth having after a month of use, minus the two that video
-# tried and did not keep (`commandBar`, `quickLauncher`) and minus the conflicts
-# above. It is a starting point, not a verdict: the hub is one click
-# per feature, and this list is only ever read on a Mac that has never run the
-# app.
+# It started as the set https://youtu.be/s8dzlv4WuNk singles out after a month
+# of use. It is now moria's actual hub, read back off the machine after that
+# host was set up by hand, so citadel comes up matching moria rather than
+# matching a video. Two things changed in that trip worth noticing if you are
+# reconsidering the list: `keepAwake` — the video's headline feature, closing
+# the lid on an external display without the charger — is NOT in it, and
+# neither are `uninstaller`, `cleaner` or `homebrew`.
+#
 {
   config,
   lib,
@@ -254,16 +268,31 @@
   # is uninstalled anyway, and writing its switch off would reach past what
   # this seed is for into settings the hub owns.
   featureEnableKeys = {
+    # `enabledKeys`: without these the feature is installed and does nothing.
     autoQuit = "autoQuitEnabled";
-    smoothScroll = "smoothScrollEnabled";
-    # The feature's other key, finderPasteImageAsFile (paste an image as a PNG),
-    # is a second behavior rather than the ⌘X/⌘V this is here for. `enabledKeys`
-    # is an any-of, so the one below is what engages the feature.
-    finderCutPaste = "finderCutPasteEnabled";
+    brightness = "brightnessControlEnabled";
+    clipboardHistory = "clipboardHistoryEnabled";
+    dockPreview = "dockPreviewEnabled";
+    pastePlain = "pastePlainEnabled";
     shelf = "shelfEnabled";
+    smoothScroll = "smoothScrollEnabled";
     urlCleaner = "urlCleanerEnabled";
+    # Already ships on; written anyway so the seed describes the host outright
+    # rather than by agreeing with a default that could change.
+    switcher = "switcherEnabled";
+    # The feature's other key, finderPasteImageAsFile (paste an image as a
+    # PNG), is a second behavior rather than the ⌘X/⌘V this is here for.
+    # `enabledKeys` is an any-of, so the one below is what engages it.
+    finderCutPaste = "finderCutPasteEnabled";
+
+    # Not `enabledKeys` — these tools work from the menu panel regardless. They
+    # are here because a capture tool you cannot reach from the keyboard is
+    # most of a capture tool missing, and all four default onto the free ⌃⌥⌘
+    # layer, which nothing else here uses.
     screenshot = "screenshotShortcutEnabled";
     screenOCR = "screenOCRShortcutEnabled";
+    screenRecorder = "recorderShortcutEnabled";
+    cameraPreview = "cameraPreviewShortcutEnabled";
   };
 
   enableWrites = lib.concatMapStringsSep "\n" (
@@ -351,70 +380,46 @@ in {
     features = lib.mkOption {
       type = lib.types.listOf (lib.types.enum knownFeatures);
       default = [
-        # Sound. Per-app volume, and per-app *output* with it: music out of the
-        # speakers while a call or an editor stays in the headphones. macOS has
-        # no equivalent at all. Wants the System Audio Recording grant.
+        # Sound. Per-app volume and per-app output; macOS has no equivalent.
         "mixer"
 
-        # Stay awake with the lid closed. The reason clamshell mode works on
-        # battery instead of sleeping the moment the charger comes out --
-        # `caffeinate` keeps the Mac up but drops the external display.
-        "keepAwake"
-
-        # Give a mouse wheel trackpad-style glide. Note the deliberate absence
-        # of "scrollInverter" beside it: see the header's conflicts section, it
-        # would double-invert against this repo's own global setting.
-        "smoothScroll"
-
-        # Capture and OCR, both on the free control-option-command layer
-        # (screenshot on 4, text-from-screen on T), so macOS keeps its own
-        # command-shift-3/4/5 and screencapture.location in ./common.nix stands.
-        "screenshot"
-        "screenOCR"
-
-        # command-X then command-V moves a file in Finder, instead of the
-        # command-option-V that nothing outside macOS uses.
-        "finderCutPaste"
-
-        # Closing the last window quits the app, for the handful (Obsidian,
-        # Notes, browsers) that otherwise linger with no window at all.
+        # Windows and Dock. `switcher` is the one to know about: its enable key
+        # ships ON and its default binding is ⌘Tab, so installing it replaces
+        # the system app switcher rather than sitting beside it.
+        "switcher"
+        "dockPreview"
         "autoQuit"
 
-        # System monitor, one id per metric family. OVERLAPS the `stats` cask in
-        # ./homebrew-base.nix — see the header's conflicts section before
-        # deciding which of the two keeps the menu bar.
+        # Clipboard and files. `pastePlain` binds ⇧⌥⌘V, the same combination
+        # macOS uses for Paste and Match Style, deliberately — it does the same
+        # job everywhere rather than only where an app implements it.
+        "clipboardHistory"
+        "pastePlain"
+        "finderCutPaste"
+        "urlCleaner"
+
+        # Display. Brightness for external screens over their own control
+        # channel, which the keyboard keys do not reach.
+        "brightness"
+
+        # Capture and tools. The three capture tools share one selector and sit
+        # on the free ⌃⌥⌘ layer (4, T, 5), so macOS keeps ⌘⇧3/4/5 and the
+        # screencapture.location in ./common.nix still stands.
+        "screenshot"
+        "screenOCR"
+        "screenRecorder"
+        "cameraPreview"
+        "mediaTools"
+        "commandBar"
+
+        # System monitor, one id per metric family. Overlaps the `stats` cask
+        # in ./homebrew-base.nix — see the header's conflicts section.
         "monitorCPU"
         "monitorGPU"
         "monitorMemory"
         "monitorNetwork"
         "monitorDisk"
         "monitorPower"
-
-        # One-click system actions: light/dark, keyboard backlight, empty the
-        # Trash, eject every disk. Wants the Finder automation grant.
-        "quickToggles"
-
-        # Lock the keyboard and black out the displays to wipe them down.
-        "cleaningMode"
-
-        # Removal and leftovers. `uninstaller` takes an app's caches, prefs and
-        # helpers with it; `cleaner` sweeps what a normal drag-to-Trash left
-        # behind. Both reach further with the optional Full Disk Access grant.
-        "uninstaller"
-        "cleaner"
-
-        # Homebrew formulae and casks without a terminal. Read-mostly here --
-        # ./homebrew-base.nix is authoritative for anything that should survive
-        # a rebuild, and `onActivation.cleanup = "none"` means a cask installed
-        # by hand through this pane simply persists undeclared.
-        "homebrew"
-
-        # Strip tracking parameters from copied links.
-        "urlCleaner"
-
-        # A floating shelf to park files mid-drag and drop them somewhere else
-        # later, instead of holding a drag across a window switch.
-        "shelf"
       ];
       description = ''
         Features to install on a fresh host. Everything omitted is written off,

@@ -137,18 +137,16 @@ See `modules/darwin/pi-web.nix`.
       Features hub, so there is nothing to pick on first launch — only permissions to grant.
       Leave its Settings → "Launch at login" **off**; the launchd agent owns that.
       Grant these, in rough order of how much stops working without them:
-      - **Accessibility** — ⌘X/⌘V in Finder, quit-on-close, smooth scrolling, the file
-        shelf and Cleaning Mode.
-      - **Screen Recording** — the screenshot tool and copy-text-from-screen.
+      - **Accessibility** — the app switcher, Dock previews, quit-on-close, ⌘X/⌘V in
+        Finder, paste-as-plain-text, the volume mixer and external-display brightness.
+        This is the one that matters.
+      - **Screen Recording** — the switcher's and Dock preview's window thumbnails, plus
+        the screenshot, screen-recording and copy-text-from-screen tools.
       - **System Audio Recording** — per-app volume and per-app output. Without it every
         app just rides the normal system output.
-      - **Automation → Finder** — emptying the Trash from Quick Toggles, ⌘X/⌘V, and the
-        uninstaller. Prompts on first use rather than up front.
-      - **Automation → Terminal** and **App Management** — the Homebrew pane. Without
-        them it lists packages but installs and removes nothing. Both prompt the first
-        time you use it rather than up front.
-      - **Full Disk Access**, optional — lets the Cleaner and Uninstaller see more than the
-        reachable places. Skippable; both work without it.
+      - **Automation → Finder** — ⌘X/⌘V in Finder.
+      - **Camera** — the camera preview mirror. **Microphone** — the optional voice track
+        in screen recordings. Both prompt the first time you use them.
       > Nothing is broken while a grant is missing — a feature that needs one sits inert
       > and says so on Vorssaint's own Permissions page, which also lists which features
       > use each grant. Nothing here can be declared: TCC is outside nix's reach.
