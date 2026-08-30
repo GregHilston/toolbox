@@ -290,6 +290,44 @@ in {
     };
   };
 
+  # Detect Frigate's capture pipeline being FROZEN while Frigate reports itself healthy.
+  #
+  # Distinct from frigate-genai-check above, which watches a feature. This watches whether
+  # Frigate is doing its job at all.
+  #
+  # Incident 2026-08-19 -> 2026-08-29: one worker thread (the inter-process dispatcher)
+  # died on a JSONDecodeError. Python does not restart a crashed thread and the parent
+  # never noticed. ffmpeg kept capturing into a pipe nobody read; the API kept answering
+  # 200; Docker reported `healthy` throughout. TEN DAYS with no recordings and no events.
+  # The footage is gone. It was found only because someone noticed the camera tiles were
+  # black.
+  #
+  # Deliberately NOT a Grafana rule on Frigate's own metrics: /api/metrics is rendered
+  # from the same in-memory stats dict that froze, so `frigate_camera_fps` read 5.0 for
+  # the whole outage. A rule on it would have reported success through the failure it
+  # exists to catch. This asks two questions Frigate cannot fake instead — is it still
+  # writing .mp4 segments, and is any camera's image still changing between two samples.
+  #
+  # Read-only by design. It never restarts Frigate: the restart is the fix, but it also
+  # clears the in-memory log holding the traceback, and the 2026-08-19 payload was lost
+  # exactly that way.
+  launchd.user.agents.frigate-recording-check = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/frigate-recording-check.sh"
+      ];
+      RunAtLoad = true;
+      # Every 15 min, matching port-sync-check. With a 30-min staleness threshold and a
+      # 2-run confirmation streak that puts detection ~45 min after a freeze, against the
+      # ten days it actually took. Each run is ~3s and touches only the newest two date
+      # directories, so this is cheap enough to run often.
+      StartInterval = 900;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/frigate-recording-check.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/frigate-recording-check.log";
+    };
+  };
+
   # Detect & auto-heal a gluetun tunnel that is broken while Docker insists it is healthy.
   #
   # Incident 2026-08-14: a mains blip took the WAN down; gluetun rode it out by cycling
