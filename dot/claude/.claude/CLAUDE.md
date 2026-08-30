@@ -16,6 +16,23 @@ When writing or updating any CLAUDE.md or README:
 - **Point to the directory, not its contents.** One sentence on what it's for is enough — never enumerate every file or script. Claude can always explore with Glob/ls when it needs to.
 - This prevents documentation rot: files change, tables go stale, context bloats.
 
+## Writing Code
+
+- **Comments carry *why*, never *what*.** A comment earns its place only by holding a
+  non-obvious constraint, a deliberate deviation, a gotcha, or the reason the obvious
+  simpler version is wrong. Default to none. Keep a block to **7 words or fewer**.
+- **Never narrate a change in code.** No "was/now/previously", "this fixes", "as
+  requested" — that belongs in the commit message, and it expires the moment it merges.
+- **Simplicity beats completeness**, even where that leaves an edge case unhandled.
+  YAGNI: no speculative abstraction, no caching, no guardrail nobody asked for.
+- Watch the four that actually bite: **state derived from other state** (it drifts),
+  duplicated conditionals or state-machine logic, leaky abstractions across layers, and
+  repeated work. Prefer a clarifying invariant over defensive code.
+
+## Prose
+
+Active voice. No stage performances. Pick the commonest word among alternatives.
+
 ## Bash working directory — use absolute paths
 
 **The Bash tool's cwd persists between calls, and it is almost never where you
