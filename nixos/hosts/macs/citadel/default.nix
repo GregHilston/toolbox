@@ -135,6 +135,42 @@
       ${pkgs.uv}/bin/uv tool install --upgrade runlayer 2>/dev/null || true
     '';
 
+    # quick — publishes a static dir to <name>.quick.mozilla.cloud. A Go binary
+    # in the internal mozilla/quick repo, so no nixpkgs package, no tap, and
+    # `fetchurl` cannot reach it: every download path is behind Mozilla SSO.
+    # Work machine only, so it lives here rather than in a shared module.
+    #
+    # Fetched with gh, not the `gcloud storage cp gs://moz-fx-quick-prod-cli/...`
+    # the landing page documents — gcloud's tokens expire and reauth wants a
+    # browser, which activation cannot give it (already seen: `Reauthentication
+    # failed. cannot prompt during non-interactive execution`). gh's keyring
+    # token does not expire. /opt/homebrew/bin/gh, not ${pkgs.gh}: it is the
+    # binary the keychain item is scoped to, and activation's PATH is stripped.
+    #
+    # One-shot, because `quick update` self-updates from the prod bucket. To
+    # reinstall, delete ~/.local/bin/quick and re-run `just dr citadel`.
+    #
+    # The CLI itself still needs `gcloud auth login` (google-cloud-sdk is in the
+    # casks above) — it shells out to gcloud for every command.
+    home.activation.install-quick = inputs.home-manager.lib.hm.dag.entryAfter ["installPackages"] ''
+      if [ ! -x "$HOME/.local/bin/quick" ]; then
+        mkdir -p "$HOME/.local/bin"
+        # Download beside the target, then rename: a half-written binary on PATH
+        # is worse than an absent one.
+        if /opt/homebrew/bin/gh release download --repo mozilla/quick \
+             --pattern quick-darwin-arm64 \
+             --output "$HOME/.local/bin/.quick.download" --clobber 2>/dev/null; then
+          chmod +x "$HOME/.local/bin/.quick.download"
+          mv "$HOME/.local/bin/.quick.download" "$HOME/.local/bin/quick"
+          echo "✓ quick installed to ~/.local/bin/quick"
+        else
+          rm -f "$HOME/.local/bin/.quick.download"
+          echo "WARNING: could not download quick from mozilla/quick." >&2
+          echo "  Needs 'gh auth login' on the Mozilla account (the repo is internal)." >&2
+        fi
+      fi
+    '';
+
     # Citadel is the Mozilla work machine: attribute commits to the Mozilla identity and
     # sign them with the on-host SSH key (added to the GregHilstonMozilla GitHub account),
     # overriding the shared gmail identity + openpgp signing from the tui/git module.
