@@ -340,7 +340,10 @@ in {
         for ext in web-fetch bash-guard; do
           ext_dir="${config.home.homeDirectory}/.pi/agent/extensions/$ext"
           if [ -d "$ext_dir" ] && [ ! -d "$ext_dir/node_modules" ]; then
-            (cd "$ext_dir" && npm install --no-audit --no-fund 2>/dev/null) || echo "WARNING: npm install failed for pi extension $ext"
+            # Deliberately not silencing stderr here (unlike installPiPackages
+            # above): a first-time install failing is the interesting case,
+            # and swallowing it left no way to tell why.
+            (cd "$ext_dir" && npm install --no-audit --no-fund) || echo "WARNING: npm install failed for pi extension $ext"
           fi
         done
         echo "✓ Pi extension deps installed"

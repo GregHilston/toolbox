@@ -825,9 +825,23 @@ everything under `deprecated/`) had no matching need here.
 
 **Measured token cost, this host, `~/Git/toolbox` cwd (same method as "The
 token budget" below):** 13,232 tokens/request without these three extensions,
-14,004 with — **+772 tokens/request** for all three together. All three loaded
-with no errors in a live smoke test (`pi --mode json -p 'Reply with exactly:
-OK'`, checked stderr for extension-load failures).
+14,004 with — **+772 tokens/request** for all three together.
+
+**Functionally verified live, not just load-checked.** A bare `-p 'Reply with
+exactly: OK'` smoke test proves registration didn't throw at import — it
+never actually calls a tool, so it can't prove much beyond that. Actually
+invoking each:
+- `web_fetch` — asked to fetch a real URL; it ran and returned a result. This
+  also settles a real question raised in review: `web-fetch/index.ts` imports
+  plain `typebox` the way `web-search.ts`'s comment above says isn't
+  resolvable from `~/.pi/agent/extensions`. It resolves anyway — pi's loader
+  reaches into its own bundled TypeBox for extensions the same way it does
+  for `@mariozechner/pi-tui`, so that comment is stale (or was true of an
+  older pi version); nothing to fix in `web-fetch`.
+- `bash-guard` — in the same session, the model tried `curl ... | grep`
+  as a fallback and bash-guard correctly blocked it (pipe detection).
+- `ask-user-question` — not yet exercised live; it's a UI popup, so it needs
+  an interactive session rather than `-p`.
 
 ## Web search
 
