@@ -715,8 +715,10 @@ Replaced by `@gotgenes/pi-permission-system` and `@narumitw/pi-plan-mode`.
   provider, i.e. a full re-prefill here. `tsc --watch` in another terminal is
   free.
 - **pi-cache-optimizer** (11k/mo) — its prompt-slimming targets
-  `<session-overview>` blocks and skill compression; we emit neither and have no
-  pi skills. Its `prompt_cache_key` reaches oMLX, which returns 200 and ignores
+  `<session-overview>` blocks and skill compression; we emit no session-overview
+  blocks, and the handful of skills pi now loads from `~/.claude/skills` (see
+  below) are too few to need compression. Its `prompt_cache_key` reaches oMLX,
+  which returns 200 and ignores
   it. It would also hoist `CLAUDE.md` out of pi's `<project_instructions>`
   wrapper, and its integrity guard cannot detect that (the regex only matches
   attribute-less tags).
@@ -761,6 +763,22 @@ go looking for `/reddit` in the repo instead of running it:
 ```bash
 pi -p 'Use the reddit_search tool to search Reddit for "nixos flakes". Report the count.'
 ```
+
+## Skills — shared with Claude Code, not duplicated
+
+`custom.programs.pi.settings` (`pi.nix`) sets `skills = ["~/.claude/skills"]`,
+so pi reads the exact same `claude-skills/` directory Claude Code does (`~/.claude/skills`
+→ `claude-skills/`, per the root `CLAUDE.md`). Pi implements the same Agent Skills
+standard Claude Code does, and documents this exact cross-harness mechanism
+(`docs/skills.md` → "Using Skills from Other Harnesses") — so there is no second
+`.pi/agent/skills/` copy to keep in sync.
+
+The catch: a `SKILL.md` written for one harness can still name that harness's
+tools by name (`AskUserQuestion`, a `quiz` extension, `Agent`). A skill meant to
+work in both names the *capability* generically in its body and maps it to each
+harness's concrete tool in a small table — see `claude-skills/teach/SKILL.md` for
+the pattern (adapted from [amosblomqvist/learn](https://github.com/amosblomqvist/learn),
+a `pi`-only config this repo does not otherwise vendor).
 
 ## Web search
 
