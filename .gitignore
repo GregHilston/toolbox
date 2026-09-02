@@ -78,10 +78,9 @@ nixos/secrets/.env
 claude-commands/mozilla/
 # Skills are found as top-level dirs, so they take a prefix instead of a subdir.
 claude-skills/mozilla-*/
-<<<<<<< Updated upstream
 
-# pi extension dependencies. The sandbox extension needs `npm install` in its
-# own directory (see dot/pi/CLAUDE.md); the tree itself is not ours to carry.
+# pi extension dependencies. Each needs `npm install` in its own directory
+# (see dot/pi/CLAUDE.md); the tree itself is not ours to carry.
 dot/pi/extensions-available/*/node_modules/
-=======
->>>>>>> Stashed changes
+dot/pi/.pi/agent/extensions/web-fetch/node_modules/
+dot/pi/.pi/agent/extensions/bash-guard/node_modules/

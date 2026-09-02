@@ -780,6 +780,55 @@ harness's concrete tool in a small table — see `claude-skills/teach/SKILL.md` 
 the pattern (adapted from [amosblomqvist/learn](https://github.com/amosblomqvist/learn),
 a `pi`-only config this repo does not otherwise vendor).
 
+## Extensions vendored from pi-config
+
+Four pieces of [amosblomqvist/pi-config](https://github.com/amosblomqvist/pi-config)
+(a general-purpose pi setup, separate from the `learn` config above) fill gaps
+nothing else here covers. Everything else in that repo was skipped — its
+`web-search/` needs a paid Google Custom Search key (we deliberately moved to
+free self-hosted SearXNG instead), its `analyze-sessions/` skill risks
+reintroducing the stale-cost-catalog bug `pi-usage.py` was written to work
+around, and the rest (`browser/`, `custom-header.ts`, `prompt-snippets/`,
+everything under `deprecated/`) had no matching need here.
+
+- **`extensions/web-fetch/`** — URL → clean markdown (Mozilla Readability +
+  Turndown), with PDF extraction via `unpdf`. pi has no built-in fetch tool
+  (Claude Code has `WebFetch`; pi had nothing). Falls back to `r.jina.ai` (a
+  third-party reader service) for pages Readability can't parse — worth
+  knowing before a URL goes through it. Vendored with its own
+  `package.json`/`package-lock.json`; `pi.nix`'s `installPiExtensionDeps`
+  activation runs `npm install` in it, same pattern as
+  `extensions-available/sandbox`.
+- **`extensions/bash-guard/`** — a real gap, not overlap. `pi-permission-system`
+  only gates file writes; `orchestration-guardrails.ts` only arms itself for
+  `/orchestrate-pi` runs (`PI_GUARDRAILS=1` or a `guardrails.json`). Neither
+  protects an ordinary interactive session from `rm -rf`, `sudo`, `git push
+  --force`, disk-formatting tools, etc. — bash-guard prompts Run/Abort for
+  those in the main session, and hard-blocks a narrower catastrophic set with
+  no UI when it detects it's running inside a subagent
+  (`PI_SUBAGENT_DEPTH >= 1`, set by `pi-agent-suite`'s subagent runner). See
+  its own `extensions/bash-guard/README.md` for the full command list. Also
+  npm-installed by `installPiExtensionDeps` (one dependency, `shell-quote`).
+- **`extensions/ask-user-question.ts`** — a UI popup for open questions with no
+  right answer. Single file, no npm deps (uses pi's own bundled
+  `@mariozechner/pi-tui`, like `web-search.ts` already does), so nothing extra
+  to install. This is exactly the extension `claude-skills/teach/SKILL.md`'s
+  tool-mapping table already anticipates ("if an ask_user_question-style
+  popup extension is installed, use it — not required") — with it installed,
+  pi's `teach` sessions get the same popup UX as Claude Code's
+  `AskUserQuestion`, not just a plain-text fallback.
+- **`claude-skills/youtube-transcript/`** — not pi-only: a real skill, vendored
+  into the shared `claude-skills/` directory (see "Skills" above) so both
+  agents get it from one copy. Fetches a video's title and transcript via
+  `yt-dlp`, which is already in `nixos/config/base-packages.nix` on every
+  managed host — no new system dependency.
+
+**Measured token cost, this host, `~/Git/toolbox` cwd (same method as "The
+token budget" below):** 13,232 tokens/request without these three extensions,
+14,004 with — **+772 tokens/request** for all three together. All three loaded
+with no errors in a live smoke test (`pi --mode json -p 'Reply with exactly:
+OK'`, checked stderr for extension-load failures).
+
 ## Web search
 
 `extensions/web-search.ts` registers a `web_search` tool against our self-hosted
