@@ -29,6 +29,7 @@
       "Bash(pnpm test *)"
     ]
   },
+  "model": "claude-fable-5-1[1m]",
   "hooks": {
     "PreToolUse": [
       {
@@ -62,6 +63,5 @@
   "agentPushNotifEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754006348784
-  },
-  "model": "sonnet"
+  }
 }
