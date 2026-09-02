@@ -324,5 +324,30 @@ in {
         echo "✓ Pi packages installed"
       fi
     '';
+
+    # web-fetch and bash-guard are vendored local extensions (not `pi install`
+    # packages — nothing in cfg.packages names them) with their own
+    # package.json. The folded stow symlink at ~/.pi/agent/extensions already
+    # makes their source visible; only node_modules is missing on a fresh
+    # checkout, since it's gitignored (see dot/pi/CLAUDE.md). Guarded on the
+    # directory existing so this no-ops harmlessly if it runs before
+    # stowDotfiles on a fresh host — the next activation picks it up once stow
+    # has.
+    home.activation.installPiExtensionDeps = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      export PATH="/opt/homebrew/bin:/run/current-system/sw/bin:$HOME/.nix-profile/bin:$PATH"
+
+      if command -v npm &>/dev/null; then
+        for ext in web-fetch bash-guard; do
+          ext_dir="${config.home.homeDirectory}/.pi/agent/extensions/$ext"
+          if [ -d "$ext_dir" ] && [ ! -d "$ext_dir/node_modules" ]; then
+            # Deliberately not silencing stderr here (unlike installPiPackages
+            # above): a first-time install failing is the interesting case,
+            # and swallowing it left no way to tell why.
+            (cd "$ext_dir" && npm install --no-audit --no-fund) || echo "WARNING: npm install failed for pi extension $ext"
+          fi
+        done
+        echo "✓ Pi extension deps installed"
+      fi
+    '';
   };
 }
