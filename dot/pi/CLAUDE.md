@@ -653,23 +653,37 @@ own UI/API, never what the agent can touch — the guard above is the real contr
 ## The token budget (read this before adding an extension)
 
 pi runs here against **local** models via oMLX by default. Every tool schema and
-every line
-of injected system prompt is re-sent on **every request**, so an extension is not
-free just because it is popular. Measured on this host with
-`pi --mode json -p ... | jq .usage`:
+every line of injected system prompt is re-sent on **every request**, so an
+extension is not free just because it is popular. Measured on moria, pi 0.84.4,
+2026-09-03, with the command at the end of this section:
 
 | Configuration | tokens/request |
 | --- | --- |
-| bare pi, no packages, empty dir | 1,644 |
-| our stack, empty dir | 7,957 |
-| our stack, `~/Git/toolbox` | 11,652 |
-| our stack, `~/Git/home-lab` | 36,120 |
+| bare pi (`--no-extensions --no-skills`), empty dir | 1,636 |
+| + skill descriptions from `~/.claude/skills` | 2,932 |
+| + every extension loaded, only the four built-in tools active | 2,953 |
+| our stack, empty dir | 9,843 |
+| our stack, `~/Git/toolbox` | 13,872 |
+| our stack, `~/Git/home-lab` | ~36,000 (2026-08 figure; its CLAUDE.md is ~26k of it) |
 
-These were taken before moonpi was dropped (b7b8bf6/9641740) and are now high:
-the same `~/Git/toolbox` measurement reads ~10,400 today. Re-measure the whole
-table rather than trusting a single row against it.
+The third row is the one to read twice: with everything loaded but only
+`read`/`bash`/`edit`/`write` active, the extensions add **21 tokens** of system
+prompt between them. The 6,900 tokens between that row and "our stack" are tool
+schemas, and they split like this (each isolated with `--exclude-tools`):
 
-Two things that are easy to misread:
+| Tools | tokens/request |
+| --- | --- |
+| `subagent_start/query/steer/wait` (pi-agent-suite run-subagent) | 2,691 |
+| `reddit_*`, seven of them (pi-reddit-research) | 1,602 |
+| `web_search`, `web_fetch`, `ask_user_question` (local) | 912 |
+| `grep`, `find`, `ls` (built-in) | 608 |
+| fff, plan-mode, the rest | ~1,100 |
+
+The two biggest lines are tools an interactive local session almost never wants,
+which is why they are lazy — see "Lazy tools" below. Re-measure the whole table
+after any change rather than trusting a single row against it.
+
+Three things that are easy to misread:
 
 **`usage.input` is not the prompt size.** oMLX prefix-caches, so `input` is only
 the *uncached* remainder; the real figure is `totalTokens` (or
@@ -681,6 +695,18 @@ gone before you type. Cache hits never give that back. Most of that 36k is
 `home-lab/CLAUDE.md` itself — 103,738 bytes, ~25,934 tokens — loaded natively by
 pi. That is a real cost of a 1,600-line context file, and it is a deliberate
 choice rather than a bug.
+
+**The cache is only as good as the prefix, and the tools array is at the front
+of it.** oMLX serves a request from cache up to the first byte that differs, so
+the cold start above costs latency only when the prefix changes: a different
+cwd, a different day (the date extension), a different tool set. Enabling a
+tool mid-session changes the tools array, and pi's own docs say that on a
+provider without native deferred loading — oMLX is one — this "may invalidate
+the provider's cached prompt prefix": the *whole conversation* re-prefills once,
+at ~1,000 tok/s on the A3B. Seconds early in a session, minutes late in one.
+The same applies to `context-projection`, which rewrites history when 70k, 50k
+and 30k tokens remain — each rewrite is a full re-prefill. Enable tools at the
+start of a session, not at turn forty.
 
 **On DeepSeek every token in that table is billed, every turn.** The numbers
 above are a latency-and-capacity argument while we are on oMLX; point pi at
