@@ -1,6 +1,6 @@
 set shell := ["zsh", "-cu"]
 
-# Set up Claude Code symlinks (commands, skills, CLAUDE.md, settings, hooks, ccstatusline)
+# Set up Claude Code symlinks (commands, skills, CLAUDE.md, settings, ccstatusline)
 # for the current user, and install the pinned ccstatusline.
 # Run this once on any non-Nix host (Nix hosts get this automatically via home-manager).
 setup-claude:
@@ -28,7 +28,6 @@ setup-claude:
     link_repo "$repo/claude-skills"               "$HOME/.claude/skills"
     link_repo "$repo/dot/claude/.claude/CLAUDE.md"     "$HOME/.claude/CLAUDE.md"
     link_repo "$repo/dot/claude/.claude/settings.json" "$HOME/.claude/settings.json"
-    link_repo "$repo/dot/claude/.claude/hooks"         "$HOME/.claude/hooks"
 
     # ccstatusline keeps its config outside ~/.claude, and its TUI writes back to it.
     mkdir -p "$HOME/.config/ccstatusline"
