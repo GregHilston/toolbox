@@ -113,13 +113,17 @@
       "presence_penalty": 0.0
     },
     "Qwen3.5-9B-MLX-4bit": {
-      "description": "dungeon lightweight helper. Had no settings entry, so it silently ran on global defaults (temp 1.0 / top_k 0).",
+      "description": "dungeon's pi default (nixos/hosts/macs/dungeon/default.nix). The strongest model that fits dungeon's ~27GB Metal ceiling beside Docker + Frigate: 5.6GB dense 9B, versus the 35B-A3B's 19GB of weights, which the ceiling cannot hold once KV cache is added (the 15GB gemma-4-26b-a4b already trips prefill_memory_exceeded there). Emits well-formed tool calls (smoke-tested 2026-09-03: bash `wc -l` on the first try, 4.4s). pi caps it at 131k context in models.json.tpl on purpose -- at ~73KB/token of KV a 262k window would not fit either.",
+      "_comment_sampling": "Qwen's non-thinking recommendations (temp 0.7 / top_p 0.8 / top_k 20). The thinking-mode set is 0.6 / 0.95 / 20; not switched because this entry predates the pi use and the difference is not measured.",
       "temperature": 0.7,
       "top_p": 0.8,
       "top_k": 20,
       "min_p": 0.0,
       "repetition_penalty": 1.0,
-      "presence_penalty": 0.0
+      "presence_penalty": 0.0,
+      "_comment_thinking": "Same runaway guard as the A3B entries: a 9B thinks itself in circles more readily, and on the shared lab box a stuck request holds memory Frigate wants.",
+      "thinking_budget_enabled": true,
+      "thinking_budget_tokens": 8192
     },
     "Qwen3-VL-4B-Instruct": {
       "description": "Vision model for frigate object detection on dungeon (frigate/config.yml). Low temperature: detection wants determinism, not creativity. Thinking off -- it is a perception task and latency is the whole point.",

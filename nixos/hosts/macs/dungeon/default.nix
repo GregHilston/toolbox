@@ -584,8 +584,18 @@ in {
   # SearXNG is a container on this host, so pi talks to it directly instead of
   # bouncing out to the tailnet address and back. Every other host keeps the
   # default in modules/programs/tui/pi.nix.
-  home-manager.users.${vars.user.name}.custom.programs.pi.searxngBaseUrl =
-    lib.mkForce "http://localhost:8214";
+  # One attrset, not two paths: nix refuses to merge attribute paths that go
+  # through a dynamic key like ${vars.user.name}.
+  home-manager.users.${vars.user.name}.custom.programs.pi = {
+    searxngBaseUrl = lib.mkForce "http://localhost:8214";
+
+    # The darwin/home.nix default is the 35B-A3B, whose 19GB of weights does
+    # not fit this host's ~27GB Metal ceiling beside Docker + Frigate once KV
+    # cache is added (the 15GB gemma-4-26b-a4b already trips
+    # prefill_memory_exceeded here). The 9B is the strongest model that does
+    # fit; its entry in dot/omlx/.omlx/model_settings.json has the numbers.
+    defaultModel = lib.mkForce "Qwen3.5-9B-MLX-4bit";
+  };
 
   # Engine. Run in AUTO mode: Frigate ships the yolov9 model over ZMQ on connect.
   # Manual one-time install (not auto-cloned — see darwin-post-deploy.md):

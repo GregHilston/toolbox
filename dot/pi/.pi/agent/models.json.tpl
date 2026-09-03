@@ -42,6 +42,14 @@
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
+          "id": "Qwen3.5-9B-MLX-4bit",
+          "name": "Qwen 3.5 9B 4-bit (dense, dungeon DEFAULT: fits beside Docker + Frigate)",
+          "contextWindow": 131072,
+          "maxTokens": 32768,
+          "input": ["text"],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
           "id": "gemma-4-26b-a4b-it-qat-4bit",
           "name": "Gemma 4 26B A4B QAT (summarization, 256k ctx, fast)",
           "contextWindow": 262144,
