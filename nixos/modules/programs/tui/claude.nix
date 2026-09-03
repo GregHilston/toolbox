@@ -20,7 +20,8 @@
 in {
   # Declaratively symlink Claude Code user-level config from the toolbox repo so
   # any host that runs home-manager gets the same commands, skills, settings,
-  # hooks, and global CLAUDE.md.
+  # and global CLAUDE.md. Hooks are commands in settings.json (`rtk hook
+  # claude`), not scripts, so there is no hooks directory to link.
   #
   # We use writable symlinks into the repo (not read-only /nix/store links) on
   # purpose: Claude Code writes back to settings.json at runtime (theme, survey
@@ -51,7 +52,6 @@ in {
     link_repo "${toolboxDir}/claude-skills"               "${claudeDir}/skills"
     link_repo "${toolboxDir}/dot/claude/.claude/CLAUDE.md"     "${claudeDir}/CLAUDE.md"
     link_repo "${toolboxDir}/dot/claude/.claude/settings.json" "${claudeDir}/settings.json"
-    link_repo "${toolboxDir}/dot/claude/.claude/hooks"         "${claudeDir}/hooks"
 
     # ccstatusline keeps its own config outside ~/.claude. Same writable-symlink
     # deal: its TUI saves back to this file, so tweaks land as git diffs.

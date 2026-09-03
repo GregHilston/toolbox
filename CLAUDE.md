@@ -29,7 +29,7 @@ description leaves the system prompt entirely; `/<name>` still works.
 
 **Nix-managed hosts** (NixOS / nix-darwin): automatic. The home-manager module at
 `nixos/modules/programs/tui/claude.nix` creates the symlinks during `home-manager`
-activation when you run `just fr <host>` or `just dr <host>`. It now manages six
+activation when you run `just fr <host>` or `just dr <host>`. It now manages five
 targets, all symlinked into this repo (so they're version-controlled and deploy to
 every host that imports `programs/tui`):
 
@@ -37,8 +37,13 @@ every host that imports `programs/tui`):
 - `~/.claude/skills`       → `claude-skills/`
 - `~/.claude/CLAUDE.md`    → `dot/claude/.claude/CLAUDE.md`   (global, cross-repo memory)
 - `~/.claude/settings.json`→ `dot/claude/.claude/settings.json` (permissions, hooks, plugins)
-- `~/.claude/hooks/`       → `dot/claude/.claude/hooks/`      (e.g. the RTK rewrite hook)
 - `~/.config/ccstatusline/settings.json` → `dot/ccstatusline/…` (status line layout)
+
+The RTK hook is the command `rtk hook claude` in `settings.json`, not a script:
+the script `rtk init` used to generate treated rtk's "rewrite, advisory" exit
+code as "no rewrite", so `git status`, `pytest`, `docker ps` and most other
+commands went through unfiltered while `rtk gain` still read 74% saved. `rtk`
+itself owns the hook now; `rtk gain` warns when it is outdated again.
 
 The symlinks are **writable** (they point into the repo, not `/nix/store`) so Claude's
 own runtime writes to `settings.json` still work — those just show up as git diffs to

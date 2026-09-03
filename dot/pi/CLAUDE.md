@@ -790,6 +790,25 @@ Two things to know before adding a group: the strip runs in
 does; and `/enable` is additive (it never removes an active tool), which is
 what pi's dynamic-tool docs ask for to keep the prompt prefix stable.
 
+## rtk — shell output filtered before the model sees it
+
+`extensions/rtk.ts` is the file `rtk init --agent pi -g` writes; it landed in
+this directory because `~/.pi/agent/extensions` is the stow symlink. It hooks
+`tool_call` for `bash`, asks `rtk rewrite` for a token-optimised equivalent
+(`git status` → `rtk git status`), and passes the command through untouched
+when rtk has none, is missing, or is older than 0.23. Zero tool schema, zero
+system prompt: the only cost is ~100 ms per bash call. `RTK_DISABLED=1` in the
+environment switches it off; `rtk gain` shows what it has saved.
+
+Regenerate it the same way after an rtk upgrade rather than editing it — the
+rules live in rtk's Rust registry, and this file is a thin delegate. The exit
+code contract it relies on: 0 rewrite, 1 no equivalent, 3 rewrite-but-advisory
+(treated as a rewrite, which is what rtk's own hook for Claude Code does now).
+
+This is what Hypa (`@hypabolic/pi-hypa`, the lws.io post's pick) would have
+done, measured at +1,050 tokens/request of schema in its default mode, +665 in
+replace mode, and an 87 MB .NET binary. rtk was already here.
+
 ## Reddit tools: global but lazy, and how to scope them instead
 
 `pi-reddit-research` costs 1,602 tok/request for 7 tools. It stays installed

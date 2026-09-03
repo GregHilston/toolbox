@@ -53,6 +53,11 @@ pkgs: {
     yt-dlp
     ffmpeg # yt-dlp needs it to merge best-quality video+audio streams
     uv
+    # Filters shell output before it reaches Claude Code (`rtk hook claude` in
+    # dot/claude/.claude/settings.json) and pi (dot/pi/.pi/agent/extensions/rtk.ts).
+    # Both fail open when the binary is missing, which is how NixOS hosts ran
+    # without it for months; the Macs get it from Homebrew.
+    rtk
     # Node runtime for npm-installed CLIs. The Macs already get node from
     # Homebrew (and /opt/homebrew/bin sorts ahead of the nix profiles on PATH,
     # so this does not displace it); NixOS hosts had none, which broke
