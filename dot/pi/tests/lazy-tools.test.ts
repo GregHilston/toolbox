@@ -13,9 +13,8 @@ import lazyTools, {
 	GROUPS,
 	activeGroups,
 	enable,
-	parseGroups,
+	parse,
 	strip,
-	unknownGroups,
 } from "../.pi/agent/extensions/lazy-tools.ts";
 
 const BUILTINS = ["read", "bash", "edit", "write", "grep", "find", "ls"];
@@ -28,13 +27,13 @@ test("strip removes every lazy group and nothing else", () => {
 
 test("strip keeps a group named in PI_ENABLE_TOOLS", () => {
 	assert.deepEqual(strip(FULL, ["reddit"]), FULL);
-	assert.deepEqual(strip(FULL, parseGroups("all")), FULL);
+	assert.deepEqual(strip(FULL, parse("all").groups), FULL);
 });
 
-test("parseGroups accepts commas or spaces, ignores case and unknowns", () => {
-	assert.deepEqual(parseGroups("Reddit, bogus"), ["reddit"]);
-	assert.deepEqual(parseGroups(undefined), []);
-	assert.deepEqual(unknownGroups("reddit bogus all"), ["bogus"]);
+test("parse accepts commas or spaces, ignores case, and names what it did not recognise", () => {
+	assert.deepEqual(parse("Reddit, bogus"), { groups: ["reddit"], unknown: ["bogus"] });
+	assert.deepEqual(parse(undefined), { groups: [], unknown: [] });
+	assert.deepEqual(parse("all").groups, ["reddit"]);
 });
 
 test("enable is additive and idempotent", () => {
@@ -106,6 +105,8 @@ test("/enable adds a group and it survives the next turn; a typo is refused; /di
 	await pi.commands.enable.handler("redit", ctx);
 	assert.deepEqual(pi.current, LEAN, "a typo must not enable anything");
 	assert.match(ctx.notes.at(-1)!, /Unknown group: redit/);
+	await pi.commands.enable.handler("", ctx);
+	assert.match(ctx.notes.at(-1)!, /usage: \/enable/);
 
 	await pi.commands.enable.handler("reddit", ctx);
 	assert.deepEqual(activeGroups(pi.current), ["reddit"]);

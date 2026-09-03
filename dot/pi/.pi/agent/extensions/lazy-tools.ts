@@ -1,28 +1,11 @@
 /**
- * Start every session without the heavy tool groups, and turn them on by hand.
+ * Heavy tool groups start off and are enabled by hand (`/enable`), never by
+ * the model: a local model misses tools it cannot see, and a mid-session
+ * enable re-prefills the whole conversation on oMLX. The strip repeats before
+ * every turn so an extension that restores its tools between turns loses.
  *
- * Measured 2026-09-03 on moria: the seven reddit_* tools cost 1,602 tokens on
- * every request, paid by every session for a task you know you are starting.
- * On oMLX that is window capacity rather than money, and the window is what
- * prefill scales with.
- *
- * Enabling is manual (`/enable`) rather than a model-facing gateway tool, and
- * that is deliberate. A local model is not reliable at noticing it needs a tool
- * it cannot see, and every mid-session enable changes the tools array at the
- * front of the prompt, which invalidates oMLX's prefix cache and re-prefills
- * the whole conversation once. So: enable at the start of a session, or set
- * PI_ENABLE_TOOLS=reddit (or `all`) for a worker that needs a group from its
- * first turn. Enables are additive, per pi's dynamic-tool guidance.
- *
- * The strip runs before every turn as well as at session start, so another
- * extension that restores its tools between turns loses. That is not enough
- * against pi-agent-suite's run-subagent, whose runtime composition re-applies
- * its baseline *after* this handler on every turn — which is why subagent_*
- * is not a group here and that extension is simply not loaded by default
- * (pi.nix). Only pi's own --exclude-tools beats the composition.
- *
- * Only this session is affected. A fresh session starts stripped again, which
- * is the whole point.
+ * subagent_* is not a group: pi-agent-suite re-applies its baseline after
+ * this handler, so pi.nix does not load it. dot/pi/CLAUDE.md -> "Lazy tools".
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -40,23 +23,17 @@ export const GROUPS: Record<string, readonly string[]> = {
 };
 
 const ALL = Object.keys(GROUPS);
+const USAGE = `usage: /enable <${ALL.join("|")}|all>`;
 
-/** "reddit" / "all" / "" → known group names, unknown ones dropped. */
-export function parseGroups(spec: string | undefined): string[] {
+/** "reddit, all" → known groups in GROUPS order, plus whatever was not one. */
+export function parse(spec: string | undefined): { groups: string[]; unknown: string[] } {
 	const words = (spec ?? "")
 		.split(/[\s,]+/)
-		.map((w) => w.trim().toLowerCase())
+		.map((w) => w.toLowerCase())
 		.filter(Boolean);
-	if (words.includes("all")) return [...ALL];
-	return ALL.filter((g) => words.includes(g));
-}
-
-/** Names in `spec` that are not a group, for an error message. */
-export function unknownGroups(spec: string): string[] {
-	return spec
-		.split(/[\s,]+/)
-		.map((w) => w.trim().toLowerCase())
-		.filter((w) => w && w !== "all" && !(w in GROUPS));
+	const unknown = words.filter((w) => w !== "all" && !(w in GROUPS));
+	const groups = words.includes("all") ? [...ALL] : ALL.filter((g) => words.includes(g));
+	return { groups, unknown };
 }
 
 function toolsOf(groups: readonly string[]): Set<string> {
@@ -80,7 +57,7 @@ export function activeGroups(active: readonly string[]): string[] {
 }
 
 export default function lazyTools(pi: ExtensionAPI) {
-	const wanted = new Set(parseGroups(process.env.PI_ENABLE_TOOLS));
+	const wanted = new Set(parse(process.env.PI_ENABLE_TOOLS).groups);
 
 	const apply = () => {
 		const active = pi.getActiveTools();
@@ -93,16 +70,16 @@ export default function lazyTools(pi: ExtensionAPI) {
 
 	const status = () => {
 		const on = activeGroups(pi.getActiveTools());
-		return `lazy tools on: ${on.length ? on.join(", ") : "none"} (groups: ${ALL.join(", ")}, all)`;
+		return `lazy tools on: ${on.length ? on.join(", ") : "none"}`;
 	};
 
 	pi.registerCommand("enable", {
-		description: "Enable a lazy tool group for this session: reddit, all",
+		description: `Enable a lazy tool group for this session: ${ALL.join(", ")}, all`,
 		handler: async (args, ctx) => {
-			const bad = unknownGroups(args ?? "");
-			const groups = parseGroups(args);
-			if (bad.length || !groups.length) {
-				ctx.ui.notify(`Unknown group${bad.length ? `: ${bad.join(", ")}` : ""}. ${status()}`, "warning");
+			const { groups, unknown } = parse(args);
+			if (unknown.length || !groups.length) {
+				const why = unknown.length ? `Unknown group: ${unknown.join(", ")}. ` : "";
+				ctx.ui.notify(`${why}${USAGE}. ${status()}`, "warning");
 				return;
 			}
 			for (const g of groups) wanted.add(g);
@@ -112,11 +89,11 @@ export default function lazyTools(pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("disable", {
-		description: "Disable a lazy tool group for this session: reddit, all",
+		description: `Disable a lazy tool group for this session: ${ALL.join(", ")}, all`,
 		handler: async (args, ctx) => {
-			const groups = parseGroups(args);
+			const { groups } = parse(args);
 			if (!groups.length) {
-				ctx.ui.notify(`Nothing matched. ${status()}`, "warning");
+				ctx.ui.notify(`${USAGE.replace("/enable", "/disable")}. ${status()}`, "warning");
 				return;
 			}
 			for (const g of groups) wanted.delete(g);
