@@ -90,7 +90,7 @@
       "max_context_window": 524288
     },
     "Qwen3.5-2B-MLX-8bit": {
-      "description": "Commit-message writer for ~/Git/notes/sync.sh, on both moria and dungeon. NLP tier of the rule-of-thumb table in the vault's llm.md: a ~2B model at Q8 is enough to turn a 4000-char diff into one line, and it loads in seconds where the 8B models it replaced ate the whole cold start. Low temperature because the output is a one-line summary, not prose.",
+      "description": "NOT in use. Tried as the commit-message writer for ~/Git/notes/sync.sh on 2026-09-03 (llm.md's NLP tier) and reverted to the 8B models: no real speed win once warm (0.3s vs 0.4s) and thinner messages -- it stopped at the first change in a diff where the 8B named both. Kept downloaded on moria and dungeon as the cheapest one-liner model if a pipeline ever wants one. Low temperature because that use is a one-line summary, not prose.",
       "temperature": 0.3,
       "top_p": 0.8,
       "top_k": 20,
