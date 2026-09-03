@@ -144,7 +144,7 @@ def format_comment(item: dict, depth: int = 0) -> str:
         title = item.get("title", "")
         author = item.get("by", "[deleted]")
         score = item.get("score", 0)
-        text = _strip_html_tags(item.get("text", ""))
+        text = strip_html_tags(item.get("text", ""))
 
         lines.append(f"# {title}")
         lines.append(f"**By {author}** | {score} points")
