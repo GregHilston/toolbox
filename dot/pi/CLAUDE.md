@@ -755,15 +755,50 @@ Replaced by `@gotgenes/pi-permission-system` and `@narumitw/pi-plan-mode`.
   day there is a server worth the ~800 tokens, with `scriptMode: false`,
   `directTools: false`, and per-server `includeTools`.
 
-## Reddit tools: kept global, and how to scope them
+## Lazy tools — `/enable reddit`, `pi-subagents`
 
-`pi-reddit-research` costs ~2,151 tok/request for 7 tools. It stays global
-because that is an eighth of what moonpi cost, and because the tool-selection
-worry did not materialise — asked "what does bin/reddit-cookie-sync.sh do when
-Firefox is logged out?", a prompt containing the word *reddit* about a local
-file, the model went straight to `read` rather than `reddit_search`.
+`extensions/lazy-tools.ts` strips the `reddit_*` tools from the active set at
+session start and again before every turn, and `/enable reddit` (or `all`)
+puts them back for the rest of the session; `/disable` reverses it. A worker
+that needs them from its first turn gets `PI_ENABLE_TOOLS=reddit` in its
+environment. Measured effect in an empty directory: **9,843 → 4,868
+tokens/request** together with the run-subagent change below — half the cold
+start, for tools an interactive session almost never wanted.
 
-If it ever does become a problem, scope it to one repo:
+It is manual on purpose. The lws.io cold-start post keeps a ~100-token
+`enable_tool` gateway so the model can switch tools on itself; a local model is
+not reliable at noticing it needs a tool it cannot see, and every mid-session
+enable re-prefills the conversation (see "The token budget"). Enable at the
+start of a session, the way you would pick a model.
+
+**`subagent_*` is not a lazy group, and cannot be.** pi-agent-suite's
+run-subagent registers its tools through a "runtime composition" that
+re-applies its own baseline tool list in `before_agent_start` — *after* any
+other extension's handler — so a `setActiveTools()` that removes them holds
+for exactly one turn. Verified with a `before_provider_request` probe: the
+tools were back in the payload, appended at the end. Only pi's own
+`--exclude-tools` beats the composition, and there is no settings-file
+equivalent (`defaultTools` covers built-ins only). So `pi.nix` simply does not
+load `extensions/run-subagent/index.ts`, and the `pi-subagents` alias in
+`dot/zsh/.zshrc` starts a session with it via `-e`. That extension was
+2,691 tokens/request: four schemas plus the system-prompt block it adds while
+they are active.
+
+Two things to know before adding a group: the strip runs in
+`before_agent_start`, so any extension that restores its tools in its *own*
+`before_agent_start` and loads after this one wins, exactly as run-subagent
+does; and `/enable` is additive (it never removes an active tool), which is
+what pi's dynamic-tool docs ask for to keep the prompt prefix stable.
+
+## Reddit tools: global but lazy, and how to scope them instead
+
+`pi-reddit-research` costs 1,602 tok/request for 7 tools. It stays installed
+globally — scoping to a project fails silently under `pi -p`, see below — but
+the tools are off until `/enable reddit` (previous section). The old worry,
+that a prompt containing the word *reddit* would pull the model toward
+`reddit_search` for a local file, never materialised; the cost was the reason.
+
+If a repo wants them on by default, scope it there:
 
 ```jsonc
 // <repo>/.pi/settings.json   — commit this; per-repo, not global
@@ -798,6 +833,15 @@ so pi reads the exact same `claude-skills/` directory Claude Code does (`~/.clau
 standard Claude Code does, and documents this exact cross-harness mechanism
 (`docs/skills.md` → "Using Skills from Other Harnesses") — so there is no second
 `.pi/agent/skills/` copy to keep in sync.
+
+Every discoverable skill's description is in the system prompt on every
+request, in both harnesses — the eight in `claude-skills/` measured 1,296
+tokens before the trim. Skills you invoke by name (grill-me, simple-english,
+the review and planning ones) carry `disable-model-invocation: true`, which
+both pi (`docs/skills.md`) and Claude Code read the same way: not in the
+prompt, still reachable as `/skill:name` here and `/name` there. Keep the
+description of anything that stays discoverable to two or three sentences;
+github-code-researcher's was 185 words of examples that belonged in the body.
 
 The catch: a `SKILL.md` written for one harness can still name that harness's
 tools by name (`AskUserQuestion`, a `quiz` extension, `Agent`). A skill meant to
@@ -852,15 +896,6 @@ everything under `deprecated/`) had no matching need here.
 **Measured token cost, this host, `~/Git/toolbox` cwd (same method as "The
 token budget" below):** 13,232 tokens/request without these three extensions,
 14,004 with — **+772 tokens/request** for all three together.
-
-Every discoverable skill's description is in the system prompt on every
-request, in both harnesses — the eight in `claude-skills/` measured 1,296
-tokens before the trim. Skills you invoke by name (grill-me, simple-english,
-the review and planning ones) carry `disable-model-invocation: true`, which
-both pi (`docs/skills.md`) and Claude Code read the same way: not in the
-prompt, still reachable as `/skill:name` here and `/name` there. Keep the
-description of anything that stays discoverable to two or three sentences;
-github-code-researcher's was 185 words of examples that belonged in the body.
 
 **Functionally verified live, not just load-checked.** A bare `-p 'Reply with
 exactly: OK'` smoke test proves registration didn't throw at import — it

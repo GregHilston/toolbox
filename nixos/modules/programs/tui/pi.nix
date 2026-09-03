@@ -128,19 +128,27 @@ in {
         # https://github.com/dmtrKovalenko/fff
         "npm:@ff-labs/pi-fff"
 
-        # Context management, but it ships 22 extensions and we want three.
+        # Context management, but it ships 22 extensions and we want two.
         # Excluded, and why:
         #   codex-*        OpenAI Codex quota/verbosity features. This host is
         #                  strictly local oMLX, so they are dead weight.
         #   mcp-wrapper    superseded by pi-mcp-adapter below; loading both
         #                  gives two MCP layers.
+        #   run-subagent   2,691 tokens/request (four tool schemas plus the
+        #                  system-prompt block it adds while they are active),
+        #                  and it cannot be made lazy from outside: the suite's
+        #                  runtime composition re-applies its baseline tool
+        #                  list before every turn, so a setActiveTools() from
+        #                  another extension holds for exactly one turn. Only
+        #                  pi's own --exclude-tools beats it. Loaded on demand
+        #                  by the `pi-subagents` alias in dot/zsh/.zshrc; see
+        #                  dot/pi/CLAUDE.md -> "Lazy tools".
         # https://github.com/n-r-w/pi-agent-suite
         {
           source = "npm:pi-agent-suite";
           extensions = [
             "extensions/context-projection/index.ts" # hides stale tool output
             "extensions/custom-compaction/index.ts" # proactive compaction
-            "extensions/run-subagent/index.ts" # subagent_* tools
           ];
         }
 

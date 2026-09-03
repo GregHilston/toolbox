@@ -188,6 +188,9 @@ alias audio="pavucontrol"
 # In-session you do not need them: Ctrl+P cycles omlx <-> deepseek, /model picks.
 alias pid='pi --provider deepseek --model deepseek-v4-pro'
 alias pidf='pi --provider deepseek --model deepseek-v4-flash'
+# subagent_* tools cost 2,691 tokens/request and are not in the default load
+# (nixos/modules/programs/tui/pi.nix); this is how a session that wants them starts.
+alias pi-subagents='pi -e ~/.pi/agent/npm/node_modules/pi-agent-suite/extensions/run-subagent/index.ts'
 
 # Clipboard (pbcopy on macOS, xclip on Linux)
 if [[ "$OSTYPE" == "darwin"* ]]; then
