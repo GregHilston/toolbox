@@ -761,9 +761,10 @@ Replaced by `@gotgenes/pi-permission-system` and `@narumitw/pi-plan-mode`.
 session start and again before every turn, and `/enable reddit` (or `all`)
 puts them back for the rest of the session; `/disable` reverses it. A worker
 that needs them from its first turn gets `PI_ENABLE_TOOLS=reddit` in its
-environment. Measured effect in an empty directory: **9,843 → 4,868
-tokens/request** together with the run-subagent change below — half the cold
-start, for tools an interactive session almost never wanted.
+environment. Measured effect in an empty directory after deploy: **9,843 → 4,328
+tokens/request**, together with the run-subagent change below and the skill
+descriptions hidden in "Skills" — less than half the cold start, for tools an
+interactive session almost never wanted. `PI_ENABLE_TOOLS=all` reads 5,919.
 
 It is manual on purpose. The lws.io cold-start post keeps a ~100-token
 `enable_tool` gateway so the model can switch tools on itself; a local model is
@@ -817,7 +818,13 @@ the tools are off until `/enable reddit` (previous section). The old worry,
 that a prompt containing the word *reddit* would pull the model toward
 `reddit_search` for a local file, never materialised; the cost was the reason.
 
-If a repo wants them on by default, scope it there:
+**A repo that wants them on by default sets `PI_ENABLE_TOOLS=reddit`** — in
+its `.envrc` under direnv, or in whatever wrapper starts pi there. Moving the
+*package* into that repo's `.pi/settings.json` does not do it: lazy-tools
+strips `reddit_*` by tool name, whichever settings file installed them.
+
+Scoping the install is still an option if you also want the package out of
+the global settings entirely:
 
 ```jsonc
 // <repo>/.pi/settings.json   — commit this; per-repo, not global

@@ -56,7 +56,8 @@ pkgs: {
     # Filters shell output before it reaches Claude Code (`rtk hook claude` in
     # dot/claude/.claude/settings.json) and pi (dot/pi/.pi/agent/extensions/rtk.ts).
     # Both fail open when the binary is missing, which is how NixOS hosts ran
-    # without it for months; the Macs get it from Homebrew.
+    # without it for months. moria's hand-installed Homebrew copy shadows this
+    # one because /opt/homebrew/bin sorts first on PATH; that is fine.
     rtk
     # Node runtime for npm-installed CLIs. The Macs already get node from
     # Homebrew (and /opt/homebrew/bin sorts ahead of the nix profiles on PATH,

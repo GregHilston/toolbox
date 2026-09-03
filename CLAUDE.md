@@ -248,10 +248,10 @@ were killed with their work uncommitted, while still reporting completion.
 ## pi's heavy tools are off until you ask — `/enable`, `pi-subagents`
 
 A fresh pi session starts without the `reddit_*` tools and without the
-`subagent_*` tools. That halves the cold start (9,843 → 4,868 tokens on every
-request), because every active tool's schema is re-sent to oMLX each turn and
-those two groups were 44% of it for tools an interactive session almost never
-wants.
+`subagent_*` tools. That more than halves the cold start (9,843 → 4,328 tokens
+on every request, measured after deploy), because every active tool's schema
+is re-sent to oMLX each turn and those two groups were 44% of it, for tools an
+interactive session almost never wants.
 
 - `/enable reddit` inside a session turns the Reddit tools on for that session
   (`/disable reddit` reverses it). `PI_ENABLE_TOOLS=reddit pi …` does it for a

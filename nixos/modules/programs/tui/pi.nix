@@ -185,9 +185,10 @@ in {
         # Reddit JSON research tools + a matching skill: compact evidence packs
         # for opinions, bugs, fixes, comparisons. Needs a session cookie —
         # see reddit-research.json below.
-        # ~2,151 tok/request for 7 tools. Kept global deliberately: that is an
-        # eighth of what moonpi cost, and scoping it to a project fails silently
-        # under `pi -p`, which never prompts for project trust. See dot/pi/CLAUDE.md.
+        # 1,602 tok/request for 7 tools, so lazy-tools.ts keeps them off until
+        # /enable reddit. Installed globally because a project-scoped package
+        # fails silently under `pi -p`, which never prompts for project trust.
+        # See dot/pi/CLAUDE.md -> "Lazy tools".
         # https://github.com/SaintNerona/pi-reddit-research
         "npm:pi-reddit-research"
       ];
