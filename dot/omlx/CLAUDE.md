@@ -56,6 +56,14 @@ so that case rests on its published benchmarks, not on our data.
 (130.7 → 86.9) because only ~3B params are active per token. Cheaper, but not free — don't
 assume MoE 8-bit is a freebie. No 6-bit exists upstream for either.
 
+**That includes tool calling.** Checked 2026-09-03 when pi's default moved off the 8-bit:
+through pi against oMLX, the 4-bit A3B made the same well-formed `bash`/`read`/`edit` calls
+as the 8-bit and produced the same correct fix, and no published card or thread reports a
+4-bit tool-calling regression for this model (the one documented failure is the OptiQ build,
+which we do not serve). Do not re-run this investigation; `docs/local-llm-benchmarks.md` →
+"Results: tool calling at 4-bit" has the numbers. The pi/opencode default lives in
+`nixos/modules/darwin/home.nix` and must name the same model as `is_default` here.
+
 **Set `reasoning_effort` on Qwen3.8.** Its template defaults to `xhigh`, which on moria burns
 the whole token budget and never emits an answer. `model_settings.json` pins `medium` plus an
 8192-token budget. Measured: `medium` 8/10 in 27 min; `xhigh` 6/10 in 111 min — more thinking

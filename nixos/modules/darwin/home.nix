@@ -77,11 +77,11 @@ in {
     custom.programs = {
       pi = {
         enable = true;
-        defaultModel = "Qwen3.6-35B-A3B-8bit";
+        defaultModel = "Qwen3.6-35B-A3B-4bit";
       };
       opencode = {
         enable = true;
-        defaultModel = "Qwen3.6-35B-A3B-8bit";
+        defaultModel = "Qwen3.6-35B-A3B-4bit";
         omlxBaseUrl = "http://localhost:8000/v1";
       };
     };

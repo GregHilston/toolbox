@@ -20,7 +20,8 @@ work is in `dot/omlx/speculative-decoding-findings.md`.
 3. **On a *dense* model, 8-bit costs ~2× the speed for nothing.** 23.0 → 11.9 tok/s. On the
    *MoE* it costs 1.50× (130.7 → 86.9), because a MoE only reads its ~3B active params.
    The "I have 128 GB so take the 8-bit" instinct is wrong on both. No 6-bit MLX quant is
-   published for either model.
+   published for either model. Tool calling survives the 4-bit quant too — see "Results:
+   tool calling at 4-bit" — so there is no agentic-use exception to this rule either.
 4. **Qwen3.8-27B is a retrain on the Qwen3.6-27B skeleton** — same architecture config,
    identically-sized 14.95 GiB weights, same measured speed. Free upgrade, old one deleted.
 5. **Qwen3.8's `reasoning_effort` defaults to `xhigh`, which never terminates.** Unconfigured
@@ -256,6 +257,37 @@ zero characters of `reasoning_content`) at 4× the wall-clock. The `medium`-vs-`
 two tasks with a mechanistic explanation (truncation), which makes it *suggestive* rather
 than proven — but pinning `medium` needs only the non-termination result, which is
 unambiguous.
+
+## Results: tool calling at 4-bit (added 2026-09-03)
+
+The question that came up when pi's default was moved from the 8-bit A3B to the 4-bit:
+does the lower quant hurt *function calling*, which the coding eval above does not exercise
+(it is single-shot completion against executable tests, no tools). Checked two ways.
+
+**Live, through pi against oMLX**, the harness we actually use: one prompt asking for two
+tool-driven tasks — count the lines of a file with a tool, then fix a bug in `add()` with the
+`edit` tool — run on each quant with the shipped `model_settings.json` sampling.
+
+| model | tool calls made | result | wall-clock | prompt tokens |
+|---|---|---|---|---|
+| Qwen3.6-35B-A3B-4bit | `bash`, `read`, `edit` | correct fix, correct count | 15 s | 7,533 |
+| Qwen3.6-35B-A3B-8bit | `read`, `read`, `edit` | correct fix, correct count | 16 s | 7,498 |
+
+Both produced well-formed tool calls on the first try, chose sensible tools, and made the
+one-character fix without collateral edits. n=1 per model, so this is a smoke test, not a
+benchmark: it rules out the failure mode where a 4-bit quant emits malformed JSON or stops
+calling tools, which is the only one that would have blocked the switch.
+
+**From the published cards.** The A3B 4-bit MLX quants (mlx-community and Unsloth's UD
+variant) both note tool-calling parser fixes in their recent revisions; nothing in the model
+cards or the r/LocalLLaMA threads found claims a tool-calling regression between 4-bit and
+8-bit on this model. The one 4-bit A3B quant with a documented tool-calling failure is the
+**OptiQ** mixed-precision build (mlx-community discussion #2), which is not one we serve.
+
+**Read together with the coding eval:** 4-bit scored 9/10 there and the DWQ 4-bit 10/10, so
+on this MoE the 4-bit is not a measured quality loss on either axis, and it decodes 1.50×
+faster for 19 GB instead of 35 GB. That is why pi and opencode default to it
+(`nixos/modules/darwin/home.nix`), matching oMLX's own `is_default`.
 
 ## Results: `reasoning_effort` (new in Qwen3.8; absent in Qwen3.6)
 
