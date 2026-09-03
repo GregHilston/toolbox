@@ -42,6 +42,11 @@ state) and `bin/pi-rpc.py` (steer one mid-run). See
 
 ## Tips
 
+- **Heavy tools are off until asked for**: `/enable reddit` turns the Reddit
+  tools on for this session; `pi-subagents` starts a session with the
+  `subagent_*` tools. Decide at the start of a session — enabling mid-way
+  re-prefills the whole conversation on oMLX. See [CLAUDE.md](CLAUDE.md) →
+  "Lazy tools".
 - **Thinking loops**: if the model spirals, the 8192-token thinking budget in oMLX will cut it off. You can also try `/nothink` or set `enable_thinking: false` per-request
 - **Plan mode for complex tasks**: `/plan` forces the model to read the codebase before touching anything — big win for local models that tend to jump into edits prematurely
 - **Keep system prompt lean**: pi's advantage is its tiny system prompt (<1000 tokens). Use `AGENTS.md` in project roots for per-project context, not global system prompt overrides

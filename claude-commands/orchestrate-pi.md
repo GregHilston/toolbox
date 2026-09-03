@@ -409,6 +409,12 @@ cd /abs/path/to/worktrees/issue-16 && \
       --alerts /abs/path/to/.claude/pi-logs/alerts.log
 ```
 
+Workers inherit the lean tool set from `dot/pi/CLAUDE.md` → "Lazy tools":
+no `reddit_*` and no `subagent_*` tools, which is ~4,300 tokens less on every
+request and nothing an issue worker needs. Prefix the spawn with
+`PI_ENABLE_TOOLS=reddit` for the rare issue that does, and use the
+`pi-subagents` alias's `-e` path if one ever needs subagents.
+
 ### Never redirect the whole stream to a file
 
 **`> issue-16.jsonl 2>&1` is what made every worker a black box, and it was our
