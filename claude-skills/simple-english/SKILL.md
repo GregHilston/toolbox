@@ -9,6 +9,7 @@ description: |
   readable", "write for non-native readers", or asks for docs that translate
   well. Enforces the standard's 53 rules: 20/25-word sentence limits, one word
   one meaning, simple tenses, active voice, condition before command.
+disable-model-invocation: true
 license: MIT
 compatibility: claude-code cursor codex gemini-cli opencode
 metadata:

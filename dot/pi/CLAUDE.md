@@ -853,6 +853,15 @@ everything under `deprecated/`) had no matching need here.
 token budget" below):** 13,232 tokens/request without these three extensions,
 14,004 with — **+772 tokens/request** for all three together.
 
+Every discoverable skill's description is in the system prompt on every
+request, in both harnesses — the eight in `claude-skills/` measured 1,296
+tokens before the trim. Skills you invoke by name (grill-me, simple-english,
+the review and planning ones) carry `disable-model-invocation: true`, which
+both pi (`docs/skills.md`) and Claude Code read the same way: not in the
+prompt, still reachable as `/skill:name` here and `/name` there. Keep the
+description of anything that stays discoverable to two or three sentences;
+github-code-researcher's was 185 words of examples that belonged in the body.
+
 **Functionally verified live, not just load-checked.** A bare `-p 'Reply with
 exactly: OK'` smoke test proves registration didn't throw at import — it
 never actually calls a tool, so it can't prove much beyond that. Actually

@@ -8,6 +8,7 @@ description: |
   or presents a plan and asks for critical feedback. Read-only: you interview,
   you never implement.
 model: inherit
+disable-model-invocation: true
 disallowed-tools: Write, Edit, NotebookEdit
 ---
 
