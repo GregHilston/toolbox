@@ -64,6 +64,16 @@ which we do not serve). Do not re-run this investigation; `docs/local-llm-benchm
 "Results: tool calling at 4-bit" has the numbers. The pi/opencode default lives in
 `nixos/modules/darwin/home.nix` and must name the same model as `is_default` here.
 
+**dungeon is the exception: `Qwen3.5-9B-MLX-4bit`.** Its oMLX ceiling is ~27GB with
+Docker and Frigate resident, and the A3B's 19GB of weights leaves no room for KV cache
+(the 15GB gemma-4-26b-a4b already trips `prefill_memory_exceeded` there). The 9B is the
+strongest model that fits, it makes well-formed tool calls (smoke-tested 2026-09-03), and
+pi caps it at 131k context because a 262k KV cache would not fit either. Set by
+`mkForce` in `nixos/hosts/macs/dungeon/default.nix`; the 35B-A3B is not even downloaded on
+that host. Two rungs down the ladder in `~/Git/notes/llm.md` → "Which Local Model For
+Which Job" (QA tier rather than personal-assistant tier), which is the honest description
+of what pi can do on that box.
+
 **Set `reasoning_effort` on Qwen3.8.** Its template defaults to `xhigh`, which on moria burns
 the whole token budget and never emits an answer. `model_settings.json` pins `medium` plus an
 8192-token budget. Measured: `medium` 8/10 in 27 min; `xhigh` 6/10 in 111 min — more thinking
