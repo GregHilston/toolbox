@@ -33,7 +33,12 @@ target := env("HOME")
 # .gitignore carries dot/pi/.pi/agent/{sessions,auth.json,models-store.json}.
 # It stays on the list because it has always been stowed and removing it would
 # be a behavior change, but prefer `stow --no-folding pi` on a fresh host.
-packages := "aerospace karabiner pi searxngr-config tmux zsh"
+#
+# `zellij` had the identical hazard (a stray config.kdl.bak landed inside this
+# repo on first stow) and IS fixed: the home-manager activation in
+# nixos/modules/programs/tui/zellij/default.nix passes --no-folding for it. This
+# manual recipe does not, so prefer `stow --no-folding zellij` on a fresh host too.
+packages := "aerospace karabiner pi searxngr-config tmux zellij zsh"
 
 # Stow a single package
 # Usage: just stow aerospace

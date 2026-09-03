@@ -1,0 +1,57 @@
+// zjstatus (https://github.com/dj95/zjstatus) status bar, replacing zellij's
+// built-in one. Placed as layouts/default.kdl: zellij matches by name, so
+// this is picked up automatically with no config.kdl change. Colors are the
+// gruvbox-dark palette, matching this repo's stylix convention.
+//
+// The wasm plugin is deployed by nixos/modules/programs/tui/zellij, which
+// symlinks it (from nixpkgs' zellijPlugins.zjstatus) to the fixed path
+// referenced below and pre-grants its zellij permissions. Without that grant
+// the plugin loads and draws nothing, with no visible prompt — that module's
+// header explains why the grant can't be given interactively here.
+layout {
+    default_tab_template {
+        children
+        pane size=1 borderless=true {
+            plugin location="file:~/.local/share/zellij/plugins/zjstatus.wasm" {
+                format_left   "{mode}#[fg=#8ec07c,bg=#3c3836,bold] {session} "
+                format_center "{tabs}"
+                format_right  "#[fg=#928374,bg=#3c3836] {datetime} "
+                format_space  "#[bg=#3c3836]"
+
+                border_enabled  "false"
+                hide_frame_for_single_pane "false"
+
+                // Highlighted on Ctrl-b: the Ctrl-b-is-a-prefix-key state is
+                // exactly what tmux muscle memory expects to be told about.
+                mode_normal       "#[bg=#3c3836] "
+                mode_locked       "#[fg=#282828,bg=#928374,bold]  LOCKED  "
+                mode_tmux         "#[fg=#282828,bg=#fabd2f,bold]  TMUX  "
+                mode_pane         "#[fg=#282828,bg=#83a598,bold]  PANE  "
+                mode_tab          "#[fg=#282828,bg=#83a598,bold]  TAB  "
+                mode_resize       "#[fg=#282828,bg=#83a598,bold]  RESIZE  "
+                mode_move         "#[fg=#282828,bg=#83a598,bold]  MOVE  "
+                mode_scroll       "#[fg=#282828,bg=#8ec07c,bold]  SCROLL  "
+                mode_search       "#[fg=#282828,bg=#8ec07c,bold]  SEARCH  "
+                mode_enter_search "#[fg=#282828,bg=#8ec07c,bold]  SEARCH  "
+                mode_session      "#[fg=#282828,bg=#83a598,bold]  SESSION  "
+                mode_rename_tab   "#[fg=#282828,bg=#d3869b,bold]  RENAME TAB  "
+                mode_rename_pane  "#[fg=#282828,bg=#d3869b,bold]  RENAME PANE  "
+                mode_default_to_mode "normal"
+
+                tab_normal            "#[fg=#928374,bg=#3c3836] {index} {name} "
+                tab_active            "#[fg=#282828,bg=#fabd2f,bold] {index} {name} "
+                tab_normal_fullscreen "#[fg=#928374,bg=#3c3836] {index} {name} [] "
+                tab_active_fullscreen "#[fg=#282828,bg=#fabd2f,bold] {index} {name} [] "
+                tab_separator         "#[fg=#3c3836,bg=#3c3836]"
+
+                // datetime_timezone is required, not optional: the wasm
+                // sandbox hides the system zone from the plugin, so omitting
+                // it silently renders UTC. Matches nixos/config/vars.nix's
+                // system.timeZone, which this portable KDL can't read.
+                datetime          "{format}"
+                datetime_format   "%H:%M"
+                datetime_timezone "America/New_York"
+            }
+        }
+    }
+}
