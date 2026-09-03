@@ -245,6 +245,28 @@ Both checks exist because a run died on a `402` mid-flight and three workers
 were killed with their work uncommitted, while still reporting completion.
 `dot/pi/CLAUDE.md` → "Pricing" carries the numbers.
 
+## pi's heavy tools are off until you ask — `/enable`, `pi-subagents`
+
+A fresh pi session starts without the `reddit_*` tools and without the
+`subagent_*` tools. That halves the cold start (9,843 → 4,868 tokens on every
+request), because every active tool's schema is re-sent to oMLX each turn and
+those two groups were 44% of it for tools an interactive session almost never
+wants.
+
+- `/enable reddit` inside a session turns the Reddit tools on for that session
+  (`/disable reddit` reverses it). `PI_ENABLE_TOOLS=reddit pi …` does it for a
+  worker from its first turn.
+- `pi-subagents` (zsh alias) starts a session with the subagent tools loaded.
+  They cannot be toggled inside a session; the reason is in the doc below.
+- Decide at the **start** of a session. Enabling later changes the front of
+  the prompt, so oMLX re-prefills the whole conversation once — seconds early
+  on, minutes deep in.
+
+It is manual rather than model-triggered on purpose: a local model is not
+reliable at noticing it needs a tool it cannot see. `dot/pi/CLAUDE.md` →
+"Lazy tools" has the mechanism, the measurements, and why subagents are the
+exception; the extension is `dot/pi/.pi/agent/extensions/lazy-tools.ts`.
+
 ## Watching pi Workers — pi-narrate, pi-workers, pi-rpc
 
 `bin/pi-narrate.py` (pi's JSON event stream → one readable line per event),
