@@ -19,6 +19,12 @@ Drop a `.md` in `claude-commands/`; it becomes `/<name>` everywhere.
 A `claude-skills/<name>/SKILL.md` with `name`/`description` frontmatter becomes
 `/<name>`. Copy an existing skill for the shape.
 
+The description is the only part that is in context on every request, in both
+Claude Code and pi (which reads the same directory). Keep it to two or three
+sentences, and add `disable-model-invocation: true` to any skill you invoke by
+name — grill-me, simple-english, the review and planning skills — so its
+description leaves the system prompt entirely; `/<name>` still works.
+
 ### How they reach each host
 
 **Nix-managed hosts** (NixOS / nix-darwin): automatic. The home-manager module at
