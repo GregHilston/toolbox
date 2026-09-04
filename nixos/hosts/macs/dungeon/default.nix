@@ -448,11 +448,13 @@ in {
     };
   };
 
-  # Deploy oMLX with dungeon-specific settings (8GB hot cache for M3 Pro 36GB).
+  # Deploy oMLX with dungeon-specific settings. 4 GB hot cache: with Gemma 26B and Frigate's
+  # vision model resident (18 GB of weights) an 8 GB cache pushed the box into swap and oMLX
+  # into prefill throttling (2026-09-04); Hermes' stable ~13k-token system prompt still fits.
   # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
     enable = true;
-    cacheSize = "8GB";
+    cacheSize = "4GB";
   };
 
   # Dungeon-specific activation: clamshell-sleep prevention and NFS mount points.
