@@ -47,25 +47,25 @@
       "min_p": 0.0
     },
     "Qwen3.6-35B-A3B-8bit": {
-      "description": "SUPERSEDED by Qwen3.6-35B-A3B-4bit for general use -- measured 86.9 t/s here vs 130.7 t/s at 4-bit (a 1.50x penalty) for 35GB instead of 19GB. Kept because it is the target of the nix-managed -long-context symlink and as an 8-bit reference point. Unsloth-recommended sampling for Qwen3.6 coding/agentic tasks. Source: https://unsloth.ai/docs/models/qwen3.6 \u2014 also validated by multiple r/LocalLLaMA threads (see llm.md notes).",
+      "description": "SUPERSEDED by Qwen3.6-35B-A3B-4bit for general use -- measured 86.9 t/s here vs 130.7 t/s at 4-bit (a 1.50x penalty) for 35GB instead of 19GB. Kept because it is the target of the nix-managed -long-context symlink and as an 8-bit reference point. Unsloth-recommended sampling for Qwen3.6 coding/agentic tasks. Source: https://unsloth.ai/docs/models/qwen3.6 — also validated by multiple r/LocalLLaMA threads (see llm.md notes).",
       "temperature": 0.6,
       "top_p": 0.95,
       "top_k": 20,
       "repetition_penalty": 1.0,
       "presence_penalty": 0.0,
-      "_comment_thinking": "Cap thinking tokens to prevent infinite reasoning loops. Qwen3.6-35B-A3B is prone to these \u2014 see https://www.reddit.com/r/LocalLLaMA/comments/1spdvpo/ and https://itayinbarr.substack.com/p/honey-i-shrunk-the-coding-agent (little-coder used 2048; we use 8192 for more headroom on complex tasks).",
+      "_comment_thinking": "Cap thinking tokens to prevent infinite reasoning loops. Qwen3.6-35B-A3B is prone to these — see https://www.reddit.com/r/LocalLLaMA/comments/1spdvpo/ and https://itayinbarr.substack.com/p/honey-i-shrunk-the-coding-agent (little-coder used 2048; we use 8192 for more headroom on complex tasks).",
       "thinking_budget_enabled": true,
       "thinking_budget_tokens": 8192
     },
     "gemma-4-26b-a4b-it-qat-4bit": {
-      "description": "Canonical gemma \u2014 QAT (quantization-aware-trained) 4-bit. Same ~15GB footprint and decode speed as a naive post-training 4-bit quant, better quality at low bit-width (Google simulates quantization during training to minimize error). Tuned for summarization/RAG: low temp reduces hallucination, thinking disabled (wasted compute for non-reasoning tasks). Sources: mlx-community/gemma-4-26B-A4B-it-qat-4bit, https://blog.google/innovation-and-ai/technology/developers-tools/quantization-aware-training-gemma-4/.",
+      "description": "dungeon's agent model since 2026-09-04: Hermes (hermes/config.yaml) and Old Gregg's ROGER_MODEL. Canonical gemma — QAT (quantization-aware-trained) 4-bit. Same ~15GB footprint and decode speed as a naive post-training 4-bit quant, better quality at low bit-width (Google simulates quantization during training to minimize error). Tuned for summarization/RAG: low temp reduces hallucination, thinking disabled (wasted compute for non-reasoning tasks). Sources: mlx-community/gemma-4-26B-A4B-it-qat-4bit, https://blog.google/innovation-and-ai/technology/developers-tools/quantization-aware-training-gemma-4/. Tool calls verified clean on oMLX 0.6.4, 40 tok/s decode on the M3 Pro; fits beside Qwen3-VL-4B-Instruct-4bit only (see home-lab hermes/README.md). ttl_seconds 300 hands the memory back to Frigate between conversations at the cost of a ~12 s reload.",
       "temperature": 0.3,
       "top_p": 0.95,
       "top_k": 64,
       "repetition_penalty": 1.0,
       "presence_penalty": 0.0,
       "thinking_budget_enabled": false,
-      "_comment_no_speculative_decoding": "DO NOT add a vlm_mtp / dflash / mtp drafter to this model. We tested the Gemma 4 assistant-MTP drafter on moria (M4 Max) and dungeon (M3 Pro): net 0.97x and 0.91x respectively \u2014 a measured LOSS on both. A low-active-param MoE (A4B activates ~4B/token) on Apple Silicon isn't bandwidth-bound, so speculative decoding has nothing to recover and the drafter overhead dominates. Full write-up + reproduction: dot/omlx/speculative-decoding-findings.md.",
+      "_comment_no_speculative_decoding": "DO NOT add a vlm_mtp / dflash / mtp drafter to this model. We tested the Gemma 4 assistant-MTP drafter on moria (M4 Max) and dungeon (M3 Pro): net 0.97x and 0.91x respectively — a measured LOSS on both. A low-active-param MoE (A4B activates ~4B/token) on Apple Silicon isn't bandwidth-bound, so speculative decoding has nothing to recover and the drafter overhead dominates. Full write-up + reproduction: dot/omlx/speculative-decoding-findings.md.",
       "ttl_seconds": 300
     },
     "gemma-4-e4b-it-qat-4bit": {
@@ -126,7 +126,17 @@
       "thinking_budget_tokens": 8192
     },
     "Qwen3-VL-4B-Instruct": {
-      "description": "Vision model for frigate object detection on dungeon (frigate/config.yml). Low temperature: detection wants determinism, not creativity. Thinking off -- it is a perception task and latency is the whole point.",
+      "description": "Vision model, bf16 (8.5 GB). Retired on dungeon 2026-09-04 in favour of the -4bit build: beside a 15 GB agent model the bf16 pair sat above oMLX's 21-24 GB admission target and the two evicted each other on every request. Kept for moria and as the revert.",
+      "temperature": 0.1,
+      "top_p": 0.8,
+      "top_k": 20,
+      "min_p": 0.0,
+      "repetition_penalty": 1.0,
+      "presence_penalty": 0.0,
+      "thinking_budget_enabled": false
+    },
+    "Qwen3-VL-4B-Instruct-4bit": {
+      "description": "Frigate's GenAI vision model on dungeon (frigate/config.yml) and Old Gregg's ROGER_VISION_MODEL. 4-bit (3.0 GB) so it stays resident beside gemma-4-26b-a4b-it-qat-4bit: measured 2026-09-04, 18.6 GB of weights survived Frigate-sized and Hermes-sized prefills with no eviction, where the bf16 build (8.5 GB) ping-ponged. Sampling as the bf16 entry: detection wants determinism.",
       "temperature": 0.1,
       "top_p": 0.8,
       "top_k": 20,
