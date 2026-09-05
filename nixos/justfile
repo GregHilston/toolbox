@@ -136,6 +136,12 @@ validate:
 #      Integrate with 1Password CLI). This is GUI-gated: on a headless machine
 #      it fails with "error initializing client: authorization timeout", so
 #      dungeon needs either a token (preferred) or a VNC session first.
+#
+#      Not from inside tmux, either. On macOS the app's socket is not reliably
+#      reachable from a tmux pane: `op` never gets its authorization prompt and
+#      hangs with no output (moria, 2026-09-05, twice). Use a plain Ghostty
+#      window, approve the Touch ID prompt, and pass --account on a host with
+#      two accounts signed in.
 secrets:
   #!/usr/bin/env bash
   set -euo pipefail
