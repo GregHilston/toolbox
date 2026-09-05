@@ -1,5 +1,7 @@
 # Generated from models.json.tpl via `just secrets` (contains API key)
 .pi/agent/models.json
+# Generated from homeassistant.json.tpl via `just secrets` (read-only HA token)
+.pi/agent/homeassistant.json
 # Managed by home-manager (pi.nix)
 .pi/agent/settings.json
 .pi/agent/reddit-research.json
