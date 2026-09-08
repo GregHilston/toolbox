@@ -876,6 +876,12 @@ harness's concrete tool in a small table — see `claude-skills/teach/SKILL.md` 
 the pattern (adapted from [amosblomqvist/learn](https://github.com/amosblomqvist/learn),
 a `pi`-only config this repo does not otherwise vendor).
 
+The wayfinder set (`claude-skills/wayfinder/` and the skills beside it, vendored
+from mattpocock/skills) uses the same table. In pi, "call the Skill tool with X"
+means read `~/.claude/skills/X/SKILL.md` and follow it, a round of grilling is
+numbered questions in the reply, and research subagents exist only under
+`pi-subagents`; otherwise the skill says to do the work inline.
+
 ## Extensions vendored from pi-config
 
 Four pieces of [amosblomqvist/pi-config](https://github.com/amosblomqvist/pi-config)
