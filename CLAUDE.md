@@ -211,13 +211,19 @@ mode passes every unbound key to the pane, so a locked pane used to have no way 
 change tab. `Ctrl-b` (and `Alt-<hjkl>`/`Alt-<arrows>`) is bound in Locked mode too, on
 the grounds that tmux's prefix is never swallowed either.
 
-**Clipboard:** `Shift`-drag. zellij captures the mouse (`mouse_mode` defaults on),
-so a plain drag is zellij's own selection, not Ghostty's; Shift is the modifier
-Ghostty reserves for reaching past a capturing app, and `copy-on-select` then puts
-it straight on the clipboard. Same reason it works under tmux, which also runs
-`mouse on`. zellij's own `copy_on_select` goes out over OSC 52 — set `copy_command`
-only if that turns out not to reach the clipboard, and note it breaks copying from
-a zellij running over SSH.
+**Clipboard:** a plain drag copies. zellij captures the mouse, so the selection is
+its own rather than Ghostty's, and its `copy_on_select` goes out over OSC 52 — which
+did not reach the clipboard here. `copy_command` bypasses OSC 52 and pipes to
+`bin/clipboard-copy.sh`, which picks the tool per host because this file is stowed to
+macOS, NixOS and Termux alike. The cost is SSH: it copies on the machine zellij runs
+on, where OSC 52 would have reached the terminal. `Shift`-drag still works too, and
+is Ghostty's own way past a mouse-capturing app.
+
+**Nested in tmux, `Ctrl-b` never arrives.** tmux's prefix is `Ctrl-b` too, so it eats
+the key and zellij looks frozen — no detach, no tab switching, no way out. `Ctrl-b
+Ctrl-b` sends one through (tmux's `send-prefix`), `Ctrl-q` quits zellij outright, and
+from any other pane `zellij --session <name> action detach` frees it without losing
+the session.
 
 `Ctrl-g` is **not** a force-unlock: autolock re-locks within `reaction_seconds`
 (0.3s) because the pane still runs a trigger command. `Alt-z` is — it disables the

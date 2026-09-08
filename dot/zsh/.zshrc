@@ -25,7 +25,7 @@ zjhelp() {
     Alt-+ -   resize              Alt-i o  move tab
 
   \e[2mclipboard\e[0m
-    Shift-drag  select and copy, straight past zellij's mouse capture
+    drag to select — copy_command puts it on the clipboard
 
   \e[2minside nvim, git, fzf\e[0m \e[2m— autolock parks you in Locked mode\e[0m
     Ctrl-b and the Alt keys still reach zellij.
@@ -34,7 +34,7 @@ zjhelp() {
 }
 
 if [[ -o interactive && ! -f ~/.hide-zj-motd ]]; then
-  if [[ -z $ZELLIJ && -z $TMUX ]]; then
+  if [[ -z $ZELLIJ ]]; then
     print -- "  \e[2mzellij\e[0m  \e[1mzj <name>\e[0m start or resume · \e[1mzj\e[0m list · \e[1mzjk <name>\e[0m kill"
   elif [[ -n $ZELLIJ ]]; then
     # Every pane is a new shell.
