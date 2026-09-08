@@ -25,6 +25,22 @@ sentences, and add `disable-model-invocation: true` to any skill you invoke by
 name — grill-me, simple-english, the review and planning skills — so its
 description leaves the system prompt entirely; `/<name>` still works.
 
+### Wayfinder, and the rest of Matt Pocock's planning chain
+
+`claude-skills/wayfinder/` is the entry point (`/wayfinder` here, `/skill:wayfinder`
+in pi) for planning work too big for one session: a map of decision tickets on the
+repo's issue tracker, resolved one per session. The model-invoked primitives it calls
+(grilling, domain-modeling, research, prototype), the downstream `to-spec` and
+`to-tickets`, and `setup-matt-pocock-skills` live beside it. Run the setup skill once
+per target repo; it writes the tracker doc the others read.
+
+Every one of them is vendored verbatim from
+[mattpocock/skills](https://github.com/mattpocock/skills) (MIT). The only local edit
+is a trailing **Tool mapping** table where a skill names a tool, so pi (no Skill tool,
+no `AskUserQuestion`, subagents only under `pi-subagents`) runs the same file. Each
+frontmatter carries `metadata.vendored`, the upstream commit; re-vendor by diffing
+against it.
+
 ### How they reach each host
 
 **Nix-managed hosts** (NixOS / nix-darwin): automatic. The home-manager module at
