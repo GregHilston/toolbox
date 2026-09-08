@@ -39,6 +39,11 @@
   # fzf/zoxide/atuin, so Ctrl-h/j/k/l reach those tools' own keymaps instead
   # of zellij's — see dot/zellij/.config/zellij/config.kdl's plugins/
   # load_plugins/keybinds blocks. Same GC-safe home.file pattern as zjstatus.
+  #
+  # Locked mode swallows nothing and reaches nothing, so that config's `locked`
+  # block keeps Ctrl-b and the Alt keys bound (tab switching still works inside
+  # nvim) and binds Alt-z to this plugin's own "disable" pipe, which is the only
+  # unlock that survives its next reaction.
   home.file.".local/share/zellij/plugins/autolock.wasm" = {
     source = pkgs.zellijPlugins.autolock;
     force = true;

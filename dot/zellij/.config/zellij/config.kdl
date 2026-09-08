@@ -14,17 +14,59 @@
 // !=break pane out, x=close pane, d=detach, space=next layout, [=copy mode,
 // s/w=session picker.
 //
+// Ctrl-b is bound in *every* mode, locked included, so the prefix is never
+// swallowed by the program in the pane — the same contract tmux gives. The
+// `locked` block below says why that is worth vim's Ctrl-b.
+//
+// Named sessions are `zj <name>` (dot/zsh/.zshrc), which attaches or creates:
+// one verb for tmux's `new -s` and `a -t` pair.
+//
 // Theme: gruvbox-dark, one of zellij's 41 built-in themes — matches this
 // repo's stylix gruvbox-dark-medium convention (nixos/modules/stylix).
 //
-// autolock (dj95/zjstatus's sibling in the plugins/load_plugins blocks below)
-// auto-switches to "locked" mode while the focused pane runs nvim/git/fzf/
-// zoxide/atuin, so Ctrl-h/j/k/l reach that tool instead of zellij. Ctrl-g
-// force-unlocks (see the `locked` mode block below).
+// autolock (fresh2dev/zellij-autolock, in the plugins/load_plugins blocks
+// below) auto-switches to "locked" mode while the focused pane runs nvim/git/
+// fzf/zoxide/atuin, so Ctrl-h/j/k/l reach that tool instead of zellij. Ctrl-g
+// unlocks for one reaction window only; Alt-z is the durable escape (see the
+// `locked` mode block below).
 
 keybinds clear-defaults=true {
+    // Locked mode is where autolock parks you while nvim/git/fzf/zoxide/atuin
+    // owns the pane, so every bind here has to earn its conflict with that
+    // program. These do:
+    //
+    // Ctrl-b, on tmux-parity grounds. tmux grabs its prefix before the pane
+    // ever sees it, which is why `prefix n` switches windows from inside vim;
+    // without this bind zellij swallowed nothing and reached nothing, leaving
+    // a vim pane with no way to change tab. It costs vim's Ctrl-b page-up,
+    // exactly as tmux already does (dot/tmux/.tmux.conf keeps the default
+    // prefix), so the trade is one this setup has made for years.
+    //
+    // Alt-<hjkl> and Alt-<arrows> mirror the shared_except "locked" block
+    // below, so "Alt is always zellij" holds in every mode. Neither vim nor
+    // helix binds them by default.
+    //
+    // Alt-z is the durable escape. Ctrl-g alone is not: it switches to normal,
+    // autolock's next reaction (reaction_seconds, 0.3s) sees a trigger command
+    // still running in the pane and re-locks. Alt-z disables the plugin first,
+    // so the unlock sticks; Alt-z in any other mode hands control back.
     locked {
         bind "Ctrl g" { SwitchToMode "normal"; }
+        bind "Ctrl b" { SwitchToMode "tmux"; }
+        bind "Alt left" { MoveFocusOrTab "left"; }
+        bind "Alt down" { MoveFocus "down"; }
+        bind "Alt up" { MoveFocus "up"; }
+        bind "Alt right" { MoveFocusOrTab "right"; }
+        bind "Alt h" { MoveFocusOrTab "left"; }
+        bind "Alt j" { MoveFocus "down"; }
+        bind "Alt k" { MoveFocus "up"; }
+        bind "Alt l" { MoveFocusOrTab "right"; }
+        bind "Alt z" {
+            MessagePlugin "autolock" {
+                payload "disable"
+            }
+            SwitchToMode "normal"
+        }
     }
     pane {
         bind "left" { MoveFocus "left"; }
@@ -184,6 +226,13 @@ keybinds clear-defaults=true {
         bind "Alt o" { MoveTab "right"; }
         bind "Alt p" { TogglePaneInGroup; }
         bind "Alt Shift p" { ToggleGroupMarking; }
+        // The other half of the locked block's Alt-z. No SwitchToMode: the
+        // plugin picks the right mode on its own within reaction_seconds.
+        bind "Alt z" {
+            MessagePlugin "autolock" {
+                payload "enable"
+            }
+        }
         // dot/tmux/.tmux.conf's no-prefix S-<arrow> (resize) and C-S-<arrow>
         // (swap-window) are deliberately NOT ported. Zellij binds no shifted
         // arrow anywhere in its own defaults — `Alt Shift p` is the only Shift
