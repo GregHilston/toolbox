@@ -211,6 +211,14 @@ mode passes every unbound key to the pane, so a locked pane used to have no way 
 change tab. `Ctrl-b` (and `Alt-<hjkl>`/`Alt-<arrows>`) is bound in Locked mode too, on
 the grounds that tmux's prefix is never swallowed either.
 
+**Clipboard:** `Shift`-drag. zellij captures the mouse (`mouse_mode` defaults on),
+so a plain drag is zellij's own selection, not Ghostty's; Shift is the modifier
+Ghostty reserves for reaching past a capturing app, and `copy-on-select` then puts
+it straight on the clipboard. Same reason it works under tmux, which also runs
+`mouse on`. zellij's own `copy_on_select` goes out over OSC 52 — set `copy_command`
+only if that turns out not to reach the clipboard, and note it breaks copying from
+a zellij running over SSH.
+
 `Ctrl-g` is **not** a force-unlock: autolock re-locks within `reaction_seconds`
 (0.3s) because the pane still runs a trigger command. `Alt-z` is — it disables the
 plugin first; `Alt-z` again hands control back. Config changes need a detach and

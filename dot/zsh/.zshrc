@@ -24,6 +24,9 @@ zjhelp() {
     Alt-hjkl  focus pane / tab    Alt-n  new pane    Alt-f  floating
     Alt-+ -   resize              Alt-i o  move tab
 
+  \e[2mclipboard\e[0m
+    Shift-drag  select and copy, straight past zellij's mouse capture
+
   \e[2minside nvim, git, fzf\e[0m \e[2m— autolock parks you in Locked mode\e[0m
     Ctrl-b and the Alt keys still reach zellij.
     \e[1mAlt-z\e[0m unlocks for real; Ctrl-g re-locks 0.3s later.
