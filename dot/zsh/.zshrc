@@ -192,6 +192,33 @@ alias pidf='pi --provider deepseek --model deepseek-v4-flash'
 # (nixos/modules/programs/tui/pi.nix); this is how a session that wants them starts.
 alias pi-subagents='pi -e ~/.pi/agent/npm/node_modules/pi-agent-suite/extensions/run-subagent/index.ts'
 
+# zellij with tmux's muscle memory. `zj foo` attaches to session foo, creating
+# it if it does not exist, so one verb covers both `tmux new -s foo` and
+# `tmux a -t foo`. Bare `zj` lists sessions.
+#
+# tmux's verbs and target flags are stripped rather than rejected, so `zj new
+# -s foo` and `zj a -t foo` land on the same place. (`${arr:#pat}` is zsh's
+# "drop elements matching pat"; arrays are 1-indexed, unlike Python.)
+zj() {
+  emulate -L zsh
+  local -a words=("$@")
+  words=(${words:#(new|new-session|a|at|attach|-s|-t)})
+  local name=$words[1]
+
+  if [[ -z $name ]]; then
+    zellij list-sessions
+  elif [[ -n $ZELLIJ ]]; then
+    # Already in a session: hand this client over. zellij refuses to nest, and
+    # switch-session creates or resurrects the target the same way attach -c
+    # does (it is what the session-manager's own new-session flow calls).
+    zellij action switch-session "$name"
+  else
+    zellij attach --create "$name"
+  fi
+}
+
+alias zjk='zellij kill-session'
+
 # Clipboard (pbcopy on macOS, xclip on Linux)
 if [[ "$OSTYPE" == "darwin"* ]]; then
   alias clip="pbcopy <"
