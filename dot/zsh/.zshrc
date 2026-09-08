@@ -1,3 +1,46 @@
+# zellij reminders, until the keys stick. `zjhelp` prints the sheet on demand,
+# `touch ~/.hide-zj-motd` silences the automatic ones, deleting this block ends
+# it for good.
+#
+# Above p10k's preamble on purpose: instant prompt redirects stdout until the
+# first prompt expansion, so anything printed below there is swallowed and
+# reported back as "console output during zsh initialization".
+zjhelp() {
+  print -- "
+  \e[1mzellij\e[0m — prefix is \e[1mCtrl-b\e[0m, same as tmux
+
+  \e[2msessions, from the shell\e[0m
+    zj <name>       start or resume        zj          list
+    zjk <name>      kill                   Ctrl-b d    detach
+
+  \e[2mCtrl-b, then\e[0m
+    c  new tab        &  close tab       n / p  next / prev tab
+    1-9 go to tab     Tab  last tab      ,  rename tab
+    %  split right    \"  split down      x  close pane
+    z  zoom           o  cycle pane      {  }  rotate pane
+    [  scroll back    s  session picker  !  break pane out
+
+  \e[2mno prefix\e[0m
+    Alt-hjkl  focus pane / tab    Alt-n  new pane    Alt-f  floating
+    Alt-+ -   resize              Alt-i o  move tab
+
+  \e[2minside nvim, git, fzf\e[0m \e[2m— autolock parks you in Locked mode\e[0m
+    Ctrl-b and the Alt keys still reach zellij.
+    \e[1mAlt-z\e[0m unlocks for real; Ctrl-g re-locks 0.3s later.
+"
+}
+
+if [[ -o interactive && ! -f ~/.hide-zj-motd ]]; then
+  if [[ -z $ZELLIJ && -z $TMUX ]]; then
+    print -- "  \e[2mzellij\e[0m  \e[1mzj <name>\e[0m start or resume · \e[1mzj\e[0m list · \e[1mzjk <name>\e[0m kill"
+  elif [[ -n $ZELLIJ ]]; then
+    # Every pane is a new shell.
+    _zj_seen=${TMPDIR:-/tmp}/.zj-motd-$ZELLIJ_SESSION_NAME
+    [[ -f $_zj_seen ]] || { : > $_zj_seen; zjhelp; }
+    unset _zj_seen
+  fi
+fi
+
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -218,50 +261,6 @@ zj() {
 }
 
 alias zjk='zellij kill-session'
-
-# Reminders while zellij's keys are still new. Delete this block when they
-# stick; `touch ~/.hide-zj-motd` silences it meanwhile, `zjhelp` still works.
-zjhelp() {
-  print -- "
-  \e[1mzellij\e[0m — prefix is \e[1mCtrl-b\e[0m, same as tmux
-
-  \e[2msessions, from the shell\e[0m
-    zj <name>       start or resume        zj          list
-    zjk <name>      kill                   Ctrl-b d    detach
-
-  \e[2mCtrl-b, then\e[0m
-    c  new tab        &  close tab       n / p  next / prev tab
-    1-9 go to tab     Tab  last tab      ,  rename tab
-    %  split right    \"  split down      x  close pane
-    z  zoom           o  cycle pane      {  }  rotate pane
-    [  scroll back    s  session picker  !  break pane out
-
-  \e[2mno prefix\e[0m
-    Alt-hjkl  focus pane / tab    Alt-n  new pane    Alt-f  floating
-    Alt-+ -   resize              Alt-i o  move tab
-
-  \e[2minside nvim, git, fzf\e[0m \e[2m— autolock parks you in Locked mode\e[0m
-    Ctrl-b and the Alt keys still reach zellij.
-    \e[1mAlt-z\e[0m unlocks for real; Ctrl-g re-locks 0.3s later.
-"
-}
-
-# A precmd, not an inline print: p10k's instant prompt warns (verbose, in
-# ~/.p10k.zsh) about any console output during init. Fires once, then leaves.
-_zj_motd() {
-  add-zsh-hook -d precmd _zj_motd
-  unfunction _zj_motd
-  [[ -f ~/.hide-zj-motd ]] && return
-  if [[ -z $ZELLIJ && -z $TMUX ]]; then
-    print -- "  \e[2mzellij\e[0m  \e[1mzj <name>\e[0m start or resume · \e[1mzj\e[0m list · \e[1mzjk <name>\e[0m kill"
-  elif [[ -n $ZELLIJ ]]; then
-    # Every pane is a new shell.
-    local seen=${TMPDIR:-/tmp}/.zj-motd-$ZELLIJ_SESSION_NAME
-    [[ -f $seen ]] || { : > $seen; zjhelp; }
-  fi
-}
-autoload -Uz add-zsh-hook
-add-zsh-hook precmd _zj_motd
 
 # Clipboard (pbcopy on macOS, xclip on Linux)
 if [[ "$OSTYPE" == "darwin"* ]]; then
