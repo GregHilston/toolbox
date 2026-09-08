@@ -397,6 +397,30 @@ in {
     };
   };
 
+  # Checks Clarkesworld for a newly published issue and, if there is one, builds its epub,
+  # validates it (epubcheck), imports it into the calibre container with a kepub conversion,
+  # and Pushover-notifies. Idempotent — state.json in the script's own directory means a day
+  # with nothing new is a fast, silent no-op, so RunAtLoad/KeepAlive don't matter here the way
+  # they do for the open-a agents above. Source lives in home-lab, not here — see
+  # home-lab/scripts/clarkesworld/README.md for the full pipeline and gotchas.
+  launchd.user.agents.clarkesworld-run = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/clarkesworld/run.sh"
+      ];
+      RunAtLoad = false;
+      StartCalendarInterval = [
+        {
+          Hour = 9;
+          Minute = 0;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/clarkesworld-run.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/clarkesworld-run.log";
+    };
+  };
+
   # Watch the settings that live OUTSIDE the home-lab repo and revert SILENTLY.
   #
   # The other six agents here all watch infrastructure — is the tunnel up, is the port
