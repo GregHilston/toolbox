@@ -213,10 +213,14 @@ the grounds that tmux's prefix is never swallowed either.
 
 **Clipboard:** a plain drag copies. zellij captures the mouse, so the selection is
 its own rather than Ghostty's, and its `copy_on_select` goes out over OSC 52 — which
-did not reach the clipboard here. `copy_command` bypasses OSC 52 and pipes to
+did not reach the clipboard here. `copy_command` bypasses that and pipes to
 `bin/clipboard-copy.sh`, which picks the tool per host because this file is stowed to
-macOS, NixOS and Termux alike. The cost is SSH: it copies on the machine zellij runs
-on, where OSC 52 would have reached the terminal. `Shift`-drag still works too, and
+macOS, NixOS and Termux alike.
+
+That wrapper writes OSC 52 to `$SSH_TTY` when it sees one, rather than copying on the
+far end where a headless box has no clipboard at all. So a selection made in a zellij
+on dungeon rides the connection back and lands on moria's clipboard — what zellij does
+for itself when `copy_command` is unset. `Shift`-drag still works everywhere too, and
 is Ghostty's own way past a mouse-capturing app.
 
 **Nested in tmux, `Ctrl-b` never arrives.** tmux's prefix is `Ctrl-b` too, so it eats

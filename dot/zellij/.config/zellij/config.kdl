@@ -516,8 +516,8 @@ scroll_buffer_size 100000
 // Set, so a plain mouse drag lands on the system clipboard. copy_on_select is
 // on by default but goes out over OSC 52, which does not reach Ghostty here.
 // The wrapper (toolbox bin/, on $PATH) picks the right tool per host, because
-// this file is stowed to macOS, NixOS and Termux alike. The cost is SSH: this
-// copies on the machine zellij runs on, where OSC 52 reached the terminal.
+// this file is stowed to macOS, NixOS and Termux alike, and falls back to OSC 52
+// over SSH so a copy on dungeon still reaches the clipboard you are sitting at.
 copy_command "clipboard-copy.sh"
  
 // Choose the destination for copied text
