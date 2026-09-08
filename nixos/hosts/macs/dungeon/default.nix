@@ -55,6 +55,30 @@
       StandardErrorPath = logFile;
     };
   };
+
+  # Daily check for a newly published issue of a magazine: build its epub, validate it
+  # (epubcheck), import it into the calibre container with a kepub conversion, and
+  # Pushover-notify. Idempotent — state.json in each script's own directory means a day
+  # with nothing new is a fast, silent no-op, so RunAtLoad/KeepAlive don't matter here the
+  # way they do for the open-a agents below. Source lives in home-lab, not here; see
+  # home-lab/scripts/periodicals/README.md for the pipeline and its gotchas.
+  mkPeriodicalAgent = name: hour: {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/periodicals/${name}/run.sh"
+      ];
+      RunAtLoad = false;
+      StartCalendarInterval = [
+        {
+          Hour = hour;
+          Minute = 0;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/${name}-run.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/${name}-run.log";
+    };
+  };
 in {
   imports = [
     ../../../modules/darwin/common.nix
@@ -397,29 +421,11 @@ in {
     };
   };
 
-  # Checks Clarkesworld for a newly published issue and, if there is one, builds its epub,
-  # validates it (epubcheck), imports it into the calibre container with a kepub conversion,
-  # and Pushover-notifies. Idempotent — state.json in the script's own directory means a day
-  # with nothing new is a fast, silent no-op, so RunAtLoad/KeepAlive don't matter here the way
-  # they do for the open-a agents above. Source lives in home-lab, not here — see
-  # home-lab/scripts/clarkesworld/README.md for the full pipeline and gotchas.
-  launchd.user.agents.clarkesworld-run = {
-    serviceConfig = {
-      ProgramArguments = [
-        "/bin/bash"
-        "/Users/${vars.user.name}/Git/home-lab/scripts/clarkesworld/run.sh"
-      ];
-      RunAtLoad = false;
-      StartCalendarInterval = [
-        {
-          Hour = 9;
-          Minute = 0;
-        }
-      ];
-      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/clarkesworld-run.log";
-      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/clarkesworld-run.log";
-    };
-  };
+  # Staggered by an hour so two scrapes don't share a minute through the same tunnel.
+  # Uncanny is bimonthly and waits for an issue to finish releasing, so it is a no-op on
+  # all but about six mornings a year — see its README.
+  launchd.user.agents.clarkesworld-run = mkPeriodicalAgent "clarkesworld" 9;
+  launchd.user.agents.uncanny-run = mkPeriodicalAgent "uncanny" 10;
 
   # Watch the settings that live OUTSIDE the home-lab repo and revert SILENTLY.
   #
