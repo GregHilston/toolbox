@@ -28,6 +28,7 @@
       # Folder form, a natural home for standalone scripts / Marimo notebooks:
       "local/"
       "scratch/"
+      ".scratch/" # wayfinder local tracker, never committed
     ];
 
     signing = {
