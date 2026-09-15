@@ -43,7 +43,6 @@
 
       # AI
       "claude"
-      "lm-studio"
       "draw-things"
 
       # Other

@@ -204,11 +204,6 @@ if [ -d "/opt/homebrew/opt/libpq/bin" ]; then
   export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 fi
 
-# LM Studio CLI
-if [ -d "$HOME/.lmstudio/bin" ]; then
-  export PATH="$PATH:$HOME/.lmstudio/bin"
-fi
-
 # Screenlayout (xrandr scripts on Linux)
 if [ -d "$HOME/.screenlayout" ]; then
   export PATH="$HOME/.screenlayout:$PATH"

@@ -65,7 +65,6 @@ exclude() {
 }
 
 echo "LLM model weights (all re-downloadable):"
-exclude "$HOME/.lmstudio"                          "LM Studio models"
 exclude "$HOME/Git/toolbox/dot/omlx/.omlx/models"  "oMLX models"
 exclude "$HOME/Git/toolbox/dot/omlx/.omlx/cache"   "oMLX prefix cache"
 exclude "$HOME/.omlx"                              "oMLX runtime KV cache"
