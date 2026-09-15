@@ -49,6 +49,17 @@
     force = true;
   };
 
+  # zellij-forgot (github.com/karimould/zellij-forgot): the Ctrl-b ? popup,
+  # a searchable list built from config.kdl's own keybinds. Not in nixpkgs,
+  # so fetched from its release; same home.file pattern as above.
+  home.file.".local/share/zellij/plugins/zellij_forgot.wasm" = {
+    source = pkgs.fetchurl {
+      url = "https://github.com/karimould/zellij-forgot/releases/download/0.4.2/zellij_forgot.wasm";
+      hash = "sha256-MRlBRVGdvcEoaFtFb5cDdDePoZ/J2nQvvkoyG6zkSds=";
+    };
+    force = true;
+  };
+
   # Plugin permission grants. Zellij has every plugin request permissions as it
   # loads and caches the answer in a KDL file under its *cache* dir; until an
   # answer is cached the plugin loads and then draws nothing. That is the entire
@@ -74,6 +85,7 @@
       permissions = {
         zjstatus = ["ChangeApplicationState" "ReadApplicationState" "RunCommands"];
         autolock = ["ChangeApplicationState" "ReadApplicationState"];
+        zellij_forgot = ["ReadApplicationState" "ChangeApplicationState"];
       };
       # Whatever the `directories` crate calls the cache dir, which is what zellij asks.
       cacheDir =

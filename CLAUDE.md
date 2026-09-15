@@ -197,6 +197,10 @@ Installed everywhere tmux is; tmux is still the default multiplexer. Config is
 stow-managed at `dot/zellij/`, keybinds deliberately shaped like our tmux ones, and
 `dot/zellij/.config/zellij/config.kdl`'s header comment owns the details.
 
+**Learning the keys:** the bottom row is zellij's stock status-bar, listing what
+the current mode accepts (press `Ctrl-b` to see the Tmux-mode keys), and
+`Ctrl-b ?` opens zellij-forgot, a searchable list of every binding.
+
 **Named sessions:** `zj <name>` (a zsh function in `dot/zsh/.zshrc`) attaches to that
 session or creates it, from inside a session or out. It is the one verb for tmux's
 `new -s` / `a -t` pair, and it tolerates that syntax — `zj a -t foo` works. Bare `zj`

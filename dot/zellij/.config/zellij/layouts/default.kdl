@@ -1,5 +1,10 @@
-// zjstatus (https://github.com/dj95/zjstatus) status bar, replacing zellij's
-// built-in one. Placed as layouts/default.kdl: zellij matches by name, so
+// zjstatus (https://github.com/dj95/zjstatus) status bar, with zellij's
+// built-in status-bar kept beneath it as the key-hint row: zjstatus shows
+// which mode you are in, never which keys that mode accepts. Stock
+// status-bar reads the live keymap, Tmux mode included, which neither
+// zjstatus-hints nor zjhints' curated list covers.
+//
+// Placed as layouts/default.kdl: zellij matches by name, so
 // this is picked up automatically with no config.kdl change. Colors are the
 // gruvbox-dark palette, matching this repo's stylix convention.
 //
@@ -52,6 +57,9 @@ layout {
                 datetime_format   "%H:%M"
                 datetime_timezone "America/New_York"
             }
+        }
+        pane size=1 borderless=true {
+            plugin location="status-bar"
         }
     }
 }
