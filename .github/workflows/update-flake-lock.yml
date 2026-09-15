@@ -63,7 +63,7 @@ jobs:
             experimental-features = nix-command flakes
 
       - name: Cache Nix store
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v15
 
       # `just validate` (nixos/justfile) rather than a copy of it here: it runs
       # `nix flake check` and then evaluates every host to a toplevel drvPath,
@@ -127,7 +127,7 @@ jobs:
             experimental-features = nix-command flakes
 
       - name: Cache Nix store
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v15
 
       # 6.6 GB of closure onto a runner documented at 14 GB is the least headroom in
       # this design, so `No space left on device` is the likeliest false ❌. It already
