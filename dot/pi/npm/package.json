@@ -1,0 +1,12 @@
+{
+  "name": "pi-packages",
+  "private": true,
+  "dependencies": {
+    "@ff-labs/pi-fff": "0.10.6",
+    "@gotgenes/pi-permission-system": "27.1.3",
+    "@narumitw/pi-plan-mode": "0.55.3",
+    "pi-agent-suite": "2.11.1",
+    "pi-powerline-footer": "0.15.1",
+    "pi-reddit-research": "0.1.3"
+  }
+}
