@@ -8,3 +8,22 @@ updates:
     labels:
       - "dependencies"
       - "automated"
+
+  # pi's packages and its vendored extensions.
+  - package-ecosystem: "npm"
+    directories:
+      - "/dot/pi/npm"
+      - "/dot/pi/.pi/agent/extensions/web-fetch"
+      - "/dot/pi/.pi/agent/extensions/bash-guard"
+      - "/dot/pi/extensions-available/sandbox"
+    schedule:
+      interval: "weekly"
+    groups:
+      # Majors stay separate PRs; they can break extensions.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    labels:
+      - "dependencies"
+      - "automated"

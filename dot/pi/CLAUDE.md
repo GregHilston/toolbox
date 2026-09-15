@@ -898,8 +898,8 @@ everything under `deprecated/`) had no matching need here.
   (Claude Code has `WebFetch`; pi had nothing). Falls back to `r.jina.ai` (a
   third-party reader service) for pages Readability can't parse — worth
   knowing before a URL goes through it. Vendored with its own
-  `package.json`/`package-lock.json`; `pi.nix`'s `installPiExtensionDeps`
-  activation runs `npm install` in it, same pattern as
+  `package.json`/`package-lock.json`; `pi.nix`'s `installPiPackages`
+  activation runs `npm ci` in it, same pattern as
   `extensions-available/sandbox`.
 - **`extensions/bash-guard/`** — a real gap, not overlap. `pi-permission-system`
   only gates file writes; `orchestration-guardrails.ts` only arms itself for
@@ -910,7 +910,7 @@ everything under `deprecated/`) had no matching need here.
   no UI when it detects it's running inside a subagent
   (`PI_SUBAGENT_DEPTH >= 1`, set by `pi-agent-suite`'s subagent runner). See
   its own `extensions/bash-guard/README.md` for the full command list. Also
-  npm-installed by `installPiExtensionDeps` (one dependency, `shell-quote`).
+  npm-installed by `installPiPackages` (one dependency, `shell-quote`).
 - **`extensions/ask-user-question.ts`** — a UI popup for open questions with no
   right answer. Single file, no npm deps (uses pi's own bundled
   `@mariozechner/pi-tui`, like `web-search.ts` already does), so nothing extra

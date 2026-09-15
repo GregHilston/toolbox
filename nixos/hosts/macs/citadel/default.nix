@@ -118,7 +118,7 @@
     custom.programs.pi.packages = lib.mkForce [
       "npm:@ff-labs/pi-fff"
       "npm:pi-agent-suite"
-      "npm:pi-powerline-footer@0.15.1" # keep in sync with modules/programs/tui/pi.nix
+      "npm:pi-powerline-footer"
     ];
 
     # Disable modules not needed on this host

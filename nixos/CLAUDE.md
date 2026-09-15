@@ -325,8 +325,8 @@ find ~ -maxdepth 3 -name '*.backup' -exec mv {} ~/.hm-stale-backups-.../ \;
   such tools by absolute nix path (`${pkgs.stow}/bin/stow`), never rely on PATH in an
   activation script.
 - **The same stripped PATH silently disabled pi's package install.**
-  `modules/programs/tui/pi.nix` guards its activation on `command -v pi`, and pi
-  lives at `/opt/homebrew/bin/pi` on Darwin — not on activation's minimal PATH.
+  `modules/programs/tui/pi.nix` guards its activation on `command -v npm`, and npm
+  lives in `/opt/homebrew/bin` on Darwin — not on activation's minimal PATH.
   The guard failed, the whole block was skipped, and nothing said so: activation
   prints `Activating installPiPackages` and simply never prints its success line.
   It went unnoticed for as long as it existed, because pi installs missing

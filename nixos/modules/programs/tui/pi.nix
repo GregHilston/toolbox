@@ -8,12 +8,25 @@
   cfg = config.custom.programs.pi;
 
   # A packages entry is either a source string or pi's filtering object form.
-  # `pi install` only ever takes the source, so unwrap it for the activation
-  # script while settings.json keeps the full entry.
   packageSource = pkg:
     if builtins.isString pkg
     then pkg
     else pkg.source;
+
+  npmDir = ../../../../dot/pi/npm;
+  npmManifest = builtins.fromJSON (builtins.readFile "${npmDir}/package.json");
+
+  # Sources the manifest lacks, or pins differently.
+  unlockedPackages = builtins.filter (source: let
+    m = builtins.match "npm:(@?[^@]+)(@(.+))?" source;
+    name = builtins.elemAt m 0;
+    pin = builtins.elemAt m 2;
+  in
+    m
+    == null
+    || !(npmManifest.dependencies ? ${name})
+    || (pin != null && npmManifest.dependencies.${name} != pin))
+  (map packageSource cfg.packages);
 
   # One oMLX model entry. Everything except id/name has a sane default because
   # every model we serve shares the same shape, and `cost` is not an option at
@@ -111,10 +124,9 @@ in {
       '';
     };
 
-    # Packages installed via `pi install`. Pi resolves these at runtime.
-    # Git-based packages are cloned to ~/.pi/agent/git/; npm packages go to
-    # the global node_modules. Local extensions live in ~/.pi/agent/extensions/
-    # managed by stow from dot/pi/.
+    # npm packages pi loads from ~/.pi/agent/npm, installed from the lock in
+    # dot/pi/npm (see installPiPackages below). Local extensions live in
+    # ~/.pi/agent/extensions/ managed by stow from dot/pi/.
     #
     # Entries are either a plain source string, or pi's object form for
     # filtering what a package loads (docs/packages.md -> "Package Filtering").
@@ -172,15 +184,11 @@ in {
         # and injects no system prompt, so it costs 0 tok/request. It is a UI
         # extension only. Configured under `powerline` in settings.json below.
         #
-        # Pinned, like ccstatusline in claude.nix. This one replaces pi's editor
-        # component — not just the footer — so a float-to-latest has a wider
-        # blast radius than the other packages here. 0.15.1 also declares
-        # peerDependencies of >=0.81.0 <0.85.0 on @earendil-works/pi-*, and
-        # installed pi is 0.84.2: one minor bump from falling out of range, so
-        # a pi upgrade may need this version moved with it.
-        # Mirrored in hosts/macs/citadel/default.nix, which mkForces this list.
+        # It replaces pi's editor component, not just the footer, so review its
+        # Dependabot bumps by hand. Mirrored in hosts/macs/citadel/default.nix,
+        # which mkForces this list.
         # https://github.com/nicobailon/pi-powerline-footer
-        "npm:pi-powerline-footer@0.15.1"
+        "npm:pi-powerline-footer"
 
         # Reddit JSON research tools + a matching skill: compact evidence packs
         # for opinions, bugs, fixes, comparisons. Needs a session cookie —
@@ -315,47 +323,53 @@ in {
       };
     };
 
-    # Install pi packages (npm/git) on activation. Pi declares packages in
-    # settings.json but the actual npm globals and git clones need `pi install`.
-    # This runs after writeBoundary so settings.json is already in place.
-    # Each install is idempotent — pi skips already-installed packages.
+    assertions = [
+      {
+        assertion = unlockedPackages == [];
+        message = ''
+          custom.programs.pi.packages lists npm packages that
+          dot/pi/npm/package.json lacks or pins differently:
+          ${lib.concatStringsSep ", " unlockedPackages}
+          Run `npm install --save-exact <pkg>@<version>` (or without a version)
+          in dot/pi/npm and commit both files.
+        '';
+      }
+    ];
+
+    # Installs from committed locks, not `pi install`, which reruns npm every
+    # time. The copy in ~/.pi/agent/npm is what pi reads; the store path
+    # stamped into node_modules skips `npm ci` until a lock changes. Pi's own
+    # startup check then finds every package present.
     home.activation.installPiPackages = lib.hm.dag.entryAfter ["writeBoundary"] ''
-      # Home-manager activation runs with a minimal PATH. pi lives in Homebrew
+      # Home-manager activation runs with a minimal PATH. npm lives in Homebrew
       # on Darwin and the user profile on NixOS, so neither is reachable by
-      # default and the `command -v pi` guard below silently skipped the whole
-      # block — the same stripped-PATH trap nixos/CLAUDE.md documents for stow.
-      # Symptom: activation prints "Activating installPiPackages", never prints
-      # the success line, and new packages are simply never installed.
+      # default and the `command -v npm` guard below would silently skip the
+      # whole block — the same stripped-PATH trap nixos/CLAUDE.md documents.
       export PATH="/opt/homebrew/bin:/run/current-system/sw/bin:$HOME/.nix-profile/bin:$PATH"
 
-      if command -v pi &>/dev/null; then
-        ${builtins.concatStringsSep "\n        " (map (pkg: ''pi install "${packageSource pkg}" 2>/dev/null || true'') cfg.packages)}
-        echo "✓ Pi packages installed"
-      fi
-    '';
-
-    # web-fetch and bash-guard are vendored local extensions (not `pi install`
-    # packages — nothing in cfg.packages names them) with their own
-    # package.json. The folded stow symlink at ~/.pi/agent/extensions already
-    # makes their source visible; only node_modules is missing on a fresh
-    # checkout, since it's gitignored (see dot/pi/CLAUDE.md). Guarded on the
-    # directory existing so this no-ops harmlessly if it runs before
-    # stowDotfiles on a fresh host — the next activation picks it up once stow
-    # has.
-    home.activation.installPiExtensionDeps = lib.hm.dag.entryAfter ["writeBoundary"] ''
-      export PATH="/opt/homebrew/bin:/run/current-system/sw/bin:$HOME/.nix-profile/bin:$PATH"
+      pi_npm_ci() {
+        local dir=$1 stamp=$2
+        # Extension dirs appear only after stow.
+        [ -d "$dir" ] || return 0
+        [ "$(cat "$dir/node_modules/.nix-lock" 2>/dev/null)" = "$stamp" ] && return 0
+        (cd "$dir" && npm ci --no-audit --no-fund) \
+          && echo "$stamp" > "$dir/node_modules/.nix-lock" \
+          || echo "WARNING: npm ci failed in $dir"
+      }
 
       if command -v npm &>/dev/null; then
-        for ext in web-fetch bash-guard; do
-          ext_dir="${config.home.homeDirectory}/.pi/agent/extensions/$ext"
-          if [ -d "$ext_dir" ] && [ ! -d "$ext_dir/node_modules" ]; then
-            # Deliberately not silencing stderr here (unlike installPiPackages
-            # above): a first-time install failing is the interesting case,
-            # and swallowing it left no way to tell why.
-            (cd "$ext_dir" && npm install --no-audit --no-fund) || echo "WARNING: npm install failed for pi extension $ext"
-          fi
+        npm_dir="${config.home.homeDirectory}/.pi/agent/npm"
+        mkdir -p "$npm_dir"
+        for f in package.json package-lock.json; do
+          install -m 644 "${npmDir}/$f" "$npm_dir/$f"
         done
-        echo "✓ Pi extension deps installed"
+        pi_npm_ci "$npm_dir" "${npmDir}"
+
+        pi_npm_ci "${config.home.homeDirectory}/.pi/agent/extensions/web-fetch" \
+          "${../../../../dot/pi/.pi/agent/extensions/web-fetch/package-lock.json}"
+        pi_npm_ci "${config.home.homeDirectory}/.pi/agent/extensions/bash-guard" \
+          "${../../../../dot/pi/.pi/agent/extensions/bash-guard/package-lock.json}"
+        echo "✓ Pi packages installed"
       fi
     '';
   };
