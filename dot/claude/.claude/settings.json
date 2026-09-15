@@ -52,11 +52,6 @@
     "context7@claude-plugins-official": true
   },
   "effortLevel": "high",
-  "modelSettings": {
-    "claude-sonnet-5": {
-      "effortLevel": "high"
-    }
-  },
   "autoCompactWindow": 1000000,
   "tui": "fullscreen",
   "autoMemoryEnabled": false,
