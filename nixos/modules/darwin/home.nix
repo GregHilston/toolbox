@@ -74,6 +74,12 @@ in {
       ${pkgs.uv}/bin/uv tool install --upgrade mflux 2>/dev/null || true
     '';
 
+    # /bin/zsh reads terminfo before TERMINFO_DIRS exists.
+    home.file.".terminfo" = {
+      source = "${pkgs.ghostty-bin.terminfo}/share/terminfo";
+      recursive = true;
+    };
+
     custom.programs = {
       pi = {
         enable = true;

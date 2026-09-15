@@ -29,10 +29,7 @@ in {
   # System packages (CLI tools available system-wide).
   # The baseline is shared with NixOS via config/base-packages.nix.
   environment = {
-    systemPackages =
-      basePackages.systemPackages
-      # SSH from Ghostty sends TERM=xterm-ghostty.
-      ++ [pkgs.ghostty-bin.terminfo];
+    inherit (basePackages) systemPackages;
 
     variables = {
       EDITOR = "nvim";
