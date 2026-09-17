@@ -16,6 +16,7 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 ├── tests/                                  # Tests for bin/ scripts (`just test`). Not under bin/, which is on $PATH.
 ├── windows/                                # Windows provisioning (autounattend.xml, scoop/winget lists).
 ├── justfile                                # Root recipes (`just setup-claude`, `just test`).
+├── ATTIC.md                                # Things deleted from this repo, and how to get them back.
 ├── CLAUDE.md                               # Repo guide for Claude Code (and humans).
 ├── README.md                               # This documentation.
 ```
