@@ -10,31 +10,43 @@ SEED=/opt/artificium-seed
 RUN_USER=artificium
 
 log() { printf 'entrypoint: %s\n' "$*" >&2; }
+die() { printf 'entrypoint: FATAL: %s\n' "$*" >&2; exit 1; }
 
-if [ "$(id -u)" -ne 0 ]; then
-  echo "entrypoint: FATAL: must start as root to install the firewall" >&2
-  exit 1
-fi
+[ "$(id -u)" -eq 0 ] || die "must start as root to install the firewall"
 
 /usr/local/sbin/init-firewall.sh
 
-# Only ever seeds an empty instance. Everything under /instance is the agent's
-# to rewrite, including its own code, and a restart must not undo that.
-if [ ! -e "${INSTANCE}/artificium.py" ]; then
+# Everything under /instance belongs to the agent between runs, so root must not
+# be tricked into writing through a symlink it planted. Nothing here writes
+# agent-controlled bytes, so the worst case is a wedged container -- but the
+# guard is two lines.
+refuse_symlink() {
+  local path="$1"
+  while [ "${path}" != "/" ] && [ "${path}" != "." ]; do
+    if [ -L "${path}" ]; then
+      die "refusing to write through symlink: ${path}"
+    fi
+    path="$(dirname "${path}")"
+  done
+}
+
+refuse_symlink "${INSTANCE}/artificium.py"
+
+seeded=false
+if [ ! -f "${INSTANCE}/artificium.py" ]; then
   log "seeding a fresh instance from ${DIST}"
   cp -a "${DIST}/." "${INSTANCE}/"
+  seeded=true
 fi
 
-if [ -d "${SEED}" ]; then
-  if [ ! -e "${INSTANCE}/mind/self.txt.seeded" ] && [ -e "${SEED}/self.txt" ]; then
-    cp "${SEED}/self.txt" "${INSTANCE}/mind/self.txt"
-    : > "${INSTANCE}/mind/self.txt.seeded"
-    log "installed the standing purpose (Self is mutable from here on)"
-  fi
+# Self is installed by `setup --self-file`, not here, so there is exactly one
+# mechanism for it and no marker file left lying around inside mind/.
+if [ -d "${SEED}/project" ]; then
   for brief in "${SEED}"/project/*; do
     [ -e "${brief}" ] || continue
     target="${INSTANCE}/mind/space/vt-smb/$(basename "${brief}")"
     if [ ! -e "${target}" ]; then
+      refuse_symlink "$(dirname "${target}")"
       mkdir -p "$(dirname "${target}")"
       cp "${brief}" "${target}"
       log "installed $(basename "${brief}")"
@@ -42,11 +54,16 @@ if [ -d "${SEED}" ]; then
   done
 fi
 
-# Guarded, because a recursive chown over a grown mind/ costs minutes on every
-# restart for nothing.
-if [ "$(stat -c %U "${INSTANCE}")" != "${RUN_USER}" ]; then
+# Guarded on a path the seed created, not on the bind-mount root: the mount root
+# may already read as the host user while everything root just copied into it
+# does not. A recursive chown over a grown mind/ costs minutes, so it runs when
+# the seed ran and otherwise only if ownership actually looks wrong.
+#
+# `${RUN_USER}:` means "the user's own login group" -- there may be no group
+# named artificium, since GID 20 is already dialout on Debian.
+if [ "${seeded}" = true ] || [ "$(stat -c %U "${INSTANCE}/artificium.py")" != "${RUN_USER}" ]; then
   log "taking ownership of ${INSTANCE}"
-  chown -R "${RUN_USER}:${RUN_USER}" "${INSTANCE}"
+  chown -R "${RUN_USER}:" "${INSTANCE}"
 fi
 
 log "dropping to ${RUN_USER}"

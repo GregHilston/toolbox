@@ -37,6 +37,9 @@ RUN git clone "${ARTIFICIUM_REPO}" /opt/artificium-dist \
     && git -C /opt/artificium-dist checkout --quiet "${ARTIFICIUM_REF}" \
     && rm -rf /opt/artificium-dist/.git
 
+# The group may already exist under another name -- macOS's default GID 20 is
+# `dialout` here -- so the user's primary group is addressed by id, never by the
+# name `artificium`, which groupadd may well have failed to create.
 RUN groupadd --gid "${GID}" artificium 2>/dev/null || true \
     && useradd --uid "${UID}" --gid "${GID}" --create-home --shell /bin/bash artificium \
     && mkdir -p /instance /reference \
@@ -46,9 +49,12 @@ COPY init-firewall.sh entrypoint.sh /usr/local/sbin/
 COPY seed/ /opt/artificium-seed/
 RUN chmod 0755 /usr/local/sbin/init-firewall.sh /usr/local/sbin/entrypoint.sh
 
+# PATH is deliberately NOT overridden. iptables, ip6tables and gosu all live in
+# /usr/sbin, and dropping it costs the firewall and the privilege drop -- the
+# IPv6 block worst of all, because its `command -v` guard would skip it in
+# silence rather than fail.
 ENV ARTIFICIUM_ROOT=/instance \
-    HOME=/home/artificium \
-    PATH=/usr/local/bin:/usr/bin:/bin
+    HOME=/home/artificium
 
 WORKDIR /instance
 
