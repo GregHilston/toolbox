@@ -18,6 +18,8 @@ WORKING_MEMORY="${ARTIFICIUM_WORKING_MEMORY:-96000}"
 # process, so the key never shows up in `ps` on the host.
 export ARTIFICIUM_API_KEY="${ARTIFICIUM_API_KEY:-${OMLX_API_KEY:-}}"
 
+BLOCKED_PROBES=""
+
 # Repositories exported read-only as background reference.
 REFERENCE_REPOS=(
   "toolbox:${HOME}/Git/toolbox"
@@ -37,6 +39,55 @@ running() { [ "$(docker inspect -f '{{.State.Running}}' "${CONTAINER}" 2>/dev/nu
 
 tty_flags() { [ -t 0 ] && printf -- '-it\n' || true; }
 
+# Targets the firewall must prove it drops. Derived, never hardcoded, and every
+# one is verified to ANSWER from the host first -- an assertion aimed at a dead
+# address passes no matter what the ruleset does, which is worse than no
+# assertion at all because it reads as coverage.
+blocked_probes() {
+  local lan router ts
+  lan="$(ipconfig getifaddr en0 2>/dev/null || true)"
+  router="$(route -n get default 2>/dev/null | awk '/gateway:/ {print $2; exit}' || true)"
+  [ -n "${lan}" ] || die "cannot determine this host's LAN address"
+  # This host's own oMLX, by its LAN address: live, and the same service the
+  # gateway hole allows. If the container can reach it, the deny list is broken.
+  printf '%s:8000\n' "${lan}"
+  [ -n "${router}" ] && printf '%s:80\n' "${router}"
+  # Only when Tailscale is actually up; a probe against a stopped daemon cannot
+  # discriminate and would quietly turn into a no-op.
+  if command -v tailscale >/dev/null 2>&1 \
+     && [ "$(tailscale status --json 2>/dev/null | jq -r '.BackendState // empty')" = "Running" ]; then
+    ts="$(tailscale status --json | jq -r '.TailscaleIPs[]? | select(test(":") | not)' | head -1)"
+    [ -n "${ts}" ] && printf '%s:8000\n' "${ts}"
+  fi
+  return 0
+}
+
+prepare_probes() {
+  local list target
+  list="$(blocked_probes)" || die "cannot build the firewall probe list"
+  [ -n "${list}" ] || die "firewall probe list is empty"
+  for target in ${list}; do
+    curl -s -o /dev/null -m 5 "http://${target}/" \
+      || die "probe target ${target} does not answer from this host, so the in-container assertion could never fail"
+    log "probe ${target} answers from the host, so it can fail"
+  done
+  BLOCKED_PROBES="$(printf '%s' "${list}" | tr '\n' ',')"
+  BLOCKED_PROBES="${BLOCKED_PROBES%,}"
+}
+
+# The agent has arbitrary shell and unrestricted egress, so whatever key it is
+# given is a key it can send anywhere. A dedicated oMLX sub-key makes that
+# revocable without rotating the one pi and everything else here uses.
+warn_shared_key() {
+  if [ -n "${OMLX_API_KEY:-}" ] && [ "${ARTIFICIUM_API_KEY}" = "${OMLX_API_KEY}" ]; then
+    log "WARNING: using the shared OMLX_API_KEY. An oMLX sub-key would be revocable on its own."
+    log "         Note it also reaches /v1/models/{id}/load and /unload, which can disrupt pi."
+  fi
+}
+
+# Public resolvers are pinned in sandbox_flags so the firewall never has to
+# punch a DNS hole to a LAN device it inherited from the host's resolv.conf.
+#
 # Everything that makes this container a sandbox. Kept in one place so that
 # `setup`, `start` and `shell` cannot drift apart on the flags that matter.
 # One flag per line, split on the strict-mode IFS at the call site.
@@ -45,7 +96,6 @@ sandbox_flags() {
 --add-host=omlx.host:host-gateway
 --cap-drop=ALL
 --cap-add=NET_ADMIN
---cap-add=NET_RAW
 --cap-add=SETUID
 --cap-add=SETGID
 --cap-add=CHOWN
@@ -59,6 +109,9 @@ sandbox_flags() {
 --volume=${INSTANCE}:/instance
 --volume=${REFERENCE}:/reference:ro
 --env=ARTIFICIUM_API_KEY
+--env=BLOCKED_PROBES=${BLOCKED_PROBES}
+--dns=1.1.1.1
+--dns=9.9.9.9
 FLAGS
 }
 
@@ -89,7 +142,7 @@ cmd_export_reference() {
       ':(exclude)secrets/*' \
       ':(exclude)**/secrets/*' \
       | tar -x -C "${dest}"
-    log "exported ${name} ($(du -sh "${dest}" | cut -f1)) from $(git -C "${repo}" rev-parse --short HEAD)"
+    log "exported ${name} ($(du -sh "${dest}" | cut -f1 | tr -d ' ')) from $(git -C "${repo}" rev-parse --short HEAD)"
   done
   log "review it before anything runs:  grep -rIl -e 'BEGIN.*PRIVATE KEY' -e 'api[_-]key' ${REFERENCE}"
 }
@@ -98,6 +151,8 @@ cmd_setup() {
   require_docker
   [ -d "${REFERENCE}" ] || die "run 'export-reference' first"
   [ -n "${ARTIFICIUM_API_KEY}" ] || die "OMLX_API_KEY is not set -- run 'just secrets' in nixos/ and open a new shell"
+  warn_shared_key
+  prepare_probes
   mkdir -p "${INSTANCE}"
 
   log "configuring against ${MODEL}"
@@ -117,11 +172,12 @@ cmd_setup() {
       --request-timeout off \
       --self-file /opt/artificium-seed/self.txt \
       --yes \
-      --no-launch
+      --no-launch "$@"
 }
 
 cmd_doctor() {
   require_docker
+  prepare_probes
   # shellcheck disable=SC2046
   docker run --rm $(tty_flags) $(sandbox_flags) "${IMAGE}" \
     python3 /instance/artificium.py doctor --live
@@ -130,6 +186,8 @@ cmd_doctor() {
 cmd_start() {
   require_docker
   [ -f "${INSTANCE}/artificium-code/config.json" ] || die "not configured -- run 'setup' first"
+  warn_shared_key
+  prepare_probes
   if running; then die "${CONTAINER} is already running"; fi
   docker rm -f "${CONTAINER}" >/dev/null 2>&1 || true
   # shellcheck disable=SC2046
@@ -167,7 +225,7 @@ usage: ${0##*/} <command> [args]
 
   build              build the sandbox image
   export-reference   refresh the read-only repo snapshots
-  setup              configure the instance against oMLX (needs OMLX_API_KEY)
+  setup [--force]    configure the instance against oMLX (needs OMLX_API_KEY)
   doctor             send one full harness request and report what came back
   start              run the life-loop in the background
   logs [-f]          the life-loop trace
@@ -178,7 +236,7 @@ usage: ${0##*/} <command> [args]
   stop               stop the life-loop
   destroy            remove the container and image, keep the run directory
 USAGE
-  exit 64
+  exit "${1:-64}"
 }
 
 [ $# -ge 1 ] || usage
@@ -196,5 +254,6 @@ case "${command}" in
   shell)            cmd_shell "$@" ;;
   stop)             cmd_stop "$@" ;;
   destroy)          cmd_destroy "$@" ;;
+  -h|--help|help)   usage 0 ;;
   *)                usage ;;
 esac
