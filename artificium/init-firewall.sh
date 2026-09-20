@@ -16,10 +16,13 @@ OMLX_PORT="${OMLX_PORT:-8000}"
 # it ever starts this container; see artificium-sandbox.sh verify_probes.
 BLOCKED_PROBES="${BLOCKED_PROBES:-}"
 
+# 0.0.0.0/8 is here because OrbStack puts the host gateway in it (0.250.250.254);
+# the single /32 hole is opened above this list, so denying the rest costs
+# nothing and closes whatever else the runtime parks there.
 DENY_V4=(
   10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
   169.254.0.0/16 100.64.0.0/10 198.18.0.0/15
-  224.0.0.0/4 240.0.0.0/4
+  0.0.0.0/8 224.0.0.0/4 240.0.0.0/4
 )
 # fd7a:115c:a1e0::/48 is Tailscale's ULA. The v4 deny list covers 100.64/10 and
 # would miss every tailnet peer reachable over its v6 address.
@@ -30,22 +33,22 @@ DENY_V6=(
 log() { printf 'firewall: %s\n' "$*" >&2; }
 die() { printf 'firewall: FATAL: %s\n' "$*" >&2; exit 1; }
 
-# The default route, not a hostname. `.host` is a live public gTLD, so a missing
-# --add-host would have DNS answer with a stranger's address and this script
-# would obligingly punch a hole to it.
-gateway="$(ip route show default | awk '/default/ {print $3; exit}')"
-[ -n "${gateway}" ] || die "no default route; cannot locate the container gateway"
+# Read the address straight out of /etc/hosts, never through DNS. `.host` is a
+# live public gTLD, so a missing --add-host would have a resolver answer with a
+# stranger's address and this script would obligingly punch a hole to it. An
+# /etc/hosts entry can only have come from --add-host, written by the daemon
+# before the container started, which is the trust anchor we actually want.
+#
+# Do NOT compare this to the default route. On OrbStack `host-gateway` is
+# 0.250.250.254 while the default route is 192.168.215.1, and only the former
+# serves oMLX -- an equality check here refuses to start, forever.
+gateway="$(awk -v h="${OMLX_HOST}" '$2 == h {print $1; exit}' /etc/hosts)"
+[ -n "${gateway}" ] \
+  || die "no /etc/hosts entry for ${OMLX_HOST}; run with --add-host=${OMLX_HOST}:host-gateway"
 case "${gateway}" in
-  10.*|172.1[6-9].*|172.2[0-9].*|172.3[01].*|192.168.*|198.1[89].*|198.19.*) ;;
-  *) die "default gateway ${gateway} is not a private address; refusing" ;;
+  *[!0-9.]*|"") die "${OMLX_HOST} maps to '${gateway}', which is not an IPv4 address" ;;
 esac
-
-# The name is still what the agent connects to, so the two must agree.
-named="$(getent hosts "${OMLX_HOST}" | awk '{print $1; exit}' || true)"
-[ -n "${named}" ] || die "cannot resolve ${OMLX_HOST}; run with --add-host=${OMLX_HOST}:host-gateway"
-[ "${named}" = "${gateway}" ] \
-  || die "${OMLX_HOST} resolves to ${named} but the gateway is ${gateway}; refusing"
-log "oMLX at ${gateway}:${OMLX_PORT}"
+log "oMLX at ${gateway}:${OMLX_PORT} (from /etc/hosts)"
 
 iptables -F
 iptables -X
