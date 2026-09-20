@@ -37,9 +37,20 @@ RFC1918 misses it entirely. IPv6 is dropped outright rather than mirrored, becau
 it is a trivial detour around all of the above.
 
 The script then **asserts its own work** and refuses to start the agent if any assertion
-fails. The blocked probes target moria's LAN and tailnet addresses on the same port the
-gateway hole allows: if either answers, the rules are wrong in the only way that matters.
-A firewall that is not asserted is a firewall that is assumed.
+fails. A firewall that is not asserted is a firewall that is assumed — but an assertion that
+cannot fail is worse than none, because it reads as coverage. Two mistakes were made here
+and are worth not repeating:
+
+- The blocked probes were hardcoded to addresses that answered nothing (a stale LAN alias
+  and a tailnet IP whose daemon was stopped), so they printed PASS regardless of the rules.
+  They are now derived by the launcher from this host's live addresses, and the launcher
+  **verifies each one answers from the host** before the container starts. The primary
+  probe is this host's own oMLX by its LAN address: live, and the same service the gateway
+  hole allows.
+- The check treated any non-zero `curl` exit as "blocked", scoring a refused connection —
+  one whose packet reached the target — the same as a dropped one. It now requires exit 28
+  specifically, and separately asserts each deny rule with `iptables -C`, which tests the
+  ruleset rather than the network's current mood.
 
 **Privilege.** Root exists only long enough to install the rules and seed a fresh instance,
 then `gosu` drops to a non-root user for the rest of the container's life. With
@@ -63,15 +74,27 @@ snapshot of committed history and not a `:ro` bind of the live directories.
 
 ## Known residue
 
-- The oMLX key travels as an environment variable so it never appears in `ps`, but `setup`
-  still writes it to `/instance/artificium-code/.secrets.json`, which is on the host bind
-  mount. An oMLX **sub-key** (`auth.sub_keys` in `dot/omlx/.omlx/settings.json.tpl`) makes
-  that credential revocable without rotating the one every other tool here uses. oMLX admin
-  routes are gated on `secret_key`, not the api key, so an inference key cannot reconfigure
-  the server — the exposure is use of the GPU, not control of it.
+- **The agent is handed a working oMLX key, and an oMLX key is not inference-only.**
+  `POST /v1/models/{id}/load` and `/unload` take `Depends(verify_api_key)` — the plain
+  inference key — and `admin/routes.py`'s `_require_admin_or_bearer` accepts a Bearer key
+  for the admin load route too. So the agent can evict a 19 GiB model out from under pi.
+  Only the settings-changing routes are gated on `secret_key`. An oMLX **sub-key**
+  (`auth.sub_keys` in `dot/omlx/.omlx/settings.json.tpl`) narrows *revocation*, not
+  capability — it is still worth having, and the launcher warns when the shared key is used,
+  but do not mistake it for a capability boundary.
+- The key travels as an environment variable so it never appears in `ps`, but `setup` writes
+  it to `/instance/artificium-code/.secrets.json`, on the host bind mount. The agent has
+  arbitrary shell and unrestricted egress, so any key it holds is a key it can send anywhere.
 - The pinned Artificium commit is a `Dockerfile` build arg. Artificium also has its own
   `upgrade` command, which the agent can run against GitHub; if it does, the image pin and
   the instance no longer agree.
+- **The privilege boundary is one layer deep.** `no-new-privileges` is the only thing
+  stopping the agent from recovering uid 0 through a setuid binary in the base image and
+  flushing the rules, since the container keeps `NET_ADMIN` in its bounding set for its whole
+  life. The mechanism is correct, but it is alone. The next hardening step is to split the
+  run: a short-lived container installs the rules and exits, and the agent joins its network
+  namespace with `--network=container:<fw> --cap-drop=ALL`, so regaining root buys nothing.
+  Deliberately deferred until a run has proven itself end to end.
 
 ## Model
 
