@@ -14,12 +14,16 @@ NAME="${1:-}"; MINUTES="${2:-15}"; CHANGE="${3:-}"
 TOOLBOX="${TOOLBOX:-$HOME/Git/toolbox}"
 RUNS="$HOME/Git/agent-runs"
 INSTANCE="${RUNS}/iter/${NAME}"
-CARD="${RUNS}/card.md"
+# Overridable so a mechanism can be tested with a card small enough to reach a
+# handoff. The gate only fires on `kanban_complete`/`kanban_request_review`, so
+# proving it works by hoping a hard card finishes is a 50-minute coin flip.
+CARD="${AGENT_CARD:-${RUNS}/card.md}"
 NOTE="${AGENT_RUN_LOG:-$HOME/Git/notes/ref-hermes-run-log.md}"
 STATS="$HOME/.omlx/stats.json"
 BUILD="${MODEL_BUILD:-Qwen3.6-35B-A3B-4bit-DWQ}"
 JUDGE="${MODEL_JUDGE:-Qwen3.8-27B-4bit}"
 CONTAINER=agent-hermes-vt-smb
+ROW_ANCHOR='<!-- agent-iterate:rows -->'
 
 stat_of() {
   python3 - "$1" "$2" "$3" <<'PY'
@@ -31,6 +35,11 @@ except Exception:
     print(0)
 PY
 }
+
+jget() { printf '%s' "$2" | python3 -c "import json,sys
+try: v=json.load(sys.stdin).get('$1')
+except Exception: v=None
+print('—' if v is None else v)" 2>/dev/null || echo '—'; }
 
 log() { printf '==> %s\n' "$*" >&2; }
 
@@ -46,76 +55,155 @@ if [ -d "${RUNS}/seed-data" ]; then
 fi
 
 for m in "${BUILD}" "${JUDGE}"; do
-  for k in requests prompt_tokens completion_tokens generation_duration prefill_duration; do
+  for k in requests prompt_tokens completion_tokens cached_tokens generation_duration prefill_duration; do
     printf -v "b_${m//[.-]/_}_${k}" '%s' "$(stat_of "${STATS}" "$m" "$k")"
   done
 done
+# The same baseline, in a form `agent-watch.py` can subtract mid-run. oMLX's
+# counters are global and cumulative, so without this a watcher can only report
+# rates between its own samples, never the run's own totals.
+python3 - "${STATS}" "${INSTANCE}/stats-baseline.json" "${BUILD}" "${JUDGE}" <<'PY'
+import json, sys
+src, dst, *models = sys.argv[1:]
+try:
+    per = json.load(open(src)).get("per_model") or {}
+except Exception:
+    per = {}
+json.dump({m: per.get(m, {}) for m in models}, open(dst, "w"))
+PY
+
+# The entrypoint exports UV_OFFLINE for the gateway and its workers, but a
+# `docker exec` gets the image environment instead — so scoring, which runs
+# pytest and the build through exec, spent ~50s per command retrying PyPI.
+# Newline-separated because the strict IFS splits on \n, not spaces, the same
+# way `agent-sandbox.sh _flags` emits one flag per line.
+UV_OFFLINE_FLAG=""
+[ "${AGENT_OFFLINE:-0}" = "1" ] && UV_OFFLINE_FLAG=$'-e\nUV_OFFLINE=1'
 
 docker rm -f "${CONTAINER}" >/dev/null 2>&1
 start_epoch=$(date +%s)
 log "iteration '${NAME}': ${MINUTES}m — ${CHANGE}"
 # shellcheck disable=SC2046
 docker run -d --name "${CONTAINER}" $("${TOOLBOX}/bin/agent-sandbox.sh" _flags "${INSTANCE}" 2>/dev/null) \
-  -e AGENT_OFFLINE="${AGENT_OFFLINE:-0}" agent-sandbox-hermes:latest >/dev/null 2>&1
+  -e AGENT_OFFLINE="${AGENT_OFFLINE:-0}" -e AGENT_BUILD_MODEL="${BUILD}" \
+  ${UV_OFFLINE_FLAG} \
+  agent-sandbox-hermes:latest >/dev/null 2>&1
 
 end=$(( start_epoch + MINUTES * 60 ))
 card_status="?"
+# A heartbeat proves the worker is alive, not that it is working. Run `gate-a`
+# heartbeated for its whole 51 minutes — the claim lease renews on heartbeat, so
+# the dispatcher never reclaimed it — while serving 30 model requests in the
+# first ten minutes and then ZERO for twenty. Nothing noticed. Overnight that is
+# the difference between losing an hour and losing the night.
+#
+# Model requests are the progress signal. The builder runs on the DWQ
+# checkpoint and nothing else on this box points at it, so its counter is ours;
+# a model shared with pi would give false "progress" from the neighbour.
+STALL_MIN="${AGENT_STALL_MINUTES:-10}"
+last_reqs="$(stat_of "${STATS}" "${BUILD}" requests)"
+last_progress=$(date +%s)
+stall_alerted=0
+stalls=0
 while [ "$(date +%s)" -lt "${end}" ]; do
   sleep 30
   card_status="$(docker exec "${CONTAINER}" hermes kanban list --json 2>/dev/null \
     | python3 -c 'import json,sys
 try: print(json.load(sys.stdin)[0]["status"])
 except Exception: print("?")' 2>/dev/null || echo "?")"
+
+  now_reqs="$(stat_of "${STATS}" "${BUILD}" requests)"
+  if [ "${now_reqs}" != "${last_reqs}" ]; then
+    last_reqs="${now_reqs}"; last_progress=$(date +%s); stall_alerted=0
+  elif [ "${stall_alerted}" = "0" ] \
+       && [ $(( $(date +%s) - last_progress )) -ge $(( STALL_MIN * 60 )) ]; then
+    stall_alerted=1; stalls=$(( stalls + 1 ))
+    log "STALL: no model traffic for ${STALL_MIN}m (card=${card_status})"
+    # Alert, do not act. Reclaiming a worker that is merely slow would be worse
+    # than waiting, and the point here is to stop a wedge going unnoticed.
+    if [ "${AGENT_NOTIFY:-1}" = "1" ]; then
+      "${TOOLBOX}/bin/pushover.py" -m "hermes ${NAME}: STALLED — no model traffic for ${STALL_MIN}m, $(( ($(date +%s) - start_epoch) / 60 ))m into a ${MINUTES}m run (card=${card_status})" >/dev/null 2>&1 || true
+    fi
+  fi
+
   case "${card_status}" in done|blocked) log "card ${card_status} early"; break ;; esac
 done
+[ "${stalls}" -gt 0 ] && log "${stalls} stall episode(s) during this run"
 elapsed=$(( $(date +%s) - start_epoch ))
 
 docker logs "${CONTAINER}" > "${INSTANCE}/container.log" 2>&1
-gate_blocks=$(docker exec "${CONTAINER}" sh -c 'grep -c "gate fired" /instance/home/logs/require-green.log 2>/dev/null' 2>/dev/null || echo 0)
+gate_fires=$(docker exec "${CONTAINER}" sh -c 'grep -c "gate fired" /instance/home/logs/require-green.log 2>/dev/null' 2>/dev/null || echo 0)
+gate_blocks=$(docker exec "${CONTAINER}" sh -c 'grep -c "gate blocked" /instance/home/logs/require-green.log 2>/dev/null' 2>/dev/null || echo 0)
+
+# Score before stopping the container. pytest and the build command are the
+# card's own DONE WHEN criteria, and they only run inside the sandbox, on a
+# container that is still up — benching after `docker stop` silently skipped
+# both and left every row measuring file counts instead of the objective.
+log "scoring (pytest + build inside the sandbox)"
+bench="$("${TOOLBOX}/bin/agent-bench.py" "${INSTANCE}/workspace" --harness "${NAME}" \
+  --container "${CONTAINER}" --json 2>/dev/null)"
+printf '%s' "${bench}" > "${INSTANCE}/score.json"
+
 docker stop "${CONTAINER}" >/dev/null 2>&1
 
-sleep 20   # oMLX flushes stats.json lazily
-bench="$("${TOOLBOX}/bin/agent-bench.py" "${INSTANCE}/workspace" --harness "${NAME}" --json 2>/dev/null)"
-pyfiles=$(printf '%s' "${bench}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["python_files"])' 2>/dev/null || echo 0)
-loc=$(printf '%s' "${bench}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["lines_of_code"])' 2>/dev/null || echo 0)
-rows=$(printf '%s' "${bench}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["dataset_rows"] or 0)' 2>/dev/null || echo 0)
-tests=$(cd "${INSTANCE}/workspace" 2>/dev/null && ls tests >/dev/null 2>&1 && echo yes || echo no)
+pyfiles=$(jget python_files "${bench}")
+loc=$(jget lines_of_code "${bench}")
+rows=$(jget dataset_rows "${bench}")
+tpass=$(jget tests_passed "${bench}")
+tfail=$(jget tests_failed "${bench}")
+bexit=$(jget build_exit_code "${bench}")
+[ "${rows}" = "—" ] && rows=0
 
+sleep 20   # oMLX flushes stats.json lazily
+# Requests and completion tokens alone cannot say where the time went. The
+# prompt size and the cache hit rate are what separate "thinking hard" from
+# "re-reading the conversation", and they are the two levers worth tuning.
 deltas=""
 for m in "${BUILD}" "${JUDGE}"; do
   v="${m//[.-]/_}"
   r=$(( $(stat_of "${STATS}" "$m" requests) - $(eval echo "\$b_${v}_requests") ))
   ct=$(( $(stat_of "${STATS}" "$m" completion_tokens) - $(eval echo "\$b_${v}_completion_tokens") ))
-  deltas="${deltas}${m}: ${r} reqs / ${ct} completion tokens<br>"
+  pt=$(( $(stat_of "${STATS}" "$m" prompt_tokens) - $(eval echo "\$b_${v}_prompt_tokens") ))
+  cd=$(( $(stat_of "${STATS}" "$m" cached_tokens) - $(eval echo "\$b_${v}_cached_tokens") ))
+  pf=$(printf '%.0f' "$(echo "$(stat_of "${STATS}" "$m" prefill_duration) - $(eval echo "\$b_${v}_prefill_duration")" | bc -l 2>/dev/null || echo 0)")
+  gn=$(printf '%.0f' "$(echo "$(stat_of "${STATS}" "$m" generation_duration) - $(eval echo "\$b_${v}_generation_duration")" | bc -l 2>/dev/null || echo 0)")
+  if [ "${r}" -gt 0 ]; then
+    deltas="${deltas}${m}: ${r} reqs, $(( pt / r ))/$(( ct / r )) prompt/completion tok per req, $(( pt == 0 ? 0 : 100 * cd / pt ))% cached, ${pf}s prefill + ${gn}s gen<br>"
+  else
+    deltas="${deltas}${m}: 0 reqs<br>"
+  fi
 done
 
 mkdir -p "$(dirname "${NOTE}")"
-[ -f "${NOTE}" ] || cat > "${NOTE}" <<'HDR'
----
-tags: [llm, ai, agents, hermes, experiment]
-related:
-  - "[[ref-hermes-kanban-improvements]]"
-  - "[[ref-artificium-vs-hermes-kanban]]"
----
+if ! grep -qF "${ROW_ANCHOR}" "${NOTE}" 2>/dev/null; then
+  cat >> "${NOTE}" <<HDR
 
-Short scored Hermes iterations on moria. One card, fixed budget, same rubric
-every time, so a change can be attributed. Long-run results live in
-[[ref-hermes-kanban-improvements]].
+## Iteration log (appended by \`agent-iterate.sh\`)
 
-**The card** is fixed across runs (`~/Git/agent-runs/card.md`): build a minimal
-`vt_smb` package against a known Socrata endpoint and emit a scored dataset.
-`DONE WHEN` requires pytest green, `vt-smb build` exit 0, >=100 rows, and every
-row carrying `outreach_score` and `outreach_reason`.
-
-| # | Run | Budget | What changed | Card | Files / LOC | Rows | Gate blocks | Model traffic | Verdict |
-|---|---|---|---|---|---|---|---|---|---|
+| # | Run | Budget | What changed | Card | Files / LOC | Tests p/f | Build | Rows | Gate fired/blocked | Stalls | Model traffic |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+${ROW_ANCHOR}
 HDR
+fi
 
-n=$(grep -c '^| [0-9]' "${NOTE}" 2>/dev/null || echo 0); n=$(( n + 1 ))
-printf '| %d | `%s` | %dm (ran %dm) | %s | **%s** | %s / %s | %s | %s | %s | |\n' \
+n=$(( $(sed -n "/## Iteration log/,/${ROW_ANCHOR}/p" "${NOTE}" | grep -c '^| [0-9]') + 1 ))
+row=$(printf '| %d | `%s` | %dm (ran %dm) | %s | **%s** | %s / %s | %s / %s | %s | %s | %s | %s | %s |' \
   "${n}" "${NAME}" "${MINUTES}" "$(( elapsed / 60 ))" "${CHANGE}" "${card_status}" \
-  "${pyfiles}" "${loc}" "${rows}" "${gate_blocks:-0}" "${deltas%<br>}" >> "${NOTE}"
+  "${pyfiles}" "${loc}" "${tpass}" "${tfail}" "${bexit}" "${rows}" "${gate_fires:-0}/${gate_blocks:-0}" "${stalls:-0}" "${deltas%<br>}")
+python3 - "${NOTE}" "${ROW_ANCHOR}" "${row}" <<'PY'
+import sys
+path, anchor, row = sys.argv[1:4]
+text = open(path).read()
+open(path, "w").write(text.replace(anchor, row + "\n" + anchor, 1))
+PY
 
 log "recorded row ${n} in ${NOTE}"
-printf '\n  card=%s  files=%s  loc=%s  rows=%s  gate_blocks=%s  elapsed=%dm\n\n' \
-  "${card_status}" "${pyfiles}" "${loc}" "${rows}" "${gate_blocks:-0}" "$(( elapsed / 60 ))"
+printf '\n  card=%s  files=%s  loc=%s  tests=%s pass/%s fail  build_exit=%s  rows=%s  gate=%s fired/blocked  stalls=%s  elapsed=%dm\n' \
+  "${card_status}" "${pyfiles}" "${loc}" "${tpass}" "${tfail}" "${bexit}" "${rows}" "${gate_fires:-0}/${gate_blocks:-0}" "${stalls:-0}" "$(( elapsed / 60 ))"
+printf '  score: %s\n\n' "${INSTANCE}/score.json"
+
+# The in-run score is measured against the venv the agent built up over the run.
+# `long-a` passed that and still shipped a tree that does not build for anyone
+# else. Re-check from clean and push the verdict, so a run that ends unattended
+# reports itself.
+"${TOOLBOX}/bin/agent-deliver.sh" "${NAME}" || true
