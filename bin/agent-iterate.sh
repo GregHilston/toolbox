@@ -36,6 +36,14 @@ log() { printf '==> %s\n' "$*" >&2; }
 
 rm -rf "${INSTANCE}"; mkdir -p "${INSTANCE}/workspace"
 cp "${CARD}" "${INSTANCE}/card.md"
+# Pre-seed the source data. Runs 2 and 3 both ignored an explicit "the source is
+# known, do not go hunting" and spent their whole budget researching other
+# sources instead. Data already on disk removes the temptation entirely and
+# isolates "can it build the package" from "will it follow the instruction".
+if [ -d "${RUNS}/seed-data" ]; then
+  mkdir -p "${INSTANCE}/workspace/data/raw"
+  cp "${RUNS}"/seed-data/* "${INSTANCE}/workspace/data/raw/" 2>/dev/null || true
+fi
 
 for m in "${BUILD}" "${JUDGE}"; do
   for k in requests prompt_tokens completion_tokens generation_duration prefill_duration; do
@@ -48,7 +56,7 @@ start_epoch=$(date +%s)
 log "iteration '${NAME}': ${MINUTES}m — ${CHANGE}"
 # shellcheck disable=SC2046
 docker run -d --name "${CONTAINER}" $("${TOOLBOX}/bin/agent-sandbox.sh" _flags "${INSTANCE}" 2>/dev/null) \
-  agent-sandbox-hermes:latest >/dev/null 2>&1
+  -e AGENT_OFFLINE="${AGENT_OFFLINE:-0}" agent-sandbox-hermes:latest >/dev/null 2>&1
 
 end=$(( start_epoch + MINUTES * 60 ))
 card_status="?"

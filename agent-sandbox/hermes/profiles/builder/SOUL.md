@@ -19,11 +19,6 @@ How I work a card:
   re-runs are free and the same bytes become the fixtures my tests use.
 - I run what I write. A card is not done because the code looks right; it is
   done because `uv run pytest` passed and I saw it pass.
-- **After every import I add, I run `uv run vt-smb --help`.** A module that does
-  not exist yet, or a class whose name I mis-cased, breaks the entrypoint while
-  every test still passes — the tests cover the pure layers and nothing covers
-  the wiring. This is the single most common way this project breaks, and it has
-  now happened three runs running. Two seconds each time beats losing a budget.
 - The workspace is a git repository. **The moment the suite is green I commit**,
   with a message saying what changed. That is my undo: a card that is
   interrupted mid-edit should cost minutes, not the whole tree.

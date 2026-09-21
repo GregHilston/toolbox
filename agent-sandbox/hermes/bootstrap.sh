@@ -112,6 +112,21 @@ if [ "${AGENT_TASK_MODE:-0}" = "1" ]; then
   exit 0
 fi
 
+# A single card seeded from /instance/card.md, for short scored iterations.
+# Format: first line is the title, the rest is the body.
+if [ -f /instance/card.md ]; then
+  if [ "$(hermes kanban list --json 2>/dev/null | jq 'length' 2>/dev/null || echo 0)" = "0" ]; then
+    title="$(head -1 /instance/card.md)"
+    body="$(tail -n +2 /instance/card.md)"
+    hermes kanban create "${title}" --body "${body}" \
+      --assignee builder --workspace "dir:${WORKSPACE}" \
+      --goal --goal-max-turns "${CARD_MAX_TURNS:-25}" --json >/dev/null
+    log "seeded 1 card from card.md"
+  fi
+  hermes kanban list 2>&1 | tail -3 >&2
+  exit 0
+fi
+
 # The task graph. Deliberately small: the point of the first cards is to prove
 # the loop turns, not to front-load a plan the agent should be making itself.
 # Each card's body IS its acceptance criteria — goal mode judges against it.

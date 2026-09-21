@@ -89,7 +89,15 @@ done
 # conntrack helper -- nf_conntrack_ftp and a PORT command naming a LAN address --
 # create an expectation that is accepted before the deny list can see it.
 iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED -j ACCEPT
-iptables -A OUTPUT -j ACCEPT
+# AGENT_OFFLINE=1 drops the final ACCEPT, leaving only loopback, DNS and oMLX.
+# Runs 2-4 each spent their whole budget researching sources the card told them
+# not to look for — once with the data already on disk. Removing the temptation
+# is the only lever left that does not rely on the model following instructions.
+if [ "${AGENT_OFFLINE:-0}" = "1" ]; then
+  log "AGENT_OFFLINE=1 — public internet DENIED, oMLX only"
+else
+  iptables -A OUTPUT -j ACCEPT
+fi
 
 # IPv6 is dropped outright. Left open it is a trivial detour around every rule
 # above. No `|| true` anywhere: a failure here must stop the run, not log a
@@ -107,6 +115,13 @@ for net in "${DENY_V6[@]}"; do
 done
 log "IPv6 egress dropped"
 
+blocked() {
+  local url="$1" timeout="$2" code
+  curl -s -o /dev/null -m "${timeout}" "${url}" && return 1
+  code=$?
+  [ "${code}" -eq 28 ]
+}
+
 # A firewall that is not asserted is a firewall that is assumed.
 #
 # Assert the ruleset itself first: it tests the rules rather than the network's
@@ -123,19 +138,17 @@ log "PASS ruleset matches intent"
 # Then assert behaviour. curl exits 7 on a TCP reset and 28 on a timeout; only
 # 28 means the packet was swallowed. Treating any non-zero exit as "blocked"
 # would score a refused connection -- one that reached the host -- as a pass.
-blocked() {
-  local url="$1" timeout="$2" code
-  curl -s -o /dev/null -m "${timeout}" "${url}" && return 1
-  code=$?
-  [ "${code}" -eq 28 ]
-}
-
 curl -s -o /dev/null -m 8 "http://${OMLX_HOST}:${OMLX_PORT}/v1/models" \
   || die "oMLX unreachable at ${OMLX_HOST}:${OMLX_PORT} -- is the server running?"
 log "PASS oMLX reachable"
 
-curl -s -o /dev/null -m 15 "https://example.com" || die "no internet egress; this run needs it"
-log "PASS internet reachable"
+if [ "${AGENT_OFFLINE:-0}" = "1" ]; then
+  blocked "https://example.com" 8 && log "PASS internet denied (offline mode)" \
+    || die "AGENT_OFFLINE=1 but the internet is still reachable"
+else
+  curl -s -o /dev/null -m 15 "https://example.com" || die "no internet egress; this run needs it"
+  log "PASS internet reachable"
+fi
 
 if curl -6 -s -o /dev/null -m 8 "https://ipv6.google.com"; then
   die "IPv6 egress is open"
