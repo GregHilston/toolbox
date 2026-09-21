@@ -116,7 +116,7 @@ except Exception: print("?")' 2>/dev/null || echo "?")"
     # Alert, do not act. Reclaiming a worker that is merely slow would be worse
     # than waiting, and the point here is to stop a wedge going unnoticed.
     if [ "${AGENT_NOTIFY:-1}" = "1" ]; then
-      "${TOOLBOX}/bin/pushover.py" -m "hermes ${NAME}: STALLED — no model traffic for ${STALL_MIN}m, $(( ($(date +%s) - start_epoch) / 60 ))m into a ${MINUTES}m run (card=${card_status})" >/dev/null 2>&1 || true
+      "${TOOLBOX}/bin/agent-notify.sh" -m "hermes ${NAME}: STALLED — no model traffic for ${STALL_MIN}m, $(( ($(date +%s) - start_epoch) / 60 ))m into a ${MINUTES}m run (card=${card_status})" >/dev/null 2>&1 || true
     fi
   fi
 
