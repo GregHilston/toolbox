@@ -1,13 +1,57 @@
-# Artificium sandbox
+# Agent sandbox — one cage, two harnesses
 
-A container for [agent-artificium](https://github.com/officialgr/agent-artificium), a
-harness built to run unattended for days and finish with one artifact. Driven by
-`bin/artificium-sandbox.sh`; `-h` lists the subcommands. The evaluation that chose it over
-pi-autoresearch is `~/Git/notes/ref-long-running-harnesses.md`.
+One container shape hosting two long-running agent harnesses, so a comparison between them
+is about the harness rather than the cage. Driven by `bin/agent-sandbox.sh --harness
+{artificium,hermes}`; `-h` lists the subcommands. Scored by `bin/agent-bench.py`.
+
+- **`artificium/`** — [agent-artificium](https://github.com/officialgr/agent-artificium):
+  one agent, one undifferentiated life-loop, no turn limit, memory offloaded to checkpoints.
+- **`hermes/`** — [Hermes Agent](https://hermes-agent.nousresearch.com/docs) driven by
+  `hermes kanban`: a durable SQLite task board whose dispatcher spawns one OS process per
+  card, with an agent-to-agent review gate.
+
+The evaluation that chose Artificium in the first place is
+`~/Git/notes/ref-long-running-harnesses.md`; the head-to-head that followed is written up
+there too.
+
+## Why Kanban and not Bot Mode
+
+The Hermes feature everyone demos is Bot Mode group rooms, and they cannot drive an
+unattended run: a hard cap of **10 messages per send and 3 rounds**, not configurable, and
+**no CLI at all** — Desktop or raw API only. Headless, they do not exist.
+
+`hermes kanban` is the headless primitive that does. Its dispatcher ticks inside the gateway
+(the standalone `kanban daemon` is deprecated and refuses to start without `--force`, because
+the two race for claims), spawns `hermes -p <assignee>` per card in an isolated workspace,
+and runs the review cycle — `kanban_request_review` → a reviewer profile is spawned →
+`request_changes` or `complete` — with no human in it.
+
+It also has, by construction, the stall detection Artificium lacks: per-card `max_retries`,
+protocol-violation detection when a worker exits without a terminal kanban call, terminal
+provider errors blocking on first occurrence, and a heartbeat reclaim.
+
+## Three configuration traps, each of which cost an hour
+
+All three present as *the model failing*, which is why they are written down.
+
+- **`provider: custom:omlx` is not valid here.** That is the v39 `providers:`-block form
+  `home-lab/hermes` uses. This release wants plain `provider: "custom"` with `base_url` and
+  `api_key` inline. The wrong value raises `Unknown provider` — and the worker process still
+  **exits 0**, so the dispatcher records "clean exit without calling a terminal kanban tool"
+  and the board fills with protocol violations that look exactly like a small model failing
+  to drive an agent loop. It is not. Test with `hermes -p <profile> -z "say pong"`.
+- **`_config_version` must match the release** (v0.21.3 = 44). Absent, the file parses as v0
+  and whole sections are ignored in silence; only `hermes doctor` mentions it.
+- **`profile create` snapshots the root model block.** Fixing the root config does not reach
+  a profile that already exists. `bootstrap.sh` re-stamps every profile on every boot.
+
+`max_in_progress: 1` on purpose: what is being tested is durable structure, not parallelism,
+and two workers contending for moria's single GPU would confound the comparison.
 
 ## Why the container is the whole safety story
 
-Artificium's README says it plainly: **it is NOT A SAFE PRODUCT.** No sandbox, no approval
+This is written about Artificium and applies to both arms. Artificium's README says it
+plainly: **it is NOT A SAFE PRODUCT.** No sandbox, no approval
 layer. It runs shell commands, and it can modify or delete anything its account reaches —
 including its own code and its own API key. A spending limit or a restriction written into
 its prompt or its config **cannot** contain it, because it can read and edit both.
