@@ -140,6 +140,19 @@ snapshot of committed history and not a `:ro` bind of the live directories.
   namespace with `--network=container:<fw> --cap-drop=ALL`, so regaining root buys nothing.
   Deliberately deferred until a run has proven itself end to end.
 
+## Why moria, and only moria
+
+Long runs need 34 GB of resident models (19 GB builder + 15 GB judge). dungeon has
+36 GB total while running Frigate and ~60 containers behind a ~27 GB oMLX ceiling, and the
+A3B is already measured as not fitting beside Frigate's vision model. Running the agent on
+dungeon against moria's oMLX does not help — moria still has to be awake, which is the
+actual constraint. dungeon's Hermes stays what it is: quick questions against the notes
+vault.
+
+**moria sleeps.** `pmset sleep` is 1 minute, and runs so far have survived only because
+Amphetamine happened to be holding an assertion. Wrap long runs in `caffeinate -dims`, and
+keep the lid open — clamshell still sleeps.
+
 ## Model
 
 `Qwen3.6-35B-A3B-4bit-DWQ`, whose `model_settings.json` entry carries the run's context
