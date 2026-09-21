@@ -157,6 +157,17 @@ kanban:
   # the stall detection Artificium has no equivalent of, and the run should be
   # allowed to demonstrate it rather than have it tuned away.
   failure_limit: 2
-  # Spawns the reviewer with the bundled SDLC review skill — which run 1 did not
-  # have, because profiles were created with --no-skills.
+  # Spawns a review worker with the bundled SDLC review skill force-loaded.
+  #
+  # NOT the `reviewer` profile, despite what this comment used to say.
+  # kanban_db_dispatch.py:1844 spawns the review lane with `row["assignee"]`,
+  # which is the card's own assignee — the builder. `lane == "review"` changes
+  # exactly two things (:1550, :1571): it claims via `claim_review_task`, and it
+  # appends `sdlc-review` to the claimed skills. So a review is the *builder
+  # model on a fresh context, with the review skill*, and the `reviewer` profile
+  # pinned to Qwen3.8-27B-4bit is unreachable this way — it has served zero
+  # requests in every run to date. It would need a card assigned to `reviewer`.
+  #
+  # Worth keeping: on long-b that arrangement rejected the work with five
+  # specific defects, four of which verified against the tree.
   review_dispatch: true
