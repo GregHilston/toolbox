@@ -88,11 +88,25 @@ printf 'RED=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=tru
 echo "def test_x(): assert True" > tests/test_x.py
 printf 'GREEN=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
 printf 'OTHER=%s\n' "$(echo '{"tool_name":"read_file"}' | /usr/local/bin/require-green.sh | head -c 26)"
+# A green suite over a pyproject whose packaging was deleted. Both runs that
+# ever completed a card shipped exactly this and the gate waved both through.
+cat > pyproject.toml <<EOF
+[project]
+name = "gate-probe"
+version = "0.1.0"
+requires-python = ">=3.11"
+[project.scripts]
+gate-probe = "gate_probe:main"
+[tool.uv]
+dev-dependencies = ["pytest>=8.0"]
+EOF
+printf 'GUTTED=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
 PROBE
 )"
 printf '%s' "${out}" | grep -q 'RED={"decision": "block"' && ok "gate blocks a failing suite" || bad "gate did NOT block on failing tests"
 printf '%s' "${out}" | grep -q '^GREEN=$' && ok "gate allows a green suite" || bad "gate blocked a green tree"
 printf '%s' "${out}" | grep -q '^OTHER=$' && ok "gate ignores other tools" || bad "gate fired on a non-completion tool"
+printf '%s' "${out}" | grep -q 'GUTTED={"decision": "block"' && ok "gate blocks a tree whose packaging was deleted" || bad "gate allowed a pyproject with a console script but no build system"
 
 # Section 2 proves the SCRIPT behaves. It says nothing about whether Hermes ever
 # calls it — and for seven runs it did not. The root config carried the hook, the
