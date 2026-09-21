@@ -37,6 +37,7 @@ pkgs: {
     btop
     bruno-cli
     yq-go
+    hyfetch # neofetch left nixpkgs; ships its fork `neowofetch`
   ];
 
   # User (home-manager) packages shared by the NixOS and Darwin profiles.

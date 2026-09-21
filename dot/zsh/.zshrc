@@ -219,6 +219,7 @@ alias c="clear"
 alias lg="lazygit"
 alias cat="bat"
 alias htop="btop"
+alias neofetch="neowofetch"
 alias python='/usr/bin/python3'
 alias audio="pavucontrol"
 
