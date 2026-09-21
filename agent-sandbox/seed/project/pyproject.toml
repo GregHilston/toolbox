@@ -1,0 +1,29 @@
+# Seeded so the agent never has to get hatchling's src-layout right.
+#
+# Two offline iterations were lost to exactly this: one wrote 15 correct modules
+# and 3 test files that could not import them ("No module named 'vt_smb'"); the
+# other spent its entire budget on pyproject.toml and uv.lock and produced
+# nothing else. Packaging config is not what we are testing.
+[project]
+name = "vt-smb"
+version = "0.1.0"
+description = "Vermont small businesses prospect list pipeline"
+requires-python = ">=3.11"
+dependencies = ["httpx>=0.27", "pydantic>=2.0", "click>=8.0", "pandas>=2.0", "pyarrow>=14.0"]
+
+[project.scripts]
+vt-smb = "vt_smb.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vt_smb"]
+
+[tool.uv]
+dev-dependencies = ["pytest>=8.0", "ruff>=0.4"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
