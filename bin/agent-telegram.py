@@ -74,7 +74,13 @@ def load_env() -> None:
 
 class Bot:
     def __init__(self, token: str) -> None:
-        self.base = f"https://api.telegram.org/bot{token}"
+        # `tests/fake_telegram.py` points this at a local server. The repo's own
+        # experience with pi-rpc.py is that this class of script fails in the
+        # poll loop rather than in its pure functions, and only a fake transport
+        # reaches that. Read per-instance, not as a class attribute, so a test
+        # setting the variable after import still wins.
+        api = os.environ.get("TELEGRAM_API_BASE", "https://api.telegram.org")
+        self.base = f"{api}/bot{token}"
 
     def api(self, method: str, **params) -> dict:
         data = urllib.parse.urlencode(params).encode()
