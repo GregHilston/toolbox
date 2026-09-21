@@ -81,13 +81,27 @@ in {
           "$TOOLBOX/omlx/.omlx/settings.json" \
           ${settingsOverlay} \
           > "$OMLX_SETTINGS.tmp"
-        mv -f "$OMLX_SETTINGS.tmp" "$OMLX_SETTINGS"
 
-        # Restart oMLX so it picks up the merged settings.json.
-        # KeepAlive only restarts on crashes, not config changes.
-        launchctl kickstart -k "gui/$(id -u ${user})/org.nixos.omlx" 2>/dev/null || true
-
-        echo "✓ oMLX configured for ${host} (hot_cache_max_size=${cfg.cacheSize})"
+        # Restart only when the merged settings actually changed.
+        #
+        # `-k` kills and restarts, and this ran unconditionally on every
+        # activation — so any `just dr moria`, for a cask or a launchd agent
+        # unrelated to inference, dropped every in-flight request and wiped the
+        # prefix cache. An agent-sandbox run mid-flight loses its turn and then
+        # re-prefills ~70k tokens per turn against a cold cache. It cost an
+        # hour of a three-hour run on 2026-09-21 to notice.
+        OMLX_SVC="gui/$(id -u ${user})/org.nixos.omlx"
+        if cmp -s "$OMLX_SETTINGS.tmp" "$OMLX_SETTINGS"; then
+          rm -f "$OMLX_SETTINGS.tmp"
+          # Not `-k`: starts it if it is down, no-op if it is up.
+          launchctl kickstart "$OMLX_SVC" >/dev/null 2>&1 || true
+          echo "✓ oMLX settings unchanged for ${host} — left running"
+        else
+          mv -f "$OMLX_SETTINGS.tmp" "$OMLX_SETTINGS"
+          # KeepAlive only restarts on crashes, not config changes.
+          launchctl kickstart -k "$OMLX_SVC" 2>/dev/null || true
+          echo "✓ oMLX configured for ${host} (hot_cache_max_size=${cfg.cacheSize}) — restarted"
+        fi
       ''))
 
       # ── Model-variant symlinks for multi-configuration support.
