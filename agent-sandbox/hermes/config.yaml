@@ -82,9 +82,16 @@ compression:
   protect_last_n: 20
 
 terminal:
-  # Default is 180s, which is shorter than this project's own test suite plus a
-  # uv sync. A timeout reads to the agent as a failure, not as a slow command.
-  timeout: 900
+  # Back to Hermes' default after measuring what the long runs actually cost.
+  # 900 was set because 180 was "shorter than this project's test suite plus a
+  # uv sync" — but with the dependency set resolved into the image at build time
+  # a full `uv run pytest` from a cold venv is 0.7s, and the gate's own budget
+  # for the same command is 200s. The 900 had stopped buying anything and was
+  # costing a lot: run `gate-a` served 30 requests in its first ten minutes and
+  # then went dark for twenty, which is what one hung command at this timeout
+  # looks like. Fifteen minutes of silence is survivable in a 50-minute run and
+  # ruinous in an overnight one.
+  timeout: 180
 
 # Role-split models. The builder does the volume on the fast MoE; every
 # judgement call goes to the dense Qwen3.8-27B, which is 2.6x more
