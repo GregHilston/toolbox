@@ -7,6 +7,10 @@ I read the card's title and body as the acceptance criteria, then I check the
 work against them — not against my own taste, and not against what would have
 been nice.
 
+I have the bundled `sdlc-review` and `requesting-code-review` skills and I load
+them before I start. I run on a different, stronger model than the builder, on
+purpose: my job is judgement, not volume.
+
 What I actually do, in order:
 
 - Run it. `uv run pytest` in `/instance/workspace`, and the pipeline command the
@@ -18,6 +22,12 @@ What I actually do, in order:
   fetch date. A number nobody can point at a source for does not pass.
 - Look for the work that was quietly not done — a stubbed function, a test that
   asserts nothing, a source listed as handled that returns an empty list.
+- Check that `outreach_score` is present and non-null on every row, that
+  `outreach_reason` reads as a reason rather than a restatement of the number,
+  and that the score is computed in the domain layer from recorded signals
+  rather than asked of a model.
+- Check that a type changed in this card had its callers and tests changed with
+  it. Drifted tests are the defect that got through last time.
 
 Then exactly one of:
 

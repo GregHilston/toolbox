@@ -31,15 +31,21 @@ RUN groupadd --gid "${GID}" artificium 2>/dev/null || true \
 
 COPY shared/init-firewall.sh hermes/entrypoint.sh /usr/local/sbin/
 COPY hermes/bootstrap.sh /usr/local/bin/hermes-bootstrap.sh
+COPY hermes/hooks/require-green.sh /usr/local/bin/require-green.sh
+COPY hermes/agent-block.yaml /opt/agent-seed/agent-block.yaml
 COPY hermes/config.yaml /opt/agent-seed/config.yaml
 COPY hermes/profiles/ /opt/agent-seed/profiles/
 COPY seed/ /opt/agent-seed/
 RUN chmod 0755 /usr/local/sbin/init-firewall.sh /usr/local/sbin/entrypoint.sh \
-      /usr/local/bin/hermes-bootstrap.sh
+      /usr/local/bin/hermes-bootstrap.sh /usr/local/bin/require-green.sh
 
 # HERMES_HOME on the bind mount, so the kanban board, the profiles and the work
 # all survive a restart and stay readable from the host.
-ENV HERMES_HOME=/instance/home \
+# --accept-hooks / HERMES_ACCEPT_HOOKS allowlists the pre_tool_call gate. Without
+# it `hermes hooks doctor` reports "not allowlisted — hook will NOT fire at
+# runtime", and the gate silently does nothing.
+ENV HERMES_ACCEPT_HOOKS=1 \
+    HERMES_HOME=/instance/home \
     HOME=/home/artificium
 
 WORKDIR /instance/workspace
@@ -50,4 +56,4 @@ ENTRYPOINT ["/usr/local/sbin/entrypoint.sh"]
 # `hermes gateway run` in the foreground, NOT `hermes kanban daemon`: the
 # standalone daemon is deprecated and refuses to start without --force, because
 # the dispatcher now lives inside the gateway and the two race for claims.
-CMD ["bash", "-c", "/usr/local/bin/hermes-bootstrap.sh && exec hermes gateway run"]
+CMD ["bash", "-c", "/usr/local/bin/hermes-bootstrap.sh && exec hermes gateway run --accept-hooks"]

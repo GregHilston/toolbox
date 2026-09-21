@@ -51,6 +51,30 @@ Group these; they are not a flat wish-list.
 - **Website quality** — see below.
 - **Provenance** — for every field, which source and which fetch date. This is
   what lets the dataset be refreshed, audited, and defended.
+- **`outreach_score`** — a float from 0.0 to 1.0. 1.0 means "definitely worth
+  approaching"; 0.0 means "do not bother". This is the column the whole dataset
+  exists to produce, so it is required on every row and must never be null.
+- **`outreach_reason`** — one sentence, in plain language, saying *why* that
+  score. "No website at all; active food licence; phone and owner name on file"
+  is a good reason. "Score 0.8" is not a reason.
+
+### How to score
+
+The score is a judgement, but it must be a *reproducible* one: compute it in the
+domain layer from the signals already on the record, never by asking a model.
+Put the weighting in one place, document it, and test it.
+
+Roughly, what raises a score: no website at all; a website that fails the
+quality checks below; only a Facebook or Instagram page; a business type that
+plainly needs a web presence to get customers (restaurants, trades, retail,
+lodging, services); a current licence or registration proving it actually
+trades; reachable contact details. What lowers it: a modern, fast,
+mobile-friendly site; a national chain or franchise; a dissolved or lapsed
+registration; no way to contact anyone.
+
+Record the component signals alongside the score. A score nobody can take apart
+is a score nobody can trust or tune, and my owner will want to know *why*
+before he writes to anyone.
 
 ## Sources, in priority order
 

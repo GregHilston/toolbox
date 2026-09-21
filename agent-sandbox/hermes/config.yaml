@@ -73,6 +73,53 @@ agent:
     - session_search
     - todo
 
+# Measured on run 1: half the GPU time was prefill, and tool schemas were 40 KB
+# of every request. Compression keeps the conversation half of that in check.
+compression:
+  enabled: true
+  threshold: 0.50
+  target_ratio: 0.20
+  protect_last_n: 20
+
+terminal:
+  # Default is 180s, which is shorter than this project's own test suite plus a
+  # uv sync. A timeout reads to the agent as a failure, not as a slow command.
+  timeout: 900
+
+# Role-split models. The builder does the volume on the fast MoE; every
+# judgement call goes to the dense Qwen3.8-27B, which is 2.6x more
+# token-efficient and carries far stronger published coding benchmarks. Its
+# 23 t/s is irrelevant for low-volume verdicts. 19GB + 15GB is comfortable on
+# 128GB, and oMLX keeps both resident.
+#
+# Its context window must be >= the main model's or compression fails SILENTLY
+# and loses conversation with no warning; 3.8 serves 262144 against our 131072.
+auxiliary:
+  goal_judge:
+    model: Qwen3.8-27B-4bit
+    provider: custom
+  kanban_decomposer:
+    model: Qwen3.8-27B-4bit
+    provider: custom
+  triage_specifier:
+    model: Qwen3.8-27B-4bit
+    provider: custom
+  compression:
+    model: Qwen3.8-27B-4bit
+    provider: custom
+
+# `pre_tool_call` is the only hook class Hermes lets veto a call. Run 1 shipped a
+# package whose CLI could not import and four drifted tests, because the gate was
+# an instruction to a small model rather than a check. fail_closed means a broken
+# hook blocks rather than waves work through.
+hooks_auto_accept: true
+hooks:
+  pre_tool_call:
+    - matcher: "^kanban_complete$"
+      command: "/usr/local/bin/require-green.sh"
+      timeout: 290
+      fail_closed: true
+
 kanban:
   # One worker at a time. Kanban's value here is durable structure — a task
   # graph, atomic claims, an agent-to-agent review gate — not parallelism, and
@@ -88,3 +135,6 @@ kanban:
   # the stall detection Artificium has no equivalent of, and the run should be
   # allowed to demonstrate it rather than have it tuned away.
   failure_limit: 2
+  # Spawns the reviewer with the bundled SDLC review skill — which run 1 did not
+  # have, because profiles were created with --no-skills.
+  review_dispatch: true
