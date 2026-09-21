@@ -1,0 +1,37 @@
+[
+  {
+    "prompt_tokens": 1962,
+    "completion_tokens": 24,
+    "wall": 1.78,
+    "prefill_tps": 1102.7,
+    "cached_tokens": 0
+  },
+  {
+    "prompt_tokens": 7878,
+    "completion_tokens": 24,
+    "wall": 7.07,
+    "prefill_tps": 1114.3,
+    "cached_tokens": 0
+  },
+  {
+    "prompt_tokens": 15884,
+    "completion_tokens": 24,
+    "wall": 14.96,
+    "prefill_tps": 1061.6,
+    "cached_tokens": 0
+  },
+  {
+    "prompt_tokens": 31893,
+    "completion_tokens": 24,
+    "wall": 33.38,
+    "prefill_tps": 955.6,
+    "cached_tokens": 0
+  },
+  {
+    "prompt_tokens": 63908,
+    "completion_tokens": 24,
+    "wall": 90.72,
+    "prefill_tps": 704.5,
+    "cached_tokens": 0
+  }
+]

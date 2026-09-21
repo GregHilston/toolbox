@@ -23,6 +23,9 @@ export OMLX_API_KEY=$(python3 -c "import json,os;print(json.load(
 | `effort.py` | token/latency cost of each `reasoning_effort` level |
 | `longctx.py` | prefill cost vs prompt length (~2K–64K) |
 | `lossless_check.py` | whether an optimization changes output at all |
+| `moe_quant_paired.py` | **the one to copy for A-vs-B**: alternating samples, so drift cancels |
+| `moe_quant_showdown.sh` | A3B-4bit vs its 4-bit-DWQ sibling, decode + prefill, one arm at a time |  *(superseded — see below)*
+| `moe_quant_verdict.py` | those raw numbers -> seconds per agent turn at a measured workload mix |
 | `contention_audit.sh` | certifies a benchmark window had no foreign traffic |
 
 ## Running
@@ -48,8 +51,20 @@ Three confounds silently produced wrong numbers during this work. Skipping any o
 reproduces them:
 
 1. **Restart oMLX before every measured model.** It keeps every model it has served resident;
-   a model measured alongside 69 GB of others read ~30% slow.
-2. **Stamp the window *after* the restart, and audit it.** A scheduled job on the same server
+   a model measured alongside 69 GB of others read ~30% slow. Restarting once at the *top*
+   of a multi-model run is not enough and is an easy mistake to make: the first arm then
+   runs alone and every later arm carries the earlier arms' weights. It cost a whole DWQ
+   comparison — see `showdown-2026-09-21-CONTAMINATED/WHY-DISCARDED.md`, where the control
+   pass came back 22% slower than its own identical first pass. Allow a settle after the
+   kickstart, too; it returns before the old process's memory is reclaimed.
+2. **Do not compare two models with two sequential passes.** This box heats up under exactly
+   the load a benchmark applies: across one 9-minute pass the *same* model read 130.92 then
+   110.12 t/s. A 16% session drift cannot rank a 10% difference, and no amount of restarting,
+   auditing or re-measuring fixes that — the control can only tell you the answer is
+   unusable, which it did, twice. Sample the arms **alternately** instead, flip the order
+   each round, and report the median of the paired ratios. `moe_quant_paired.py` is the
+   worked example; it survived a 28% drift inside a single pass.
+3. **Stamp the window *after* the restart, and audit it.** A scheduled job on the same server
    once depressed a measurement ~20% with nothing in the output to indicate it.
    `contention_audit.sh` fails closed — an unparseable window or empty log is a hard error,
    because a false "CLEAN" launders a bad run as verified.
@@ -57,7 +72,7 @@ reproduces them:
    printf 'START %s\nEND %s\n' "$(date '+%F %T')" "$(date '+%F %T')" > window.txt
    ./contention_audit.sh window.txt Qwen3.6-35B-A3B-4bit
    ```
-3. **Never let the prefix cache serve your prefill.** `longctx.py` defends against this with a
+4. **Never let the prefix cache serve your prefill.** `longctx.py` defends against this with a
    per-prompt nonce, shuffled sizes, a warm-up, and a `cached_tokens == 0` check. If you write
    a new long-context test, do the same — the tell that we got this wrong originally was a
    4× longer prompt returning *faster*.
