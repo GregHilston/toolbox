@@ -8,6 +8,8 @@ Four files in /instance/workspace/data/raw/:
 3. vt-website-probes.json — one row per custom email domain seen in file 1, already probed: reachable, status, final_url, ttfb_ms, title, has_viewport, parked, copyright_year.
 4. socrata-active-vendors.json — 600 state vendor registrations. Thin: vendor, name, city, st, postal, location_1. NOTE its ":@computed_region_5r79_s8s6" field is a Socrata region id, NOT a NAICS code. Do not emit it as an industry.
 
+THE FILES ARE TOO BIG TO READ. vt-dfs-licensed-trades.json is 3.2 MB and vt-childcare-providers.json is 1.4 MB — reading either whole would consume most of your context and leave you nothing to work with. Inspect them with `head -c 2000`, `jq '.[0]'`, `jq 'length'` and `jq -r '.[0] | keys[]'` from the terminal, and have your CODE stream them. Never read a raw file into the conversation.
+
 Build a Python package under /instance/workspace following ENGINEERING.md: domain/ pure (no I/O imports), DTOs adapter-local and frozen, ports as typing.Protocol, one mapper per source tested against that source as a recorded fixture.
 
 THE WEB-PRESENCE SIGNAL IS THE POINT. Derive it in the domain layer:
@@ -26,6 +28,7 @@ source, outreach_score, outreach_reason
 - contact_name: the person where there is one, else empty.
 - category: "child care", "electrician", "plumber", "gas installer", or "state vendor".
 - source: which input file the row came from.
+- A row nobody can contact is not a prospect, whatever its web presence. The trades file carries no phone or email, so those rows must score BELOW an otherwise-equal provider that has both. Contactability is a component signal like any other: keep it in a column and let the weighting see it.
 - outreach_score: float 0.0-1.0, required, never null, computed in the domain layer from the recorded signals above, with the weighting in ONE place and unit-tested including boundaries. Never ask a model for it.
 - outreach_reason: one plain sentence naming the ACTUAL signals that moved the score for THAT row. Not a template. "No website; uses a gmail address; 42 licensed places in Chittenden" is useful. "Vermont-registered business; city and postal on file" is not.
 
