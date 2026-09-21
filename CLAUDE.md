@@ -273,17 +273,17 @@ private.
 that bind-mounts your real `~/.claude` and `~/Git`, so credentials and sessions are
 shared. See `claude-code/CLAUDE.md`.
 
-## Artificium — an unattended agent, sandboxed
+## Hermes — an unattended agent, sandboxed
 
-`bin/artificium-sandbox.sh` runs [Artificium](https://github.com/officialgr/agent-artificium)
-on moria against local inference. Its README says it is **NOT A SAFE PRODUCT** — no sandbox,
-no approval layer, and an agent that can rewrite its own code and its own key — so every
-safety property comes from the container: default-deny egress that denies the tailnet as
-well as RFC1918, a non-root agent that cannot undo the firewall, and a read-only reference
-tree built from `git archive` so gitignored secrets are excluded by construction.
+`bin/agent-sandbox.sh` runs [Hermes](https://hermes-agent.nousresearch.com/docs) on moria
+against local inference, driven by `hermes kanban`. The harness is not sandboxed by itself,
+so every safety property comes from the container: default-deny egress that denies the
+tailnet as well as RFC1918, a non-root agent that cannot undo the firewall, and a read-only
+reference tree built from `git archive` so gitignored secrets are excluded by construction.
 
-`artificium/CLAUDE.md` owns the details. The harness evaluation behind the choice is
-`~/Git/notes/ref-long-running-harnesses.md`.
+`agent-sandbox/CLAUDE.md` owns the details, and `bin/agent-{verify,iterate,watch,deliver}`
+are the loop around it — **always `agent-verify.sh` before a long run.** Run history and
+findings are in `~/Git/notes/ref-hermes-run-log.md`; the operator guide is `~/Git/hermes.md`.
 
 ## Secret Management
 

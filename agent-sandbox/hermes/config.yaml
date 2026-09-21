@@ -30,8 +30,7 @@ model:
   # A cold prefill of the harness prompt plus tool schemas is minutes on a local
   # 35B, not seconds.
   request_timeout_seconds: 1800
-  # Matches what Artificium was told, and what the DWQ entry in
-  # dot/omlx/.omlx/model_settings.json now serves.
+  # Matches what the DWQ entry in dot/omlx/.omlx/model_settings.json serves.
   context_length: 131072
 
 agent:
@@ -42,9 +41,8 @@ agent:
   # and any surface not explicitly listed falls back to the factory composite,
   # which bakes it in.
   #
-  # This is also the fair setting. Artificium has no web_search tool; it reaches
-  # the internet through the shell. Leaving Hermes a built-in search would be
-  # comparing capability sets rather than harnesses.
+  # Build cards run with AGENT_OFFLINE=1 anyway, so a built-in search would be
+  # a tool that cannot work advertised on every turn.
   # A denylist, not an allowlist: an unknown name here is harmless, whereas a
   # `platform_toolsets` allowlist missing the kanban toolset would strip the
   # very tools a worker must call to end its run.
@@ -146,16 +144,16 @@ kanban:
   # One worker at a time. Kanban's value here is durable structure — a task
   # graph, atomic claims, an agent-to-agent review gate — not parallelism, and
   # two workers contending for moria's single GPU would confound both the
-  # wall-clock and the token numbers against Artificium's single loop.
+  # wall-clock and the token numbers between runs.
   max_in_progress: 1
   max_in_progress_per_profile: 1
   # The dispatcher runs inside the gateway; the standalone `kanban daemon` is
   # deprecated and the two would race for claims.
   dispatch_in_gateway: true
   dispatch_interval_seconds: 60
-  # After two consecutive non-successful attempts a card auto-blocks. This is
-  # the stall detection Artificium has no equivalent of, and the run should be
-  # allowed to demonstrate it rather than have it tuned away.
+  # After two consecutive non-successful attempts a card auto-blocks. That is
+  # stall detection by construction, and a run should be allowed to demonstrate
+  # it rather than have it tuned away.
   failure_limit: 2
   # Spawns a review worker with the bundled SDLC review skill force-loaded.
   #

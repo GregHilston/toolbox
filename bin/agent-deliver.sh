@@ -23,7 +23,7 @@ TOOLBOX="${TOOLBOX:-$HOME/Git/toolbox}"
 RUNS="$HOME/Git/agent-runs"
 INSTANCE="${RUNS}/iter/${NAME}"
 SCRATCH="${RUNS}/clean-${NAME}"
-IMAGE="${ARTIFICIUM_IMAGE:-agent-sandbox-hermes:latest}"
+IMAGE="${AGENT_IMAGE:-agent-sandbox-hermes:latest}"
 
 [ -d "${INSTANCE}/workspace" ] || { echo "no such run: ${INSTANCE}" >&2; exit 66; }
 
@@ -53,7 +53,7 @@ grep -q '^dependencies' pyproject.toml 2>/dev/null || printf 'DEFECT=no dependen
 PROBE
 
 # shellcheck disable=SC2046
-out="$(docker run --rm $("${TOOLBOX}/bin/agent-sandbox.sh" --harness hermes _flags "${SCRATCH}" 2>/dev/null) \
+out="$(docker run --rm $("${TOOLBOX}/bin/agent-sandbox.sh" _flags "${SCRATCH}" 2>/dev/null) \
   -e AGENT_TASK_MODE=1 -e AGENT_OFFLINE=1 -e UV_OFFLINE=1 \
   -e BUILD_CMD="${AGENT_BUILD_CMD:-vt-smb build}" "${IMAGE}" bash /instance/probe.sh 2>&1)"
 

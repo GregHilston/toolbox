@@ -13,7 +13,7 @@ IFS=$'\n\t'
 
 TOOLBOX="${TOOLBOX:-$HOME/Git/toolbox}"
 INSTANCE="${AGENT_VERIFY_DIR:-$HOME/Git/agent-runs/verify}"
-IMAGE="${ARTIFICIUM_IMAGE:-agent-sandbox-hermes:latest}"
+IMAGE="${AGENT_IMAGE:-agent-sandbox-hermes:latest}"
 MODEL_JUDGE="${AGENT_JUDGE_MODEL:-Qwen3.8-27B-4bit}"
 MODEL_BUILD="${AGENT_BUILD_MODEL:-Qwen3.6-35B-A3B-4bit-DWQ}"
 STATS="$HOME/.omlx/stats.json"
@@ -41,7 +41,7 @@ PY
 run_probe() {
   cat > "${INSTANCE}/probe.sh"
   # shellcheck disable=SC2046
-  docker run --rm $("${TOOLBOX}/bin/agent-sandbox.sh" --harness hermes _flags "${INSTANCE}" 2>/dev/null) \
+  docker run --rm $("${TOOLBOX}/bin/agent-sandbox.sh" _flags "${INSTANCE}" 2>/dev/null) \
     -e AGENT_TASK_MODE=1 -e AGENT_BUILD_MODEL="${MODEL_BUILD}" \
     "${IMAGE}" bash /instance/probe.sh 2>&1
 }
@@ -224,7 +224,7 @@ timeout 120 uv run python -c 'import pandas, pyarrow, httpx, pydantic' 2>&1 >/de
   && echo "DEPS=ok" || echo "DEPS=fail"
 PROBE
 # shellcheck disable=SC2046
-out="$(docker run --rm $("${TOOLBOX}/bin/agent-sandbox.sh" --harness hermes _flags "${OFFLINE_DIR}" 2>/dev/null) \
+out="$(docker run --rm $("${TOOLBOX}/bin/agent-sandbox.sh" _flags "${OFFLINE_DIR}" 2>/dev/null) \
   -e AGENT_TASK_MODE=1 -e AGENT_OFFLINE=1 "${IMAGE}" bash /instance/probe.sh 2>&1)"
 printf '%s' "${out}" | grep -q 'OFFLINE=1' && ok "UV_OFFLINE is set in offline mode" || bad "UV_OFFLINE not exported"
 printf '%s' "${out}" | grep -q 'PYTEST=.*1 passed' && ok "pytest runs offline from the image cache" || bad "pytest cannot run offline"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Default-deny egress for the Artificium sandbox: the open internet is allowed,
+# Default-deny egress for the agent sandbox: the open internet is allowed,
 # every private network is not, and oMLX is reached through a single hole.
 #
 # Runs as root before the agent exists, then the entrypoint drops to a non-root
@@ -13,7 +13,7 @@ OMLX_PORT="${OMLX_PORT:-8000}"
 # Addresses that MUST be unreachable, and that MUST answer when the rules are
 # absent -- otherwise the assertion passes for the wrong reason and the safety
 # net is decorative. The launcher verifies each one answers from the host before
-# it ever starts this container; see artificium-sandbox.sh verify_probes.
+# it ever starts this container; see agent-sandbox.sh verify_probes.
 BLOCKED_PROBES="${BLOCKED_PROBES:-}"
 
 # 0.0.0.0/8 is here because OrbStack puts the host gateway in it (0.250.250.254);

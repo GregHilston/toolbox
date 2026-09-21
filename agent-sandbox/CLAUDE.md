@@ -7,11 +7,10 @@ subcommands. Scored by `bin/agent-bench.py`, watched in flight with `bin/agent-w
 from a clean tree and pushed to a phone by `bin/agent-deliver.sh`, and **verified by
 `bin/agent-verify.sh` before any long run**.
 
-**Artificium was removed.** It lost the head-to-head badly: its provider-neutral
-`<tool_call>` text protocol collides with oMLX's unconditional tool-call extraction, and it
-landed zero tool calls in 80 requests while Hermes produced 2,167 LOC and a 1,000-row
-dataset in the same budget. Findings in `~/Git/notes/ref-artificium-vs-hermes-kanban.md`;
-the code is in git history if it is ever wanted back.
+**Hermes is the only harness here.** The alternative that was evaluated alongside it lost
+the head-to-head and its code is gone; `~/Git/notes/ref-artificium-vs-hermes-kanban.md`
+keeps that record, and git history has the code if it is ever wanted back. Nothing in this
+directory should need it.
 
 ## Verify before you run
 
@@ -33,7 +32,7 @@ the two race for claims), spawns `hermes -p <assignee>` per card in an isolated 
 and runs the review cycle — `kanban_request_review` → a reviewer profile is spawned →
 `request_changes` or `complete` — with no human in it.
 
-It also has, by construction, the stall detection Artificium lacks: per-card `max_retries`,
+It also has stall detection by construction: per-card `max_retries`,
 protocol-violation detection when a worker exits without a terminal kanban call, terminal
 provider errors blocking on first occurrence, and a heartbeat reclaim.
 
@@ -66,21 +65,22 @@ and two workers contending for moria's single GPU would confound the comparison.
 
 ## Why the container is the whole safety story
 
-This is written about Artificium and applies to both arms. Artificium's README says it
-plainly: **it is NOT A SAFE PRODUCT.** No sandbox, no approval
-layer. It runs shell commands, and it can modify or delete anything its account reaches —
-including its own code and its own API key. A spending limit or a restriction written into
-its prompt or its config **cannot** contain it, because it can read and edit both.
+Hermes ships no sandbox and no approval layer. It runs shell commands, and it can modify or
+delete anything its account reaches — including its own config. A restriction written into
+its prompt or its config **cannot** contain it, because it can read and edit both. The
+`pre_tool_call` gate is the one exception, and only because it lives outside the model's
+reach.
 
 So none of the safety here lives inside the agent. All of it is the container.
 
 ## The three boundaries
 
-**Filesystem.** Two mounts and nothing else. `/instance` (rw) is the entire Artificium root
-— `artificium-code/`, `mind/`, `logs/` — because `config.json` lives under the code
-directory and the agent may rewrite its own source. `/reference` (ro) holds snapshots of
-`toolbox`, `home-lab` and `notes`. No `$HOME`, no Docker socket, no SSH agent, no
-`~/.claude`, no host `~/Git`.
+**Filesystem.** Two mounts and nothing else. `/instance` (rw) holds the whole run:
+`workspace/` is the tree the agent builds and `home/` is `HERMES_HOME` — the kanban board,
+the profiles, the logs — both on the bind mount so they survive a restart and stay readable
+from the host while a run continues. `/reference` (ro) holds snapshots of `toolbox`,
+`home-lab` and `notes`. No `$HOME`, no Docker socket, no SSH agent, no `~/.claude`, no host
+`~/Git`.
 
 `/instance` is a host bind mount rather than a named volume, which the README's "do not
 expose host drives" line argues against. The deviation is deliberate: the directory is
@@ -142,12 +142,13 @@ snapshot of committed history and not a `:ro` bind of the live directories.
   (`auth.sub_keys` in `dot/omlx/.omlx/settings.json.tpl`) narrows *revocation*, not
   capability — it is still worth having, and the launcher warns when the shared key is used,
   but do not mistake it for a capability boundary.
-- The key travels as an environment variable so it never appears in `ps`, but `setup` writes
-  it to `/instance/artificium-code/.secrets.json`, on the host bind mount. The agent has
-  arbitrary shell and unrestricted egress, so any key it holds is a key it can send anywhere.
-- The pinned Artificium commit is a `Dockerfile` build arg. Artificium also has its own
-  `upgrade` command, which the agent can run against GitHub; if it does, the image pin and
-  the instance no longer agree.
+- The key travels as an environment variable so it never appears in `ps`, but `bootstrap.sh`
+  writes it to `${HERMES_HOME}/.env` — `/instance/home/.env`, on the host bind mount. The
+  agent has arbitrary shell and unrestricted egress, so any key it holds is a key it can
+  send anywhere.
+- The Hermes version is pinned in the `FROM` line, currently `v2026.9.14`. Nothing stops the
+  agent installing a different one inside a running container, in which case the image pin
+  and the instance no longer agree.
 - **The privilege boundary is one layer deep.** `no-new-privileges` is the only thing
   stopping the agent from recovering uid 0 through a setuid binary in the base image and
   flushing the rules, since the container keeps `NET_ADMIN` in its bounding set for its whole

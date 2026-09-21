@@ -1,6 +1,5 @@
-# The Hermes arm of the harness comparison. Same cage as the Artificium arm:
-# default-deny egress installed by root, then a non-root agent for the rest of
-# the container's life.
+# The sandbox image: default-deny egress installed by root, then a non-root
+# agent for the rest of the container's life.
 #
 # Pinned to v2026.9.14, NOT the v2026.8.31 that home-lab/hermes runs. That
 # release's notes open by describing how v0.21.0 made state.db fragile, and two
@@ -24,8 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sqlite3 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd --gid "${GID}" artificium 2>/dev/null || true \
-    && useradd --uid "${UID}" --gid "${GID}" --create-home --shell /bin/bash artificium \
+RUN groupadd --gid "${GID}" agent 2>/dev/null || true \
+    && useradd --uid "${UID}" --gid "${GID}" --create-home --shell /bin/bash agent \
     && mkdir -p /instance \
     && chown "${UID}:${GID}" /instance
 
@@ -47,7 +46,7 @@ RUN chmod 0755 /usr/local/sbin/init-firewall.sh /usr/local/sbin/entrypoint.sh \
 # runtime", and the gate silently does nothing.
 ENV HERMES_ACCEPT_HOOKS=1 \
     HERMES_HOME=/instance/home \
-    HOME=/home/artificium \
+    HOME=/home/agent \
     UV_LINK_MODE=copy
 # The uv cache is an image layer and the venv is on the bind mount, so uv can
 # never hardlink between them; unset, it says so on every command it runs.
@@ -58,7 +57,7 @@ ENV HERMES_ACCEPT_HOOKS=1 \
 # card is unsatisfiable by construction; two iterations were lost to this and
 # read as packaging failures. Resolve and download the seeded dependency set at
 # build time, and ship the lock beside the pyproject so nothing re-resolves.
-USER artificium
+USER agent
 RUN mkdir -p /tmp/warm/src/vt_smb /tmp/warm/tests \
     && cp /opt/agent-seed/project/pyproject.toml /tmp/warm/ \
     && touch /tmp/warm/src/vt_smb/__init__.py \

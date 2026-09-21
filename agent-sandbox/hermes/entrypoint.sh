@@ -1,5 +1,5 @@
 #!/bin/bash
-# Same contract as the Artificium entrypoint: install the egress firewall as
+# The contract: install the egress firewall as
 # root, seed an empty instance, then drop to a non-root user for the rest of the
 # container's life. The two harnesses must be caged identically or the
 # comparison between them measures the cage.
@@ -8,7 +8,7 @@ IFS=$'\n\t'
 
 INSTANCE=/instance
 SEED=/opt/agent-seed
-RUN_USER=artificium
+RUN_USER=agent
 
 log() { printf 'entrypoint: %s\n' "$*" >&2; }
 die() { printf 'entrypoint: FATAL: %s\n' "$*" >&2; exit 1; }

@@ -1,28 +1,16 @@
 #!/bin/bash
-# Build, seed and drive a sandboxed long-running agent. Two harnesses share one
-# sandbox so the comparison between them is about the harness, not the cage.
+# Build, seed and drive a sandboxed long-running Hermes agent.
 # See agent-sandbox/CLAUDE.md.
 set -euo pipefail
 IFS=$'\n\t'
-
-# Hermes only. Artificium was removed after the head-to-head: its text
-# `<tool_call>` protocol collides with oMLX's unconditional tool-call extraction
-# and it landed zero tool calls in 80 requests. See
-# ~/Git/notes/ref-artificium-vs-hermes-kanban.md. `--harness hermes` is still
-# accepted so older commands and docs keep working.
-if [ "${1:-}" = "--harness" ]; then
-  [ "${2:-}" = "hermes" ] || { echo "only the hermes harness remains" >&2; exit 64; }
-  shift 2
-fi
-HARNESS=hermes
 
 RUNS_DIR="${AGENT_RUNS_DIR:-$HOME/Git/agent-runs}"
 SANDBOX_DIR="${AGENT_SANDBOX_DIR:-$HOME/Git/toolbox/agent-sandbox}"
 REFERENCE="${RUNS_DIR}/reference"
 
-IMAGE="agent-sandbox-${HARNESS}:latest"
-CONTAINER="agent-${HARNESS}-vt-smb"
-INSTANCE="${RUNS_DIR}/vt-smb/${HARNESS}"
+IMAGE="${AGENT_IMAGE:-agent-sandbox-hermes:latest}"
+CONTAINER="agent-hermes-vt-smb"
+INSTANCE="${RUNS_DIR}/vt-smb/hermes"
 
 MODEL="${AGENT_MODEL:-Qwen3.6-35B-A3B-4bit-DWQ}"
 CONTEXT_WINDOW="${AGENT_CONTEXT_WINDOW:-131072}"
@@ -30,7 +18,6 @@ WORKING_MEMORY="${AGENT_WORKING_MEMORY:-96000}"
 
 # Exported, not passed on the command line: `--env=NAME` reads it from this
 # process, so the key never shows up in `ps` on the host.
-export ARTIFICIUM_API_KEY="${ARTIFICIUM_API_KEY:-${OMLX_API_KEY:-}}"
 export OMLX_API_KEY="${OMLX_API_KEY:-}"
 
 BLOCKED_PROBES=""
@@ -94,7 +81,7 @@ prepare_probes() {
 # given is a key it can send anywhere. A dedicated oMLX sub-key makes that
 # revocable without rotating the one pi and everything else here uses.
 warn_shared_key() {
-  if [ -n "${OMLX_API_KEY:-}" ] && [ "${ARTIFICIUM_API_KEY}" = "${OMLX_API_KEY}" ]; then
+  if [ -n "${OMLX_API_KEY:-}" ]; then
     log "WARNING: using the shared OMLX_API_KEY. An oMLX sub-key would be revocable on its own."
     log "         Note it also reaches /v1/models/{id}/load and /unload, which can disrupt pi."
   fi
@@ -126,7 +113,6 @@ sandbox_flags_for() {
 --cpus=6
 --volume=${instance}:/instance
 --volume=${REFERENCE}:/reference:ro
---env=ARTIFICIUM_API_KEY
 --env=OMLX_API_KEY
 --env=BLOCKED_PROBES=${BLOCKED_PROBES}
 --dns=1.1.1.1
@@ -136,11 +122,11 @@ FLAGS
 
 cmd_build() {
   require_docker
-  log "building ${IMAGE} from ${HARNESS}/Dockerfile"
+  log "building ${IMAGE} from hermes/Dockerfile"
   docker build \
     --build-arg "UID=$(id -u)" \
     --build-arg "GID=$(id -g)" \
-    -f "${SANDBOX_DIR}/${HARNESS}/Dockerfile" \
+    -f "${SANDBOX_DIR}/hermes/Dockerfile" \
     -t "${IMAGE}" "${SANDBOX_DIR}"
 }
 
@@ -188,13 +174,13 @@ cmd_stop() {
 
 cmd_logs() { require_docker; docker logs "$@" "${CONTAINER}"; }
 cmd_status() { require_docker; running || die "${CONTAINER} is not running"
-  docker exec -u artificium "${CONTAINER}" hermes kanban list "$@"; }
+  docker exec -u agent "${CONTAINER}" hermes kanban list "$@"; }
 cmd_show()   { require_docker; running || die "${CONTAINER} is not running"
-  docker exec -u artificium "${CONTAINER}" hermes kanban show "$@"; }
+  docker exec -u agent "${CONTAINER}" hermes kanban show "$@"; }
 cmd_doctor() { require_docker; running || die "${CONTAINER} is not running"
-  docker exec -u artificium "${CONTAINER}" hermes doctor; }
+  docker exec -u agent "${CONTAINER}" hermes doctor; }
 cmd_shell() { require_docker; running || die "${CONTAINER} is not running"
-  docker exec -itu artificium "${CONTAINER}" bash; }
+  docker exec -itu agent "${CONTAINER}" bash; }
 
 # Leaves ${RUNS_DIR} alone on purpose: a failed run is only useful if it stays
 # inspectable afterwards.
@@ -223,7 +209,7 @@ cmd_task() {
     esac
   done
 
-  [ -n "${ARTIFICIUM_API_KEY}" ] || die "OMLX_API_KEY is not set"
+  [ -n "${OMLX_API_KEY}" ] || die "OMLX_API_KEY is not set"
   warn_shared_key
   prepare_probes
   mkdir -p "${dir}/workspace"
