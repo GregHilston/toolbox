@@ -8,21 +8,26 @@
 `docker logs` on a run is 59 lines of gateway boot noise and then silence: the
 worker's transcript is never persisted, and `hermes kanban log` stays empty. The
 signals that do exist are scattered — heartbeats in kanban.db, files appearing on
-the bind mount, token counters in oMLX's stats.json — and all three are readable
-from the host, so watching costs the run nothing.
+the bind mount, and completions in oMLX's log — and all three are readable from
+the host, so watching costs the run nothing.
+
+Traffic comes from the log rather than `~/.omlx/stats.json`, which flushes lazily
+with an unbounded lag: it was seen sitting at 1240 requests while the log showed
+eleven completions in the previous six minutes.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sqlite3
 import sys
 import time
 from pathlib import Path
 
 RUNS = Path.home() / "Git/agent-runs/iter"
-STATS = Path.home() / ".omlx/stats.json"
+OMLX_LOG = Path.home() / "Library/Logs/omlx.log"
 SKIP = {".venv", "node_modules", "__pycache__", ".git", ".ruff_cache", ".pytest_cache"}
 
 
@@ -35,11 +40,37 @@ def ago(seconds: float) -> str:
     return f"{seconds // 3600}h{(seconds % 3600) // 60:02d}m"
 
 
-def read_stats() -> dict:
+LINE = re.compile(
+    r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d),\d+ .*"
+    r"Chat completion: model=([^,]+), (\d+) tokens in ([\d.]+)s .*prompt: (\d+)"
+)
+
+
+def log_traffic(since_epoch: float) -> dict:
+    """Per-model totals since a run started, read from oMLX's own log.
+
+    `~/.omlx/stats.json` is the obvious source and it cannot be trusted for this:
+    it flushes lazily with an unbounded lag, and was observed sitting at 1240
+    requests while the log showed eleven completions in the previous six minutes.
+    A watcher reading it says "no model traffic yet" about a run that is working.
+    """
+    stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(since_epoch))
+    agg: dict[str, dict] = {}
     try:
-        return json.loads(STATS.read_text()).get("per_model") or {}
-    except Exception:
+        with open(OMLX_LOG, errors="ignore") as fh:
+            for line in fh:
+                m = LINE.match(line)
+                if not m or m.group(1) < stamp:
+                    continue
+                a = agg.setdefault(m.group(2), {"reqs": 0, "prompt": 0,
+                                                "completion": 0, "secs": 0.0})
+                a["reqs"] += 1
+                a["prompt"] += int(m.group(5))
+                a["completion"] += int(m.group(3))
+                a["secs"] += float(m.group(4))
+    except OSError:
         return {}
+    return agg
 
 
 def kanban(instance: Path) -> dict:
@@ -91,26 +122,35 @@ def workspace_state(instance: Path) -> dict:
     return {"files": files, "loc": loc, "newest": newest, "newest_path": newest_path}
 
 
-def model_lines(baseline: dict, now: dict, elapsed: float) -> list[str]:
+def model_lines(traffic: dict, elapsed: float) -> list[str]:
     lines = []
-    for model, before in baseline.items():
-        after = now.get(model) or {}
-        d = {k: (after.get(k, 0) or 0) - (before.get(k, 0) or 0) for k in
-             ("requests", "prompt_tokens", "completion_tokens", "cached_tokens",
-              "prefill_duration", "generation_duration")}
-        if d["requests"] <= 0:
+    for model, a in sorted(traffic.items(), key=lambda kv: -kv[1]["reqs"]):
+        n = a["reqs"]
+        if not n:
             continue
-        rpm = d["requests"] / (elapsed / 60) if elapsed > 0 else 0
-        avg_prompt = d["prompt_tokens"] / d["requests"]
-        cached = 100 * d["cached_tokens"] / d["prompt_tokens"] if d["prompt_tokens"] else 0
+        rpm = n / (elapsed / 60) if elapsed > 0 else 0
         lines.append(
-            f"  {model}: {d['requests']} reqs ({rpm:.1f}/min), "
-            f"{avg_prompt/1000:.1f}k avg prompt, {cached:.0f}% cached, "
-            f"prefill {d['prefill_duration']/d['requests']:.1f}s/req, "
-            f"gen {d['generation_duration']/d['requests']:.1f}s/req, "
-            f"{d['completion_tokens']} completion tokens"
+            f"  {model}: {n} reqs ({rpm:.1f}/min), "
+            f"{a['prompt'] / n / 1000:.1f}k avg prompt, "
+            f"{a['completion'] / n:.0f} avg completion, "
+            f"{a['secs']:.0f}s of model time"
         )
     return lines
+
+
+def last_completion(since_epoch: float) -> float:
+    """Epoch of the most recent completion, or the run start if there is none."""
+    stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(since_epoch))
+    latest = since_epoch
+    try:
+        with open(OMLX_LOG, errors="ignore") as fh:
+            for line in fh:
+                m = LINE.match(line)
+                if m and m.group(1) >= stamp:
+                    latest = time.mktime(time.strptime(m.group(1), "%Y-%m-%d %H:%M:%S"))
+    except OSError:
+        pass
+    return latest
 
 
 def render(instance: Path) -> str:
@@ -175,15 +215,15 @@ def render(instance: Path) -> str:
         except Exception as exc:
             out.append(f"  score.json unreadable ({exc})")
 
-    baseline_path = instance / "stats-baseline.json"
-    if baseline_path.exists():
-        try:
-            baseline = json.loads(baseline_path.read_text())
-        except Exception:
-            baseline = {}
-        out += model_lines(baseline, read_stats(), elapsed) or ["  no model traffic yet"]
-    else:
-        out.append("  (no stats baseline — model traffic unavailable for this run)")
+    traffic = log_traffic(started) if started else {}
+    out += model_lines(traffic, elapsed) or ["  no model traffic yet"]
+    # Silence is the failure mode that matters: run gate-a heartbeated for 51
+    # minutes while serving nothing for twenty of them.
+    if traffic:
+        quiet = now - last_completion(started)
+        if quiet > 300:
+            out.append(f"  !! no completion for {ago(quiet)} — possible stall")
+
     return "\n".join(out)
 
 

@@ -59,24 +59,6 @@ for m in "${BUILD}" "${JUDGE}"; do
     printf -v "b_${m//[.-]/_}_${k}" '%s' "$(stat_of "${STATS}" "$m" "$k")"
   done
 done
-# The same baseline, in a form `agent-watch.py` can subtract mid-run. oMLX's
-# counters are global and cumulative, so without this a watcher can only report
-# rates between its own samples, never the run's own totals.
-python3 - "${STATS}" "${INSTANCE}/stats-baseline.json" "${BUILD}" "${JUDGE}" <<'PY'
-import json, sys
-src, dst, *models = sys.argv[1:]
-try:
-    per = json.load(open(src)).get("per_model") or {}
-except Exception:
-    per = {}
-json.dump({m: per.get(m, {}) for m in models}, open(dst, "w"))
-PY
-
-# The entrypoint exports UV_OFFLINE for the gateway and its workers, but a
-# `docker exec` gets the image environment instead — so scoring, which runs
-# pytest and the build through exec, spent ~50s per command retrying PyPI.
-# Newline-separated because the strict IFS splits on \n, not spaces, the same
-# way `agent-sandbox.sh _flags` emits one flag per line.
 UV_OFFLINE_FLAG=""
 [ "${AGENT_OFFLINE:-0}" = "1" ] && UV_OFFLINE_FLAG=$'-e\nUV_OFFLINE=1'
 
@@ -100,8 +82,20 @@ card_status="?"
 # Model requests are the progress signal. The builder runs on the DWQ
 # checkpoint and nothing else on this box points at it, so its counter is ours;
 # a model shared with pi would give false "progress" from the neighbour.
+# Counted from oMLX's log, NOT from stats.json. The stats file flushes lazily and
+# the lag is unbounded: during run smoke-enriched it sat at 1240 while the log
+# showed 11 completions in the previous six minutes, so a stall detector reading
+# it would have paged on a healthy run. The log line is timestamped and names the
+# model, and the full date is compared so a run crossing midnight still works.
+OMLX_LOG="${OMLX_LOG:-$HOME/Library/Logs/omlx.log}"
+completions_since() {
+  awk -v s="$1" -v m="Chat completion: model=${BUILD}," \
+    'index($0, m) { ts = $1 " " substr($2, 1, 8); if (ts >= s) n++ } END { print n+0 }' \
+    "${OMLX_LOG}" 2>/dev/null || echo 0
+}
+run_stamp="$(date '+%F %T')"
 STALL_MIN="${AGENT_STALL_MINUTES:-10}"
-last_reqs="$(stat_of "${STATS}" "${BUILD}" requests)"
+last_reqs="$(completions_since "${run_stamp}")"
 last_progress=$(date +%s)
 stall_alerted=0
 stalls=0
@@ -112,7 +106,7 @@ while [ "$(date +%s)" -lt "${end}" ]; do
 try: print(json.load(sys.stdin)[0]["status"])
 except Exception: print("?")' 2>/dev/null || echo "?")"
 
-  now_reqs="$(stat_of "${STATS}" "${BUILD}" requests)"
+  now_reqs="$(completions_since "${run_stamp}")"
   if [ "${now_reqs}" != "${last_reqs}" ]; then
     last_reqs="${now_reqs}"; last_progress=$(date +%s); stall_alerted=0
   elif [ "${stall_alerted}" = "0" ] \
@@ -158,21 +152,9 @@ sleep 20   # oMLX flushes stats.json lazily
 # Requests and completion tokens alone cannot say where the time went. The
 # prompt size and the cache hit rate are what separate "thinking hard" from
 # "re-reading the conversation", and they are the two levers worth tuning.
-deltas=""
-for m in "${BUILD}" "${JUDGE}"; do
-  v="${m//[.-]/_}"
-  r=$(( $(stat_of "${STATS}" "$m" requests) - $(eval echo "\$b_${v}_requests") ))
-  ct=$(( $(stat_of "${STATS}" "$m" completion_tokens) - $(eval echo "\$b_${v}_completion_tokens") ))
-  pt=$(( $(stat_of "${STATS}" "$m" prompt_tokens) - $(eval echo "\$b_${v}_prompt_tokens") ))
-  cd=$(( $(stat_of "${STATS}" "$m" cached_tokens) - $(eval echo "\$b_${v}_cached_tokens") ))
-  pf=$(printf '%.0f' "$(echo "$(stat_of "${STATS}" "$m" prefill_duration) - $(eval echo "\$b_${v}_prefill_duration")" | bc -l 2>/dev/null || echo 0)")
-  gn=$(printf '%.0f' "$(echo "$(stat_of "${STATS}" "$m" generation_duration) - $(eval echo "\$b_${v}_generation_duration")" | bc -l 2>/dev/null || echo 0)")
-  if [ "${r}" -gt 0 ]; then
-    deltas="${deltas}${m}: ${r} reqs, $(( pt / r ))/$(( ct / r )) prompt/completion tok per req, $(( pt == 0 ? 0 : 100 * cd / pt ))% cached, ${pf}s prefill + ${gn}s gen<br>"
-  else
-    deltas="${deltas}${m}: 0 reqs<br>"
-  fi
-done
+# Python, not awk: macOS ships BWK awk, whose match() takes no array argument,
+# so the gawk idiom for pulling the token counts out fails silently here.
+deltas="$(python3 "${TOOLBOX}/bin/_omlx_run_traffic.py" "${OMLX_LOG}" "${run_stamp}" "${BUILD}" "${JUDGE}")"
 
 mkdir -p "$(dirname "${NOTE}")"
 if ! grep -qF "${ROW_ANCHOR}" "${NOTE}" 2>/dev/null; then

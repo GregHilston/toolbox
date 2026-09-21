@@ -2,8 +2,9 @@
 
 The watcher reads three sources that all lie in their own way: a kanban.db being
 written by a live dispatcher, a workspace an agent is midway through creating,
-and oMLX counters that are global and cumulative rather than per-run. Each of
-those is a way to render a wrong number confidently, so they are what is tested.
+and an oMLX log that covers every model and every caller since the server
+started. Each is a way to render a wrong number confidently, so they are what is
+tested.
 """
 
 from __future__ import annotations
@@ -56,32 +57,52 @@ class Ago(unittest.TestCase):
 
 
 class ModelLines(unittest.TestCase):
-    def test_reports_the_runs_own_totals_not_the_servers(self):
-        """oMLX's counters cover every model and every caller since it started,
-        so a watcher that reads them straight attributes the whole day to one run."""
-        baseline = {"m": {"requests": 100, "prompt_tokens": 1_000_000, "completion_tokens": 50_000,
-                          "cached_tokens": 900_000, "prefill_duration": 500.0,
-                          "generation_duration": 400.0}}
-        now = {"m": {"requests": 110, "prompt_tokens": 1_400_000, "completion_tokens": 55_000,
-                     "cached_tokens": 1_240_000, "prefill_duration": 600.0,
-                     "generation_duration": 480.0}}
-        line, = watch.model_lines(baseline, now, elapsed=300)
+    def test_reports_per_model_totals(self):
+        traffic = {"m": {"reqs": 10, "prompt": 400_000, "completion": 5_000, "secs": 180.0}}
+        line, = watch.model_lines(traffic, elapsed=300)
         self.assertIn("10 reqs (2.0/min)", line)
-        self.assertIn("40.0k avg prompt", line)   # 400k new prompt over 10 requests
-        self.assertIn("85% cached", line)         # 340k of 400k
-        self.assertIn("prefill 10.0s/req", line)
-        self.assertIn("5000 completion tokens", line)
+        self.assertIn("40.0k avg prompt", line)
+        self.assertIn("500 avg completion", line)
+        self.assertIn("180s of model time", line)
 
-    def test_a_model_with_no_new_traffic_is_omitted(self):
+    def test_a_model_with_no_traffic_is_omitted(self):
         """The judge serves nothing until a handoff; a '0 reqs' line every 20s
         would read as a broken configuration rather than an idle one."""
-        same = {"m": {"requests": 7, "prompt_tokens": 10, "completion_tokens": 1,
-                      "cached_tokens": 0, "prefill_duration": 1.0, "generation_duration": 1.0}}
-        self.assertEqual(watch.model_lines(same, same, elapsed=60), [])
+        self.assertEqual(watch.model_lines({"m": {"reqs": 0, "prompt": 0,
+                                                  "completion": 0, "secs": 0.0}}, 60), [])
 
     def test_no_division_by_zero_before_the_first_request(self):
-        baseline = {"m": {"requests": 0, "prompt_tokens": 0}}
-        self.assertEqual(watch.model_lines(baseline, {"m": {"requests": 0}}, elapsed=0), [])
+        self.assertEqual(watch.model_lines({}, elapsed=0), [])
+
+
+class LogTraffic(unittest.TestCase):
+    """oMLX's log is the source because stats.json lags unboundedly."""
+
+    def _write(self, lines):
+        fh = tempfile.NamedTemporaryFile("w", suffix=".log", delete=False)
+        fh.write("".join(lines)); fh.close()
+        watch.OMLX_LOG = Path(fh.name)
+        return fh.name
+
+    def test_counts_only_completions_after_the_run_started(self):
+        fmt = ("{} - omlx.server - INFO - Chat completion: model={}, {} tokens "
+               "in {}s (1 tok/s), prompt: {}, finish_reason=stop\n")
+        self._write([
+            fmt.format("2026-09-21 09:00:00,001", "M", 100, "5.0", 1000),   # before
+            fmt.format("2026-09-21 10:00:05,001", "M", 200, "7.0", 2000),   # after
+            fmt.format("2026-09-21 10:00:09,001", "M", 300, "8.0", 4000),   # after
+            "2026-09-21 10:00:10,001 - omlx.scheduler - INFO - unrelated\n",
+        ])
+        start = time.mktime(time.strptime("2026-09-21 10:00:00", "%Y-%m-%d %H:%M:%S"))
+        got = watch.log_traffic(start)
+        self.assertEqual(got["M"]["reqs"], 2)
+        self.assertEqual(got["M"]["prompt"], 6000)
+        self.assertEqual(got["M"]["completion"], 500)
+        self.assertAlmostEqual(got["M"]["secs"], 15.0)
+
+    def test_a_missing_log_is_not_an_error(self):
+        watch.OMLX_LOG = Path("/nonexistent/omlx.log")
+        self.assertEqual(watch.log_traffic(time.time()), {})
 
 
 class WorkspaceState(unittest.TestCase):
