@@ -57,6 +57,14 @@ if "agent: {}" in text:
 elif "disabled_toolsets" not in text:
     cfg.write_text(text.rstrip() + "\n" + block)
 PYEOF
+    # The gate has to reach the worker, and the worker runs under a profile.
+    python3 - "${profile_config}" "${SEED}/hooks-block.yaml" <<'PYEOF'
+import pathlib, sys
+cfg, block = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]).read_text()
+text = cfg.read_text()
+if "pre_tool_call" not in text:
+    cfg.write_text(text.rstrip() + "\n" + block)
+PYEOF
   fi
 done
 
@@ -77,6 +85,19 @@ reviewer_config="${HERMES_HOME}/profiles/reviewer/config.yaml"
 if [ -f "${reviewer_config}" ]; then
   sed -i 's|^  default: .*|  default: Qwen3.8-27B-4bit|' "${reviewer_config}"
   log "reviewer pinned to Qwen3.8-27B-4bit"
+fi
+
+# The builder model sets the throughput of the entire run, so make swapping it
+# an experiment rather than an image rebuild. Both the root config and the
+# already-snapshotted profiles need it: `profile create` copies the model block.
+if [ -n "${AGENT_BUILD_MODEL:-}" ]; then
+  sed -i "s|^  default: .*|  default: ${AGENT_BUILD_MODEL}|" "${HERMES_HOME}/config.yaml"
+  for role in builder researcher; do
+    profile_config="${HERMES_HOME}/profiles/${role}/config.yaml"
+    [ -f "${profile_config}" ] && \
+      sed -i "s|^  default: .*|  default: ${AGENT_BUILD_MODEL}|" "${profile_config}"
+  done
+  log "builder model overridden to ${AGENT_BUILD_MODEL}"
 fi
 
 # The key is read from .env, not only from the process environment.

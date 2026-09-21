@@ -32,6 +32,11 @@ case "${tool}" in
 esac
 
 block() {
+  # Log the refusal as well as the firing. Counting only "gate fired" cannot
+  # distinguish a gate that waved everything through from one that caught
+  # something, and that difference is the only reason the gate exists.
+  { printf '[%s] gate blocked %s: %s\n' "$(date -u +%FT%TZ)" "${tool}" \
+      "$(printf '%s' "$1" | head -1)"; } >> "${LOG}" 2>/dev/null
   printf '%s\n' "$1" | head -c 2500 | python3 -c 'import json,sys
 print(json.dumps({"decision":"block","reason":sys.stdin.read()}))'
   exit 0
