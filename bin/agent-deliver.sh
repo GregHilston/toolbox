@@ -81,8 +81,10 @@ summary="$(printf 'hermes %s: %s (card=%s)\ntests: %s\nclean build: exit %s%s\nr
 printf '\n%s\n\n' "${summary}"
 
 if [ "${AGENT_NOTIFY:-1}" = "1" ]; then
-  "${TOOLBOX}/bin/pushover.py" -m "${summary}" >/dev/null 2>&1 \
-    && log "pushed" || log "pushover failed (is PUSHOVER_USER_KEY set?)"
+  # agent-notify.sh fans out to whichever transports are configured and says
+  # per transport what it did, so there is nothing to report here but failure.
+  "${TOOLBOX}/bin/agent-notify.sh" -m "${summary}" \
+    || log "no transport delivered (is nixos/secrets/.env populated?)"
 fi
 
 rm -rf "${SCRATCH}"
