@@ -99,6 +99,14 @@ fi
 
 hermes kanban init >/dev/null 2>&1 || true
 
+# A one-shot `task` run wants profiles, config and skills, but no board — the
+# board exists to sequence dependent work, and a single bounded question is one
+# turn.
+if [ "${AGENT_TASK_MODE:-0}" = "1" ]; then
+  log "task mode: skipping the vt-smb task graph"
+  exit 0
+fi
+
 # The task graph. Deliberately small: the point of the first cards is to prove
 # the loop turns, not to front-load a plan the agent should be making itself.
 # Each card's body IS its acceptance criteria — goal mode judges against it.

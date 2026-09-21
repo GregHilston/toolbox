@@ -105,7 +105,10 @@ warn_shared_key() {
 # Everything that makes this container a sandbox. Kept in one place so that
 # `setup`, `start` and `shell` cannot drift apart on the flags that matter.
 # One flag per line, split on the strict-mode IFS at the call site.
-sandbox_flags() {
+sandbox_flags() { sandbox_flags_for "${INSTANCE}"; }
+
+sandbox_flags_for() {
+  local instance="$1"
   cat <<FLAGS
 --add-host=omlx.host:host-gateway
 --cap-drop=ALL
@@ -120,7 +123,7 @@ sandbox_flags() {
 --memory-swap=16g
 --pids-limit=512
 --cpus=6
---volume=${INSTANCE}:/instance
+--volume=${instance}:/instance
 --volume=${REFERENCE}:/reference:ro
 --env=ARTIFICIUM_API_KEY
 --env=OMLX_API_KEY
@@ -242,6 +245,39 @@ cmd_destroy() {
   log "removed container and image; ${RUNS_DIR} is untouched"
 }
 
+# One bounded question, one profile, no kanban board. `hermes -p X -z "..."` is
+# the whole mechanism; everything else this script does is the cage around it.
+cmd_task() {
+  require_docker
+  local dir="${1:-}"; shift || true
+  [ -n "${dir}" ] || die "usage: ${0##*/} task <dir> [--minutes N] [--profile NAME]"
+  dir="$(cd "${dir}" 2>/dev/null && pwd)" || die "no such directory: ${1:-}"
+  [ -f "${dir}/task.md" ] || die "${dir}/task.md not found -- write the task there first"
+
+  local minutes=10 profile=researcher
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --minutes) minutes="$2"; shift 2 ;;
+      --profile) profile="$2"; shift 2 ;;
+      *) die "unknown option: $1" ;;
+    esac
+  done
+
+  [ -n "${ARTIFICIUM_API_KEY}" ] || die "OMLX_API_KEY is not set"
+  warn_shared_key
+  prepare_probes
+  mkdir -p "${dir}/workspace"
+
+  log "task: ${dir}/task.md as ${profile}, ${minutes}m cap"
+  # shellcheck disable=SC2046
+  docker run --rm $(tty_flags) $(sandbox_flags_for "${dir}") \
+    -e AGENT_TASK_MODE=1 \
+    "${IMAGE}" bash -c \
+    "/usr/local/bin/hermes-bootstrap.sh >/dev/null 2>&1; \
+     timeout $(( minutes * 60 )) hermes -p ${profile} -z \"\$(cat /instance/task.md)\""
+  log "done; output under ${dir}/workspace/"
+}
+
 usage() {
   cat >&2 <<USAGE
 usage: ${0##*/} <command> [args]
@@ -257,6 +293,7 @@ usage: ${0##*/} <command> [args]
   chat               talk to the agent
   shell              a shell in the container, as the agent's user
   stop               stop the life-loop
+  task <dir>         run one bounded task from <dir>/task.md (--minutes, --profile)
   destroy            remove the container and image, keep the run directory
 USAGE
   exit "${1:-64}"
@@ -276,6 +313,7 @@ case "${command}" in
   chat)             cmd_chat "$@" ;;
   shell)            cmd_shell "$@" ;;
   stop)             cmd_stop "$@" ;;
+  task)             cmd_task "$@" ;;
   destroy)          cmd_destroy "$@" ;;
   -h|--help|help)   usage 0 ;;
   *)                usage ;;
