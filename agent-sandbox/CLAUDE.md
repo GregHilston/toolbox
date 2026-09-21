@@ -3,8 +3,9 @@
 A cage for [Hermes Agent](https://hermes-agent.nousresearch.com/docs) driven by
 `hermes kanban`: a durable SQLite task board whose dispatcher spawns one OS process per
 card, with an agent-to-agent review gate. Driven by `bin/agent-sandbox.sh`; `-h` lists the
-subcommands. Scored by `bin/agent-bench.py`, and **verified by `bin/agent-verify.sh` before
-any long run**.
+subcommands. Scored by `bin/agent-bench.py`, watched in flight with `bin/agent-watch.py`, re-checked
+from a clean tree and pushed to a phone by `bin/agent-deliver.sh`, and **verified by
+`bin/agent-verify.sh` before any long run**.
 
 **Artificium was removed.** It lost the head-to-head badly: its provider-neutral
 `<tool_call>` text protocol collides with oMLX's unconditional tool-call extraction, and it
@@ -36,9 +37,9 @@ It also has, by construction, the stall detection Artificium lacks: per-card `ma
 protocol-violation detection when a worker exits without a terminal kanban call, terminal
 provider errors blocking on first occurrence, and a heartbeat reclaim.
 
-## Three configuration traps, each of which cost an hour
+## Four configuration traps, each of which cost an hour
 
-All three present as *the model failing*, which is why they are written down.
+All four present as *the model failing*, which is why they are written down.
 
 - **`provider: custom:omlx` is not valid here.** That is the v39 `providers:`-block form
   `home-lab/hermes` uses. This release wants plain `provider: "custom"` with `base_url` and
@@ -50,6 +51,15 @@ All three present as *the model failing*, which is why they are written down.
   and whole sections are ignored in silence; only `hermes doctor` mentions it.
 - **`profile create` snapshots the root model block.** Fixing the root config does not reach
   a profile that already exists. `bootstrap.sh` re-stamps every profile on every boot.
+- **`AGENT_OFFLINE=1` used to make the card unsatisfiable.** The image shipped an empty
+  uv cache and no pytest, so with the internet gone `uv run pytest` and `uv run vt-smb
+  build` — criteria 1 and 2 of the card's DONE WHEN, and both of the commands
+  `require-green.sh` runs — could not resolve a single dependency. Each attempt burned
+  ~50s retrying PyPI and then failed, so two iterations were written off as src-layout
+  packaging failures that were nothing of the kind. The Dockerfile now resolves the seeded
+  dependency set at build time, ships the resulting `uv.lock` beside the seeded
+  `pyproject.toml`, and the entrypoint exports `UV_OFFLINE=1` so a package that is genuinely
+  missing fails fast and names itself. `agent-verify.sh` section 4 asserts all of it.
 
 `max_in_progress: 1` on purpose: what is being tested is durable structure, not parallelism,
 and two workers contending for moria's single GPU would confound the comparison.
@@ -166,3 +176,14 @@ bound. Chosen over the dense `Qwen3.8-27B-4bit` for two reasons that only apply 
 is watching: it is 4.5× faster in wall-clock, which is the currency of an unattended run,
 and it has no `reasoning_effort` knob — the setting that, left at its Qwen3.8 default, burns
 a whole token budget and emits no answer at all. `dot/omlx/CLAUDE.md` has the measurements.
+
+DWQ rather than the plain `Qwen3.6-35B-A3B-4bit` that pi defaults to, and the price is
+**~10%** — paired measurement says -9.8% decode, -9.3% prefill, against the 21% this repo
+quoted for a year from sequential runs that were really measuring their own thermal drift.
+The two checkpoints differ in precision layout, not in learned scales: the plain build is
+`bits: 4` with the MoE gates at 8, DWQ is `bits: 8` with only the expert FFNs at 4, so it
+runs embeddings, `lm_head`, the gates and the whole attention stack at 8-bit. For an
+unattended run a certain 10% is a good trade against an uncorrected derailment; for pi, with
+a human present, it is not. `AGENT_BUILD_MODEL` overrides it for an experiment, and
+`agent-verify.sh` section 4 asserts the builder actually *answers* on the expected model
+rather than merely naming it in a config file.
