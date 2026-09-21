@@ -21,8 +21,8 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/vt_smb"]
 
-[tool.uv]
-dev-dependencies = ["pytest>=8.0", "ruff>=0.4"]
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.4"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

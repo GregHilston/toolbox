@@ -50,4 +50,11 @@ if [ "$(stat -c %U "${INSTANCE}/home")" != "${RUN_USER}" ]; then
 fi
 
 log "dropping to ${RUN_USER}"
+# Without this uv spends 50s retrying PyPI before every failure, and reports a
+# connect timeout rather than a missing package. The image's cache carries the
+# seeded dependency set; anything else should fail fast and say so.
+if [ "${AGENT_OFFLINE:-0}" = "1" ]; then
+  export UV_OFFLINE=1
+  log "UV_OFFLINE=1 — uv resolves from the image cache only"
+fi
 exec gosu "${RUN_USER}" "$@"
