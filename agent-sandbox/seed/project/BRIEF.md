@@ -76,6 +76,26 @@ Record the component signals alongside the score. A score nobody can take apart
 is a score nobody can trust or tune, and my owner will want to know *why*
 before he writes to anyone.
 
+## What is actually on disk
+
+The sources below are the long-term plan. What a run has **right now** is a seed
+corpus fetched on the host by `seed/tools/fetch-vt-sources.py`, because the agent
+runs with no internet:
+
+| file | rows | what makes it useful |
+|---|---|---|
+| `vt-childcare-providers.json` | 1,048 | **the spine.** Real business names, and every row has a phone, an email, a county and coordinates |
+| `vt-dfs-licensed-trades.json` | 11,489 | licensed electricians, plumbers, gas installers — addressed, mostly sole traders |
+| `vt-website-probes.json` | 219 | the part an offline agent cannot do: every custom email domain, already probed for the signals below |
+| `socrata-active-vendors.json` | 600 | thin, and its `:@computed_region_*` field is a Socrata region id, **not** a NAICS code |
+
+**The email domain is the web-presence signal, and it is free.** 536 of the 1,048
+providers email from gmail, yahoo, comcast or myfairpoint — a business with no
+domain of its own has no website worth the name, and that is a finding rather
+than a gap. The 509 on a custom domain join to the probe file, where 9 have no
+viewport tag, 12 carry a copyright year of 2020 or earlier, and 13 do not resolve
+at all. Those are the businesses to write to.
+
 ## Sources, in priority order
 
 Open and official first. Verify each one's current terms before relying on it;
