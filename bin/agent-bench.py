@@ -196,9 +196,22 @@ def run_in_container(container: str, workdir: str, command: str, timeout: int = 
     )
     if probe.stdout.strip() != "true":
         return None, f"container {container} is not running"
+    # The entrypoint exports UV_OFFLINE for the gateway and its workers, but a
+    # `docker exec` gets the image environment instead. Without it uv spends ~50s
+    # retrying PyPI and then fails, so an offline run scored a working build as
+    # exit 1 — the tree was fine, the scoring was not. Mirror the container's own
+    # AGENT_OFFLINE rather than taking it as a flag nobody will remember to pass.
+    env_flags = []
+    offline = subprocess.run(
+        ["docker", "inspect", "-f",
+         "{{range .Config.Env}}{{println .}}{{end}}", container],
+        capture_output=True, text=True,
+    )
+    if "AGENT_OFFLINE=1" in offline.stdout:
+        env_flags = ["-e", "UV_OFFLINE=1"]
     try:
         done = subprocess.run(
-            ["docker", "exec", "-w", workdir, container, "bash", "-lc", command],
+            ["docker", "exec", "-w", workdir, *env_flags, container, "bash", "-lc", command],
             capture_output=True, text=True, timeout=timeout,
         )
     except subprocess.TimeoutExpired:
