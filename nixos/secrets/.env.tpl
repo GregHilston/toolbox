@@ -8,3 +8,10 @@ PUSHOVER_WORK_API_KEY={{ op://Infra/Pushover/work_api_key }}
 FROM_EMAIL_ADDRESS_PASSWORD="{{ op://Infra/Gmail App Password/password }}"
 SLACK_BOT_TOKEN={{ op://Infra/SlackBot/bot_token }}
 SLACK_APP_TOKEN={{ op://Infra/SlackBot/app_token }}
+
+# Telegram — the Hermes harness's phone front door (bin/agent-telegram.py).
+# ALLOWED_CHAT_IDS is the whole access-control story for a bot that can spawn a
+# three-hour run, so it is mandatory: the bot refuses to start without it.
+TELEGRAM_BOT_TOKEN={{ op://Infra/Telegram/bot_token }}
+TELEGRAM_CHAT_ID={{ op://Infra/Telegram/chat_id }}
+TELEGRAM_ALLOWED_CHAT_IDS={{ op://Infra/Telegram/allowed_chat_ids }}

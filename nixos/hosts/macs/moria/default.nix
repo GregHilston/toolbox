@@ -91,4 +91,33 @@
   # `just pi-web-setup`. See modules/darwin/pi-web.nix for why nix does not own
   # its launchd agents.
   custom.programs.piWeb.enable = true;
+
+  # The Hermes harness's phone front door: a Telegram bot that reports a run's
+  # progress and can start one. moria only, because moria is where the runs are.
+  #
+  # Outbound long-polling, so no webhook, no inbound port and no firewall change.
+  # The token stays on the host: bin/agent-sandbox.sh passes an explicit env
+  # allowlist into the container, so it never reaches the sandboxed agent.
+  #
+  # Invoked through uv by its absolute profile path rather than the script's own
+  # `env -S uv run` shebang, because launchd hands an agent a minimal PATH. The
+  # profile path is stable across GC; a /nix/store path would not be.
+  #
+  # Before the 1Password entry exists the script exits 78 saying which variable
+  # is missing, hence the throttle — an unconfigured host logs one line every
+  # five minutes instead of spinning.
+  launchd.user.agents.agent-telegram = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/etc/profiles/per-user/${vars.user.name}/bin/uv"
+        "run"
+        "/Users/${vars.user.name}/Git/toolbox/bin/agent-telegram.py"
+      ];
+      RunAtLoad = true;
+      KeepAlive = true;
+      ThrottleInterval = 300;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/agent-telegram.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/agent-telegram.log";
+    };
+  };
 }
