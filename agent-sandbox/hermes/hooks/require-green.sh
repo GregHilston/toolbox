@@ -27,7 +27,7 @@ except Exception: print("")' 2>/dev/null)"
 
 # Only gate the one call that means "this work is finished".
 case "${tool}" in
-  kanban_complete) ;;
+  kanban_complete|kanban_request_review) ;;
   *) exit 0 ;;
 esac
 
@@ -43,13 +43,13 @@ cd "${WORKSPACE}" 2>/dev/null || exit 0        # nothing built yet; nothing to g
 [ -f pyproject.toml ] || exit 0
 
 if ! out="$(timeout 200 uv run pytest -q 2>&1)"; then
-  block "kanban_complete refused: the test suite does not pass. Fix this before completing.
+  block "${tool} refused: the test suite does not pass. Fix this before handing the work on.
 
 $(printf '%s' "${out}" | tail -40)"
 fi
 
 if ! out="$(timeout 60 bash -lc "${BUILD_CMD}" 2>&1)"; then
-  block "kanban_complete refused: the suite passes but '${BUILD_CMD}' fails, so the entrypoint does not even import. Tests passing while the CLI cannot import is exactly the gap that shipped last run.
+  block "${tool} refused: the suite passes but '${BUILD_CMD}' fails, so the entrypoint does not even import. Tests passing while the CLI cannot import is exactly the gap that shipped last run.
 
 $(printf '%s' "${out}" | tail -40)"
 fi

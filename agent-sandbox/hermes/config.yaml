@@ -130,7 +130,7 @@ auxiliary:
 hooks_auto_accept: true
 hooks:
   pre_tool_call:
-    - matcher: "^kanban_complete$"
+    - matcher: "^kanban_(complete|request_review)$"
       command: "/usr/local/bin/require-green.sh"
       timeout: 290
       fail_closed: true
