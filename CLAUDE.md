@@ -273,6 +273,18 @@ private.
 that bind-mounts your real `~/.claude` and `~/Git`, so credentials and sessions are
 shared. See `claude-code/CLAUDE.md`.
 
+## Artificium — an unattended agent, sandboxed
+
+`bin/artificium-sandbox.sh` runs [Artificium](https://github.com/officialgr/agent-artificium)
+on moria against local inference. Its README says it is **NOT A SAFE PRODUCT** — no sandbox,
+no approval layer, and an agent that can rewrite its own code and its own key — so every
+safety property comes from the container: default-deny egress that denies the tailnet as
+well as RFC1918, a non-root agent that cannot undo the firewall, and a read-only reference
+tree built from `git archive` so gitignored secrets are excluded by construction.
+
+`artificium/CLAUDE.md` owns the details. The harness evaluation behind the choice is
+`~/Git/notes/ref-long-running-harnesses.md`.
+
 ## Secret Management
 
 All secrets live in 1Password (vault: **Infra**). Committed `.tpl` template files contain

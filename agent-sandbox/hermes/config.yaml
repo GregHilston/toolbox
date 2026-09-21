@@ -1,0 +1,155 @@
+_config_version: 44
+# Hermes config for the harness comparison. Seeded into $HERMES_HOME on first
+# boot and thereafter writable, unlike home-lab/hermes/config.yaml which is
+# read-only on purpose — this instance is an experiment, not a service.
+#
+# `_config_version` must match the pinned release (v0.21.3 = 44). Absent, the
+# file is read as v0 and whole sections are silently ignored — `hermes doctor`
+# says "Config version outdated (v0 -> v44)" and nothing else complains.
+
+database:
+  # SQLite over a macOS bind mount through virtiofs is not WAL crash-safe, and
+  # Hermes will not downgrade a database it has already opened in WAL — so this
+  # must be right before the first boot, not after. v2026.9.14 also added an
+  # outright state.db WAL refusal on cross-VM filesystems, which this is.
+  journal_mode: "delete"
+
+model:
+  # "custom", NOT "custom:omlx". The named-provider form under a `providers:`
+  # block is the v39 schema that home-lab/hermes uses; this release wants the
+  # plain "custom" provider with base_url and api_key inline, and rejects the
+  # other with `Unknown provider` — while the worker process still exits 0, so
+  # the kanban dispatcher reports it as "clean exit without a terminal call"
+  # rather than as a model failure. That misdiagnosis cost an hour.
+  provider: "custom"
+  default: Qwen3.6-35B-A3B-4bit-DWQ
+  # omlx.host, not host.docker.internal: the firewall opens exactly one /32 from
+  # /etc/hosts and the two must name the same address.
+  base_url: http://omlx.host:8000/v1
+  api_key: ${OMLX_API_KEY}
+  # A cold prefill of the harness prompt plus tool schemas is minutes on a local
+  # 35B, not seconds.
+  request_timeout_seconds: 1800
+  # Matches what Artificium was told, and what the DWQ entry in
+  # dot/omlx/.omlx/model_settings.json now serves.
+  context_length: 131072
+
+agent:
+  reasoning_effort: "low"
+  # Same reasoning as home-lab/hermes: fewer tool schemas, shorter prefill on
+  # every turn. `web`/`search`/`x_search` must be disabled HERE rather than only
+  # omitted from platform_toolsets — Hermes' built-in web_search auto-activates
+  # and any surface not explicitly listed falls back to the factory composite,
+  # which bakes it in.
+  #
+  # This is also the fair setting. Artificium has no web_search tool; it reaches
+  # the internet through the shell. Leaving Hermes a built-in search would be
+  # comparing capability sets rather than harnesses.
+  # A denylist, not an allowlist: an unknown name here is harmless, whereas a
+  # `platform_toolsets` allowlist missing the kanban toolset would strip the
+  # very tools a worker must call to end its run.
+  #
+  # The size of this list is the point. The first smoke test logged
+  # "tool_search activated (tier 1): 21 core/visible tools kept, 17 deferred",
+  # and every worker then exited rc=0 without calling kanban_complete or
+  # kanban_block — three strikes and the card auto-blocked. A 3B-active model
+  # will not go searching for a tool it cannot see.
+  disabled_toolsets:
+    - web
+    - search
+    - x_search
+    - browser
+    - image_gen
+    - video_gen
+    - computer_use
+    - discord
+    - feishu
+    - spotify
+    - connectors
+    - a2a
+    - react
+    - tts
+    - cronjob
+    - session_search
+    - todo
+
+# Measured on run 1: half the GPU time was prefill, and tool schemas were 40 KB
+# of every request. Compression keeps the conversation half of that in check.
+compression:
+  enabled: true
+  threshold: 0.50
+  target_ratio: 0.20
+  protect_last_n: 20
+
+terminal:
+  # Default is 180s, which is shorter than this project's own test suite plus a
+  # uv sync. A timeout reads to the agent as a failure, not as a slow command.
+  timeout: 900
+
+# Role-split models. The builder does the volume on the fast MoE; every
+# judgement call goes to the dense Qwen3.8-27B, which is 2.6x more
+# token-efficient and carries far stronger published coding benchmarks. Its
+# 23 t/s is irrelevant for low-volume verdicts. 19GB + 15GB is comfortable on
+# 128GB, and oMLX keeps both resident.
+#
+# Its context window must be >= the main model's or compression fails SILENTLY
+# and loses conversation with no warning; 3.8 serves 262144 against our 131072.
+auxiliary:
+  # Each slot is a FULL connection block, not just a model name:
+  # config_defaults.py builds {provider, model, base_url, api_key, timeout,
+  # extra_body}. Run 2 set only model+provider, so with no base_url/api_key the
+  # slot could not reach oMLX and silently fell back to the main model's chain —
+  # the dense model served ZERO requests across the whole run while goal mode
+  # was demonstrably on (goal_mode=1 in kanban.db). Verify with per-model request
+  # counts in oMLX stats, never by reading the config back.
+  goal_judge:
+    provider: "custom"
+    model: Qwen3.8-27B-4bit
+    base_url: http://omlx.host:8000/v1
+    api_key: ${OMLX_API_KEY}
+  kanban_decomposer:
+    provider: "custom"
+    model: Qwen3.8-27B-4bit
+    base_url: http://omlx.host:8000/v1
+    api_key: ${OMLX_API_KEY}
+  triage_specifier:
+    provider: "custom"
+    model: Qwen3.8-27B-4bit
+    base_url: http://omlx.host:8000/v1
+    api_key: ${OMLX_API_KEY}
+  compression:
+    provider: "custom"
+    model: Qwen3.8-27B-4bit
+    base_url: http://omlx.host:8000/v1
+    api_key: ${OMLX_API_KEY}
+
+# `pre_tool_call` is the only hook class Hermes lets veto a call. Run 1 shipped a
+# package whose CLI could not import and four drifted tests, because the gate was
+# an instruction to a small model rather than a check. fail_closed means a broken
+# hook blocks rather than waves work through.
+hooks_auto_accept: true
+hooks:
+  pre_tool_call:
+    - matcher: "^kanban_complete$"
+      command: "/usr/local/bin/require-green.sh"
+      timeout: 290
+      fail_closed: true
+
+kanban:
+  # One worker at a time. Kanban's value here is durable structure — a task
+  # graph, atomic claims, an agent-to-agent review gate — not parallelism, and
+  # two workers contending for moria's single GPU would confound both the
+  # wall-clock and the token numbers against Artificium's single loop.
+  max_in_progress: 1
+  max_in_progress_per_profile: 1
+  # The dispatcher runs inside the gateway; the standalone `kanban daemon` is
+  # deprecated and the two would race for claims.
+  dispatch_in_gateway: true
+  dispatch_interval_seconds: 60
+  # After two consecutive non-successful attempts a card auto-blocks. This is
+  # the stall detection Artificium has no equivalent of, and the run should be
+  # allowed to demonstrate it rather than have it tuned away.
+  failure_limit: 2
+  # Spawns the reviewer with the bundled SDLC review skill — which run 1 did not
+  # have, because profiles were created with --no-skills.
+  review_dispatch: true
