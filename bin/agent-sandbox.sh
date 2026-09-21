@@ -171,13 +171,17 @@ cmd_setup() {
   prepare_probes
   mkdir -p "${INSTANCE}"
 
-  log "configuring against ${MODEL}"
+  # 127.0.0.1:8100 is the in-container shim, not oMLX directly: oMLX strips
+  # Artificium's <tool_call> text blocks into message.tool_calls and hands back
+  # an empty content, which Artificium reports as "empty answer (tool_calls)".
+  # agent-sandbox/artificium/omlx-shim.py puts them back.
+  log "configuring against ${MODEL} via the tool-protocol shim"
   # shellcheck disable=SC2046 # deliberate word splitting of the flag list
   docker run --rm $(tty_flags) $(sandbox_flags) "${IMAGE}" \
     python3 /instance/artificium.py setup \
       --provider custom \
       --adapter openai_compatible \
-      --url "http://omlx.host:8000/v1" \
+      --url "http://127.0.0.1:8100/v1" \
       --model "${MODEL}" \
       --context-window "${CONTEXT_WINDOW}" \
       --working-memory-tokens "${WORKING_MEMORY}" \

@@ -66,5 +66,18 @@ if [ "${seeded}" = true ] || [ "$(stat -c %U "${INSTANCE}/artificium.py")" != "$
   chown -R "${RUN_USER}:" "${INSTANCE}"
 fi
 
+# The shim starts here rather than in CMD, because `setup` and `doctor`
+# override CMD and need it just as much as `run` does. Loopback only, so the
+# firewall's `-o lo ACCEPT` covers it and no new surface is opened.
+log "starting the oMLX tool-protocol shim on 127.0.0.1:8100"
+gosu "${RUN_USER}" python3 /usr/local/bin/omlx-shim.py &
+for _ in $(seq 1 25); do
+  if curl -s -o /dev/null -m 1 "http://127.0.0.1:8100/v1/models"; then break; fi
+  sleep 0.2
+done
+curl -s -o /dev/null -m 2 "http://127.0.0.1:8100/v1/models" \
+  || die "shim did not come up on 127.0.0.1:8100"
+log "shim ready"
+
 log "dropping to ${RUN_USER}"
 exec gosu "${RUN_USER}" "$@"
