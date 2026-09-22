@@ -35,12 +35,18 @@
   #   moonlight — stream games in (from the Steam Deck via Sunshine, or from
   #               the desktop over Tailscale). Native Apple-Silicon Metal client.
   #   telegram  — the native macOS client, not the Qt `telegram-desktop`.
+  #   hermes-desktop — the agent. The cask carries the CLI as well as the app,
+  #               which is why this is not the Tier 2 nix flake: that flake is
+  #               maintained "on a best-effort basis only" and "commits to main
+  #               may break these packages at any point", and its container mode
+  #               is NixOS-only anyway.
   # Note: the gaming apps' state (CrossOver bottles, Moonlight host pairing) is
   # runtime config, not declarative — same as oMLX model downloads.
   homebrew.casks = [
     "crossover"
     "moonlight"
     "telegram"
+    "hermes-desktop"
   ];
 
   home-manager.users.${vars.user.name} = {
@@ -94,32 +100,17 @@
   # its launchd agents.
   custom.programs.piWeb.enable = true;
 
-  # The Hermes harness's phone front door: a Telegram bot that reports a run's
-  # progress and can start one. moria only, because moria is where the runs are.
+  # Hermes runs here, as Bot Mode: bots are profiles, so their SOULs, config and
+  # skills live in the repo and are symlinked into ~/.hermes by
+  # modules/programs/tui/hermes.nix. moria only for now -- it is where oMLX is.
   #
-  # Outbound long-polling, so no webhook, no inbound port and no firewall change.
-  # The token stays on the host: bin/agent-sandbox.sh passes an explicit env
-  # allowlist into the container, so it never reaches the sandboxed agent.
+  # The app itself is the `hermes-desktop` cask in modules/darwin/homebrew-base.nix,
+  # and the gateway service is installed once by hand with `hermes gateway install`,
+  # the same division pi-web uses: nix owns the config, not the launchd agent.
   #
-  # Invoked through uv by its absolute profile path rather than the script's own
-  # `env -S uv run` shebang, because launchd hands an agent a minimal PATH. The
-  # profile path is stable across GC; a /nix/store path would not be.
-  #
-  # Before the 1Password entry exists the script exits 78 saying which variable
-  # is missing, hence the throttle — an unconfigured host logs one line every
-  # five minutes instead of spinning.
-  launchd.user.agents.agent-telegram = {
-    serviceConfig = {
-      ProgramArguments = [
-        "/etc/profiles/per-user/${vars.user.name}/bin/uv"
-        "run"
-        "/Users/${vars.user.name}/Git/toolbox/bin/agent-telegram.py"
-      ];
-      RunAtLoad = true;
-      KeepAlive = true;
-      ThrottleInterval = 300;
-      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/agent-telegram.log";
-      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/agent-telegram.log";
-    };
-  };
+  # There is deliberately no Telegram agent here any more. Hermes speaks Telegram
+  # (and eighteen other platforms) natively through its own gateway, two-way, with
+  # /status and /approve built in, so the 350-line bot this repo carried was a
+  # reimplementation. `hermes gateway setup` configures it.
+  custom.programs.hermes.enable = true;
 }
