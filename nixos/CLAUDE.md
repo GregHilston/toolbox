@@ -9,6 +9,30 @@ Always verify your own changes before asking the user to test. Detect the curren
 
 These commands do NOT require `sudo` and catch most evaluation and dependency errors. Run this after every config change so the user doesn't have to be your test runner.
 
+## macOS caps the GPU at 75% of RAM, and oMLX does not know
+
+`iogpu.wired_limit_mb` defaults to `0`, which is **not** unlimited — it means
+"the built-in default", and that is **75% of unified memory**. On moria's 128 GB
+that is 96 GB. Measured 2026-09-22 with Qwen3.6-35B (19 GB) and gpt-oss-120b
+(59 GB) both resident: a steady **86-87 GB**, into which the KV cache then grows.
+
+oMLX budgets against its own `max_model_memory: auto`, which resolves to ~84%
+(107.5 GB), **above** what the kernel will wire. So its LRU plans against
+memory it cannot have, and the wall it actually hits is invisible to it.
+
+`modules/darwin/gpu-wired-limit.nix` raises the kernel limit above oMLX's
+ceiling so oMLX's own manager is the only limiter. It computes
+`total - reserveGb` at boot from `hw.memsize`, never goes below the 75% the
+kernel would have chosen, and no-ops under `minTotalGb`.
+
+**`/etc/sysctl.conf` is ignored on modern macOS.** It has to be a root launchd
+daemon with `RunAtLoad`, which is also why the value resets on every reboot.
+macOS 13 spelled the key `debug.iogpu.wired_limit`; 14+ uses
+`iogpu.wired_limit_mb`. The daemon tries both.
+
+To check the live value: `sysctl iogpu.wired_limit_mb` (`0` = the 75% default),
+and `curl -s localhost:8000/health` for what oMLX thinks its ceiling is.
+
 ## Available Hosts
 
 `just list-hosts`. Three are Darwin (**moria** M4 Max/oMLX server, **dungeon** M3 Pro
