@@ -1,0 +1,69 @@
+# orchestrator. A Bot is a profile, so this file is what the Desktop roster edits.
+#
+# This was `reviewer`, pinned to Qwen3.8-27B — the SAME FAMILY as the builder's
+# Qwen3.6-35B-A3B, which is the configuration the evidence says buys nothing.
+# arXiv 2609.04270 measured an execute-review-revise pipeline: same-model
+# self-review had the HIGHEST error detection (85% recall) and produced no
+# significant accuracy gain, because it rejected 2.1x as often for a third the
+# repair rate — 35% of correct answers wrongly rejected. A CROSS-FAMILY
+# mid-tier reviewer gave +12 points (p=0.0005) at a 2% false-rejection rate.
+# A reviewer below the capability floor is inert: no gain, double the tokens.
+#
+# So: a different family, and the largest one this machine serves.
+model:
+  provider: "custom"
+  default: gpt-oss-120b-heretic-v2-mxfp4-q8-hi-mlx
+  base_url: http://127.0.0.1:8000/v1
+  api_key: ${OMLX_API_KEY}
+  request_timeout_seconds: 1800
+  # Measured 2026-09-22: 34s to load cold, then it and the builder alternate
+  # sub-second — oMLX keeps both resident, so supervising costs no swap.
+  context_length: 131072
+
+# No hooks block. `require-green.sh` vetoes `kanban_complete`, and this bot
+# never completes a card — it reviews what the builder wrote. Its gate is the
+# `verify-agent-output` skill, which it runs itself.
+
+# The SAME directory the builder starts in. A reviewer that cannot read the
+# work is not a reviewer, and the Bot Mode walkthrough names this as the thing
+# to test with a harmless file before trusting a run.
+terminal:
+  cwd: "${HOME}/Git/agent-runs/workspace"
+
+agent:
+  # Narrow on purpose. The Bot Mode walkthrough's recommended orchestrator keeps
+  # File Operations, Skills, Clarifying Questions and Memory, plus Terminal for
+  # "bounded checks" — which for a coding reviewer is the whole job: run the
+  # gate, diff the tree, profile the output. Independent web research is off for
+  # an orchestrator; so is everything that would let it do the builder's work.
+  #
+  # `delegation` is off for a reason that is easy to get wrong: @mentions do NOT
+  # need it. Task Delegation spawns anonymous temporary subagents; messaging a
+  # persistent teammate is native Bot Mode. Leaving it on offers this bot a way
+  # to start a second writer, which is the one thing the architecture forbids.
+  disabled_toolsets:
+    - web
+    - search
+    - x_search
+    - browser
+    - browser-use
+    - image_gen
+    - video_gen
+    - computer_use
+    - discord
+    - feishu
+    - spotify
+    - connectors
+    - connections
+    - a2a
+    - react
+    - tts
+    - cronjob
+    - session_search
+    - todo
+    - homeassistant
+    - delegation
+    - code_execution
+    - vision
+    - desktop_ui
+    - project

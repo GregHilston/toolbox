@@ -19,7 +19,7 @@ model:
 # there is 23 KB heavier than from anywhere else, for instructions written to
 # Claude Code about a repo this bot has no business editing.
 terminal:
-  cwd: "${HOME}/Git/agent-runs/vt-smb-chat/workspace"
+  cwd: "${HOME}/Git/agent-runs/workspace"
 
 hooks_auto_accept: true
 hooks:
@@ -64,3 +64,8 @@ agent:
     # and the locks are S2 Authenticated. moria has no HA access at all, so it
     # has no business offering the tools.
     - homeassistant
+    # @mentions do NOT need Task Delegation — that tool spawns anonymous
+    # temporary subagents, while messaging a persistent teammate is native Bot
+    # Mode. Leaving it on cost 4,650 B of schema on every request, the third
+    # largest block after `file` and `skills`, and offered a second writer.
+    - delegation

@@ -12,7 +12,11 @@
   # isolated config, memory, skills, credentials and chat history under
   # ~/.hermes/profiles/<name>/", so the roster in the Desktop app and the
   # directories in this repo are the same objects seen from two ends.
-  bots = ["builder" "researcher" "reviewer"];
+  bots = ["builder" "researcher" "orchestrator"];
+
+  # Ours, not Hermes'. The bundled library lives in the same tree, so these are
+  # linked individually — see the activation script.
+  skills = ["verify-agent-output"];
 in {
   options.custom.programs.hermes.enable =
     lib.mkEnableOption "Hermes bot profiles symlinked from the toolbox repo";
@@ -52,6 +56,16 @@ in {
       link_repo "${toolboxDir}/hermes/config.yaml" "${hermesDir}/config.yaml"
       link_repo "${toolboxDir}/hermes/hooks"       "${hermesDir}/hooks"
 
+      # Our own skills, one symlink each rather than one for the directory:
+      # ~/.hermes/skills/ is where Hermes unpacks its BUNDLED library, so
+      # linking the whole tree would replace it. Skills live one level below a
+      # category, alongside the bundled ones.
+      mkdir -p "${hermesDir}/skills/software-development"
+      ${lib.concatMapStringsSep "\n      " (skill: ''
+          link_repo "${toolboxDir}/hermes/skills/${skill}" "${hermesDir}/skills/software-development/${skill}"
+        '')
+        skills}
+
       ${lib.concatMapStringsSep "\n      " (bot: ''
             mkdir -p "${profilesDir}/${bot}"
             link_repo "${toolboxDir}/hermes/profiles/${bot}/SOUL.md"     "${profilesDir}/${bot}/SOUL.md"
@@ -59,7 +73,7 @@ in {
         '')
         bots}
 
-      echo "✓ Hermes bot profiles linked: ${lib.concatStringsSep ", " bots}"
+      echo "✓ Hermes bots linked: ${lib.concatStringsSep ", " bots}; skills: ${lib.concatStringsSep ", " skills}"
     '';
   };
 }

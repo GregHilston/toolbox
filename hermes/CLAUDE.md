@@ -48,6 +48,39 @@ a bot's runtime edits show up as git diffs to commit or discard — the same tra
 unsupervised one at it. Only the declarative half is linked; `memories/`,
 `sessions/`, `state.db`, `cron/` and `logs/` stay where Hermes puts them.
 
+## The roster, and why the orchestrator is a different family
+
+`builder` writes. `orchestrator` reviews and never writes. `researcher` is
+unused so far. **Writes stay single-threaded** — when two agents edit one tree
+they make conflicting implicit choices and the result is worse than either
+alone, which is the one thing every source on this agrees about.
+
+The orchestrator runs **gpt-oss-120b**, deliberately not another Qwen. It was
+`reviewer` on Qwen3.8-27B, the same family as the builder, which arXiv
+2609.04270 measures as worth nothing: same-model self-review had the *highest*
+error detection (85% recall) and no significant accuracy gain, because it
+rejected 2.1x as often for a third the repair rate. A cross-family mid-tier
+reviewer gave +12 points at a 2% false-rejection rate.
+
+**The review must be unconditional.** Cognition's "smart friend" pattern — the
+builder calls for help when stuck — fails here, because recognising you are
+stuck is the thing a small model cannot do. Our builder had `clarify`, and two
+files told it to ask rather than guess, and it published 2,120 false rows
+instead. So the orchestrator reviews every time, on a trigger the builder does
+not control.
+
+`hermes/skills/verify-agent-output/` is what makes its judgement land on
+evidence: a model judging code alone catches ~45% of real errors, and the same
+model plus deterministic analysis reaches 94%.
+
+**`delegation` is off on every bot.** @mentions do not need it — Task Delegation
+spawns anonymous temporary subagents, while messaging a persistent teammate is
+native Bot Mode. It cost 4,650 B of schema per request and offered a second
+writer.
+
+Both bots start in `~/Git/agent-runs/workspace` (`terminal.cwd`), which must be
+shared: a reviewer that cannot read the work is not a reviewer.
+
 ## What is ours rather than Hermes'
 
 `hooks/require-green.sh` refuses `kanban_complete` and `kanban_request_review`
