@@ -136,7 +136,33 @@ Runtime state, so none of it is in git.
   configured while `channel_directory.json` held no platforms at all.
 - **`~/.hermes/.env` is generated** from `hermes/.env.tpl` by `just secrets`, so
   `hermes config set` writes and anything the wizard stores there are
-  overwritten. Put keys in the template.
+  overwritten. Put keys in the template. **Every bot also needs its own**, from
+  `hermes/profile.env.tpl` — see below.
+
+- **A secondary profile does NOT fall back to the root `.env`, and an
+  unresolved `${VAR}` is sent VERBATIM.** `config.py:_env_ref_lookup` resolves
+  refs through the profile secret scope, and `get_secret` returns a miss rather
+  than another profile's value — upstream #84079, where every profile "had" the
+  default's `${MATRIX_ACCESS_TOKEN}`. So with no `profiles/<bot>/.env`,
+  `api_key: ${OMLX_API_KEY}` goes on the wire as the literal string
+  `${OMLX_API_KEY}` and oMLX answers `HTTP 401: Invalid API key`.
+
+  **The default profile is the exception** — it reads plain `os.environ`. That
+  is why this hid for a whole session: `hermes -p builder -z` works (a CLI
+  invocation enters no scope), and Telegram works (`sessions.json` shows
+  `transport_profile: "default"`), while every Bot Chat 401s. "The key saved for
+  Custom endpoint is invalid" is the Desktop's phrasing for it, and it sends you
+  looking at a key that is fine.
+
+  The tell is in the request dump, which is the fastest way to settle any
+  "is it the key" question:
+
+  ```bash
+  ls -t ~/.hermes/profiles/<bot>/sessions/request_dump_*.json | head -1
+  ```
+
+  `request.headers.Authorization` reading `Bearer ${OMLX_A...KEY}` is the
+  literal template, not a redaction of a real secret.
 - **`hermes doctor`'s "No API key found in ~/.hermes/.env" is a permanent false
   positive here.** It greps the file for one of thirty hard-coded vendor names
   (`doctor.py:_PROVIDER_ENV_HINTS`) and `OMLX_API_KEY` is not among them. The
@@ -159,6 +185,20 @@ Runtime state, so none of it is in git.
   messages from compression; if those alone exceed `target_ratio`, every attempt
   misses and the goal judge eventually rules the goal unachievable. See
   `config.yaml`.
+- **`agent.reasoning_effort` does nothing on this setup.** Hermes does put it on
+  the wire — a captured request body to `127.0.0.1:8000/v1/chat/completions`
+  carries `"reasoning_effort": "low"` — and oMLX ignores it. Measured
+  2026-09-22: the same prompt at `low` and at `high` returned the same text,
+  the same 400 completion tokens, and an empty `reasoning_content` both times.
+  oMLX applies reasoning effort from **its own** `chat_template_kwargs`, per
+  model, in `~/.omlx/model_settings.json`, and the DWQ entry the builder runs
+  has none — while `Qwen3.8-27B-4bit` has `reasoning_effort: medium` under a
+  comment calling it "THE most important setting for this model". What bounds
+  thinking for both is `thinking_budget_tokens: 8192` in the same file. So the
+  knob is oMLX's, not Hermes'; `nixos/modules/darwin/omlx.nix` generates it.
+  Leave the DWQ entry alone without a reason: no `chat_template_kwargs` is the
+  configuration that scored 10/10 on our coding eval, the best of anything
+  tested.
 - `provider: custom:omlx` is the old form. This release wants plain
   `provider: "custom"` with `base_url` and `api_key` inline; the wrong value
   raises `Unknown provider` and the worker still exits 0.
