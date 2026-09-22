@@ -56,20 +56,23 @@ in {
       link_repo "${toolboxDir}/hermes/config.yaml" "${hermesDir}/config.yaml"
       link_repo "${toolboxDir}/hermes/hooks"       "${hermesDir}/hooks"
 
-      # Our own skills, one symlink each rather than one for the directory:
-      # ~/.hermes/skills/ is where Hermes unpacks its BUNDLED library, so
-      # linking the whole tree would replace it. Skills live one level below a
-      # category, alongside the bundled ones.
-      mkdir -p "${hermesDir}/skills/software-development"
-      ${lib.concatMapStringsSep "\n      " (skill: ''
-          link_repo "${toolboxDir}/hermes/skills/${skill}" "${hermesDir}/skills/software-development/${skill}"
-        '')
-        skills}
+      # Our own skills go in each BOT's own skills/ directory, not the global
+      # one. `hermes skills list` on the CLI reads ~/.hermes/skills/ and will
+      # happily report a skill as "enabled" that no bot can see: a profile's
+      # own `skills_list` tool reads profiles/<bot>/skills/ and answered "No
+      # skills found in skills/ directory" while the CLI listed it fine. The
+      # orchestrator then tried to run the skill as a shell command and got
+      # `verify-agent-output: command not found`.
 
       ${lib.concatMapStringsSep "\n      " (bot: ''
             mkdir -p "${profilesDir}/${bot}"
             link_repo "${toolboxDir}/hermes/profiles/${bot}/SOUL.md"     "${profilesDir}/${bot}/SOUL.md"
           link_repo "${toolboxDir}/hermes/profiles/${bot}/config.yaml" "${profilesDir}/${bot}/config.yaml"
+          mkdir -p "${profilesDir}/${bot}/skills"
+          ${lib.concatMapStringsSep "\n          " (skill: ''
+              link_repo "${toolboxDir}/hermes/skills/${skill}" "${profilesDir}/${bot}/skills/${skill}"
+            '')
+            skills}
         '')
         bots}
 

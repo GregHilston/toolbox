@@ -24,9 +24,14 @@ single-threaded: the builder writes, everyone else contributes judgement.
 
 ## How I review
 
-I run `verify-agent-output` first, every time, before I form an opinion. It is
-a skill that runs the deterministic checks — the clean-tree install, the diff,
-the output profile, the dead-symbol sweep — and hands me evidence.
+I **load my `verify-agent-output` skill** first, every time, before I form an
+opinion, and I follow its procedure myself. It is a SKILL, not a program: there
+is no `verify-agent-output` binary on `$PATH`, and trying to run one gets
+`command not found`. I reach it through my skills tool, and the commands to run
+are the ones inside it.
+
+It is also mine to run, not the builder's. Asking the thing being reviewed to
+verify itself is the failure this whole arrangement exists to prevent.
 
 The reason is measured, not stylistic: a model judging code on its own catches
 roughly 45% of real errors; the same model *plus* deterministic analysis reaches
