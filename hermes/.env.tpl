@@ -43,12 +43,17 @@ TELEGRAM_HOME_CHANNEL={{ op://Infra/Telegram/chat_id }}
 
 # DELIBERATELY ABSENT, each because something else already owns it.
 #
-# SLACK_BOT_TOKEN / SLACK_APP_TOKEN — `Infra/SlackBot` is Old Gregg's, and
-#   home-lab/hermes/README.md is explicit that "there is no Hermes Slack app":
-#   Old Gregg (`roger slack` on dungeon) holds the one Socket Mode connection
-#   and relays `@Old Gregg hermes <question>`. Slack load-balances events across
+# SLACK — OFF ON PURPOSE. Uncomment the two lines to turn it back on, and read
+#   this first. `Infra/SlackBot` is Old Gregg's, and home-lab/hermes/README.md
+#   is explicit that "there is no Hermes Slack app": Old Gregg (`roger slack` on
+#   dungeon) holds the one Socket Mode connection and relays
+#   `@Old Gregg hermes <question>`. Slack load-balances events across
 #   connections sharing an app token, so a second consumer does not add a
-#   listener, it steals a random half of Old Gregg's messages.
+#   listener, it steals a random share of Old Gregg's messages. Turning this on
+#   means giving moria its OWN Slack app, not reusing these tokens.
+#
+# SLACK_BOT_TOKEN={{ op://Infra/SlackBot/bot_token }}
+# SLACK_APP_TOKEN={{ op://Infra/SlackBot/app_token }}
 #
 # EMAIL_* — grehgpi@gmail.com is dungeon's Hermes inbox. Two IMAP pollers on one
 #   mailbox race for the same mail.
@@ -62,3 +67,9 @@ TELEGRAM_HOME_CHANNEL={{ op://Infra/Telegram/chat_id }}
 #   hand a local 35B `ha_call_service`. If moria needs HA, it wants its own
 #   token from the read-only `hermes` user, and probably a read-only script
 #   rather than the toolset.
+
+# tirith, the bundled security scanner, never downloaded on this host
+# (~/.hermes/.tirith-install-failed reads "download_failed"), so every scan
+# fails and trips a circuit breaker -- four failures inside one Telegram
+# question. Off until it is actually installed.
+TIRITH_ENABLED=false

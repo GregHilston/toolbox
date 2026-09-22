@@ -19,3 +19,15 @@ hooks:
       command: "${HOME}/.hermes/hooks/require-green.sh"
       timeout: 290
       fail_closed: true
+
+agent:
+  # The homeassistant toolset registers regardless of HASS_URL/HASS_TOKEN, so
+  # with neither set `ha_list_entities` resolved the default
+  # homeassistant.local:8123, failed DNS, and sent the bot off self-debugging:
+  # one Telegram question produced ten tool errors, four of them `terminal`.
+  # dungeon's Hermes leaves this toolset off deliberately
+  # (home-lab/hermes/README.md §8) because HA has no per-entity permissions and
+  # the locks are S2 Authenticated. moria has no HA access at all, so it has no
+  # business offering the tools.
+  disabled_toolsets:
+    - homeassistant
