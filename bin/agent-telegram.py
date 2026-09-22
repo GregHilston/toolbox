@@ -32,6 +32,7 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -128,6 +129,16 @@ def list_runs(limit: int = 10) -> str:
     return "\n".join(rows) or "no runs yet"
 
 
+def ensure_docker_on_path() -> None:
+    """launchd's PATH has no docker."""
+    if shutil.which("docker"):
+        return
+    for d in ("/usr/local/bin", "/opt/homebrew/bin"):
+        if os.access(f"{d}/docker", os.X_OK):
+            os.environ["PATH"] = f"{d}:{os.environ.get('PATH', '')}"
+            return
+
+
 def container_running() -> bool:
     out = subprocess.run(
         ["docker", "ps", "--filter", f"name={CONTAINER}", "--format", "{{.Names}}"],
@@ -214,6 +225,7 @@ def main() -> int:
     args = ap.parse_args()
 
     load_env()
+    ensure_docker_on_path()
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token:
         print("TELEGRAM_BOT_TOKEN is not set — see hermes.md 'From your phone'", file=sys.stderr)
@@ -231,11 +243,19 @@ def main() -> int:
     # Drain whatever queued while the bot was down without acting on it: a
     # restart should not replay an hours-old /run.
     offset = None
+    discarded = 0
     try:
-        pending = bot.api("getUpdates", timeout=0).get("result", [])
-        if pending:
+        while True:
+            params = {"timeout": 0}
+            if offset is not None:
+                params["offset"] = offset
+            pending = bot.api("getUpdates", **params).get("result", [])
+            if not pending:
+                break
             offset = pending[-1]["update_id"] + 1
-            print(f"discarded {len(pending)} stale update(s)", file=sys.stderr, flush=True)
+            discarded += len(pending)
+        if discarded:
+            print(f"discarded {discarded} stale update(s)", file=sys.stderr, flush=True)
     except Exception as exc:
         print(f"initial drain failed: {exc}", file=sys.stderr, flush=True)
 
