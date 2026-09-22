@@ -27,36 +27,38 @@ TERMINAL_TIMEOUT=60
 VISION_TOOLS_DEBUG=false
 WEB_TOOLS_DEBUG=false
 
-# Home Assistant. Setting HASS_TOKEN alone activates ha_list_entities,
-# ha_get_state, ha_list_services and ha_call_service, and the gateway platform
-# for state changes; no toolset needs enabling. HA runs on dungeon and this URL
-# is reachable from moria over Tailscale — verified with
-# `curl -H "Authorization: Bearer <token>" <url>/api/` returning 200.
-#
-# Reuses the token pi's harness already had (dot/pi/.pi/agent/homeassistant.json).
-HASS_URL=https://home-assistant.grehg2.xyz
-HASS_TOKEN={{ op://Infra/Hermes/hass_token_pi_harness }}
+# The model key. config.yaml says `api_key: ${OMLX_API_KEY}`, and a gateway
+# resolves that against THIS file, not the shell -- which is why the first
+# Telegram question came back "HTTP 401: Invalid API key" from oMLX.
+OMLX_API_KEY={{ op://Infra/oMLX/api_key }}
 
-# Telegram. Hermes' allowlist variable is TELEGRAM_ALLOWED_USERS, NOT the
-# TELEGRAM_ALLOWED_CHAT_IDS our deleted bot used — same 1Password field, the
-# name the tool actually reads. Without an allowlist anyone who finds the bot
-# can drive it.
+# Telegram. moria's bot only: dungeon's Hermes is reached over Slack and email,
+# not Telegram, so this token (freed when the toolbox's own bot was deleted) is
+# uncontended. Hermes reads TELEGRAM_ALLOWED_USERS, not the
+# TELEGRAM_ALLOWED_CHAT_IDS our bot used -- same 1Password field, the name the
+# tool actually reads. Without it, anyone who finds the bot can drive it.
 TELEGRAM_BOT_TOKEN={{ op://Infra/Telegram/bot_token }}
 TELEGRAM_ALLOWED_USERS={{ op://Infra/Telegram/allowed_chat_ids }}
 TELEGRAM_HOME_CHANNEL={{ op://Infra/Telegram/chat_id }}
 
-# Slack, over Socket Mode: outbound WebSocket, so no public endpoint and
-# nothing to open on the firewall.
-SLACK_BOT_TOKEN={{ op://Infra/SlackBot/bot_token }}
-SLACK_APP_TOKEN={{ op://Infra/SlackBot/app_token }}
-
-# Email, on a dedicated account — the docs are explicit that the agent gets
-# full IMAP access to whatever inbox this points at, so it is not the personal
-# one. EMAIL_ALLOWED_USERS is the access control: unlisted senders are ignored
-# silently rather than refused, which is the right default for an address that
-# will inevitably receive spam.
-EMAIL_ADDRESS=grehgpi@gmail.com
-EMAIL_PASSWORD={{ op://Infra/Hermes/gmail_app_password }}
-EMAIL_IMAP_HOST=imap.gmail.com
-EMAIL_SMTP_HOST=smtp.gmail.com
-EMAIL_ALLOWED_USERS=Gregory.Hilston@gmail.com
+# DELIBERATELY ABSENT, each because something else already owns it.
+#
+# SLACK_BOT_TOKEN / SLACK_APP_TOKEN — `Infra/SlackBot` is Old Gregg's, and
+#   home-lab/hermes/README.md is explicit that "there is no Hermes Slack app":
+#   Old Gregg (`roger slack` on dungeon) holds the one Socket Mode connection
+#   and relays `@Old Gregg hermes <question>`. Slack load-balances events across
+#   connections sharing an app token, so a second consumer does not add a
+#   listener, it steals a random half of Old Gregg's messages.
+#
+# EMAIL_* — grehgpi@gmail.com is dungeon's Hermes inbox. Two IMAP pollers on one
+#   mailbox race for the same mail.
+#
+# HASS_TOKEN — home-lab/hermes/README.md §8: the ha_* toolset "is deliberately
+#   not enabled, and the token is not named HASS_TOKEN because that name would
+#   enable it", because HA has no per-entity permissions and the locks are S2
+#   Authenticated. Read-only is the whole design. `hass_token_pi_harness` is
+#   also NOT read-only -- a POST to a bogus service returns 400, not 401, so it
+#   gets past auth and can call services. Giving moria's bots HASS_TOKEN would
+#   hand a local 35B `ha_call_service`. If moria needs HA, it wants its own
+#   token from the read-only `hermes` user, and probably a read-only script
+#   rather than the toolset.
