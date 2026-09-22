@@ -167,6 +167,16 @@ secrets:
   # secrets/.env. Generated, so `hermes config set` writes are overwritten --
   # see the header of hermes/.env.tpl.
   op inject -f -i ../hermes/.env.tpl -o "$HOME/.hermes/.env"
+  # And one per bot. A secondary profile resolves `${VAR}` against its OWN .env
+  # and a miss stays verbatim, so without these every Bot Chat sends the literal
+  # string `${OMLX_API_KEY}` and oMLX answers 401 -- while the CLI and Telegram
+  # keep working, because both run as the `default` profile. See the header of
+  # hermes/profile.env.tpl.
+  for bot in builder researcher reviewer; do
+    install -d -m 700 "$HOME/.hermes/profiles/$bot"
+    op inject -f -i ../hermes/profile.env.tpl -o "$HOME/.hermes/profiles/$bot/.env"
+    chmod 600 "$HOME/.hermes/profiles/$bot/.env"
+  done
   # DeepSeek is a personal, metered API key and citadel is the Mozilla work
   # machine, so it never gets one — the line is stripped before injection rather
   # than merely hidden from pi's model picker, so the key is absent from that

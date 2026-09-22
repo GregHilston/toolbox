@@ -136,7 +136,33 @@ Runtime state, so none of it is in git.
   configured while `channel_directory.json` held no platforms at all.
 - **`~/.hermes/.env` is generated** from `hermes/.env.tpl` by `just secrets`, so
   `hermes config set` writes and anything the wizard stores there are
-  overwritten. Put keys in the template.
+  overwritten. Put keys in the template. **Every bot also needs its own**, from
+  `hermes/profile.env.tpl` — see below.
+
+- **A secondary profile does NOT fall back to the root `.env`, and an
+  unresolved `${VAR}` is sent VERBATIM.** `config.py:_env_ref_lookup` resolves
+  refs through the profile secret scope, and `get_secret` returns a miss rather
+  than another profile's value — upstream #84079, where every profile "had" the
+  default's `${MATRIX_ACCESS_TOKEN}`. So with no `profiles/<bot>/.env`,
+  `api_key: ${OMLX_API_KEY}` goes on the wire as the literal string
+  `${OMLX_API_KEY}` and oMLX answers `HTTP 401: Invalid API key`.
+
+  **The default profile is the exception** — it reads plain `os.environ`. That
+  is why this hid for a whole session: `hermes -p builder -z` works (a CLI
+  invocation enters no scope), and Telegram works (`sessions.json` shows
+  `transport_profile: "default"`), while every Bot Chat 401s. "The key saved for
+  Custom endpoint is invalid" is the Desktop's phrasing for it, and it sends you
+  looking at a key that is fine.
+
+  The tell is in the request dump, which is the fastest way to settle any
+  "is it the key" question:
+
+  ```bash
+  ls -t ~/.hermes/profiles/<bot>/sessions/request_dump_*.json | head -1
+  ```
+
+  `request.headers.Authorization` reading `Bearer ${OMLX_A...KEY}` is the
+  literal template, not a redaction of a real secret.
 - **`hermes doctor`'s "No API key found in ~/.hermes/.env" is a permanent false
   positive here.** It greps the file for one of thirty hard-coded vendor names
   (`doctor.py:_PROVIDER_ENV_HINTS`) and `OMLX_API_KEY` is not among them. The
