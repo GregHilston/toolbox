@@ -1,0 +1,21 @@
+# researcher. A Bot is a profile, so this file is what the Desktop roster edits.
+#
+# A profile does NOT inherit the root config's `hooks` block. The root carried
+# it for seven runs and the gate never fired once: `require-green.log` was empty
+# every time, which read as "no card ever completed" until one did and the log
+# was still absent. Same trap as `disabled_toolsets`. So every bot that can hand
+# work off carries its own copy.
+model:
+  provider: "custom"
+  default: Qwen3.6-35B-A3B-4bit-DWQ
+  base_url: http://127.0.0.1:8000/v1
+  api_key: ${OMLX_API_KEY}
+  request_timeout_seconds: 1800
+
+hooks_auto_accept: true
+hooks:
+  pre_tool_call:
+    - matcher: "^kanban_(complete|request_review)$"
+      command: "${HOME}/.hermes/hooks/require-green.sh"
+      timeout: 290
+      fail_closed: true

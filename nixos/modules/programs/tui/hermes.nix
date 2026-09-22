@@ -53,8 +53,9 @@ in {
       link_repo "${toolboxDir}/hermes/hooks"       "${hermesDir}/hooks"
 
       ${lib.concatMapStringsSep "\n      " (bot: ''
-          mkdir -p "${profilesDir}/${bot}"
-          link_repo "${toolboxDir}/hermes/profiles/${bot}/SOUL.md" "${profilesDir}/${bot}/SOUL.md"
+            mkdir -p "${profilesDir}/${bot}"
+            link_repo "${toolboxDir}/hermes/profiles/${bot}/SOUL.md"     "${profilesDir}/${bot}/SOUL.md"
+          link_repo "${toolboxDir}/hermes/profiles/${bot}/config.yaml" "${profilesDir}/${bot}/config.yaml"
         '')
         bots}
 

@@ -37,6 +37,18 @@ bot, a run loop, a scorer, a preflight — has been deleted, because Hermes ship
 a Docker terminal backend, native Telegram and eighteen other transports, the
 kanban board, and an approvals system. See the root `CLAUDE.md`.
 
+## The gate only fires on board-driven work
+
+`hooks/require-green.sh` matches `^kanban_(complete|request_review)$`. A plain
+Bot Chat never issues either, so **the gate does nothing in conversation** — it
+guards work handed off through `hermes kanban`. For chat-driven work the
+equivalent is running `bin/installs-from-clean.sh <workspace>` yourself, or
+giving a bot a skill that does.
+
+Each bot carries its own copy of the `hooks` block in
+`profiles/<bot>/config.yaml`, because a profile does **not** inherit the root
+config's. The root carried it for seven runs and the gate never fired once.
+
 ## Traps
 
 - **`HERMES_WRITE_SAFE_ROOT` is a security feature**, not a bug. It confines
