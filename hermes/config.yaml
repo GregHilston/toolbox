@@ -184,3 +184,6 @@ kanban:
   # Worth keeping: on long-b that arrangement rejected the work with five
   # specific defects, four of which verified against the tree.
   review_dispatch: true
+onboarding:
+  seen:
+    profile_build_offered: true
