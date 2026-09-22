@@ -25,8 +25,8 @@ ALLOWED, STRANGER = 4242, 9999
 
 
 def run_bot(fake: FakeTelegram, *, allowlist: str | None = str(ALLOWED),
-            runs: Path | None = None) -> subprocess.CompletedProcess:
-    """One drain plus one poll against the fake, then exit."""
+            runs: Path | None = None, polls: int = 1) -> subprocess.CompletedProcess:
+    """A drain plus `polls` polls against the fake, then exit."""
     env = {
         "PATH": "/usr/bin:/bin",
         # HOME moves the run directory; TOOLBOX must stay on the real checkout,
@@ -40,10 +40,9 @@ def run_bot(fake: FakeTelegram, *, allowlist: str | None = str(ALLOWED),
     }
     if allowlist is not None:
         env["TELEGRAM_ALLOWED_CHAT_IDS"] = allowlist
-    return subprocess.run(
-        [sys.executable, str(SCRIPT), "--once"],
-        env=env, capture_output=True, text=True, timeout=60,
-    )
+    argv = [sys.executable, str(SCRIPT)]
+    argv += ["--once"] if polls == 1 else ["--polls", str(polls)]
+    return subprocess.run(argv, env=env, capture_output=True, text=True, timeout=60)
 
 
 class TestAllowlist(unittest.TestCase):
@@ -98,9 +97,28 @@ class TestRestartSafety(unittest.TestCase):
         self.assertEqual(fake.offsets[1], 8, "the poll should ack past update_id 7")
 
     def test_offset_advances_past_a_handled_update(self):
-        with FakeTelegram([[], [message(5, ALLOWED, "/runs")]]) as fake:
-            run_bot(fake)
-        self.assertEqual(len(fake.sent), 1)
+        # Two polls, because the offset a handled update sets is only visible
+        # on the next request. Asserting the reply instead still passed with
+        # the line that advances it deleted, so the bot would have answered
+        # the same command every 50s forever -- and re-run every /stop.
+        with FakeTelegram([[], [message(5, ALLOWED, "/runs")], []]) as fake:
+            run_bot(fake, polls=2)
+        self.assertEqual(fake.offsets, [None, None, 6],
+                         "the second poll must ack past update_id 5")
+
+
+    def test_a_stranger_cannot_reach_the_side_effect(self):
+        # `fake.sent == []` proves no reply, not that handle() never ran. A
+        # /run that spawned and was merely not acknowledged looks identical.
+        with tempfile.TemporaryDirectory() as home:
+            with FakeTelegram([[], [message(1, STRANGER, "/run evil 480 x")]]) as fake:
+                proc = run_bot(fake, runs=Path(home))
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(fake.sent, [])
+            self.assertFalse((Path(home) / "Git/agent-runs/iter/evil").exists(),
+                             "a stranger's /run must not create a run directory")
+            self.assertFalse((Path(home) / "Git/agent-runs/logs/evil.log").exists(),
+                             "a stranger's /run must not create a log")
 
 
 class TestCommandsOverTheWire(unittest.TestCase):

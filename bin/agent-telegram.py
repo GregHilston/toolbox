@@ -221,7 +221,11 @@ def handle(text: str) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--once", action="store_true", help="drain one batch and exit (for testing)")
+    ap.add_argument("--once", action="store_true", help="drain, then poll once and exit (for testing)")
+    # The offset only reaches the wire on the NEXT poll, so proving it advances
+    # takes two. With --once the assertion can only watch the reply instead,
+    # which passes with the offset line deleted.
+    ap.add_argument("--polls", type=int, default=0, help="exit after N polls (for testing)")
     args = ap.parse_args()
 
     load_env()
@@ -260,12 +264,14 @@ def main() -> int:
         print(f"initial drain failed: {exc}", file=sys.stderr, flush=True)
 
     print(f"listening; allowed chats: {sorted(allowed)}", file=sys.stderr, flush=True)
+    polls = 0
     while True:
         try:
             params = {"timeout": POLL_SECONDS}
             if offset is not None:
                 params["offset"] = offset
             updates = bot.api("getUpdates", **params).get("result", [])
+            polls += 1
         except Exception as exc:
             print(f"poll failed: {exc}", file=sys.stderr, flush=True)
             time.sleep(5)
@@ -289,7 +295,7 @@ def main() -> int:
                 reply = f"command failed: {exc}"
             bot.send(chat_id, reply)
 
-        if args.once:
+        if args.once or (args.polls and polls >= args.polls):
             return 0
 
 
