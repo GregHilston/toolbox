@@ -22,9 +22,22 @@ watching the mechanism fire can. **Three minutes here saves an hour.**
 
 ## Why Kanban and not Bot Mode
 
-The Hermes feature everyone demos is Bot Mode group rooms, and they cannot drive an
-unattended run: a hard cap of **10 messages per send and 3 rounds**, not configurable, and
-**no CLI at all** — Desktop or raw API only. Headless, they do not exist.
+The Hermes feature everyone demos is Bot Mode group rooms. **Correction, 2026-09-22:** an
+earlier version of this file said Bot Mode has "no CLI at all — Desktop or raw API only".
+That is wrong, and it was load-bearing for this choice. The docs say *"Because Bots are
+profiles, everything has a terminal equivalent"* (`hermes -p <bot> chat`), rooms keep
+running when the Desktop is closed because the gateway owns turn scheduling, and bots reach
+each other with `message_agent`.
+
+What is true, and what actually rules group rooms out for a four-hour build, is the **hard
+cap of 10 messages per send and 3 rounds, which is not configurable**. That is a ceiling on
+a conversation, not a work queue.
+
+The distinction matters less than it looks, because **a Bot _is_ a profile**. The techniques
+the Bot Mode demos show — a SOUL.md per role, capability pruning per role, a different model
+per role — are exactly what `profiles/builder` and `profiles/reviewer` here already do. What
+this harness does not use is the Desktop UI and group rooms; the agent design is the same
+idea, driven by a board instead of a chat.
 
 `hermes kanban` is the headless primitive that does. Its dispatcher ticks inside the gateway
 (the standalone `kanban daemon` is deprecated and refuses to start without `--force`, because
