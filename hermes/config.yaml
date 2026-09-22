@@ -1,0 +1,239 @@
+_config_version: 45
+# Hermes config for the harness comparison. Seeded into $HERMES_HOME on first
+# boot and thereafter writable, unlike home-lab/hermes/config.yaml which is
+# read-only on purpose — this instance is an experiment, not a service.
+#
+# `_config_version` must match the pinned release (v0.21.4 = 45). Absent, the
+# file is read as v0 and whole sections are silently ignored — `hermes doctor`
+# says "Config version outdated (v0 -> v45)" and nothing else complains.
+#
+# Bump it BY HAND, never with `hermes doctor --fix`: that path ends in
+# `_persist_migration`, which rewrites this file from the parsed YAML and takes
+# every comment below with it. Read the step in
+# `hermes_cli/config_migrations.py` first — 44 -> 45 only appends `connections`
+# to a saved `platform_toolsets` list, and we have no such key, so the bump is
+# the whole migration.
+
+database:
+  # SQLite over a macOS bind mount through virtiofs is not WAL crash-safe, and
+  # Hermes will not downgrade a database it has already opened in WAL — so this
+  # must be right before the first boot, not after. v2026.9.14 also added an
+  # outright state.db WAL refusal on cross-VM filesystems, which this is.
+  journal_mode: "delete"
+
+model:
+  # "custom", NOT "custom:omlx". The named-provider form under a `providers:`
+  # block is the v39 schema that home-lab/hermes uses; this release wants the
+  # plain "custom" provider with base_url and api_key inline, and rejects the
+  # other with `Unknown provider` — while the worker process still exits 0, so
+  # the kanban dispatcher reports it as "clean exit without a terminal call"
+  # rather than as a model failure. That misdiagnosis cost an hour.
+  provider: "custom"
+  default: Qwen3.6-35B-A3B-4bit-DWQ
+  # Localhost: oMLX is a launchd service on this machine. This was omlx.host
+  # when Hermes ran in our own container, pinned by the firewall to one /32.
+  base_url: http://127.0.0.1:8000/v1
+  api_key: ${OMLX_API_KEY}
+  # A cold prefill of the harness prompt plus tool schemas is minutes on a local
+  # 35B, not seconds.
+  request_timeout_seconds: 1800
+  # Matches what the DWQ entry in dot/omlx/.omlx/model_settings.json serves.
+  context_length: 131072
+
+agent:
+  reasoning_effort: "low"
+  # Inactivity, not wall-clock, and the gateway cancels the turn on it. The
+  # default is 1800 — the same 30 minutes a single local turn can spend silent
+  # (see ref-hermes-run-log.md, "a quiet bot is not a stuck bot"). Streamed
+  # tokens count as progress, so this only binds across a cold prefill; a run
+  # that dies exactly at the half hour is this, not the model.
+  gateway_timeout: 3600
+  gateway_timeout_warning: 900
+  # Same reasoning as home-lab/hermes: fewer tool schemas, shorter prefill on
+  # every turn. `web`/`search`/`x_search` must be disabled HERE rather than only
+  # omitted from platform_toolsets — Hermes' built-in web_search auto-activates
+  # and any surface not explicitly listed falls back to the factory composite,
+  # which bakes it in.
+  #
+  # Build cards run with AGENT_OFFLINE=1 anyway, so a built-in search would be
+  # a tool that cannot work advertised on every turn.
+  # A denylist, not an allowlist: an unknown name here is harmless, whereas a
+  # `platform_toolsets` allowlist missing the kanban toolset would strip the
+  # very tools a worker must call to end its run.
+  #
+  # The size of this list is the point. The first smoke test logged
+  # "tool_search activated (tier 1): 21 core/visible tools kept, 17 deferred",
+  # and every worker then exited rc=0 without calling kanban_complete or
+  # kanban_block — three strikes and the card auto-blocked. A 3B-active model
+  # will not go searching for a tool it cannot see.
+  disabled_toolsets:
+    - web
+    - search
+    - x_search
+    - browser
+    - image_gen
+    - video_gen
+    - computer_use
+    - discord
+    - feishu
+    - spotify
+    - connectors
+    - a2a
+    - react
+    - tts
+    - cronjob
+    - session_search
+    - todo
+
+# Measured on run 1: half the GPU time was prefill, and tool schemas were 40 KB
+# of every request. Compression keeps the conversation half of that in check.
+#
+# long-c died here. Compression fires at 50% of 131072 (~65k) and must reach
+# 20% (~26k) -- but protect_last_n exempts the last 20 messages from being
+# compressed at all, and for a tool-heavy agent those alone are worth more than
+# the target. So it compressed, missed, retried to the attempt limit, and the
+# goal judge ruled the goal unachievable and blocked the card at 106 minutes
+# with prompts at 101k. An unreachable target is not a budget, it is a deadline.
+compression:
+  enabled: true
+  threshold: 0.50
+  # `target_ratio` no longer sizes the tail. `tail_mode` defaults to `lean`,
+  # and lean computes the tail as clamp(10k, 25k, context x 0.025) — 10,000
+  # tokens here — ignoring this value (context_compressor.py:2122). It survives
+  # only as the idle-compaction floor below. That is also long-c's post-mortem:
+  # the unreachable target it died against is a legacy-tail failure the default
+  # already fixes.
+  target_ratio: 0.35
+  protect_last_n: 8
+  # The knob for a tool-heavy agent on a 131k window. Compression fires at 50%
+  # (~65k) and rarely gets there, so terminal dumps and file reads ride along in
+  # history and are re-sent every turn. This prunes them deterministically, with
+  # no model call, once re-sent history passes the threshold. The VT card is
+  # nothing but `jq` over multi-megabyte JSON and pytest output.
+  proactive_prune_tokens: 48000
+  # A supervised Bot Chat is a conversation you leave and come back to. Compact
+  # the accumulated history once, up front, rather than re-reading it on every
+  # turn for the rest of the session.
+  idle_compact_after_seconds: 1800
+  # Gateway hygiene's INACTIVITY budget, default 30s — how long it waits for the
+  # summariser's FIRST token before giving up and taking a cooldown. Qwen3.8-27B
+  # prefilling a 65k middle at 23 t/s does not answer in 30 seconds, so on the
+  # default every gateway-path compression aborts and backs off. The turn itself
+  # is never held this long: `hygiene_max_turn_hold_seconds` (10s) releases it
+  # and the summariser finishes detached, to be adopted at the next boundary.
+  hygiene_timeout_seconds: 300
+
+terminal:
+  # NOTE the premise below is now stale: the image it argues from was deleted
+  # with the container harness, and a clean build resolves from the uv cache on
+  # the host instead. Measured 2026-09-22: `installs-from-clean.sh` over
+  # long-e's tree — copy, offline `uv sync`, suite, and `vt-smb build` over
+  # 13,137 rows — is 0.8s end to end. 180 is still not close to binding.
+  #
+  # This key also beats `TERMINAL_TIMEOUT` in `.env`: `terminal_tool.py:606`
+  # bridges an explicit `terminal` section with override=True.
+  #
+  # Back to Hermes' default after measuring what the long runs actually cost.
+  # 900 was set because 180 was "shorter than this project's test suite plus a
+  # uv sync" — but with the dependency set resolved into the image at build time
+  # a full `uv run pytest` from a cold venv is 0.7s, and the gate's own budget
+  # for the same command is 200s. The 900 had stopped buying anything and was
+  # costing a lot: run `gate-a` served 30 requests in its first ten minutes and
+  # then went dark for twenty, which is what one hung command at this timeout
+  # looks like. Fifteen minutes of silence is survivable in a 50-minute run and
+  # ruinous in an overnight one.
+  timeout: 180
+
+# Role-split models. The builder does the volume on the fast MoE; every
+# judgement call goes to the dense Qwen3.8-27B, which is 2.6x more
+# token-efficient and carries far stronger published coding benchmarks. Its
+# 23 t/s is irrelevant for low-volume verdicts. 19GB + 15GB is comfortable on
+# 128GB, and oMLX keeps both resident.
+#
+# Its context window must be >= the main model's or compression fails SILENTLY
+# and loses conversation with no warning; 3.8 serves 262144 against our 131072.
+auxiliary:
+  # Each slot is a FULL connection block, not just a model name:
+  # config_defaults.py builds {provider, model, base_url, api_key, timeout,
+  # extra_body}. Run 2 set only model+provider, so with no base_url/api_key the
+  # slot could not reach oMLX and silently fell back to the main model's chain —
+  # the dense model served ZERO requests across the whole run while goal mode
+  # was demonstrably on (goal_mode=1 in kanban.db). Verify with per-model request
+  # counts in oMLX stats, never by reading the config back.
+  goal_judge:
+    provider: "custom"
+    model: Qwen3.8-27B-4bit
+    base_url: http://127.0.0.1:8000/v1
+    api_key: ${OMLX_API_KEY}
+  kanban_decomposer:
+    provider: "custom"
+    model: Qwen3.8-27B-4bit
+    base_url: http://127.0.0.1:8000/v1
+    api_key: ${OMLX_API_KEY}
+  triage_specifier:
+    provider: "custom"
+    model: Qwen3.8-27B-4bit
+    base_url: http://127.0.0.1:8000/v1
+    api_key: ${OMLX_API_KEY}
+  compression:
+    provider: "custom"
+    model: Qwen3.8-27B-4bit
+    base_url: http://127.0.0.1:8000/v1
+    api_key: ${OMLX_API_KEY}
+    # Default is 120s (auxiliary_client.py:6095 says so itself). Summarising a
+    # 65k middle on a 23 t/s dense model is not a two-minute job, and the host's
+    # own in-agent budget is floored at this value — so raising it raises both.
+    timeout: 900
+
+# `pre_tool_call` is the only hook class Hermes lets veto a call. Run 1 shipped a
+# package whose CLI could not import and four drifted tests, because the gate was
+# an instruction to a small model rather than a check. fail_closed means a broken
+# hook blocks rather than waves work through.
+# NOTE: this gate matches kanban tool calls, so it fires on BOARD-driven work
+# and not on a plain Bot Chat, where no kanban_complete is ever issued. For
+# chat-driven work the equivalent is `bin/installs-from-clean.sh <workspace>`,
+# run by you or by a bot as a skill.
+hooks_auto_accept: true
+hooks:
+  pre_tool_call:
+    - matcher: "^kanban_(complete|request_review)$"
+      # Linked here from hermes/hooks/ by modules/programs/tui/hermes.nix.
+      # UNVERIFIED on a host install: check with `hermes --accept-hooks hooks
+      # test pre_tool_call` and `hermes hooks doctor` before trusting it. A
+      # hook that is not allowlisted reports "will NOT fire at runtime".
+      command: "${HOME}/.hermes/hooks/require-green.sh"
+      timeout: 290
+      fail_closed: true
+
+kanban:
+  # One worker at a time. Kanban's value here is durable structure — a task
+  # graph, atomic claims, an agent-to-agent review gate — not parallelism, and
+  # two workers contending for moria's single GPU would confound both the
+  # wall-clock and the token numbers between runs.
+  max_in_progress: 1
+  max_in_progress_per_profile: 1
+  # The dispatcher runs inside the gateway; the standalone `kanban daemon` is
+  # deprecated and the two would race for claims.
+  dispatch_in_gateway: true
+  dispatch_interval_seconds: 60
+  # After two consecutive non-successful attempts a card auto-blocks. That is
+  # stall detection by construction, and a run should be allowed to demonstrate
+  # it rather than have it tuned away.
+  failure_limit: 2
+  # Spawns a review worker with the bundled SDLC review skill force-loaded.
+  #
+  # NOT the `reviewer` profile, despite what this comment used to say.
+  # kanban_db_dispatch.py:1844 spawns the review lane with `row["assignee"]`,
+  # which is the card's own assignee — the builder. `lane == "review"` changes
+  # exactly two things (:1550, :1571): it claims via `claim_review_task`, and it
+  # appends `sdlc-review` to the claimed skills. So a review is the *builder
+  # model on a fresh context, with the review skill*, and the `reviewer` profile
+  # pinned to Qwen3.8-27B-4bit is unreachable this way — it has served zero
+  # requests in every run to date. It would need a card assigned to `reviewer`.
+  #
+  # Worth keeping: on long-b that arrangement rejected the work with five
+  # specific defects, four of which verified against the tree.
+  review_dispatch: true
+onboarding:
+  seen:
+    profile_build_offered: true

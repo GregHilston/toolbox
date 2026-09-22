@@ -1,0 +1,66 @@
+# builder. A Bot is a profile, so this file is what the Desktop roster edits.
+#
+# A profile does NOT inherit the root config's `hooks` block. The root carried
+# it for seven runs and the gate never fired once: `require-green.log` was empty
+# every time, which read as "no card ever completed" until one did and the log
+# was still absent. Same trap as `disabled_toolsets`. So every bot that can hand
+# work off carries its own copy.
+model:
+  provider: "custom"
+  default: Qwen3.6-35B-A3B-4bit-DWQ
+  base_url: http://127.0.0.1:8000/v1
+  api_key: ${OMLX_API_KEY}
+  request_timeout_seconds: 1800
+
+# Where the bot's shell starts. Without it a gateway-served Bot Chat runs in
+# whatever directory launchd handed the gateway, and the first thing every run
+# spends turns on is finding the workspace. It also keeps the bot out of
+# ~/Git/toolbox, whose 21 KB CLAUDE.md is a cwd context file: `prompt-size` from
+# there is 23 KB heavier than from anywhere else, for instructions written to
+# Claude Code about a repo this bot has no business editing.
+terminal:
+  cwd: "${HOME}/Git/agent-runs/vt-smb-chat/workspace"
+
+hooks_auto_accept: true
+hooks:
+  pre_tool_call:
+    - matcher: "^kanban_(complete|request_review)$"
+      command: "${HOME}/.hermes/hooks/require-green.sh"
+      timeout: 290
+      fail_closed: true
+
+agent:
+  # THE WHOLE LIST, not just homeassistant. A profile's `disabled_toolsets`
+  # REPLACES the root config's rather than merging with it, so carrying only
+  # `homeassistant` here re-advertised the sixteen the root turns off: every
+  # profile paid 25 tools / 42.2 KB of schema per request against `default`'s
+  # 16 / 30.0 KB. `hermes -p <bot> prompt-size` against `hermes -p default
+  # prompt-size` is how you see it; the root's own comment on this list explains
+  # why the size matters to a 3B-active model.
+  disabled_toolsets:
+    - web
+    - search
+    - x_search
+    - browser
+    - image_gen
+    - video_gen
+    - computer_use
+    - discord
+    - feishu
+    - spotify
+    - connectors
+    - a2a
+    - react
+    - tts
+    - cronjob
+    - session_search
+    - todo
+    # The homeassistant toolset registers regardless of HASS_URL/HASS_TOKEN, so
+    # with neither set `ha_list_entities` resolved the default
+    # homeassistant.local:8123, failed DNS, and sent the bot off self-debugging:
+    # one Telegram question produced ten tool errors, four of them `terminal`.
+    # dungeon's Hermes leaves this toolset off deliberately
+    # (home-lab/hermes/README.md §8) because HA has no per-entity permissions
+    # and the locks are S2 Authenticated. moria has no HA access at all, so it
+    # has no business offering the tools.
+    - homeassistant

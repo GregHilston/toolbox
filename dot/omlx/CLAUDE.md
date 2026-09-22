@@ -51,6 +51,16 @@ actually failed a specific hard problem, or when output tokens are precious (31.
 to solve the same eval). We did **not** measure a quality advantage — the eval ceilings out —
 so that case rests on its published benchmarks, not on our data.
 
+**`Qwen3.6-35B-A3B-4bit-DWQ` costs ~10%, not the 21% this repo said for a year.** Paired A/B
+sampling measures **-9.8% decode and -9.3% prefill** against the plain build. The old figure
+came from sequential passes, and on this box a benchmark heats the machine enough that the
+session drifts as much as the effect — two runs were discarded before a drift-cancelling
+design worked. So: pi keeps the plain build (interactive, 10% is felt, a human catches a bad
+turn), and the unattended agent sandbox pins DWQ on purpose, because there 10% buys an extra
+turn in ten and nobody is watching for a derailment. Neither default changed; the reasoning
+behind both did. **Any future A-vs-B on this box should use `bench/moe_quant_paired.py`'s
+design, not a sequential pass.**
+
 **Always prefer 4-bit over 8-bit**, but for different reasons per architecture: on a *dense*
 27B, 8-bit costs ~2× the speed (23.0 → 11.9 t/s); on the *MoE* it costs 1.50×
 (130.7 → 86.9) because only ~3B params are active per token. Cheaper, but not free — don't

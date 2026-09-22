@@ -122,6 +122,64 @@ See `modules/darwin/pi-web.nix`.
 - [ ] **Add a project** - point it at `~/Git`, start a session, close the tab and reopen it
       to confirm the session survived
 
+## Hermes (moria only)
+
+`just dr` installs the `hermes-desktop` cask and symlinks the bot profiles into
+`~/.hermes`, but **the cask only stages an installer**. `Hermes.app` contains a
+single 10.8 MB `Hermes-Setup` binary and no CLI, so until you launch it once
+there is no `hermes` on `$PATH`:
+
+```bash
+open -a Hermes            # runs Hermes-Setup: installs the real app and the CLI
+exec $SHELL -l            # the installer edits your shell rc; reload it
+command -v hermes         # expect ~/.local/bin/hermes
+```
+
+Then, by hand — nix owns the config, not the service, the same split as PI WEB:
+
+```bash
+hermes gateway install    # the launchd background service
+hermes gateway setup      # interactive: Telegram and any other transports
+hermes hooks doctor       # the completion gate must NOT say "will NOT fire at runtime"
+```
+
+**Check the symlinks survived the installer.** It writes into `~/.hermes`, and
+these must still point into the repo rather than have been replaced by real
+files:
+
+```bash
+ls -l ~/.hermes/config.yaml ~/.hermes/hooks ~/.hermes/profiles/*/
+```
+
+Everything under `~/.hermes` that is a symlink is repo-managed and writable on
+purpose — Hermes edits `config.yaml` and `SOUL.md` at runtime, so those edits
+show up as git diffs in the toolbox to commit or discard. `memories/`,
+`sessions/`, `state.db` and `logs/` are runtime state and are not managed.
+
+### Settings nix cannot reach
+
+Two knobs that matter live in the Electron app, not in `config.yaml`, and are
+**device-local** — kept in `~/Library/Application Support/Hermes/pool-limits.json`,
+which the main process owns and rewrites, so set them in the GUI rather than by
+editing the file. Both apply live; no restart.
+
+**Desktop → Settings → Advanced:**
+
+| Setting | Default | Set to | Why |
+| --- | --- | --- | --- |
+| Warm Bot Backends | 3 | **5** | Each open Bot holds one backend (~60 MB). Four profiles are served here, so on 3 the fourth waits 30s for a slot and then fails with *timed out waiting for a free local slot*. |
+| Backend idle timeout | `600000` ms | **`3600000`** ms | An unused backend is reaped after this, and the next visit pays a cold start. `Hermes backend for profile "<name>" exited (1)` in `desktop.log` right after an idle-reap line is that reaper, not a crash. |
+
+Also **System Settings → Privacy & Security → Full Disk Access** for your
+terminal (and `Hermes.app`): `hermes doctor` asks for it as "macOS TCC anchor
+missing", and it is the one switch that stops the per-folder Desktop/Downloads/
+Documents prompts. Hermes' signing identity is stable, so the grant survives
+updates.
+
+```bash
+open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
+```
+
 ## Launch Applications
 
 - [ ] Set up AeroSpace tiling

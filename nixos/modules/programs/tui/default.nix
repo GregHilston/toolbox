@@ -12,6 +12,7 @@
     ./zoxide
     ./zsh
     ./claude.nix
+    ./hermes.nix
     ./nh.nix
     ./opencode.nix
     ./ssh.nix

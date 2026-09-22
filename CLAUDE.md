@@ -273,6 +273,28 @@ private.
 that bind-mounts your real `~/.claude` and `~/Git`, so credentials and sessions are
 shared. See `claude-code/CLAUDE.md`.
 
+## Hermes — bots on moria
+
+[Hermes](https://hermes-agent.nousresearch.com/docs) runs on moria against local inference,
+as **Bot Mode**. A Bot is a profile, so `hermes/profiles/<bot>/SOUL.md` and
+`hermes/config.yaml` in this repo *are* the bots the Desktop roster shows;
+`nixos/modules/programs/tui/hermes.nix` symlinks them into `~/.hermes` writably, because
+Hermes edits all of them at runtime.
+
+The app is the `hermes-desktop` cask in the moria host file, not the Tier 2 nix flake. The
+gateway service is installed once by hand — `hermes gateway install`, then
+`hermes gateway setup` for Telegram and the rest — the same division pi-web uses.
+
+Two things here are ours because Hermes has no equivalent:
+`hermes/hooks/require-green.sh` refuses a handoff whose tree would not install for anyone
+else, and `bin/installs-from-clean.sh` answers the same question about any directory, with
+no container and no agent involved.
+
+**This repo used to carry a 3,000-line harness around Hermes — a container, a Telegram bot,
+a run loop, a scorer — nearly all of which reimplemented features Hermes ships.** It was
+deleted; `~/Git/notes/ref-hermes-run-log.md` records what those runs taught, which is the
+part worth keeping. The operator guide is `~/Git/hermes.md`.
+
 ## Secret Management
 
 All secrets live in 1Password (vault: **Infra**). Committed `.tpl` template files contain

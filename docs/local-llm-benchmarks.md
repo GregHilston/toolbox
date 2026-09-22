@@ -211,6 +211,9 @@ story. It is never *zero*, which is the part people assume wrongly.
 |---|---|---|---|---|---|---|
 | **Qwen3.6-35B-A3B-4bit** | MoE | ~3B | 4-bit | 19 GB | **130.73** | 0.50 s |
 | Qwen3.6-35B-A3B-4bit-DWQ | MoE | ~3B | 4-bit DWQ | 19 GB | 103.64 | 0.52 s |
+
+The DWQ row was measured sequentially and is depressed by session drift; the
+checkpoint-to-checkpoint figure is the paired **-9.8%**, not `103.64 / 130.73`.
 | Qwen3.6-35B-A3B-8bit | MoE | ~3B | 8-bit | 35 GB | 86.91 | 0.54 s |
 | Qwen3.6-27B-4bit | dense | 27B | 4-bit | 14.95 GiB | 24.01 | 2.51 s |
 | **Qwen3.8-27B-4bit** | dense | 27B | 4-bit | 14.95 GiB | **22.96** | 2.58 s |
@@ -306,6 +309,36 @@ Unset and explicit `xhigh` behave identically, confirming the default. A side ef
 knowing: because `</think>` never arrives, the parser cannot split reasoning from content, so
 all ~36k characters land in `content` and `reasoning_content` comes back empty.
 
+## Results: DWQ vs plain 4-bit, measured in pairs
+
+Two sequential attempts at this comparison were thrown out by their own drift controls, and
+the lesson generalises to any A-vs-B on this box.
+
+| attempt | design | control said | verdict |
+|---|---|---|---|
+| 1 | one oMLX restart at the top | plain re-measured **22% slow** | residency: arm 2 carried arm 1's 19 GB |
+| 2 | restart before every arm | plain 130.92 -> 110.12 t/s across the pass | **16% thermal drift vs an ~18% effect** |
+| 3 | **A/B/A/B, both models warm** | plain drifted 28% and it did not matter | usable |
+
+The fix is not a better control, it is a design where drift cancels. Warm both models so
+residency is identical and stable, then sample the two alternately, flipping the order each
+round. Every round yields a *paired* ratio taken seconds apart, so a machine sliding under
+the pass slides under both halves of every pair. Report the median of the ratios and their
+spread — never a difference of two averages taken minutes apart.
+
+| axis | plain | DWQ | paired ratio | DWQ cost |
+|---|---|---|---|---|
+| decode (n=6 pairs) | 126-134 t/s | 119-121 t/s | median 0.902, spread 0.886-0.953 | **-9.8%** |
+| prefill @32K (n=5 pairs) | 867-1248 t/s | 787-1124 t/s | median 0.907, spread 0.836-1.002 | **-9.3%** |
+
+The two axes agreeing at ~10% is the result. The wide absolute ranges in that table are the
+drift the pairing absorbed; the ratios are what to read.
+
+**This supersedes the 21%** that the quantization section quoted for a year. That figure came
+from sequential passes on a machine that heats up under exactly the load a benchmark applies,
+so it measured the session as much as the checkpoint. Reproduce with
+`bench/moe_quant_paired.py`.
+
 ## Results: long-context prefill (corrected)
 
 **These numbers replace an earlier contaminated set** — see trap #3 above. Every row below was
@@ -390,11 +423,23 @@ maths/programming — our pi registry already declares `maxTokens: 81920`.
 **DWQ (distilled weight quantization) — real, but not free.** `Qwen3.6-35B-A3B-4bit-DWQ`
 gradient-optimizes the quantization scales against a full-precision teacher, and is reported
 to behave like ~4.6-bit. Measured here: **10/10 on the coding eval (the best result of
-anything tested) but 103.6 tok/s vs 130.7 — a 21% speed cost.** By our own n=10 standard the
-extra task is not a demonstrated quality gain, while the 21% is measured and certain. Kept on
-disk and documented as the quality-leaning alternative; **not made the default.** The slowdown
-has a clear cause: DWQ keeps embeddings, `lm_head`, routers and shared experts at higher
-precision, and in a MoE those are read on *every* token.
+anything tested). **The "21% speed cost" this section carried for a year is about double the
+real figure: measured in pairs, DWQ costs 9.8% on decode and 9.3% on prefill.** By our own
+n=10 standard the extra task is still not a demonstrated quality gain — but a 10% cost is a
+far easier price than 21%, and it is why the unattended agent sandbox runs DWQ deliberately
+(`~/Git/notes/ref-long-running-harnesses.md`) while pi keeps the plain build for interactive
+work, where 10% is felt and a human is present to catch a bad turn. The slowdown
+has a clear cause, though not quite the one written here originally. Read the two
+`config.json` quantization blocks side by side and the difference is precision layout, not
+learned scales: the plain build is `bits: 4` with 80 modules bumped to 8-bit (the MoE
+gates), while the DWQ build is **`bits: 8`** with 240 modules dropped to 4-bit — and those
+240 are exactly the expert FFNs. So the DWQ checkpoint runs the embeddings, `lm_head`, the
+gates and **the entire attention stack** at 8-bit, and only the experts at 4. The shared
+experts are 4-bit in DWQ, not 8-bit as this section used to say. Both land at ~19 GB because
+the experts dominate the parameter count; what differs is how much 8-bit weight is touched
+per token. Upstream mlx-lm claims DWQ improves quality and makes **no** claim about
+inference cost, so the penalty belongs to this checkpoint's layout rather than to DWQ the
+method.
 
 **OptiQ — rejected on its own numbers.** `Qwen3.6-35B-A3B-OptiQ-4bit` advertises a higher
 aggregate "Capability Score", but the per-metric table shows it **losing** on MMLU (−0.9),
@@ -411,7 +456,7 @@ a prefill-path fix.
 
 ## Confounds that produced wrong numbers
 
-Every one of these produced a plausible, wrong result. Three needed permanent tooling.
+Every one of these produced a plausible, wrong result. Four needed permanent tooling.
 
 **1. Foreign traffic on a shared server.** Another process on this machine hammered
 `gpt-oss-120b` on the same oMLX instance for ~5 minutes — most likely a manual `roger` run,
@@ -452,10 +497,27 @@ fenced code block landed before the cutoff. Track `finish_reason` separately fro
 **7. `timeout` does not exist on macOS.** A guard using it silently *skipped* an entire
 benchmark phase rather than running it (`gtimeout`, from coreutils, is the equivalent).
 
-Drift control: each pass re-measures its first model last. Across the full matrix that came
-out at **−3.9%** — an order of magnitude too small to manufacture the 2× quant gap.
+**8. Thermal drift across a sequential A-vs-B.** The confound that cost two whole
+comparison runs on 2026-09-21. Restarting the server per model (confound #2) fixes residency
+and leaves this one untouched: a benchmark is sustained GPU load, the machine warms under it,
+and the *same* model measured at the start and the end of one 9-minute pass read **130.92
+then 110.12 tok/s**. A 16% session drift cannot rank a 10% difference between checkpoints,
+and the re-measure-first-model-last control can only report that the run is unusable — which
+it did, both times. The fix is a design where drift cancels rather than a better control:
+warm both models so residency is identical, then sample them **alternately**, flipping the
+order each round, and report the median of the *paired* ratios. That design returned a stable
+answer through a 28% drift inside its own pass. `bench/moe_quant_paired.py`.
 
----
+**9. Reading a quantization penalty off two sequential medians.** The corollary, and the
+reason the DWQ figure in this document was wrong by roughly 2× for a year. `103.64 / 130.73`
+looks like a checkpoint ratio and is really a session ratio. Paired sampling puts DWQ at
+**-9.8% decode / -9.3% prefill**, not -21%.
+
+Drift control: each pass re-measures its first model last. Across the 2026-08-15 matrix that
+came out at **−3.9%** — an order of magnitude too small to manufacture the 2× quant gap.
+**It does not generalise.** On 2026-09-21 the same control read −16% and −28%, on a machine
+that had been running agent workloads for the previous hour. Treat −3.9% as one session's
+luck, not as this box's drift, and re-read the control every time.
 
 ## Outcome / current config
 
@@ -465,7 +527,7 @@ out at **−3.9%** — an order of magnitude too small to manufacture the 2× qu
 - **Specialist:** `Qwen3.8-27B-4bit` — temp 1.0 / top_p 0.95 / top_k 20 / min_p 0.0,
   `reasoning_effort: medium`, 8192-token budget.
 - **Quality-leaning alternative, on disk, not default:** `Qwen3.6-35B-A3B-4bit-DWQ`
-  (10/10 but 21% slower).
+  (10/10, and ~10% slower — not the 21% long quoted here).
 - Speculative decoding **off** pending the losslessness bug.
 - Deleted: `Qwen3.6-27B-4bit`, `Qwen3.6-27B-8bit`, `Qwen3.8-27B-8bit`, DSpark drafter (~73 GB).
 
