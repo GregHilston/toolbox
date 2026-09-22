@@ -39,7 +39,7 @@ except Exception: print("")' 2>/dev/null)"
 # a thing that can only ever subtract.
 if [ -z "${tool}" ]; then
   log_line "gate blocked <unparseable>: cannot read tool_name from the payload"
-  printf '{"decision":"block","reason":"the completion gate could not parse the tool call payload, so it cannot verify the tree. This is a harness fault, not your fault: report it rather than working around it."}\n'
+  printf '{"decision": "block", "reason": "the completion gate could not parse the tool call payload, so it cannot verify the tree. This is a harness fault, not your fault: report it rather than working around it."}\n'
   exit 0
 fi
 
@@ -172,7 +172,9 @@ fi
 # The clean entrypoint check only runs --help, so a dependency that only the
 # tests or the real build import can still be dropped. Running the suite out of
 # the clean environment closes the test half of that.
-if [ -d tests ] && ! out="$(gate_run 200 'uv run --no-sync pytest -q' \
+# No --no-sync: this must resolve the project from pyproject.toml on its own,
+# not inherit whatever the entrypoint check happened to install a moment ago.
+if [ -d tests ] && ! out="$(gate_run 200 'uv run pytest -q' \
     UV_PROJECT_ENVIRONMENT="${GATE_VENV}")"; then
   clean_fail "${tool} refused: the suite passes against the workspace .venv and fails in a clean environment built from pyproject.toml alone. Something the tests import is installed but not declared.
 

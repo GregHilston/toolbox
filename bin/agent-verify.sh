@@ -80,8 +80,8 @@ cat > pyproject.toml <<EOF
 name = "gate-probe"
 version = "0.1.0"
 requires-python = ">=3.11"
-[tool.uv]
-dev-dependencies = ["pytest>=8.0"]
+[dependency-groups]
+dev = ["pytest>=8.0"]
 EOF
 echo "def test_x(): assert False" > tests/test_x.py
 printf 'RED=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
@@ -101,8 +101,8 @@ version = "0.1.0"
 requires-python = ">=3.11"
 [project.scripts]
 gate-probe = "gate_probe:main"
-[tool.uv]
-dev-dependencies = ["pytest>=8.0"]
+[dependency-groups]
+dev = ["pytest>=8.0"]
 EOF
 printf 'GUTTED=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
 # Every one of these was a working way past the gate, and the first is cheaper
@@ -118,8 +118,8 @@ version = "0.1.0"
 requires-python = ">=3.11"
 [project.entry-points.console_scripts]
 gate-probe = "gate_probe:main"
-[tool.uv]
-dev-dependencies = ["pytest>=8.0"]
+[dependency-groups]
+dev = ["pytest>=8.0"]
 EOF
 printf 'RENAMED=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
 cat > pyproject.toml <<EOF
