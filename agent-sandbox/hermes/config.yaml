@@ -73,11 +73,18 @@ agent:
 
 # Measured on run 1: half the GPU time was prefill, and tool schemas were 40 KB
 # of every request. Compression keeps the conversation half of that in check.
+#
+# long-c died here. Compression fires at 50% of 131072 (~65k) and must reach
+# 20% (~26k) -- but protect_last_n exempts the last 20 messages from being
+# compressed at all, and for a tool-heavy agent those alone are worth more than
+# the target. So it compressed, missed, retried to the attempt limit, and the
+# goal judge ruled the goal unachievable and blocked the card at 106 minutes
+# with prompts at 101k. An unreachable target is not a budget, it is a deadline.
 compression:
   enabled: true
   threshold: 0.50
-  target_ratio: 0.20
-  protect_last_n: 20
+  target_ratio: 0.35
+  protect_last_n: 8
 
 terminal:
   # Back to Hermes' default after measuring what the long runs actually cost.
