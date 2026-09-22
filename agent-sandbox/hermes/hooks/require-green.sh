@@ -127,19 +127,22 @@ print(e.group(1) if e else "")
 PY
 )"
 
-if [ -n "${script_name}" ]; then
-  missing=""
-  grep -qE '^\s*\[build-system\]' pyproject.toml || missing="a [build-system] table"
-  # `dependencies = []` satisfied a bare `^dependencies` grep, so an empty list
-  # was a way to declare nothing while looking like a declaration.
-  python3 -c 'import re,sys
-t = open("pyproject.toml").read()
-m = re.search(r"^\s*dependencies\s*=\s*\[(.*?)\]", t, re.M | re.S)
-sys.exit(0 if m and m.group(1).strip() else 1)' 2>/dev/null \
-    || missing="${missing:+${missing} and }a non-empty dependencies list"
-  if [ -n "${missing}" ]; then
-    block "${tool} refused: pyproject.toml declares the console script '${script_name}' but is missing ${missing}, so nothing can install it. The suite and the entrypoint only pass here because .venv already holds what they need; a clean checkout gets nothing. Restore the packaging rather than working around it — deleting the build system is not a fix for a build error."
-  fi
+#
+# There is deliberately NO "dependencies must be non-empty" check here. It was
+# one, and long-e proved it wrong: that agent shipped a pure-stdlib package —
+# abc, csv, dataclasses, json, os, re, sys, typing and nothing else — whose
+# clean build succeeded and emitted 13,137 rows, and the gate refused it for
+# declaring no dependencies. An empty dependency list is the honest answer for a
+# package that has none, and a gate that refuses a working tree deadlocks an
+# honest agent, which is worse than the hole it closes.
+#
+# What replaces it is behavioural and sits below: the console script must exist
+# in a venv built from pyproject.toml alone, and the entrypoint and the suite
+# must both run out of that venv. Those catch long-a's dropped pyarrow and
+# long-b's hand-made wrappers without an opinion about how many dependencies a
+# package ought to have.
+if [ -n "${script_name}" ] && ! grep -qE '^\s*\[build-system\]' pyproject.toml; then
+  block "${tool} refused: pyproject.toml declares the console script '${script_name}' but has no [build-system] table, so nothing can install it. The suite and the entrypoint only pass here because .venv already holds what they need; a clean checkout gets nothing. Restore the packaging rather than working around it — deleting the build system is not a fix for a build error."
 fi
 
 # The structural check above cannot see a dependency that was dropped while the
@@ -154,6 +157,16 @@ fi
 GATE_VENV="$(mktemp -d /tmp/gate-clean-venv.XXXXXX 2>/dev/null)" || GATE_VENV="/tmp/gate-clean-venv.$$"
 rm -rf "${GATE_VENV}"
 clean_fail() { rm -rf "${GATE_VENV}"; block "$1"; }
+
+# Sync explicitly rather than relying on BUILD_CMD to install the project as a
+# side effect. It does in production, where BUILD_CMD is `uv run vt-smb --help`;
+# it did not under the verifier's `true`, and a check that depends on another
+# command having happened first is the bug that already bit the suite check.
+if ! out="$(gate_run 180 'uv sync --quiet' UV_PROJECT_ENVIRONMENT="${GATE_VENV}")"; then
+  clean_fail "${tool} refused: the project cannot be installed from pyproject.toml alone into a clean environment.
+
+$(printf '%s' "${out}" | tail -40)"
+fi
 
 if ! out="$(gate_run 180 "${BUILD_CMD}" UV_PROJECT_ENVIRONMENT="${GATE_VENV}")"; then
   clean_fail "${tool} refused: '${BUILD_CMD}' works against the .venv in the workspace and fails in a clean environment built from pyproject.toml alone. Whatever it needs is installed but not declared, so nobody else can build this.

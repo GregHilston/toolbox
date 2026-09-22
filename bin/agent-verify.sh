@@ -122,6 +122,9 @@ gate-probe = "gate_probe:main"
 dev = ["pytest>=8.0"]
 EOF
 printf 'RENAMED=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
+# A package that genuinely needs nothing: buildable, installable, no deps.
+mkdir -p src/gate_probe
+printf 'def main():\n    print("ok")\n' > src/gate_probe/__init__.py
 cat > pyproject.toml <<EOF
 [project]
 name = "gate-probe"
@@ -133,6 +136,10 @@ gate-probe = "gate_probe:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+[tool.hatch.build.targets.wheel]
+packages = ["src/gate_probe"]
+[dependency-groups]
+dev = ["pytest>=8.0"]
 EOF
 printf 'EMPTYDEPS=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
 PROBE
@@ -150,8 +157,10 @@ printf '%s' "${out}" | grep -q 'NOPAYLOAD={"decision": "block"' \
   && ok "gate blocks a payload it cannot parse" || bad "an unreadable payload still opens the gate"
 printf '%s' "${out}" | grep -q 'RENAMED={"decision": "block"' \
   && ok "gate sees entry-points.console_scripts too" || bad "renaming the scripts table skips the packaging check"
-printf '%s' "${out}" | grep -q 'EMPTYDEPS={"decision": "block"' \
-  && ok "gate blocks an empty dependencies list" || bad "dependencies = [] still satisfies the gate"
+# Not a block: long-e's pure-stdlib package built clean and emitted 13,137 rows
+# while the gate refused it for declaring no dependencies.
+printf '%s' "${out}" | grep -q '^EMPTYDEPS=$' \
+  && ok "gate allows a package that needs no dependencies" || bad "gate refused a dependency-free package"
 
 # Section 2 proves the SCRIPT behaves. It says nothing about whether Hermes ever
 # calls it — and for seven runs it did not. The root config carried the hook, the

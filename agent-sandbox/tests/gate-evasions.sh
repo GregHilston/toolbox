@@ -84,9 +84,12 @@ open(p,"w").write(t)
 P
 check "scripts table renamed, build-system gone" BLOCK "$(run_gate "$W" kanban_complete)"
 
-W="$(mk_good emptydeps)"; sed -i '' 's/dependencies = \["packaging"\]/dependencies = []/' "$W/pyproject.toml"
+# long-e shipped a pure-stdlib package whose clean build emitted 13,137 rows,
+# and the gate refused it for declaring no dependencies. A package with none is
+# telling the truth; the behavioural checks below are what catch a real evasion.
+W="$(mk_good stdlibonly)"; sed -i '' 's/dependencies = \["packaging"\]/dependencies = []/' "$W/pyproject.toml"
 printf 'def main():\n    print("ok")\n' > "$W/src/demo/cli.py"
-check "dependencies = [] (empty list)" BLOCK "$(run_gate "$W" kanban_complete)"
+check "a pure-stdlib package still passes" PASS "$(run_gate "$W" kanban_complete)"
 
 W="$(mk_good notests)"; rm "$W/tests/test_ok.py"
 check "every test deleted" BLOCK "$(run_gate "$W" kanban_complete)"
@@ -99,11 +102,21 @@ out="$(printf '{"tool_name":"kanban_complete"}' | \
 check "[tool.uv] package=false + wrapper on PATH" BLOCK "$out"
 
 echo "== the profile-pollution evasion =="
+# A broken tree PLUS a profile that fakes uv into succeeding. If the gate still
+# sourced the login profile the fake would wave this through; with --noprofile
+# the real uv runs and the tree is refused on its merits.
 W="$(mk_good polluted)"
-printf 'export UV_PROJECT_ENVIRONMENT=%s/.dirty\ndemo-cli() { echo faked; }\n' "$W" > "$ROOT/fakehome/.bash_profile"
-printf 'export UV_PROJECT_ENVIRONMENT=%s/.dirty\n' "$W" > "$ROOT/fakehome/.bashrc"
-sed -i '' 's/dependencies = \["packaging"\]/dependencies = []/' "$W/pyproject.toml"
-check ".bash_profile redirects the clean venv" BLOCK "$(run_gate "$W" kanban_complete)"
+python3 - "$W/pyproject.toml" <<'P'
+import sys
+p = sys.argv[1]; t = open(p).read()
+t = t.replace('requires = ["hatchling"]\nbuild-backend = "hatchling.build"\n', '')
+t = t.replace("[build-system]\n", "")
+open(p, "w").write(t)
+P
+printf 'uv() { echo "FAKE UV"; return 0; }\nexport UV_PROJECT_ENVIRONMENT=%s/.dirty\n' "$W" > "$ROOT/fakehome/.bash_profile"
+printf 'uv() { echo "FAKE UV"; return 0; }\n' "$ROOT/fakehome/.bashrc" >/dev/null 2>&1 || true
+printf 'uv() { echo "FAKE UV"; return 0; }\n' > "$ROOT/fakehome/.bashrc"
+check "a faked uv in .bash_profile is ignored" BLOCK "$(run_gate "$W" kanban_complete)"
 
 echo
 echo "== $pass passed, $fail failed =="
