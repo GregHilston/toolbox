@@ -50,6 +50,22 @@
   ];
 
   home-manager.users.${vars.user.name} = {
+    # Hermes runs here, as Bot Mode: bots are profiles, so their SOULs and
+    # config live in the repo and are symlinked into ~/.hermes by
+    # modules/programs/tui/hermes.nix. moria only for now -- it is where oMLX is.
+    #
+    # This is a HOME-MANAGER option, so it belongs in this block. piWeb looks
+    # similar and sits at the system level because it is a darwin module; that
+    # difference cost a failed `just dr`.
+    #
+    # The app is the `hermes-desktop` cask above. The gateway service is
+    # installed once by hand (`hermes gateway install`, then
+    # `hermes gateway setup`), the same division pi-web uses: nix owns the
+    # config, not the launchd agent. There is deliberately no Telegram agent
+    # here any more -- Hermes speaks Telegram, and eighteen other platforms,
+    # natively through its own gateway.
+    custom.programs.hermes.enable = true;
+
     # Moria-specific packages: whisper for local transcription, ffmpeg to extract
     # audio from video first. The comment here used to also claim a Python for
     # parakeet-mlx — that was for bin/audio-transcript.py, which now lives in
@@ -99,18 +115,4 @@
   # `just pi-web-setup`. See modules/darwin/pi-web.nix for why nix does not own
   # its launchd agents.
   custom.programs.piWeb.enable = true;
-
-  # Hermes runs here, as Bot Mode: bots are profiles, so their SOULs, config and
-  # skills live in the repo and are symlinked into ~/.hermes by
-  # modules/programs/tui/hermes.nix. moria only for now -- it is where oMLX is.
-  #
-  # The app itself is the `hermes-desktop` cask in modules/darwin/homebrew-base.nix,
-  # and the gateway service is installed once by hand with `hermes gateway install`,
-  # the same division pi-web uses: nix owns the config, not the launchd agent.
-  #
-  # There is deliberately no Telegram agent here any more. Hermes speaks Telegram
-  # (and eighteen other platforms) natively through its own gateway, two-way, with
-  # /status and /approve built in, so the 350-line bot this repo carried was a
-  # reimplementation. `hermes gateway setup` configures it.
-  custom.programs.hermes.enable = true;
 }
