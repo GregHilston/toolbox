@@ -23,7 +23,11 @@ IMAGE_TOOLS_DEBUG=false
 MOA_TOOLS_DEBUG=false
 TERMINAL_LIFETIME_SECONDS=300
 TERMINAL_MODAL_IMAGE=nikolaik/python-nodejs:python3.11-nodejs20
-TERMINAL_TIMEOUT=60
+# TERMINAL_TIMEOUT deliberately absent. It was 60 here, from the installer,
+# while config.yaml carried a reasoned 180 — and config wins, because
+# `terminal_tool.py:606` bridges an explicit `terminal` section with
+# override=True. Two files disagreeing about one number, with no way to tell
+# from either which one the agent obeys, is worse than one file owning it.
 VISION_TOOLS_DEBUG=false
 WEB_TOOLS_DEBUG=false
 

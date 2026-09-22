@@ -1,11 +1,18 @@
-_config_version: 44
+_config_version: 45
 # Hermes config for the harness comparison. Seeded into $HERMES_HOME on first
 # boot and thereafter writable, unlike home-lab/hermes/config.yaml which is
 # read-only on purpose — this instance is an experiment, not a service.
 #
-# `_config_version` must match the pinned release (v0.21.3 = 44). Absent, the
+# `_config_version` must match the pinned release (v0.21.4 = 45). Absent, the
 # file is read as v0 and whole sections are silently ignored — `hermes doctor`
-# says "Config version outdated (v0 -> v44)" and nothing else complains.
+# says "Config version outdated (v0 -> v45)" and nothing else complains.
+#
+# Bump it BY HAND, never with `hermes doctor --fix`: that path ends in
+# `_persist_migration`, which rewrites this file from the parsed YAML and takes
+# every comment below with it. Read the step in
+# `hermes_cli/config_migrations.py` first — 44 -> 45 only appends `connections`
+# to a saved `platform_toolsets` list, and we have no such key, so the bump is
+# the whole migration.
 
 database:
   # SQLite over a macOS bind mount through virtiofs is not WAL crash-safe, and
@@ -35,6 +42,13 @@ model:
 
 agent:
   reasoning_effort: "low"
+  # Inactivity, not wall-clock, and the gateway cancels the turn on it. The
+  # default is 1800 — the same 30 minutes a single local turn can spend silent
+  # (see ref-hermes-run-log.md, "a quiet bot is not a stuck bot"). Streamed
+  # tokens count as progress, so this only binds across a cold prefill; a run
+  # that dies exactly at the half hour is this, not the model.
+  gateway_timeout: 3600
+  gateway_timeout_warning: 900
   # Same reasoning as home-lab/hermes: fewer tool schemas, shorter prefill on
   # every turn. `web`/`search`/`x_search` must be disabled HERE rather than only
   # omitted from platform_toolsets — Hermes' built-in web_search auto-activates
@@ -83,10 +97,42 @@ agent:
 compression:
   enabled: true
   threshold: 0.50
+  # `target_ratio` no longer sizes the tail. `tail_mode` defaults to `lean`,
+  # and lean computes the tail as clamp(10k, 25k, context x 0.025) — 10,000
+  # tokens here — ignoring this value (context_compressor.py:2122). It survives
+  # only as the idle-compaction floor below. That is also long-c's post-mortem:
+  # the unreachable target it died against is a legacy-tail failure the default
+  # already fixes.
   target_ratio: 0.35
   protect_last_n: 8
+  # The knob for a tool-heavy agent on a 131k window. Compression fires at 50%
+  # (~65k) and rarely gets there, so terminal dumps and file reads ride along in
+  # history and are re-sent every turn. This prunes them deterministically, with
+  # no model call, once re-sent history passes the threshold. The VT card is
+  # nothing but `jq` over multi-megabyte JSON and pytest output.
+  proactive_prune_tokens: 48000
+  # A supervised Bot Chat is a conversation you leave and come back to. Compact
+  # the accumulated history once, up front, rather than re-reading it on every
+  # turn for the rest of the session.
+  idle_compact_after_seconds: 1800
+  # Gateway hygiene's INACTIVITY budget, default 30s — how long it waits for the
+  # summariser's FIRST token before giving up and taking a cooldown. Qwen3.8-27B
+  # prefilling a 65k middle at 23 t/s does not answer in 30 seconds, so on the
+  # default every gateway-path compression aborts and backs off. The turn itself
+  # is never held this long: `hygiene_max_turn_hold_seconds` (10s) releases it
+  # and the summariser finishes detached, to be adopted at the next boundary.
+  hygiene_timeout_seconds: 300
 
 terminal:
+  # NOTE the premise below is now stale: the image it argues from was deleted
+  # with the container harness, and a clean build resolves from the uv cache on
+  # the host instead. Measured 2026-09-22: `installs-from-clean.sh` over
+  # long-e's tree — copy, offline `uv sync`, suite, and `vt-smb build` over
+  # 13,137 rows — is 0.8s end to end. 180 is still not close to binding.
+  #
+  # This key also beats `TERMINAL_TIMEOUT` in `.env`: `terminal_tool.py:606`
+  # bridges an explicit `terminal` section with override=True.
+  #
   # Back to Hermes' default after measuring what the long runs actually cost.
   # 900 was set because 180 was "shorter than this project's test suite plus a
   # uv sync" — but with the dependency set resolved into the image at build time
@@ -134,6 +180,10 @@ auxiliary:
     model: Qwen3.8-27B-4bit
     base_url: http://127.0.0.1:8000/v1
     api_key: ${OMLX_API_KEY}
+    # Default is 120s (auxiliary_client.py:6095 says so itself). Summarising a
+    # 65k middle on a 23 t/s dense model is not a two-minute job, and the host's
+    # own in-agent budget is floored at this value — so raising it raises both.
+    timeout: 900
 
 # `pre_tool_call` is the only hook class Hermes lets veto a call. Run 1 shipped a
 # package whose CLI could not import and four drifted tests, because the gate was

@@ -13,7 +13,7 @@ purpose: my job is judgement, not volume.
 
 What I actually do, in order:
 
-- Run it. `uv run pytest` in `/instance/workspace`, and the pipeline command the
+- Run it. `uv run pytest` in the workspace, and the pipeline command the
   card claims works. A claim I did not execute is a claim I have not checked.
 - Check conformance to `ENGINEERING.md`: nothing under `domain/` imports an I/O
   library, DTOs are referenced only inside their own adapter package, ports are

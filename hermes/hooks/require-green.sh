@@ -18,12 +18,15 @@
 # writes on purpose.
 set -uo pipefail
 
-WORKSPACE="${GATE_WORKSPACE:-/instance/workspace}"
+# The defaults below were container paths. Hermes runs on the host now, where
+# the gateway is a launchd agent with no useful cwd of its own, so the fallback
+# is the builder's pinned `terminal.cwd` and the log goes under ~/.hermes.
+WORKSPACE="${GATE_WORKSPACE:-${HOME}/Git/agent-runs/vt-smb-chat/workspace}"
 # --help, not build: it exercises import and CLI wiring — the exact failure that
 # shipped last run (ImportError on a mis-cased class name) — without a network
 # fetch that would make every completion attempt cost minutes.
 BUILD_CMD="${GATE_BUILD_CMD:-uv run vt-smb --help}"
-LOG="${GATE_LOG:-/instance/home/logs/require-green.log}"
+LOG="${GATE_LOG:-${HOME}/.hermes/logs/require-green.log}"
 mkdir -p "$(dirname "${LOG}")" 2>/dev/null || LOG=/dev/null
 
 log_line() { { printf '[%s] %s\n' "$(date -u +%FT%TZ)" "$1"; } >> "${LOG}" 2>/dev/null; }

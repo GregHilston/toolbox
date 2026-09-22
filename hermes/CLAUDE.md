@@ -77,6 +77,54 @@ Each bot carries its own copy of the `hooks` block in
 `profiles/<bot>/config.yaml`, because a profile does **not** inherit the root
 config's. The root carried it for seven runs and the gate never fired once.
 
+## A profile's config REPLACES the root's, key by key
+
+Not just `hooks` — every key. `profiles/<bot>/config.yaml` carried
+`agent.disabled_toolsets: [homeassistant]`, which dropped the root's other
+seventeen on the floor: `web`, `browser`, `x_search` and the rest were
+advertised to every bot, including the ones that run with no network. The cost
+was 25 tools / 42.2 KB of schema per request against `default`'s 16 / 30.0 KB.
+
+So each profile now carries the whole list, and the way to see it is to compare
+a bot against the root:
+
+```bash
+for p in default builder researcher reviewer; do
+  hermes -p $p prompt-size | grep "Tool schemas"
+done
+```
+
+`default` reads the root config alone. **Any profile that differs from it has
+overridden something**, and the four numbers agreeing is the check that a
+profile's copy is still complete.
+
+## Reading a bot's conversations
+
+They are in `~/.hermes/state.db`, and nowhere else. Read them rather than asking
+for a paste:
+
+```bash
+sqlite3 -header -column ~/.hermes/state.db \
+  "select id, source, display_name, datetime(started_at,'unixepoch','localtime'), message_count
+     from sessions order by started_at desc limit 10;"
+
+sqlite3 ~/.hermes/state.db \
+  "select role, tool_name, substr(replace(coalesce(content,''),char(10),' '),1,200)
+     from messages where session_id='<id>' order by id;"
+```
+
+`source` tells the surface apart: `telegram`, `desktop`, `cli`. There are
+`messages_fts` and `messages_fts_trigram` indexes if you want to search rather
+than scroll.
+
+The two neighbouring paths are decoys. `~/.hermes/sessions/sessions.json` says
+so in its own `_README` — it is a legacy mirror of the gateway *routing* index,
+a map of session keys to ids, with no message text. `~/.hermes/logs/` is the
+gateway's operational log: it records that a Telegram message arrived and how
+many characters the reply was, never what either said.
+
+Runtime state, so none of it is in git.
+
 ## Traps
 
 - **`${VAR}` in `config.yaml` resolves against the profile's own `.env`, not
@@ -89,6 +137,17 @@ config's. The root carried it for seven runs and the gate never fired once.
 - **`~/.hermes/.env` is generated** from `hermes/.env.tpl` by `just secrets`, so
   `hermes config set` writes and anything the wizard stores there are
   overwritten. Put keys in the template.
+- **`hermes doctor`'s "No API key found in ~/.hermes/.env" is a permanent false
+  positive here.** It greps the file for one of thirty hard-coded vendor names
+  (`doctor.py:_PROVIDER_ENV_HINTS`) and `OMLX_API_KEY` is not among them. The
+  key is wired through `config.yaml`'s `api_key: ${OMLX_API_KEY}`; the check
+  that actually answers the question is the same doctor's "auxiliary task
+  routing resolves: … custom@127.0.0.1".
+- **Never `hermes doctor --fix` or `hermes setup` to bump `_config_version`.**
+  Both end in `_persist_migration`, which rewrites `config.yaml` from parsed
+  YAML — every comment in it is why a setting is what it is, and they do not
+  survive. Read the step in `hermes_cli/config_migrations.py`, apply what it
+  does by hand, and edit the number.
 
 - **`HERMES_WRITE_SAFE_ROOT` is a security feature**, not a bug. It confines
   writes to a directory. This project once widened it to work around a blocked
