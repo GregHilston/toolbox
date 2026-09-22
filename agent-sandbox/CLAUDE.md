@@ -58,7 +58,7 @@ All four present as *the model failing*, which is why they are written down.
   packaging failures that were nothing of the kind. The Dockerfile now resolves the seeded
   dependency set at build time, ships the resulting `uv.lock` beside the seeded
   `pyproject.toml`, and the entrypoint exports `UV_OFFLINE=1` so a package that is genuinely
-  missing fails fast and names itself. `agent-verify.sh` section 4 asserts all of it.
+  missing fails fast and names itself. `agent-verify.sh` section 5 asserts all of it.
 
 `max_in_progress: 1` on purpose: what is being tested is durable structure, not parallelism,
 and two workers contending for moria's single GPU would confound the comparison.
@@ -124,7 +124,7 @@ they stop agent-authored code from starving the oMLX server the agent itself dep
 
 `export-reference` builds it with `git archive HEAD` per repo. That excludes every gitignored
 path **by construction** rather than by a blocklist that goes stale — `nixos/secrets/.env`
-and its seven live keys, `home-lab/roger/secrets/.env`, `.venv`, `.worktrees`. Pathspecs
+and its ten live keys, `home-lab/roger/secrets/.env`, `.venv`, `.worktrees`. Pathspecs
 handle the one `.env` that is tracked, in `home-lab`: no credentials in it, but home-network
 topology all the same.
 
@@ -174,7 +174,7 @@ keep the lid open — clamshell still sleeps.
 
 `Qwen3.6-35B-A3B-4bit-DWQ`, whose `model_settings.json` entry carries the run's context
 bound. Chosen over the dense `Qwen3.8-27B-4bit` for two reasons that only apply when nobody
-is watching: it is 4.5× faster in wall-clock, which is the currency of an unattended run,
+is watching: it is ~5.2× faster in wall-clock, which is the currency of an unattended run,
 and it has no `reasoning_effort` knob — the setting that, left at its Qwen3.8 default, burns
 a whole token budget and emits no answer at all. `dot/omlx/CLAUDE.md` has the measurements.
 

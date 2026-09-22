@@ -90,17 +90,38 @@ in {
         # prefix cache. An agent-sandbox run mid-flight loses its turn and then
         # re-prefills ~70k tokens per turn against a cold cache. It cost an
         # hour of a three-hour run on 2026-09-21 to notice.
+        # model_settings.json is a symlink into the repo, so a pull changes what
+        # oMLX would load without changing settings.json at all. Comparing only
+        # the merge meant "unchanged — left running" while the running server
+        # held a stale context bound, which the harness then disagreed with.
+        MODEL_STAMP="$OMLX_DIR/.model_settings.sha"
+        MODEL_NOW="$(shasum -a 256 "$TOOLBOX/omlx/.omlx/model_settings.json" 2>/dev/null | cut -d" " -f1)"
+        MODEL_WAS="$(cat "$MODEL_STAMP" 2>/dev/null || true)"
+
         OMLX_SVC="gui/$(id -u ${user})/org.nixos.omlx"
-        if cmp -s "$OMLX_SETTINGS.tmp" "$OMLX_SETTINGS"; then
+        if cmp -s "$OMLX_SETTINGS.tmp" "$OMLX_SETTINGS" && [ "$MODEL_NOW" = "$MODEL_WAS" ]; then
           rm -f "$OMLX_SETTINGS.tmp"
-          # Not `-k`: starts it if it is down, no-op if it is up.
-          launchctl kickstart "$OMLX_SVC" >/dev/null 2>&1 || true
-          echo "✓ oMLX settings unchanged for ${host} — left running"
+          # Not `-k`: starts it if it is down, no-op if it is up. Its exit code
+          # is the only evidence the service exists at all, so do not discard it
+          # and then claim success.
+          if launchctl kickstart "$OMLX_SVC" >/dev/null 2>&1; then
+            echo "✓ oMLX config unchanged for ${host} — left running"
+          else
+            echo "⚠ oMLX config unchanged for ${host}, but the service did not start — check: launchctl print $OMLX_SVC"
+          fi
         else
           mv -f "$OMLX_SETTINGS.tmp" "$OMLX_SETTINGS"
-          # KeepAlive only restarts on crashes, not config changes.
-          launchctl kickstart -k "$OMLX_SVC" 2>/dev/null || true
-          echo "✓ oMLX configured for ${host} (hot_cache_max_size=${cfg.cacheSize}) — restarted"
+          # KeepAlive only restarts on crashes, not config changes. Stamp only
+          # after a restart that worked: swallowing the failure left the new
+          # config on disk and every later activation reporting "unchanged",
+          # so the change never applied and nothing ever said so.
+          if launchctl kickstart -k "$OMLX_SVC" >/dev/null 2>&1; then
+            printf '%s' "$MODEL_NOW" > "$MODEL_STAMP"
+            echo "✓ oMLX configured for ${host} (hot_cache_max_size=${cfg.cacheSize}) — restarted"
+          else
+            rm -f "$MODEL_STAMP"
+            echo "⚠ oMLX config changed for ${host} but the restart failed — it will retry next activation"
+          fi
         fi
       ''))
 

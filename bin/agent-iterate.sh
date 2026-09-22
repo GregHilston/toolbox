@@ -24,7 +24,10 @@ INSTANCE="${RUNS}/iter/${NAME}"
 CARD="${AGENT_CARD:-${RUNS}/card.md}"
 NOTE="${AGENT_RUN_LOG:-$HOME/Git/notes/ref-hermes-run-log.md}"
 STATS="$HOME/.omlx/stats.json"
-BUILD="${MODEL_BUILD:-Qwen3.6-35B-A3B-4bit-DWQ}"
+# agent-verify.sh reads AGENT_BUILD_MODEL; this read MODEL_BUILD and then
+# overwrote AGENT_BUILD_MODEL in the container, so the documented override
+# silently ran the default and the run-log row named the wrong model.
+BUILD="${AGENT_BUILD_MODEL:-${MODEL_BUILD:-Qwen3.6-35B-A3B-4bit-DWQ}}"
 JUDGE="${MODEL_JUDGE:-Qwen3.8-27B-4bit}"
 CONTAINER=agent-hermes-vt-smb
 ROW_ANCHOR='<!-- agent-iterate:rows -->'
