@@ -44,8 +44,16 @@ RUN chmod 0755 /usr/local/sbin/init-firewall.sh /usr/local/sbin/entrypoint.sh \
 # --accept-hooks / HERMES_ACCEPT_HOOKS allowlists the pre_tool_call gate. Without
 # it `hermes hooks doctor` reports "not allowlisted — hook will NOT fire at
 # runtime", and the gate silently does nothing.
+#
+# HERMES_WRITE_SAFE_ROOT comes from the upstream image as /opt/data, and the
+# workspace is not under it, so Hermes' own write guard denied every write_file
+# to /instance/workspace. long-d was blocked by the goal judge for exactly that:
+# "File writes to /instance/workspace are denied due to the
+# HERMES_WRITE_SAFE_ROOT restriction". Inherited defaults from a base image are
+# not defaults we chose.
 ENV HERMES_ACCEPT_HOOKS=1 \
     HERMES_HOME=/instance/home \
+    HERMES_WRITE_SAFE_ROOT=/instance \
     HOME=/home/agent \
     UV_LINK_MODE=copy
 # The uv cache is an image layer and the venv is on the bind mount, so uv can
@@ -65,6 +73,15 @@ RUN mkdir -p /tmp/warm/src/vt_smb /tmp/warm/tests \
     && UV_PYTHON_DOWNLOADS=never uv lock \
     && UV_PYTHON_DOWNLOADS=never uv sync --frozen \
     && rm -rf /tmp/warm/.venv
+# The seed pins hatchling, so only hatchling landed in the agent's cache -- and
+# long-d, having switched to setuptools, shipped a structurally correct tree
+# that could not build offline at all. Warm every backend the agent might
+# reasonably choose, into the agent's own cache: the base image has setuptools
+# under /root/.cache, which the agent cannot read.
+RUN UV_PYTHON_DOWNLOADS=never uv venv --python /usr/bin/python3 /tmp/backends \
+    && UV_PYTHON_DOWNLOADS=never uv pip install --python /tmp/backends/bin/python \
+         setuptools wheel flit-core poetry-core pdm-backend hatchling \
+    && rm -rf /tmp/backends
 USER root
 RUN cp /tmp/warm/uv.lock /opt/agent-seed/project/uv.lock && rm -rf /tmp/warm
 
