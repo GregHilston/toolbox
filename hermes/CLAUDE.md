@@ -8,6 +8,24 @@ roster in the Desktop app are the same objects seen from two ends.
 `ls` answers what is in here. `nixos/modules/programs/tui/hermes.nix` symlinks
 `config.yaml`, `hooks/` and each `profiles/<bot>/SOUL.md` into `~/.hermes`.
 
+## There are two Hermes deployments — check before wiring anything
+
+`~/Git/home-lab/hermes/` runs one on **dungeon**, reached over **Slack (through Old
+Gregg) and email at grehgpi@**. This one, on **moria**, takes **Telegram**.
+
+**They must not share an integration.** Slack load-balances events across
+connections sharing an app token, so a second consumer steals a random share of
+Old Gregg's messages rather than adding a listener; two IMAP pollers race for
+the same mail. Both were briefly configured here on 2026-09-22.
+
+**Home Assistant is the sharpest edge.** `home-lab/hermes/README.md` §8: the
+`ha_*` toolset "is deliberately not enabled, and the token is not named
+`HASS_TOKEN` because that name would enable it" — HA has no per-entity
+permissions and the locks are S2 Authenticated, so read-only is the whole
+design. `Infra/Hermes/hass_token_pi_harness` is *not* read-only: a POST to a
+bogus service returns 400, not 401, so it clears auth and can call services.
+If moria ever needs HA, it wants its own token from the read-only `hermes` user.
+
 ## Installing it
 
 The `hermes-desktop` cask stages an **installer**, not the app: `Hermes.app`
@@ -60,6 +78,17 @@ Each bot carries its own copy of the `hooks` block in
 config's. The root carried it for seven runs and the gate never fired once.
 
 ## Traps
+
+- **`${VAR}` in `config.yaml` resolves against the profile's own `.env`, not
+  your shell.** `api_key: ${OMLX_API_KEY}` with the key only in
+  `nixos/secrets/.env` means every model call goes out keyless and oMLX answers
+  `HTTP 401: Invalid API key`. The gateway is a launchd agent; it inherits
+  nothing. Credentials the setup wizard can see in your environment are not
+  credentials the gateway has — that is also why it reported Slack and Telegram
+  configured while `channel_directory.json` held no platforms at all.
+- **`~/.hermes/.env` is generated** from `hermes/.env.tpl` by `just secrets`, so
+  `hermes config set` writes and anything the wizard stores there are
+  overwritten. Put keys in the template.
 
 - **`HERMES_WRITE_SAFE_ROOT` is a security feature**, not a bug. It confines
   writes to a directory. This project once widened it to work around a blocked
