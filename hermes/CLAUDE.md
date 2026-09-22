@@ -51,7 +51,8 @@ unsupervised one at it. Only the declarative half is linked; `memories/`,
 ## The roster, and why the orchestrator is a different family
 
 `builder` writes. `orchestrator` reviews and never writes. `researcher` is
-unused so far. **Writes stay single-threaded** — when two agents edit one tree
+unused so far. `librarian` keeps the LLM wiki at `~/Git/notes/wiki`, apart from
+the coding bots. **Writes stay single-threaded** — when two agents edit one tree
 they make conflicting implicit choices and the result is worse than either
 alone, which is the one thing every source on this agrees about.
 
@@ -98,6 +99,19 @@ bot, a run loop, a scorer, a preflight — has been deleted, because Hermes ship
 a Docker terminal backend, native Telegram and eighteen other transports, the
 kanban board, and an approvals system. See the root `CLAUDE.md`.
 
+## The librarian's review gate
+
+`skills/llm-wiki-review/` is Wanderloots' free Review Companion v1.0.0 from
+Patreon, copied verbatim (sha256 `d9c03763…59dc2c`, which matches its own
+QUALIFICATION.md). It wraps the bundled `llm-wiki`, which `hermes.nix` links
+into the librarian because a bot sees only its own `skills/`.
+
+The skill calls itself "not deterministic enforcement", and it was qualified on
+a frontier model only. `hooks/wiki-review-gate.py` is the enforcement: compiled
+pages need a `Review/` proposal whose `decision: approve` the bot did not write
+itself. Greg sets that property in Obsidian. `tests/wiki-review-gate.sh` covers
+each rule. `terminal` can still write files, so the gate is a fence, not a wall.
+
 ## The gate only fires on board-driven work
 
 `hooks/require-green.sh` matches `^kanban_(complete|request_review)$`. A plain
@@ -122,13 +136,13 @@ So each profile now carries the whole list, and the way to see it is to compare
 a bot against the root:
 
 ```bash
-for p in default builder researcher reviewer; do
+for p in default builder researcher orchestrator librarian; do
   hermes -p $p prompt-size | grep "Tool schemas"
 done
 ```
 
 `default` reads the root config alone. **Any profile that differs from it has
-overridden something**, and the four numbers agreeing is the check that a
+overridden something**, and the numbers agreeing is the check that a
 profile's copy is still complete.
 
 ## Reading a bot's conversations

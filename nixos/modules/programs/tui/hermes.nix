@@ -12,11 +12,15 @@
   # isolated config, memory, skills, credentials and chat history under
   # ~/.hermes/profiles/<name>/", so the roster in the Desktop app and the
   # directories in this repo are the same objects seen from two ends.
-  bots = ["builder" "researcher" "orchestrator"];
-
-  # Ours, not Hermes'. The bundled library lives in the same tree, so these are
-  # linked individually — see the activation script.
-  skills = ["verify-agent-output"];
+  # Bot -> our skills. Ours, not Hermes'. The bundled library lives in the same
+  # tree, so these are linked individually — see the activation script.
+  botSkills = {
+    builder = ["verify-agent-output"];
+    researcher = ["verify-agent-output"];
+    orchestrator = ["verify-agent-output"];
+    librarian = ["llm-wiki-review"];
+  };
+  bots = lib.attrNames botSkills;
 in {
   options.custom.programs.hermes.enable =
     lib.mkEnableOption "Hermes bot profiles symlinked from the toolbox repo";
@@ -72,11 +76,15 @@ in {
           ${lib.concatMapStringsSep "\n          " (skill: ''
               link_repo "${toolboxDir}/hermes/skills/${skill}" "${profilesDir}/${bot}/skills/${skill}"
             '')
-            skills}
+            botSkills.${bot}}
         '')
         bots}
 
-      echo "✓ Hermes bots linked: ${lib.concatStringsSep ", " bots}; skills: ${lib.concatStringsSep ", " skills}"
+      # llm-wiki-review wraps the bundled llm-wiki and loads it by name, and a
+      # bot sees only its own skills/. Linked from Hermes' copy, so updates land.
+      link_repo "${hermesDir}/skills/research/llm-wiki" "${profilesDir}/librarian/skills/llm-wiki"
+
+      echo "✓ Hermes bots linked: ${lib.concatStringsSep ", " bots}"
     '';
   };
 }
