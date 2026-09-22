@@ -86,8 +86,12 @@ EOF
 echo "def test_x(): assert False" > tests/test_x.py
 printf 'RED=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
 echo "def test_x(): assert True" > tests/test_x.py
-printf 'GREEN=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
-printf 'OTHER=%s\n' "$(echo '{"tool_name":"read_file"}' | /usr/local/bin/require-green.sh | head -c 26)"
+green_out="$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
+printf 'GREEN=%s\n' "${green_out}"
+printf 'GREENEXIT=%s\n' "$?"
+other_out="$(echo '{"tool_name":"read_file"}' | /usr/local/bin/require-green.sh | head -c 26)"
+printf 'OTHER=%s\n' "${other_out}"
+printf 'OTHEREXIT=%s\n' "$?"
 # A green suite over a pyproject whose packaging was deleted. Both runs that
 # ever completed a card shipped exactly this and the gate waved both through.
 cat > pyproject.toml <<EOF
@@ -101,12 +105,53 @@ gate-probe = "gate_probe:main"
 dev-dependencies = ["pytest>=8.0"]
 EOF
 printf 'GUTTED=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
+# Every one of these was a working way past the gate, and the first is cheaper
+# than either evasion actually observed: the gate used to exit 0 when there was
+# nothing to look at, which made deleting the evidence the shortest path.
+rm -f pyproject.toml
+printf 'NOPYPROJECT=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
+printf 'NOPAYLOAD=%s\n' "$(echo '{}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
+cat > pyproject.toml <<EOF
+[project]
+name = "gate-probe"
+version = "0.1.0"
+requires-python = ">=3.11"
+[project.entry-points.console_scripts]
+gate-probe = "gate_probe:main"
+[tool.uv]
+dev-dependencies = ["pytest>=8.0"]
+EOF
+printf 'RENAMED=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
+cat > pyproject.toml <<EOF
+[project]
+name = "gate-probe"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = []
+[project.scripts]
+gate-probe = "gate_probe:main"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+EOF
+printf 'EMPTYDEPS=%s\n' "$(echo '{"tool_name":"kanban_complete"}' | GATE_BUILD_CMD=true /usr/local/bin/require-green.sh | head -c 26)"
 PROBE
 )"
 printf '%s' "${out}" | grep -q 'RED={"decision": "block"' && ok "gate blocks a failing suite" || bad "gate did NOT block on failing tests"
-printf '%s' "${out}" | grep -q '^GREEN=$' && ok "gate allows a green suite" || bad "gate blocked a green tree"
-printf '%s' "${out}" | grep -q '^OTHER=$' && ok "gate ignores other tools" || bad "gate fired on a non-completion tool"
+# Silence alone is what a crashed gate also produces, so pair it with exit 0.
+{ printf '%s' "${out}" | grep -q '^GREEN=$' && printf '%s' "${out}" | grep -q '^GREENEXIT=0$'; } \
+  && ok "gate allows a green suite" || bad "gate blocked a green tree, or did not exit 0"
+{ printf '%s' "${out}" | grep -q '^OTHER=$' && printf '%s' "${out}" | grep -q '^OTHEREXIT=0$'; } \
+  && ok "gate ignores other tools" || bad "gate fired on a non-completion tool, or did not exit 0"
 printf '%s' "${out}" | grep -q 'GUTTED={"decision": "block"' && ok "gate blocks a tree whose packaging was deleted" || bad "gate allowed a pyproject with a console script but no build system"
+printf '%s' "${out}" | grep -q 'NOPYPROJECT={"decision": "block"' \
+  && ok "gate blocks a missing pyproject.toml" || bad "deleting pyproject.toml still opens the gate"
+printf '%s' "${out}" | grep -q 'NOPAYLOAD={"decision": "block"' \
+  && ok "gate blocks a payload it cannot parse" || bad "an unreadable payload still opens the gate"
+printf '%s' "${out}" | grep -q 'RENAMED={"decision": "block"' \
+  && ok "gate sees entry-points.console_scripts too" || bad "renaming the scripts table skips the packaging check"
+printf '%s' "${out}" | grep -q 'EMPTYDEPS={"decision": "block"' \
+  && ok "gate blocks an empty dependencies list" || bad "dependencies = [] still satisfies the gate"
 
 # Section 2 proves the SCRIPT behaves. It says nothing about whether Hermes ever
 # calls it — and for seven runs it did not. The root config carried the hook, the
@@ -182,15 +227,15 @@ note "a profile config is what we asked for; oMLX's log says what actually serve
 # server's own log line is better evidence anyway: it names the model per
 # request, it is timestamped, and contention_audit.sh already parses it.
 OMLX_LOG="${OMLX_LOG:-$HOME/Library/Logs/omlx.log}"
-probe_start="$(date '+%H:%M:%S')"
+probe_start="$(date '+%F %T')"
 probe_out="$(run_probe <<'PROBE'
 /usr/local/bin/hermes-bootstrap.sh >/dev/null 2>&1
 timeout 300 hermes -p builder -z "say pong" 2>&1 | tail -2
 PROBE
 )"
-probe_end="$(date '+%H:%M:%S')"
+probe_end="$(date '+%F %T')"
 served="$(grep "Chat completion: model=" "${OMLX_LOG}" 2>/dev/null \
-  | awk -v s="${probe_start}" -v e="${probe_end}" '{t=substr($2,1,8)} t>=s && t<=e' \
+  | awk -v s="${probe_start}" -v e="${probe_end}" '{t=$1 " " substr($2,1,8)} t>=s && t<=e' \
   | sed 's/.*model=\([^,]*\),.*/\1/' | sort -u | tr '\n' ' ')"
 if printf '%s' "${served}" | grep -qF "${MODEL_BUILD}"; then
   ok "oMLX served the builder turn on ${MODEL_BUILD}"
