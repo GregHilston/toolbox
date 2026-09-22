@@ -10,7 +10,10 @@
 # Every case here was a WORKING bypass, three of them reproduced against real
 # uv. The last assertion matters most: a gate that refuses a good tree deadlocks
 # an honest agent, which is worse than the hole it closes.
-GATE="$HOME/Git/toolbox/agent-sandbox/hermes/hooks/require-green.sh"
+# Resolved from this file, not from $HOME: an absolute path that moved with the
+# repo layout once already, and a missing gate makes every case report PASS.
+GATE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/hooks/require-green.sh"
+[ -x "$GATE" ] || { echo "gate not found or not executable: $GATE" >&2; exit 70; }
 ROOT="$(mktemp -d)"; trap 'rm -rf "$ROOT"' EXIT
 pass=0; fail=0
 
