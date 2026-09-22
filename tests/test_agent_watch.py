@@ -105,6 +105,46 @@ class LogTraffic(unittest.TestCase):
         self.assertEqual(watch.log_traffic(time.time()), {})
 
 
+class LastCompletion(unittest.TestCase):
+    """The stall warning is the one thing the watcher exists for, and run
+    gate-a showed what it costs to miss: heartbeats for 51 minutes with no
+    model traffic for twenty of them, and nothing anywhere noticed."""
+
+    FMT = ("{} - omlx.server - INFO - Chat completion: model=M, 10 tokens "
+           "in 1.0s (1 tok/s), prompt: 100, finish_reason=stop\n")
+
+    def _write(self, lines):
+        fh = tempfile.NamedTemporaryFile("w", suffix=".log", delete=False)
+        fh.write("".join(lines)); fh.close()
+        watch.OMLX_LOG = Path(fh.name)
+
+    def _at(self, stamp):
+        return time.mktime(time.strptime(stamp, "%Y-%m-%d %H:%M:%S"))
+
+    def test_returns_the_most_recent_completion(self):
+        self._write([self.FMT.format("2026-09-21 10:00:05,001"),
+                     self.FMT.format("2026-09-21 10:07:30,001")])
+        got = watch.last_completion(self._at("2026-09-21 10:00:00"))
+        self.assertEqual(got, self._at("2026-09-21 10:07:30"))
+
+    def test_a_completion_before_the_run_does_not_count(self):
+        """Otherwise a quiet run inherits the previous run's last request and
+        reads as busy -- the log is one unrotated file spanning weeks."""
+        self._write([self.FMT.format("2026-09-21 09:00:00,001")])
+        start = self._at("2026-09-21 10:00:00")
+        self.assertEqual(watch.last_completion(start), start)
+
+    def test_silence_since_the_run_started_reports_the_start(self):
+        self._write([])
+        start = self._at("2026-09-21 10:00:00")
+        self.assertEqual(watch.last_completion(start), start)
+
+    def test_a_missing_log_does_not_raise(self):
+        watch.OMLX_LOG = Path("/nonexistent/omlx.log")
+        start = time.time()
+        self.assertEqual(watch.last_completion(start), start)
+
+
 class WorkspaceState(unittest.TestCase):
     def test_excludes_the_venv(self):
         """`uv sync` drops ~24 packages of Python into .venv/. Counted, the
