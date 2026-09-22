@@ -82,11 +82,20 @@ The sources below are the long-term plan. What a run has **right now** is a seed
 corpus fetched on the host by `seed/tools/fetch-vt-sources.py`, because the agent
 runs with no internet:
 
-| file | rows | what makes it useful |
+**No source is the spine. The prospect is.** Calling child care "the spine"
+here is what made every emailable row in v1 a child care provider: it is the
+only Socrata file with email addresses, the whole web-presence signal is derived
+from the email domain, so the file that happened to have emails became the
+dataset. That was an accident of availability, not a targeting decision. Each
+file below contributes *evidence about prospects*; a file with no contact
+details describes a prospect to be reached another way, not a lesser row.
+
+| file | rows | what it contributes |
 |---|---|---|
-| `vt-childcare-providers.json` | 1,048 | **the spine.** Real business names, and every row has a phone, an email, a county and coordinates |
-| `vt-dfs-licensed-trades.json` | 11,489 | licensed electricians, plumbers, gas installers — addressed, mostly sole traders |
-| `vt-website-probes.json` | 219 | the part an offline agent cannot do: every custom email domain, already probed for the signals below |
+| `osm-vt-businesses.json` | 5,969 | **the widest vertical coverage: 287 of them** — restaurants, lodging, garages, clinics, galleries, campsites, retail. Carries `phone` (1,949), `email` (274), `website` and `facebook` directly. 372 have a contact and no site; 140 use a Facebook page as their whole web presence |
+| `vt-childcare-providers.json` | 1,048 | the only Socrata file with emails: phone, email, county and coordinates on every row |
+| `vt-dfs-licensed-trades.json` | 11,489 | licensed trades, addressed, mostly sole traders — and **no phone, no email, no business name.** A person, an address and a licence. Reaching them is an unsolved problem, not a mapping exercise |
+| `vt-website-probes.json` | 219+ | the part an offline agent cannot do: every custom domain, already probed |
 | `socrata-active-vendors.json` | 600 | thin, and its `:@computed_region_*` field is a Socrata region id, **not** a NAICS code |
 
 **The email domain is the web-presence signal, and it is free.** 536 of the 1,048
