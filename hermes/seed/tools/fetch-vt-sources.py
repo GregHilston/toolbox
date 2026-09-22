@@ -57,6 +57,30 @@ SOCRATA = [
     ("cy8e-89cz", "vt-dfs-licensed-trades.json", "DFS licensed trades"),
 ]
 
+# OpenStreetMap, via Overpass. Needs a User-Agent — the default curl one gets a
+# bare 406 from overpass-api.de.
+#
+# MEASURED 2026-09-22, because the plan assumed this would enrich the trades and
+# it does not: of 11,489 licensed trades, 31 surname+town matched an OSM POI and
+# spot-checking showed them to be false ("Block" the gas installer vs H&R Block).
+# OSM maps PREMISES. A sole-trader electrician working out of a van at a home
+# address is not a mapped feature, and only 36 OSM names even look like a trade.
+#
+# It is still worth fetching, for the opposite reason: 3,068 named Vermont
+# businesses, 1,054 with a phone, 238 with a phone and NO website, and 77 whose
+# entire web presence is a Facebook page. That is a NEW prospect pool, not an
+# enrichment of an old one.
+OVERPASS = "https://overpass-api.de/api/interpreter"
+OVERPASS_QUERY = """[out:json][timeout:300];
+area["ISO3166-2"="US-VT"][admin_level=4]->.vt;
+(
+  nwr["craft"](area.vt);
+  nwr["office"](area.vt);
+  nwr["shop"](area.vt);
+  nwr["amenity"~"^(contractor|car_repair|veterinary|dentist|doctors)$"](area.vt);
+);
+out tags center;"""
+
 PARKED = re.compile(
     r"(domain (is )?for sale|this domain|parked (free )?(at|by)|buy this domain"
     r"|godaddy|sedoparking|hugedomains|under construction|coming soon"

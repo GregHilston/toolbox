@@ -63,6 +63,64 @@ front is ten minutes.
 | town casing | 1,360 city strings, 1,294 lowercased | 66 dupes (`ST ALBANS` / `St Albans`) |
 | density unused | 326 trades in Milton, 268 in Colchester | *"one of 326 licensed trades in your town, four have a website"* is the cold email |
 
+## Getting contact details for the other 12,106 — MEASURED, and mostly bad news
+
+I tried the top three before proposing them. Two do not work.
+
+**OpenStreetMap does not enrich the trades.** Of 11,489 licensed trades, **31**
+surname+town matched an OSM POI, and spot-checking shows those are false —
+"Block" the gas installer against H&R Block. Only 36 OSM names even look like a
+trade. The reason is structural: **OSM maps premises.** A sole-trader
+electrician working from a van at a home address is not a mapped feature, and
+never will be. Convenience stores and supermarkets are.
+
+**There is no Vermont business registry in open data.** 172 datasets on
+data.vermont.gov, none with trading names plus contacts. The Secretary of
+State's search is a web app at `bizfilings.vermont.gov`. The nearest thing is
+Vendor Payments (2.59M rows) — business names, no contact details.
+
+**Search does find them, one at a time.** "Trombly, plumber" resolves to
+Trombly Plumbing & Heating with a live site — but the person-to-business link
+is inferential and it got the town wrong (St. Johnsbury, not St. Albans) and
+surfaced a New Hampshire namesake. At 11,489 rows that is a project, not a step.
+
+### So the trades are probably not an email segment
+
+Not at acceptable cost. They have **no business name in the data at all** — only
+a person, an address and a licence — and the person-to-business link is the
+whole problem. Treat them as a phone or direct-mail segment, or as a long-tail
+search project, and stop pretending the email pipeline will reach them.
+
+### What OSM IS good for
+
+A **new prospect pool**, not an enrichment. Fetched and saved to
+`osm-vt-businesses.json`:
+
+| | |
+|---|---|
+| named Vermont businesses | **3,068** |
+| with a phone | 1,054 |
+| with an email | 181 |
+| **with a phone and NO website** | **238** — immediately actionable |
+| whose entire web presence is a Facebook page | **77** — the pitch writes itself |
+
+That is 238 prospects you can call tomorrow, against the 617 warm ones the
+current dataset yields, and they are spread across every vertical rather than
+concentrated in childcare.
+
+### Still worth trying, in this order
+
+1. **Domain guessing into the prober we already have** — free, but expect a low
+   hit rate against surnames with no trading name attached.
+2. **Facebook** — now the *first*-class path for trades rather than the last,
+   because it is the only source that links a person to a local trading name at
+   scale. Same engineering caveat: its own adapter, every field optional, never
+   fails the pipeline. And 77 rows of the signal arrive free from OSM already.
+3. **VT Secretary of State** — needs scraping a web app. Highest value for the
+   trades, highest effort.
+
+## Original plan, kept for the record
+
 ## Getting contact details for the other 12,106
 
 In the order I would build them:
