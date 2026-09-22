@@ -273,17 +273,27 @@ private.
 that bind-mounts your real `~/.claude` and `~/Git`, so credentials and sessions are
 shared. See `claude-code/CLAUDE.md`.
 
-## Hermes — an unattended agent, sandboxed
+## Hermes — bots on moria
 
-`bin/agent-sandbox.sh` runs [Hermes](https://hermes-agent.nousresearch.com/docs) on moria
-against local inference, driven by `hermes kanban`. The harness is not sandboxed by itself,
-so every safety property comes from the container: default-deny egress that denies the
-tailnet as well as RFC1918, a non-root agent that cannot undo the firewall, and a read-only
-reference tree built from `git archive` so gitignored secrets are excluded by construction.
+[Hermes](https://hermes-agent.nousresearch.com/docs) runs on moria against local inference,
+as **Bot Mode**. A Bot is a profile, so `hermes/profiles/<bot>/SOUL.md` and
+`hermes/config.yaml` in this repo *are* the bots the Desktop roster shows;
+`nixos/modules/programs/tui/hermes.nix` symlinks them into `~/.hermes` writably, because
+Hermes edits all of them at runtime.
 
-`agent-sandbox/CLAUDE.md` owns the details, and `bin/agent-{verify,iterate,watch,deliver}`
-are the loop around it — **always `agent-verify.sh` before a long run.** Run history and
-findings are in `~/Git/notes/ref-hermes-run-log.md`; the operator guide is `~/Git/hermes.md`.
+The app is the `hermes-desktop` cask in the moria host file, not the Tier 2 nix flake. The
+gateway service is installed once by hand — `hermes gateway install`, then
+`hermes gateway setup` for Telegram and the rest — the same division pi-web uses.
+
+Two things here are ours because Hermes has no equivalent:
+`hermes/hooks/require-green.sh` refuses a handoff whose tree would not install for anyone
+else, and `bin/installs-from-clean.sh` answers the same question about any directory, with
+no container and no agent involved.
+
+**This repo used to carry a 3,000-line harness around Hermes — a container, a Telegram bot,
+a run loop, a scorer — nearly all of which reimplemented features Hermes ships.** It was
+deleted; `~/Git/notes/ref-hermes-run-log.md` records what those runs taught, which is the
+part worth keeping. The operator guide is `~/Git/hermes.md`.
 
 ## Secret Management
 

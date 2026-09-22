@@ -9,7 +9,7 @@ Decode tok/s ranks these two checkpoints one way and prefill tok/s can rank them
 another, and neither is what an agent run spends its night doing. An agent turn
 is a partly-cached prompt followed by a long generation, so the honest figure is
 seconds per turn at the mix a real run actually produced — measured, not assumed:
-pass `--avg-prompt`, `--cached-frac` and `--completion` from `agent-watch.py`.
+pass `--avg-prompt`, `--cached-frac` and `--completion` from a real run's oMLX log.
 """
 
 from __future__ import annotations

@@ -87,7 +87,7 @@ in {
         # `-k` kills and restarts, and this ran unconditionally on every
         # activation — so any `just dr moria`, for a cask or a launchd agent
         # unrelated to inference, dropped every in-flight request and wiped the
-        # prefix cache. An agent-sandbox run mid-flight loses its turn and then
+        # prefix cache. A Hermes bot mid-turn loses it and then
         # re-prefills ~70k tokens per turn against a cold cache. It cost an
         # hour of a three-hour run on 2026-09-21 to notice.
         # model_settings.json is a symlink into the repo, so a pull changes what
