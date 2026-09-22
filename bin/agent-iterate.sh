@@ -10,6 +10,10 @@ IFS=$'\n\t'
 
 NAME="${1:-}"; MINUTES="${2:-15}"; CHANGE="${3:-}"
 [ -n "${NAME}" ] || { echo "usage: ${0##*/} <name> <minutes> '<what changed>'" >&2; exit 64; }
+# This name reaches `rm -rf`; `..` would take the whole runs directory with it.
+case "${NAME}" in
+  *[!a-z0-9-]*|-*|"") echo "bad run name '${NAME}' — lowercase, digits and dashes" >&2; exit 64 ;;
+esac
 
 TOOLBOX="${TOOLBOX:-$HOME/Git/toolbox}"
 RUNS="$HOME/Git/agent-runs"
@@ -65,11 +69,25 @@ UV_OFFLINE_FLAG=""
 docker rm -f "${CONTAINER}" >/dev/null 2>&1
 start_epoch=$(date +%s)
 log "iteration '${NAME}': ${MINUTES}m — ${CHANGE}"
-# shellcheck disable=SC2046
-docker run -d --name "${CONTAINER}" $("${TOOLBOX}/bin/agent-sandbox.sh" _flags "${INSTANCE}" 2>/dev/null) \
+# `_flags` calls die() when a probe target is down, and an empty expansion here
+# starts a container with no mounts and no env that exits within seconds.
+if ! FLAGS="$("${TOOLBOX}/bin/agent-sandbox.sh" _flags "${INSTANCE}")"; then
+  echo "cannot build the sandbox flags — refusing to start a run" >&2
+  exit 70
+fi
+# shellcheck disable=SC2086
+docker run -d --name "${CONTAINER}" ${FLAGS} \
   -e AGENT_OFFLINE="${AGENT_OFFLINE:-0}" -e AGENT_BUILD_MODEL="${BUILD}" \
   ${UV_OFFLINE_FLAG} \
   agent-sandbox-hermes:latest >/dev/null 2>&1
+
+alive() { [ "$(docker inspect -f '{{.State.Running}}' "${CONTAINER}" 2>/dev/null)" = "true" ]; }
+sleep 5
+if ! alive; then
+  echo "container exited immediately — see: docker logs ${CONTAINER}" >&2
+  docker logs "${CONTAINER}" 2>&1 | tail -20 >&2
+  exit 70
+fi
 
 end=$(( start_epoch + MINUTES * 60 ))
 card_status="?"
@@ -99,12 +117,23 @@ last_reqs="$(completions_since "${run_stamp}")"
 last_progress=$(date +%s)
 stall_alerted=0
 stalls=0
+cards=0
 while [ "$(date +%s)" -lt "${end}" ]; do
   sleep 30
-  card_status="$(docker exec "${CONTAINER}" hermes kanban list --json 2>/dev/null \
-    | python3 -c 'import json,sys
+  if ! alive; then
+    log "container exited after $(( ($(date +%s) - start_epoch) / 60 ))m (card=${card_status})"
+    [ "${AGENT_NOTIFY:-1}" = "1" ] && "${TOOLBOX}/bin/agent-notify.sh" \
+      -m "hermes ${NAME}: container EXITED $(( ($(date +%s) - start_epoch) / 60 ))m into a ${MINUTES}m run (card=${card_status})" >/dev/null 2>&1 || true
+    break
+  fi
+  board="$(docker exec "${CONTAINER}" hermes kanban list --json 2>/dev/null)"
+  card_status="$(printf '%s' "${board}" | python3 -c 'import json,sys
 try: print(json.load(sys.stdin)[0]["status"])
 except Exception: print("?")' 2>/dev/null || echo "?")"
+  # Run 5 was invalidated by scoring one card of a four-card graph as the run.
+  cards="$(printf '%s' "${board}" | python3 -c 'import json,sys
+try: print(len(json.load(sys.stdin)))
+except Exception: print(0)' 2>/dev/null || echo 0)"
 
   now_reqs="$(completions_since "${run_stamp}")"
   if [ "${now_reqs}" != "${last_reqs}" ]; then
@@ -124,10 +153,17 @@ except Exception: print("?")' 2>/dev/null || echo "?")"
 done
 [ "${stalls}" -gt 0 ] && log "${stalls} stall episode(s) during this run"
 elapsed=$(( $(date +%s) - start_epoch ))
+card_label="${card_status}"
+[ "${cards:-0}" -gt 1 ] && card_label="${card_status} (1 of ${cards})"
 
 docker logs "${CONTAINER}" > "${INSTANCE}/container.log" 2>&1
-gate_fires=$(docker exec "${CONTAINER}" sh -c 'grep -c "gate fired" /instance/home/logs/require-green.log 2>/dev/null' 2>/dev/null || echo 0)
-gate_blocks=$(docker exec "${CONTAINER}" sh -c 'grep -c "gate blocked" /instance/home/logs/require-green.log 2>/dev/null' 2>/dev/null || echo 0)
+count_gate() {
+  docker exec "${CONTAINER}" sh -c \
+    "grep -c '$1' /instance/home/logs/require-green.log 2>/dev/null; true" 2>/dev/null \
+    | head -1 | tr -cd '0-9'
+}
+gate_fires="$(count_gate 'gate fired')"; gate_fires="${gate_fires:-0}"
+gate_blocks="$(count_gate 'gate blocked')"; gate_blocks="${gate_blocks:-0}"
 
 # Score before stopping the container. pytest and the build command are the
 # card's own DONE WHEN criteria, and they only run inside the sandbox, on a
@@ -170,7 +206,7 @@ fi
 
 n=$(( $(sed -n "/## Iteration log/,/${ROW_ANCHOR}/p" "${NOTE}" | grep -c '^| [0-9]') + 1 ))
 row=$(printf '| %d | `%s` | %dm (ran %dm) | %s | **%s** | %s / %s | %s / %s | %s | %s | %s | %s | %s |' \
-  "${n}" "${NAME}" "${MINUTES}" "$(( elapsed / 60 ))" "${CHANGE}" "${card_status}" \
+  "${n}" "${NAME}" "${MINUTES}" "$(( elapsed / 60 ))" "${CHANGE}" "${card_label}" \
   "${pyfiles}" "${loc}" "${tpass}" "${tfail}" "${bexit}" "${rows}" "${gate_fires:-0}/${gate_blocks:-0}" "${stalls:-0}" "${deltas%<br>}")
 python3 - "${NOTE}" "${ROW_ANCHOR}" "${row}" <<'PY'
 import sys
