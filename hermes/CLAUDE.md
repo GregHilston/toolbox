@@ -159,6 +159,20 @@ Runtime state, so none of it is in git.
   messages from compression; if those alone exceed `target_ratio`, every attempt
   misses and the goal judge eventually rules the goal unachievable. See
   `config.yaml`.
+- **`agent.reasoning_effort` does nothing on this setup.** Hermes does put it on
+  the wire — a captured request body to `127.0.0.1:8000/v1/chat/completions`
+  carries `"reasoning_effort": "low"` — and oMLX ignores it. Measured
+  2026-09-22: the same prompt at `low` and at `high` returned the same text,
+  the same 400 completion tokens, and an empty `reasoning_content` both times.
+  oMLX applies reasoning effort from **its own** `chat_template_kwargs`, per
+  model, in `~/.omlx/model_settings.json`, and the DWQ entry the builder runs
+  has none — while `Qwen3.8-27B-4bit` has `reasoning_effort: medium` under a
+  comment calling it "THE most important setting for this model". What bounds
+  thinking for both is `thinking_budget_tokens: 8192` in the same file. So the
+  knob is oMLX's, not Hermes'; `nixos/modules/darwin/omlx.nix` generates it.
+  Leave the DWQ entry alone without a reason: no `chat_template_kwargs` is the
+  configuration that scored 10/10 on our coding eval, the best of anything
+  tested.
 - `provider: custom:omlx` is the old form. This release wants plain
   `provider: "custom"` with `base_url` and `api_key` inline; the wrong value
   raises `Unknown provider` and the worker still exits 0.
