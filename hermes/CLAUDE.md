@@ -8,6 +8,16 @@ roster in the Desktop app are the same objects seen from two ends.
 `ls` answers what is in here. `nixos/modules/programs/tui/hermes.nix` symlinks
 `config.yaml`, `hooks/` and each `profiles/<bot>/SOUL.md` into `~/.hermes`.
 
+## Installing it
+
+The `hermes-desktop` cask stages an **installer**, not the app: `Hermes.app`
+holds one `Hermes-Setup` binary and no CLI. `open -a Hermes` once, then reload
+the shell — the installer puts the binary at `~/.local/bin/hermes` and edits
+your rc. `just dr` alone leaves you with `command not found: hermes`.
+
+The gateway service is then `hermes gateway install` by hand, and transports are
+`hermes gateway setup`. Full checklist: `nixos/docs/darwin-post-deploy.md`.
+
 ## The symlinks are writable on purpose
 
 Hermes' own configuration docs say `config.yaml` "is not safe to make read-only
