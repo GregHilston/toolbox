@@ -36,3 +36,27 @@ WEB_TOOLS_DEBUG=false
 # Reuses the token pi's harness already had (dot/pi/.pi/agent/homeassistant.json).
 HASS_URL=https://home-assistant.grehg2.xyz
 HASS_TOKEN={{ op://Infra/Hermes/hass_token_pi_harness }}
+
+# Telegram. Hermes' allowlist variable is TELEGRAM_ALLOWED_USERS, NOT the
+# TELEGRAM_ALLOWED_CHAT_IDS our deleted bot used — same 1Password field, the
+# name the tool actually reads. Without an allowlist anyone who finds the bot
+# can drive it.
+TELEGRAM_BOT_TOKEN={{ op://Infra/Telegram/bot_token }}
+TELEGRAM_ALLOWED_USERS={{ op://Infra/Telegram/allowed_chat_ids }}
+TELEGRAM_HOME_CHANNEL={{ op://Infra/Telegram/chat_id }}
+
+# Slack, over Socket Mode: outbound WebSocket, so no public endpoint and
+# nothing to open on the firewall.
+SLACK_BOT_TOKEN={{ op://Infra/SlackBot/bot_token }}
+SLACK_APP_TOKEN={{ op://Infra/SlackBot/app_token }}
+
+# Email, on a dedicated account — the docs are explicit that the agent gets
+# full IMAP access to whatever inbox this points at, so it is not the personal
+# one. EMAIL_ALLOWED_USERS is the access control: unlisted senders are ignored
+# silently rather than refused, which is the right default for an address that
+# will inevitably receive spam.
+EMAIL_ADDRESS=grehgpi@gmail.com
+EMAIL_PASSWORD={{ op://Infra/Hermes/gmail_app_password }}
+EMAIL_IMAP_HOST=imap.gmail.com
+EMAIL_SMTP_HOST=smtp.gmail.com
+EMAIL_ALLOWED_USERS=Gregory.Hilston@gmail.com
