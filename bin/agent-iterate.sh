@@ -49,6 +49,9 @@ log() { printf '==> %s\n' "$*" >&2; }
 
 rm -rf "${INSTANCE}"; mkdir -p "${INSTANCE}/workspace"
 cp "${CARD}" "${INSTANCE}/card.md"
+# agent-deliver.sh re-checks the tree in a clean container and must mirror this
+# run's network setting; assuming it scored a good tree as a build failure once.
+printf '%s' "${AGENT_OFFLINE:-0}" > "${INSTANCE}/offline"
 # Pre-seed the source data. Runs 2 and 3 both ignored an explicit "the source is
 # known, do not go hunting" and spent their whole budget researching other
 # sources instead. Data already on disk removes the temptation entirely and

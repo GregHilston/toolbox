@@ -36,7 +36,10 @@ log() { printf '==> %s\n' "$*" >&2; }
 
 # launchd hands an agent none of the shell's environment, so the secrets file is
 # the only place the token reliably is. A shell that already sourced it wins.
-if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] && [ -r "${ENV_FILE}" ]; then
+# The file carries both transports. Gating on the Telegram token alone meant a
+# shell that exported that one and not PUSHOVER_* never sourced it, so Pushover
+# silently no-opped while the script still exited 0 reporting a send.
+if { [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${PUSHOVER_USER_KEY:-}" ]; } && [ -r "${ENV_FILE}" ]; then
   set -a; . "${ENV_FILE}"; set +a
 fi
 

@@ -52,9 +52,14 @@ grep -q '^\[build-system\]' pyproject.toml 2>/dev/null || printf 'DEFECT=no [bui
 grep -q '^dependencies' pyproject.toml 2>/dev/null || printf 'DEFECT=no dependencies declared in pyproject.toml\n'
 PROBE
 
-# shellcheck disable=SC2046
+# The run's own offline setting, not an assumption. A clean probe that cannot
+# reach PyPI fails a tree whose dependency was declared and resolvable.
+offline="${AGENT_OFFLINE:-$(cat "${INSTANCE}/offline" 2>/dev/null || echo 1)}"
+uv_offline=""
+[ "${offline}" = "1" ] && uv_offline="-e UV_OFFLINE=1"
+# shellcheck disable=SC2046,SC2086
 out="$(docker run --rm $("${TOOLBOX}/bin/agent-sandbox.sh" _flags "${SCRATCH}" 2>/dev/null) \
-  -e AGENT_TASK_MODE=1 -e AGENT_OFFLINE=1 -e UV_OFFLINE=1 \
+  -e AGENT_TASK_MODE=1 -e AGENT_OFFLINE="${offline}" ${uv_offline} \
   -e BUILD_CMD="${AGENT_BUILD_CMD:-vt-smb build}" "${IMAGE}" bash /instance/probe.sh 2>&1)"
 
 pytest_line="$(printf '%s' "${out}" | sed -n 's/^PYTEST=//p' | tail -1)"
@@ -73,7 +78,8 @@ except Exception:
     print("?")
 PY
 )"
-gate="$(grep -c "gate fired" "${INSTANCE}/home/logs/require-green.log" 2>/dev/null || echo 0)"
+gate="$({ grep -c "gate fired" "${INSTANCE}/home/logs/require-green.log" 2>/dev/null; true; } | head -1 | tr -cd '0-9')"
+gate="${gate:-0}"
 
 # The card can be `done` while the artifact does not work for anyone else; that
 # gap is the reason this script exists, so say it in the first line.

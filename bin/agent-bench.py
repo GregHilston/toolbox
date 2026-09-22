@@ -62,6 +62,11 @@ def find_package(workspace: Path) -> Path | None:
         if not base.is_dir():
             continue
         for child in sorted(base.iterdir()):
+            # `tests/__init__.py` is common and sorts before most package
+            # names, and picking it reports the suite's size as the run's
+            # output and then complains the architecture is missing.
+            if child.name in {"tests", "test", "docs", "scripts"}:
+                continue
             if child.is_dir() and (child / "__init__.py").exists():
                 return child
     return None
@@ -267,13 +272,21 @@ def main() -> int:
             score.notes.append(f"pytest not run: {out}")
         else:
             score.tests_collected, score.tests_passed, score.tests_failed = parse_pytest(out)
-        code, out = run_in_container(args.container, args.container_workdir, f"{args.build_cmd} >/dev/null 2>&1; echo $?")
-        if code is not None:
-            tail = out.strip().splitlines()
+        marker = "BUILD_EXIT="
+        code, out = run_in_container(
+            args.container, args.container_workdir,
+            f"{args.build_cmd} >/dev/null 2>&1; echo {marker}$?")
+        if code is None:
+            score.notes.append(f"build not run: {out}")
+        else:
+            # Scan for the marker rather than taking the last line: stdout and
+            # stderr are concatenated and the login shell writes to stderr last.
+            hits = [ln for ln in out.splitlines() if marker in ln]
             try:
-                score.build_exit_code = int(tail[-1]) if tail else None
-            except ValueError:
+                score.build_exit_code = int(hits[-1].split(marker, 1)[1].strip())
+            except (IndexError, ValueError):
                 score.build_exit_code = None
+                score.notes.append("build exit code not found in the probe output")
 
     if args.json:
         print(json.dumps(asdict(score), indent=2))
