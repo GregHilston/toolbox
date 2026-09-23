@@ -1,0 +1,107 @@
+
+==> restarting oMLX so this model is measured alone
+
+==> decode throughput: Qwen3.6-35B-A3B-4bit (plain)
+
+========================================================================
+MODEL: Qwen3.6-35B-A3B-4bit  (extra=None)
+========================================================================
+  [warm-up / load: 4.1s]
+  code   run1: decode 133.90 t/s | e2e 100.35 t/s | ttft  0.50s (prefill    917 t/s) | in 458 / out 200 tok
+  code   run2: decode 131.93 t/s | e2e  98.75 t/s | ttft  0.51s (prefill    899 t/s) | in 458 / out 200 tok
+  code   run3: decode 131.17 t/s | e2e  98.65 t/s | ttft  0.50s (prefill    911 t/s) | in 458 / out 200 tok
+  prose  run1: decode 134.06 t/s | e2e 107.05 t/s | ttft  0.38s (prefill    483 t/s) | in 182 / out 200 tok
+  prose  run2: decode 132.60 t/s | e2e 105.83 t/s | ttft  0.38s (prefill    477 t/s) | in 182 / out 200 tok
+  prose  run3: decode 127.78 t/s | e2e 103.17 t/s | ttft  0.37s (prefill    488 t/s) | in 182 / out 200 tok
+  qa     run1: decode 126.72 t/s | e2e 102.68 t/s | ttft  0.37s (prefill    484 t/s) | in 179 / out 200 tok
+  qa     run2: decode 128.24 t/s | e2e 103.50 t/s | ttft  0.37s (prefill    480 t/s) | in 179 / out 200 tok
+  qa     run3: decode 130.72 t/s | e2e 104.96 t/s | ttft  0.38s (prefill    477 t/s) | in 179 / out 200 tok
+  --> MEDIAN decode: code=131.93  prose=132.60  qa=128.24   AVG=130.92 t/s
+
+wrote /Users/ghilston/Git/toolbox/dot/omlx/bench/showdown-clean/decode_plain.json
+
+==> prefill vs prompt length: Qwen3.6-35B-A3B-4bit (plain)
+model=Qwen3.6-35B-A3B-4bit   (thinking disabled; output capped so wall ~= prefill)
+unique nonce per prompt + shuffled order => no prefix-cache reuse
+
+     7881 prompt tok ->    4.84s   (   1627 tok/s prefill), out 24, cached 0
+    15883 prompt tok ->   11.83s   (   1342 tok/s prefill), out 24, cached 0
+    31891 prompt tok ->   28.40s   (   1123 tok/s prefill), out 24, cached 0
+     1965 prompt tok ->    1.70s   (   1156 tok/s prefill), out 24, cached 0
+    63905 prompt tok ->   76.61s   (    834 tok/s prefill), out 24, cached 0
+
+==> auditing plain's window for anything else that touched the GPU
+window: 10:05:38 -> 10:08:03   (expected model: Qwen3.6-35B-A3B-4bit)
+  CLEAN - 16 requests in window, all Qwen3.6-35B-A3B-4bit
+
+==> restarting oMLX so this model is measured alone
+
+==> decode throughput: Qwen3.6-35B-A3B-4bit-DWQ (dwq)
+
+========================================================================
+MODEL: Qwen3.6-35B-A3B-4bit-DWQ  (extra=None)
+========================================================================
+  [warm-up / load: 3.3s]
+  code   run1: decode 112.08 t/s | e2e  87.07 t/s | ttft  0.51s (prefill    894 t/s) | in 458 / out 200 tok
+  code   run2: decode 102.00 t/s | e2e  75.68 t/s | ttft  0.68s (prefill    672 t/s) | in 458 / out 200 tok
+  code   run3: decode 107.66 t/s | e2e  79.79 t/s | ttft  0.65s (prefill    706 t/s) | in 458 / out 200 tok
+  prose  run1: decode 108.42 t/s | e2e  88.28 t/s | ttft  0.42s (prefill    432 t/s) | in 182 / out 200 tok
+  prose  run2: decode 107.95 t/s | e2e  87.78 t/s | ttft  0.43s (prefill    427 t/s) | in 182 / out 200 tok
+  prose  run3: decode 106.10 t/s | e2e  86.13 t/s | ttft  0.44s (prefill    416 t/s) | in 182 / out 200 tok
+  qa     run1: decode 107.00 t/s | e2e  86.34 t/s | ttft  0.45s (prefill    400 t/s) | in 179 / out 200 tok
+  qa     run2: decode 107.79 t/s | e2e  87.14 t/s | ttft  0.44s (prefill    407 t/s) | in 179 / out 200 tok
+  qa     run3: decode 104.19 t/s | e2e  84.78 t/s | ttft  0.44s (prefill    407 t/s) | in 179 / out 200 tok
+  --> MEDIAN decode: code=107.66  prose=107.95  qa=107.00   AVG=107.54 t/s
+
+wrote /Users/ghilston/Git/toolbox/dot/omlx/bench/showdown-clean/decode_dwq.json
+
+==> prefill vs prompt length: Qwen3.6-35B-A3B-4bit-DWQ (dwq)
+model=Qwen3.6-35B-A3B-4bit-DWQ   (thinking disabled; output capped so wall ~= prefill)
+unique nonce per prompt + shuffled order => no prefix-cache reuse
+
+    15880 prompt tok ->   13.62s   (   1166 tok/s prefill), out 24, cached 0
+     1962 prompt tok ->    1.72s   (   1140 tok/s prefill), out 24, cached 0
+    63904 prompt tok ->   85.66s   (    746 tok/s prefill), out 24, cached 0
+    31891 prompt tok ->   34.03s   (    937 tok/s prefill), out 24, cached 0
+     7876 prompt tok ->    7.18s   (   1097 tok/s prefill), out 24, cached 0
+
+==> auditing dwq's window for anything else that touched the GPU
+window: 10:08:29 -> 10:11:16   (expected model: Qwen3.6-35B-A3B-4bit-DWQ)
+  CLEAN - 16 requests in window, all Qwen3.6-35B-A3B-4bit-DWQ
+
+==> restarting oMLX so this model is measured alone
+
+==> decode throughput: Qwen3.6-35B-A3B-4bit (plain-repeat)
+
+========================================================================
+MODEL: Qwen3.6-35B-A3B-4bit  (extra=None)
+========================================================================
+  [warm-up / load: 3.8s]
+  code   run1: decode 122.53 t/s | e2e  93.04 t/s | ttft  0.52s (prefill    885 t/s) | in 458 / out 200 tok
+  code   run2: decode 111.89 t/s | e2e  82.16 t/s | ttft  0.65s (prefill    708 t/s) | in 458 / out 200 tok
+  code   run3: decode 109.22 t/s | e2e  81.13 t/s | ttft  0.63s (prefill    722 t/s) | in 458 / out 200 tok
+  prose  run1: decode 106.79 t/s | e2e  86.72 t/s | ttft  0.43s (prefill    420 t/s) | in 182 / out 200 tok
+  prose  run2: decode 119.12 t/s | e2e  95.97 t/s | ttft  0.40s (prefill    449 t/s) | in 182 / out 200 tok
+  prose  run3: decode 111.42 t/s | e2e  89.94 t/s | ttft  0.43s (prefill    425 t/s) | in 182 / out 200 tok
+  qa     run1: decode 110.92 t/s | e2e  89.30 t/s | ttft  0.44s (prefill    410 t/s) | in 179 / out 200 tok
+  qa     run2: decode 107.04 t/s | e2e  87.30 t/s | ttft  0.42s (prefill    424 t/s) | in 179 / out 200 tok
+  qa     run3: decode  98.65 t/s | e2e  81.00 t/s | ttft  0.44s (prefill    405 t/s) | in 179 / out 200 tok
+  --> MEDIAN decode: code=111.89  prose=111.42  qa=107.04   AVG=110.12 t/s
+
+wrote /Users/ghilston/Git/toolbox/dot/omlx/bench/showdown-clean/decode_plain-repeat.json
+
+==> prefill vs prompt length: Qwen3.6-35B-A3B-4bit (plain-repeat)
+model=Qwen3.6-35B-A3B-4bit   (thinking disabled; output capped so wall ~= prefill)
+unique nonce per prompt + shuffled order => no prefix-cache reuse
+
+     7877 prompt tok ->    6.64s   (   1186 tok/s prefill), out 24, cached 0
+     1965 prompt tok ->    1.67s   (   1180 tok/s prefill), out 24, cached 0
+    63905 prompt tok ->   83.22s   (    768 tok/s prefill), out 24, cached 0
+    31890 prompt tok ->   32.18s   (    991 tok/s prefill), out 24, cached 0
+    15883 prompt tok ->   14.16s   (   1121 tok/s prefill), out 24, cached 0
+
+==> auditing plain-repeat's window for anything else that touched the GPU
+window: 10:11:41 -> 10:14:24   (expected model: Qwen3.6-35B-A3B-4bit)
+  CLEAN - 16 requests in window, all Qwen3.6-35B-A3B-4bit
+
+==> results in /Users/ghilston/Git/toolbox/dot/omlx/bench/showdown-clean
