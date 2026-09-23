@@ -1,23 +1,25 @@
-# reviewer. A Bot is a profile, so this file is what the Desktop roster edits.
-#
-# A profile does NOT inherit the root config's `hooks` block. The root carried
-# it for seven runs and the gate never fired once: `require-green.log` was empty
-# every time, which read as "no card ever completed" until one did and the log
-# was still absent. Same trap as `disabled_toolsets`. So every bot that can hand
-# work off carries its own copy.
+# librarian. Keeps ~/Git/notes/wiki, an LLM wiki under human review: the
+# bundled llm-wiki skill does the synthesis, llm-wiki-review stops it at a
+# Review/ proposal, and hooks/wiki-review-gate.py refuses any compiled-page
+# write that Greg has not approved. The skill alone is advice to a small model;
+# the hook is what makes the review real.
 model:
   provider: "custom"
-  default: Qwen3.8-27B-4bit
+  default: Qwen3.6-35B-A3B-4bit-DWQ
   base_url: http://127.0.0.1:8000/v1
   api_key: ${OMLX_API_KEY}
   request_timeout_seconds: 1800
 
+# Relative paths in write_file/patch resolve here, and the gate assumes so.
+terminal:
+  cwd: "${HOME}/Git/notes/wiki"
+
 hooks_auto_accept: true
 hooks:
   pre_tool_call:
-    - matcher: "^kanban_(complete|request_review)$"
-      command: "${HOME}/.hermes/hooks/require-green.sh"
-      timeout: 290
+    - matcher: "^(write_file|patch)$"
+      command: "${HOME}/.hermes/hooks/wiki-review-gate.py"
+      timeout: 30
       fail_closed: true
 
 agent:
@@ -55,3 +57,8 @@ agent:
     # and the locks are S2 Authenticated. moria has no HA access at all, so it
     # has no business offering the tools.
     - homeassistant
+    # @mentions do NOT need Task Delegation — that tool spawns anonymous
+    # temporary subagents, while messaging a persistent teammate is native Bot
+    # Mode. Leaving it on cost 4,650 B of schema on every request, the third
+    # largest block after `file` and `skills`, and offered a second writer.
+    - delegation

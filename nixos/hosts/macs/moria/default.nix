@@ -9,6 +9,11 @@
     ../../../modules/darwin/homebrew-server.nix
     ../../../modules/darwin/home.nix
     ../../../modules/darwin/omlx.nix
+    # Raise the Metal wired-memory ceiling. macOS defaults the GPU to 75% of
+    # unified memory (96 GB here) while oMLX's own auto ceiling is ~84% —
+    # measured 86-87 GB steady with the builder and orchestrator models both
+    # resident, so nine gigabytes from a wall oMLX cannot see.
+    ../../../modules/darwin/gpu-wired-limit.nix
     # Launch Handy at login so the Caps-Lock-hold → F18 dictation hotkey works
     # without opening the app by hand.
     ../../../modules/darwin/handy.nix
@@ -115,4 +120,13 @@
   # `just pi-web-setup`. See modules/darwin/pi-web.nix for why nix does not own
   # its launchd agents.
   custom.programs.piWeb.enable = true;
+
+  # 128 GB box serving two models at once. macOS would cap the GPU at 96 GB
+  # (its 75% default) while oMLX budgets against ~107 GB, so the kernel wall is
+  # one oMLX cannot see. 16 GB back is generous because this host also runs the
+  # Hermes desktop app, a browser and terminals.
+  custom.system.gpuWiredLimit = {
+    enable = true;
+    reserveGb = 16;
+  };
 }

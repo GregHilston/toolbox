@@ -57,6 +57,45 @@ SOCRATA = [
     ("cy8e-89cz", "vt-dfs-licensed-trades.json", "DFS licensed trades"),
 ]
 
+# OpenStreetMap, via Overpass. Needs a User-Agent — the default curl one gets a
+# bare 406 from overpass-api.de.
+#
+# MEASURED 2026-09-22, because the plan assumed this would enrich the trades and
+# it does not: of 11,489 licensed trades, 31 surname+town matched an OSM POI and
+# spot-checking showed them to be false ("Block" the gas installer vs H&R Block).
+# OSM maps PREMISES. A sole-trader electrician working out of a van at a home
+# address is not a mapped feature, and only 36 OSM names even look like a trade.
+#
+# It is still worth fetching, for the opposite reason: 5,969 named Vermont
+# businesses across 287 distinct verticals, 1,949 with a phone, 372 with a
+# contact and NO website, and 140 whose entire web presence is a Facebook page.
+# That is a NEW prospect pool, not an enrichment of an old one.
+OVERPASS_MIRRORS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.osm.jp/api/interpreter",
+]
+
+# One request for all of these times out with "Dispatcher_Client... server is
+# probably too busy", so they go one at a time and merge on (type, id).
+OVERPASS_CHUNKS = {
+    "shop": 'nwr["shop"](area.vt);',
+    "craft": 'nwr["craft"](area.vt);',
+    "office": 'nwr["office"](area.vt);',
+    "healthcare": 'nwr["healthcare"](area.vt);',
+    "tourism": 'nwr["tourism"~"^(hotel|motel|guest_house|bed_and_breakfast|camp_site'
+               '|caravan_site|chalet|hostel|apartment|attraction|museum|gallery)$"](area.vt);',
+    "leisure": 'nwr["leisure"~"^(fitness_centre|sports_centre|golf_course|marina'
+               '|horse_riding|dance|escape_game|bowling_alley)$"](area.vt);',
+    "food": 'nwr["amenity"~"^(restaurant|cafe|bar|pub|fast_food|ice_cream|biergarten'
+            '|nightclub)$"](area.vt);',
+    "health": 'nwr["amenity"~"^(veterinary|dentist|doctors|clinic|pharmacy)$"](area.vt);',
+    "services": 'nwr["amenity"~"^(childcare|kindergarten|driving_school|car_wash|car_rental'
+                '|car_repair|fuel|funeral_directors|bank|studio|animal_boarding'
+                '|animal_shelter)$"](area.vt);',
+    "culture": 'nwr["amenity"~"^(theatre|cinema)$"](area.vt);',
+}
+
 PARKED = re.compile(
     r"(domain (is )?for sale|this domain|parked (free )?(at|by)|buy this domain"
     r"|godaddy|sedoparking|hugedomains|under construction|coming soon"

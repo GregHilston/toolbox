@@ -12,7 +12,15 @@
   # isolated config, memory, skills, credentials and chat history under
   # ~/.hermes/profiles/<name>/", so the roster in the Desktop app and the
   # directories in this repo are the same objects seen from two ends.
-  bots = ["builder" "researcher" "reviewer"];
+  # Bot -> our skills. Ours, not Hermes'. The bundled library lives in the same
+  # tree, so these are linked individually — see the activation script.
+  botSkills = {
+    builder = ["verify-agent-output"];
+    researcher = ["verify-agent-output"];
+    orchestrator = ["verify-agent-output"];
+    librarian = ["llm-wiki-review"];
+  };
+  bots = lib.attrNames botSkills;
 in {
   options.custom.programs.hermes.enable =
     lib.mkEnableOption "Hermes bot profiles symlinked from the toolbox repo";
@@ -52,14 +60,31 @@ in {
       link_repo "${toolboxDir}/hermes/config.yaml" "${hermesDir}/config.yaml"
       link_repo "${toolboxDir}/hermes/hooks"       "${hermesDir}/hooks"
 
+      # Our own skills go in each BOT's own skills/ directory, not the global
+      # one. `hermes skills list` on the CLI reads ~/.hermes/skills/ and will
+      # happily report a skill as "enabled" that no bot can see: a profile's
+      # own `skills_list` tool reads profiles/<bot>/skills/ and answered "No
+      # skills found in skills/ directory" while the CLI listed it fine. The
+      # orchestrator then tried to run the skill as a shell command and got
+      # `verify-agent-output: command not found`.
+
       ${lib.concatMapStringsSep "\n      " (bot: ''
             mkdir -p "${profilesDir}/${bot}"
             link_repo "${toolboxDir}/hermes/profiles/${bot}/SOUL.md"     "${profilesDir}/${bot}/SOUL.md"
           link_repo "${toolboxDir}/hermes/profiles/${bot}/config.yaml" "${profilesDir}/${bot}/config.yaml"
+          mkdir -p "${profilesDir}/${bot}/skills"
+          ${lib.concatMapStringsSep "\n          " (skill: ''
+              link_repo "${toolboxDir}/hermes/skills/${skill}" "${profilesDir}/${bot}/skills/${skill}"
+            '')
+            botSkills.${bot}}
         '')
         bots}
 
-      echo "✓ Hermes bot profiles linked: ${lib.concatStringsSep ", " bots}"
+      # llm-wiki-review wraps the bundled llm-wiki and loads it by name, and a
+      # bot sees only its own skills/. Linked from Hermes' copy, so updates land.
+      link_repo "${hermesDir}/skills/research/llm-wiki" "${profilesDir}/librarian/skills/llm-wiki"
+
+      echo "✓ Hermes bots linked: ${lib.concatStringsSep ", " bots}"
     '';
   };
 }
