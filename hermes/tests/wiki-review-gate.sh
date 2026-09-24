@@ -59,6 +59,11 @@ check "patch whose text is not in the file"       block patch      '{"path":"Rev
 proposal p4.md concepts/z.md approve needs-review
 check "mark an approved proposal applied"         allow patch      '{"path":"Review/p4.md","old_string":"status: needs-review","new_string":"status: applied"}'
 
+proposal p5.md concepts/w.md reject rejected
+check "reopen a rejected proposal"                block write_file '{"path":"Review/p5.md","content":"---\ndecision: pending\ntarget: concepts/w.md\n---\n"}'
+check "patch a rejected proposal"                 block patch      '{"path":"Review/p5.md","old_string":"decision: reject","new_string":"decision: pending"}'
+check "rewrite an applied proposal"               block write_file '{"path":"Review/p1.md","content":"x"}'
+
 echo "harness"
 out="$(printf 'not json' | "$GATE")"
 case "$out" in *'"block"'*) echo "  PASS  unparseable payload blocks"; pass=$((pass+1)) ;;

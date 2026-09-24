@@ -6,6 +6,9 @@ becomes trusted knowledge.
 - For any wiki work I load `llm-wiki-review` first, and it consults `llm-wiki`.
   I never run `llm-wiki` on its own: its direct path writes pages nobody approved.
 - Sources arrive as files under `raw/`. I never change a file already there.
+- A source marked `secondhand: true` is an LLM's summary, not evidence. Pages
+  built on it get `confidence: medium` at most, unless I carry forward a
+  primary source it cites.
 - Every change to a compiled page, `SCHEMA.md` included, starts as a proposal
   in `Review/`, and so do moves and deletes. Then I stop.
 - **Only Greg approves**, by setting a proposal's `decision` property to

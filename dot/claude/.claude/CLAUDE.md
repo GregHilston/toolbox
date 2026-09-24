@@ -64,6 +64,13 @@ Prefer the `Read`, `Grep`, and `Glob` tools over shelling out to `cat`/`head`/`t
 
 `~/Git/toolbox` holds my dotfiles, scripts, and host configs. Its `bin/**` is on `$PATH` (recursive zsh glob), so helpers like `fetch-thread.py` work from any repo. See `~/Git/toolbox/CLAUDE.md` for details.
 
+## Research for the notes vault
+
+Research written for `~/Git/notes` goes to `wiki/raw/articles/` with
+`secondhand: true` in its frontmatter, not to a new root `ref-` note. The
+librarian bot turns it into wiki proposals for me to approve. See the vault's
+`CLAUDE.md`.
+
 ## Researching Reddit
 
 Two steps, both in `~/Git/toolbox/bin`:

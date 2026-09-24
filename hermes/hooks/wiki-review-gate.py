@@ -11,7 +11,9 @@ Wired as a pre_tool_call hook on write_file and patch. The rules:
   outside the wiki   blocked
   raw/**             create only; sources are immutable
   Review/**          anything except setting `decision: approve` -- only Greg
-                     does that, in Obsidian, or the bot can approve itself
+                     does that, in Obsidian, or the bot can approve itself --
+                     or touching a rejected/applied proposal, which the bot
+                     once reopened by overwriting
   index.md, log.md   always; navigation, not knowledge
   everything else    only with a Review/ proposal whose `target` is this path,
                      `decision: approve`, and `status` not yet `applied`
@@ -93,7 +95,10 @@ if top == "raw":
     block(f"{rel} is a raw source, and raw sources are immutable. Capture a new source under a new file name; put corrections in a wiki page proposal.")
 
 if top == "Review":
-    now = field(path.read_text(errors="replace"), "decision") if path.exists() else None
+    current = path.read_text(errors="replace") if path.exists() else ""
+    if field(current, "status") in ("applied", "rejected"):
+        block(f"{rel} is closed ({field(current, 'status')}), and closed proposals are the audit trail. Write a new proposal file instead.")
+    now = field(current, "decision")
     if field(after_write(tool, args, path), "decision") == "approve" and now != "approve":
         block(f"{rel}: only Greg approves a proposal, by setting its `decision` property to approve in Obsidian. Tell him the proposal is ready and stop. Recording reject, defer or revise is fine.")
     sys.exit(0)

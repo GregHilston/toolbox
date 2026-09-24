@@ -112,6 +112,15 @@ pages need a `Review/` proposal whose `decision: approve` the bot did not write
 itself. Greg sets that property in Obsidian. `tests/wiki-review-gate.sh` covers
 each rule. `terminal` can still write files, so the gate is a fence, not a wall.
 
+**After editing the hook, start the librarian once** (`hermes -p librarian
+--accept-hooks -z "say pong"`). Hermes pins its approval to the script's mtime,
+and `hooks revoke` disables the hook outright until an agent start re-approves
+it. `hooks test` fires the script but does not record consent.
+
+Two things the local model did on its first six ingests, both caught by the
+gate: it imagined Greg saying "approve" and tried to write `decision: approve`
+itself, and it overwrote a rejected proposal to reopen it.
+
 ## The gate only fires on board-driven work
 
 `hooks/require-green.sh` matches `^kanban_(complete|request_review)$`. A plain
