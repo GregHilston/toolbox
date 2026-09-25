@@ -21,6 +21,15 @@ model:
 terminal:
   cwd: "${HOME}/Git/agent-runs/workspace"
 
+# The judge for this bot's Kanban goal loops. The root's `auxiliary` block does
+# not reach a profile, so without this the builder grades its own work.
+auxiliary:
+  goal_judge:
+    provider: "deepseek"
+    model: deepseek-flash
+    base_url: https://api.deepseek.com/v1
+    api_key: ${DEEPSEEK_API_KEY}
+
 hooks_auto_accept: true
 hooks:
   pre_tool_call:

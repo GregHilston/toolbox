@@ -9,16 +9,15 @@
 # mid-tier reviewer gave +12 points (p=0.0005) at a 2% false-rejection rate.
 # A reviewer below the capability floor is inert: no gain, double the tokens.
 #
-# So: a different family, and the largest one this machine serves.
+# So: a different family, and smarter than anything moria can serve. Reviews
+# and plans are low-volume, so a hosted model costs little. V4.1 Flash, not
+# V4 Pro: it leads Pro on the agentic benchmarks and Pro was nearly retired.
 model:
-  provider: "custom"
-  default: gpt-oss-120b-heretic-v2-mxfp4-q8-hi-mlx
-  base_url: http://127.0.0.1:8000/v1
-  api_key: ${OMLX_API_KEY}
+  provider: "deepseek"
+  default: deepseek-flash
+  base_url: https://api.deepseek.com/v1
+  api_key: ${DEEPSEEK_API_KEY}
   request_timeout_seconds: 1800
-  # Measured 2026-09-22: 34s to load cold, then it and the builder alternate
-  # sub-second — oMLX keeps both resident, so supervising costs no swap.
-  context_length: 131072
 
 # No hooks block. `require-green.sh` vetoes `kanban_complete`, and this bot
 # never completes a card — it reviews what the builder wrote. Its gate is the

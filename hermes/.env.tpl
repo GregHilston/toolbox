@@ -35,6 +35,9 @@ WEB_TOOLS_DEBUG=false
 # resolves that against THIS file, not the shell -- which is why the first
 # Telegram question came back "HTTP 401: Invalid API key" from oMLX.
 OMLX_API_KEY={{ op://Infra/oMLX/api_key }}
+# The orchestrator and both goal judges run on DeepSeek. `just secrets` strips
+# this line on citadel, the work machine.
+DEEPSEEK_API_KEY={{ op://Infra/DeepSeek/api_key }}
 
 # Telegram. moria's bot only: dungeon's Hermes is reached over Slack and email,
 # not Telegram, so this token (freed when the toolbox's own bot was deleted) is

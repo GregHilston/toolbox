@@ -56,12 +56,18 @@ the coding bots. **Writes stay single-threaded** — when two agents edit one tr
 they make conflicting implicit choices and the result is worse than either
 alone, which is the one thing every source on this agrees about.
 
-The orchestrator runs **gpt-oss-120b**, deliberately not another Qwen. It was
-`reviewer` on Qwen3.8-27B, the same family as the builder, which arXiv
-2609.04270 measures as worth nothing: same-model self-review had the *highest*
-error detection (85% recall) and no significant accuracy gain, because it
-rejected 2.1x as often for a third the repair rate. A cross-family mid-tier
-reviewer gave +12 points at a 2% false-rejection rate.
+The orchestrator runs **DeepSeek V4.1 Flash** (`deepseek-flash`) over the API,
+deliberately not another Qwen. Same-family review is worth nothing by arXiv
+2609.04270: same-model self-review had the *highest* error detection (85%
+recall) and no significant accuracy gain, because it rejected 2.1x as often for
+a third the repair rate. A cross-family mid-tier reviewer gave +12 points at a
+2% false-rejection rate. It is hosted because nothing moria can serve beside the
+builder is both non-Qwen and strong enough; reviews and plans are low-volume,
+so the cost is small. The goal judges run on it for the same reason.
+
+**The API sees what the orchestrator reads**, so work in the shared workspace
+goes to DeepSeek. `DEEPSEEK_API_KEY` comes from 1Password through `just secrets`
+into the root and every profile `.env`, and is stripped on citadel.
 
 **The review must be unconditional.** Cognition's "smart friend" pattern — the
 builder calls for help when stuck — fails here, because recognising you are

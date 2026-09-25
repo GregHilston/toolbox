@@ -144,14 +144,16 @@ terminal:
   # ruinous in an overnight one.
   timeout: 180
 
-# Role-split models. The builder does the volume on the fast MoE; every
-# judgement call goes to the dense Qwen3.8-27B, which is 2.6x more
-# token-efficient and carries far stronger published coding benchmarks. Its
-# 23 t/s is irrelevant for low-volume verdicts. 19GB + 15GB is comfortable on
-# 128GB, and oMLX keeps both resident.
+# Role-split models. The builder does the volume on the fast MoE. Judging and
+# planning go to DeepSeek: another family, so the judge is not grading its own
+# kind (arXiv 2609.04270), and planning is where the Hermes docs say frontier
+# judgment pays. Rewriting a note and compressing stay local on Qwen3.8-27B.
 #
-# Its context window must be >= the main model's or compression fails SILENTLY
-# and loses conversation with no warning; 3.8 serves 262144 against our 131072.
+# ONLY `default` reads this block. A profile does not inherit it, so the
+# builder's Kanban goal loops take their judge from profiles/builder.
+#
+# The compression model's context window must be >= the main model's or
+# compression fails SILENTLY; 3.8 serves 262144 against our 131072.
 auxiliary:
   # Each slot is a FULL connection block, not just a model name:
   # config_defaults.py builds {provider, model, base_url, api_key, timeout,
@@ -161,15 +163,15 @@ auxiliary:
   # was demonstrably on (goal_mode=1 in kanban.db). Verify with per-model request
   # counts in oMLX stats, never by reading the config back.
   goal_judge:
-    provider: "custom"
-    model: Qwen3.8-27B-4bit
-    base_url: http://127.0.0.1:8000/v1
-    api_key: ${OMLX_API_KEY}
+    provider: "deepseek"
+    model: deepseek-flash
+    base_url: https://api.deepseek.com/v1
+    api_key: ${DEEPSEEK_API_KEY}
   kanban_decomposer:
-    provider: "custom"
-    model: Qwen3.8-27B-4bit
-    base_url: http://127.0.0.1:8000/v1
-    api_key: ${OMLX_API_KEY}
+    provider: "deepseek"
+    model: deepseek-flash
+    base_url: https://api.deepseek.com/v1
+    api_key: ${DEEPSEEK_API_KEY}
   triage_specifier:
     provider: "custom"
     model: Qwen3.8-27B-4bit

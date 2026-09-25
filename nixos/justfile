@@ -159,6 +159,15 @@ secrets:
     echo "    integration, which requires a GUI session on this host."
   fi
 
+  # citadel never gets the personal DeepSeek key; see the end of this recipe.
+  inject_hermes() {
+    if [ "$(hostname -s)" = "citadel" ]; then
+      sed '/^DEEPSEEK_API_KEY=/d' "$1" | op inject -f -o "$2"
+    else
+      op inject -f -i "$1" -o "$2"
+    fi
+  }
+
   op inject -f -i ../dot/omlx/.omlx/settings.json.tpl -o ../dot/omlx/.omlx/settings.json
   op inject -f -i ../dot/pi/.pi/agent/models.json.tpl -o ../dot/pi/.pi/agent/models.json
   op inject -f -i ../dot/pi/.pi/agent/homeassistant.json.tpl -o ../dot/pi/.pi/agent/homeassistant.json
@@ -166,7 +175,7 @@ secrets:
   # inherits nothing from the shell, so platform credentials cannot live in
   # secrets/.env. Generated, so `hermes config set` writes are overwritten --
   # see the header of hermes/.env.tpl.
-  op inject -f -i ../hermes/.env.tpl -o "$HOME/.hermes/.env"
+  inject_hermes ../hermes/.env.tpl "$HOME/.hermes/.env"
   # And one per bot. A secondary profile resolves `${VAR}` against its OWN .env
   # and a miss stays verbatim, so without these every Bot Chat sends the literal
   # string `${OMLX_API_KEY}` and oMLX answers 401 -- while the CLI and Telegram
@@ -174,7 +183,7 @@ secrets:
   # hermes/profile.env.tpl.
   for bot in builder researcher orchestrator librarian; do
     install -d -m 700 "$HOME/.hermes/profiles/$bot"
-    op inject -f -i ../hermes/profile.env.tpl -o "$HOME/.hermes/profiles/$bot/.env"
+    inject_hermes ../hermes/profile.env.tpl "$HOME/.hermes/profiles/$bot/.env"
     chmod 600 "$HOME/.hermes/profiles/$bot/.env"
   done
   # DeepSeek is a personal, metered API key and citadel is the Mozilla work

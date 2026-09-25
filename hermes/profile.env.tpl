@@ -12,7 +12,8 @@
 # why the CLI, and Telegram (which routes to `default`), worked for a whole
 # session while every Bot Chat 401'd.
 #
-# The model key ONLY. Not the Telegram token: these bots have no transport of
+# The model keys ONLY. Not the Telegram token: these bots have no transport of
 # their own, and one file per profile is what keeps #84079's isolation real
 # instead of symlinking the root .env into every one of them.
 OMLX_API_KEY={{ op://Infra/oMLX/api_key }}
+DEEPSEEK_API_KEY={{ op://Infra/DeepSeek/api_key }}
