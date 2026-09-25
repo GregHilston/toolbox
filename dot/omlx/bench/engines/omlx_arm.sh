@@ -49,7 +49,7 @@ print(f"  model_settings: {model} mode={mode} "
 PY
 
 # brew-upgraded oMLX crash-loops if the old process still holds 8000, so kill first.
-kill "$(lsof -ti :8000)" 2>/dev/null || true
+kill "$(lsof -ti tcp:8000 -sTCP:LISTEN)" 2>/dev/null || true
 sleep 3
 launchctl kickstart -k "gui/$(id -u)/org.nixos.omlx"
 for i in $(seq 1 90); do

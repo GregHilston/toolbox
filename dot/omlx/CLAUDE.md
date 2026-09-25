@@ -14,8 +14,13 @@ launchctl kickstart -k gui/$(id -u)/org.nixos.omlx
 8000, so the new instance crash-loops. Kill the holder first:
 
 ```bash
-kill $(lsof -ti :8000) 2>/dev/null; launchctl kickstart -k "gui/$(id -u)/org.nixos.omlx"
+kill $(lsof -ti tcp:8000 -sTCP:LISTEN) 2>/dev/null; launchctl kickstart -k "gui/$(id -u)/org.nixos.omlx"
 ```
+
+**`-sTCP:LISTEN` is not optional.** A bare `lsof -ti :8000` also lists every
+*client* of port 8000. On dungeon that includes OrbStack's VM, which carries the
+containers' traffic to oMLX, so on 2026-09-25 it stopped the whole Docker stack
+and left the USB dongles detached (`home-lab/docs/runbooks/usb-dongle-missing.md`).
 
 ## Per-Model Settings
 
