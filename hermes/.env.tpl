@@ -31,12 +31,11 @@ TERMINAL_MODAL_IMAGE=nikolaik/python-nodejs:python3.11-nodejs20
 VISION_TOOLS_DEBUG=false
 WEB_TOOLS_DEBUG=false
 
-# The model key. config.yaml says `api_key: ${OMLX_API_KEY}`, and a gateway
-# resolves that against THIS file, not the shell -- which is why the first
-# Telegram question came back "HTTP 401: Invalid API key" from oMLX.
+# The model keys. `hermes-mode.sh` copies them into the MODEL_/JUDGE_/UTIL_
+# lines it appends here, because a gateway resolves config refs against THIS
+# file, not the shell. `just secrets` strips DeepSeek on citadel, the work
+# machine.
 OMLX_API_KEY={{ op://Infra/oMLX/api_key }}
-# The orchestrator and both goal judges run on DeepSeek. `just secrets` strips
-# this line on citadel, the work machine.
 DEEPSEEK_API_KEY={{ op://Infra/DeepSeek/api_key }}
 
 # Telegram. moria's bot only: dungeon's Hermes is reached over Slack and email,

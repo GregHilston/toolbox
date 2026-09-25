@@ -1,17 +1,11 @@
-# orchestrator. A Bot is a profile, so this file is what the Desktop roster edits.
+# reviewer. A Bot is a profile, so this file is what the Desktop roster edits.
 #
-# This was `reviewer`, pinned to Qwen3.8-27B — the SAME FAMILY as the builder's
-# Qwen3.6-35B-A3B, which is the configuration the evidence says buys nothing.
-# arXiv 2609.04270 measured an execute-review-revise pipeline: same-model
-# self-review had the HIGHEST error detection (85% recall) and produced no
-# significant accuracy gain, because it rejected 2.1x as often for a third the
-# repair rate — 35% of correct answers wrongly rejected. A CROSS-FAMILY
-# mid-tier reviewer gave +12 points (p=0.0005) at a 2% false-rejection rate.
-# A reviewer below the capability floor is inert: no gain, double the tokens.
-#
-# So: a different family, and smarter than anything moria can serve. Reviews
-# and plans are low-volume, so a hosted model costs little. V4.1 Flash, not
-# V4 Pro: it leads Pro on the agentic benchmarks and Pro was nearly retired.
+# Reviews what the builder wrote, with its own SOUL so the review style can be
+# tuned without touching the orchestrator's planning. A different family from
+# the builder: on 2026-09-25 the Qwen MoE declared done with hidden tests
+# failing in 6 of 9 runs, and a DeepSeek review round fixed most of them
+# (notes: ref-hermes-run-log.md). Kanban's own review lane does not use this
+# bot; it reruns the builder with `sdlc-review`.
 model:
   provider: ${MODEL_PROVIDER}
   default: ${MODEL_NAME}
@@ -19,8 +13,8 @@ model:
   api_key: ${MODEL_API_KEY}
   request_timeout_seconds: 1800
 
-# No hooks block. `require-green.sh` vetoes `kanban_complete`, and this bot
-# never completes a card: it plans, and the reviewer judges what comes back.
+# No hooks block: this bot never completes a card. Its gate is the
+# `verify-agent-output` skill, which it runs itself.
 
 # The SAME directory the builder starts in. A reviewer that cannot read the
 # work is not a reviewer, and the Bot Mode walkthrough names this as the thing

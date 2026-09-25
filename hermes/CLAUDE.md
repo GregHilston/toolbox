@@ -50,13 +50,14 @@ unsupervised one at it. Only the declarative half is linked; `memories/`,
 
 ## The roster, and why the orchestrator is a different family
 
-`builder` writes. `orchestrator` reviews and never writes. `researcher` is
-unused so far. `librarian` keeps the LLM wiki at `~/Git/notes/wiki`, apart from
+`builder` writes. `orchestrator` plans and delegates. `reviewer` judges what
+comes back, with its own SOUL for the review style. `researcher` is unused so
+far. `librarian` keeps the LLM wiki at `~/Git/notes/wiki`, apart from
 the coding bots. **Writes stay single-threaded** — when two agents edit one tree
 they make conflicting implicit choices and the result is worse than either
 alone, which is the one thing every source on this agrees about.
 
-The orchestrator runs **DeepSeek V4.1 Flash** (`deepseek-flash`) over the API,
+The orchestrator and reviewer run **DeepSeek V4.1 Flash** (`deepseek-flash`) over the API,
 deliberately not another Qwen. Same-family review is worth nothing by arXiv
 2609.04270: same-model self-review had the *highest* error detection (85%
 recall) and no significant accuracy gain, because it rejected 2.1x as often for
@@ -88,6 +89,44 @@ writer.
 Both bots start in `~/Git/agent-runs/workspace` (`terminal.cwd`), which must be
 shared: a reviewer that cannot read the work is not a reviewer.
 
+## Local, cloud, or mixed
+
+`hermes-mode.sh local|mixed|cloud` (in `bin/`) picks the models for every bot
+at once. Configs never name a model: they read `${MODEL_*}` (the bot's own
+role), `${JUDGE_*}` (goal judges, planner) and `${UTIL_*}` (triage,
+compression), and the script writes those lines into each profile's `.env`,
+which is where a profile resolves `${VAR}`. Hermes has no mode feature and a
+profile cannot inherit, so this is the one switch. `just secrets` re-applies the
+saved mode (`~/.hermes/mode`), since it regenerates every `.env`.
+
+| Mode | builder, researcher, librarian | orchestrator, reviewer, judges | triage, compression |
+|---|---|---|---|
+| local | Qwen3.6-35B-A3B | Qwen3.8-27B | Qwen3.8-27B |
+| mixed (default with a DeepSeek key) | Qwen3.6-35B-A3B | DeepSeek Flash | Qwen3.8-27B |
+| cloud | DeepSeek Flash | DeepSeek Flash | DeepSeek Flash |
+
+Bots see a switch on their next message. The default profile (CLI, Telegram)
+reads the environment at gateway start, so `hermes gateway restart` after one.
+
+## Why the builder is the MoE, and why its work must be checked
+
+`bench/quick-ab/` races builder models on three small cards and scores them
+with hidden tests the agent never sees (`run.py --report <dir>` prints the
+table). On 2026-09-25 (58 runs), Qwen3.6-35B-A3B finished a card in about a
+minute but **declared done with hidden tests failing** in 6 of 9 runs (78% of
+hidden tests). Dense Qwen3.8-27B, Swift-Qwen3.8-27B and Qwen3.5-122B-A10B
+reached 94% at 5–7 minutes a card. The same MoE **reviewed by another model**
+(up to two rounds) reached 92–94% in about 2.5 minutes; DeepSeek reviewed as
+well as Claude at 1/40th the API price. DeepSeek alone as builder scored 98%
+in under a minute, but the code leaves the machine.
+
+So the builder stays the MoE and every result is reviewed by another family;
+in Bot Mode that is the orchestrator. **Kanban's review lane is not that:** it
+reruns the card's assignee with `sdlc-review`, so the builder reviews itself.
+Rejected in the same run: froggeric's fixed chat template (same scores, up to
+twice the tokens), Qwen3.8 Flash Next REAP (2.7 tok/s on oMLX 0.6.4), and
+Qwen3.5 4B/9B (false completion on every card).
+
 ## What is ours rather than Hermes'
 
 `hooks/require-green.sh` refuses `kanban_complete` and `kanban_request_review`
@@ -98,7 +137,9 @@ executables in `.venv` — and the agent, the reviewer and the scorer all read
 that same polluted venv and all three agreed. `tests/gate-evasions.sh` replays
 every bypass that has worked, on the host, in seconds; its last case asserts a
 genuinely installable tree still **passes**, because a gate that refuses good
-work deadlocks an honest agent.
+work deadlocks an honest agent. It checks the card's own workspace
+(`HERMES_KANBAN_WORKSPACE`, else the hook payload's `cwd`); a fixed path once
+held a correct build refused for 2.5 hours.
 
 Everything else this repo once wrapped around Hermes — a container, a Telegram
 bot, a run loop, a scorer, a preflight — has been deleted, because Hermes ships

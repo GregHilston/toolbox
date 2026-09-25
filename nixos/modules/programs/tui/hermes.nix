@@ -18,6 +18,7 @@
     builder = ["verify-agent-output"];
     researcher = ["verify-agent-output"];
     orchestrator = ["verify-agent-output"];
+    reviewer = ["verify-agent-output"];
     librarian = ["llm-wiki-review"];
   };
   bots = lib.attrNames botSkills;

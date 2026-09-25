@@ -28,12 +28,11 @@ model:
   # other with `Unknown provider` — while the worker process still exits 0, so
   # the kanban dispatcher reports it as "clean exit without a terminal call"
   # rather than as a model failure. That misdiagnosis cost an hour.
-  provider: "custom"
-  default: Qwen3.6-35B-A3B-4bit-DWQ
-  # Localhost: oMLX is a launchd service on this machine. This was omlx.host
-  # when Hermes ran in our own container, pinned by the firewall to one /32.
-  base_url: http://127.0.0.1:8000/v1
-  api_key: ${OMLX_API_KEY}
+  # Which model is `bin/hermes-mode.sh`'s choice, written into ~/.hermes/.env.
+  provider: ${MODEL_PROVIDER}
+  default: ${MODEL_NAME}
+  base_url: ${MODEL_BASE_URL}
+  api_key: ${MODEL_API_KEY}
   # A cold prefill of the harness prompt plus tool schemas is minutes on a local
   # 35B, not seconds.
   request_timeout_seconds: 1800
@@ -144,10 +143,10 @@ terminal:
   # ruinous in an overnight one.
   timeout: 180
 
-# Role-split models. The builder does the volume on the fast MoE. Judging and
-# planning go to DeepSeek: another family, so the judge is not grading its own
-# kind (arXiv 2609.04270), and planning is where the Hermes docs say frontier
-# judgment pays. Rewriting a note and compressing stay local on Qwen3.8-27B.
+# Role-split models, chosen by `bin/hermes-mode.sh`. JUDGE judges and plans:
+# DeepSeek in mixed mode, another family so the judge is not grading its own
+# kind (arXiv 2609.04270). UTIL rewrites notes and compresses: local
+# Qwen3.8-27B unless the mode is cloud.
 #
 # ONLY `default` reads this block. A profile does not inherit it, so the
 # builder's Kanban goal loops take their judge from profiles/builder.
@@ -163,25 +162,25 @@ auxiliary:
   # was demonstrably on (goal_mode=1 in kanban.db). Verify with per-model request
   # counts in oMLX stats, never by reading the config back.
   goal_judge:
-    provider: "deepseek"
-    model: deepseek-flash
-    base_url: https://api.deepseek.com/v1
-    api_key: ${DEEPSEEK_API_KEY}
+    provider: ${JUDGE_PROVIDER}
+    model: ${JUDGE_NAME}
+    base_url: ${JUDGE_BASE_URL}
+    api_key: ${JUDGE_API_KEY}
   kanban_decomposer:
-    provider: "deepseek"
-    model: deepseek-flash
-    base_url: https://api.deepseek.com/v1
-    api_key: ${DEEPSEEK_API_KEY}
+    provider: ${JUDGE_PROVIDER}
+    model: ${JUDGE_NAME}
+    base_url: ${JUDGE_BASE_URL}
+    api_key: ${JUDGE_API_KEY}
   triage_specifier:
-    provider: "custom"
-    model: Qwen3.8-27B-4bit
-    base_url: http://127.0.0.1:8000/v1
-    api_key: ${OMLX_API_KEY}
+    provider: ${UTIL_PROVIDER}
+    model: ${UTIL_NAME}
+    base_url: ${UTIL_BASE_URL}
+    api_key: ${UTIL_API_KEY}
   compression:
-    provider: "custom"
-    model: Qwen3.8-27B-4bit
-    base_url: http://127.0.0.1:8000/v1
-    api_key: ${OMLX_API_KEY}
+    provider: ${UTIL_PROVIDER}
+    model: ${UTIL_NAME}
+    base_url: ${UTIL_BASE_URL}
+    api_key: ${UTIL_API_KEY}
     # Default is 120s (auxiliary_client.py:6095 says so itself). Summarising a
     # 65k middle on a 23 t/s dense model is not a two-minute job, and the host's
     # own in-agent budget is floored at this value — so raising it raises both.

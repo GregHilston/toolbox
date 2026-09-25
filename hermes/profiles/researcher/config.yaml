@@ -6,10 +6,10 @@
 # was still absent. Same trap as `disabled_toolsets`. So every bot that can hand
 # work off carries its own copy.
 model:
-  provider: "custom"
-  default: Qwen3.6-35B-A3B-4bit-DWQ
-  base_url: http://127.0.0.1:8000/v1
-  api_key: ${OMLX_API_KEY}
+  provider: ${MODEL_PROVIDER}
+  default: ${MODEL_NAME}
+  base_url: ${MODEL_BASE_URL}
+  api_key: ${MODEL_API_KEY}
   request_timeout_seconds: 1800
 
 hooks_auto_accept: true

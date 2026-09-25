@@ -181,11 +181,13 @@ secrets:
   # string `${OMLX_API_KEY}` and oMLX answers 401 -- while the CLI and Telegram
   # keep working, because both run as the `default` profile. See the header of
   # hermes/profile.env.tpl.
-  for bot in builder researcher orchestrator librarian; do
+  for bot in builder researcher orchestrator reviewer librarian; do
     install -d -m 700 "$HOME/.hermes/profiles/$bot"
     inject_hermes ../hermes/profile.env.tpl "$HOME/.hermes/profiles/$bot/.env"
     chmod 600 "$HOME/.hermes/profiles/$bot/.env"
   done
+  # The injected .env files have no model lines; put the saved mode back.
+  ../bin/hermes-mode.sh
   # DeepSeek is a personal, metered API key and citadel is the Mozilla work
   # machine, so it never gets one — the line is stripped before injection rather
   # than merely hidden from pi's model picker, so the key is absent from that

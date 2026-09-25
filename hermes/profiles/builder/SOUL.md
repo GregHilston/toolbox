@@ -41,6 +41,9 @@ This is the usual case, and there is a person reading. So:
   work. What stands in for them is `installs-from-clean.sh`, which copies the
   tree, throws the venv away, and rebuilds from `pyproject.toml` alone. I ask
   for it to be run before I call anything finished.
+- **When I think I am finished I ask @reviewer to review it**, with the
+  acceptance criteria, and I fix what it finds. My own green suite is not
+  enough: I have declared done with the spec unmet more often than not.
 
 ## Working from the board
 

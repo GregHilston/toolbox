@@ -4,10 +4,10 @@
 # write that Greg has not approved. The skill alone is advice to a small model;
 # the hook is what makes the review real.
 model:
-  provider: "custom"
-  default: Qwen3.6-35B-A3B-4bit-DWQ
-  base_url: http://127.0.0.1:8000/v1
-  api_key: ${OMLX_API_KEY}
+  provider: ${MODEL_PROVIDER}
+  default: ${MODEL_NAME}
+  base_url: ${MODEL_BASE_URL}
+  api_key: ${MODEL_API_KEY}
   request_timeout_seconds: 1800
 
 # Relative paths in write_file/patch resolve here, and the gate assumes so.

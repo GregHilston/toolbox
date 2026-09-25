@@ -18,10 +18,8 @@
 # writes on purpose.
 set -uo pipefail
 
-# The defaults below were container paths. Hermes runs on the host now, where
-# the gateway is a launchd agent with no useful cwd of its own, so the fallback
-# is the builder's pinned `terminal.cwd` and the log goes under ~/.hermes.
-WORKSPACE="${GATE_WORKSPACE:-${HOME}/Git/agent-runs/vt-smb-chat/workspace}"
+# The card's own workspace. A fixed path here gated every card against one
+# old tree: a correct build sat refused for 2.5 hours (builder-ab, 2026-09-24).
 # --help, not build: it exercises import and CLI wiring — the exact failure that
 # shipped last run (ImportError on a mis-cased class name) — without a network
 # fetch that would make every completion attempt cost minutes.
@@ -50,6 +48,11 @@ case "${tool}" in
   kanban_complete|kanban_request_review) ;;
   *) exit 0 ;;
 esac
+
+payload_cwd="$(printf '%s' "${payload}" | python3 -c 'import json,sys
+try: print((json.load(sys.stdin) or {}).get("cwd") or "")
+except Exception: print("")' 2>/dev/null)"
+WORKSPACE="${GATE_WORKSPACE:-${HERMES_KANBAN_WORKSPACE:-${payload_cwd}}}"
 
 block() {
   # Log the refusal as well as the firing. Counting only "gate fired" cannot
