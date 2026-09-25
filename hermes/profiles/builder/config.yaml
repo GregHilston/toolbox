@@ -78,3 +78,6 @@ agent:
     # Mode. Leaving it on cost 4,650 B of schema on every request, the third
     # largest block after `file` and `skills`, and offered a second writer.
     - delegation
+onboarding:
+  seen:
+    tool_progress_prompt: true
