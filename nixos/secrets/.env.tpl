@@ -5,7 +5,8 @@ OMLX_API_KEY={{ op://Infra/oMLX/api_key }}
 DEEPSEEK_API_KEY={{ op://Infra/DeepSeek/api_key }}
 PUSHOVER_USER_KEY={{ op://Infra/Pushover/user_key }}
 PUSHOVER_WORK_API_KEY={{ op://Infra/Pushover/work_api_key }}
-FROM_EMAIL_ADDRESS_PASSWORD="{{ op://Infra/Gmail App Password/password }}"
+# The Hermes bot account's app password; mail-ip.py --from must match.
+FROM_EMAIL_ADDRESS_PASSWORD="{{ op://Infra/Hermes/gmail_app_password }}"
 
 # Slack and Telegram moved to hermes/.env.tpl, which generates ~/.hermes/.env.
 # Hermes' gateway is a launchd agent and reads that file itself; it inherits

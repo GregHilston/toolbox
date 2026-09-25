@@ -5,7 +5,11 @@
 #     "loguru",
 # ]
 # ///
-"""Email this device's IP addresses and hostname to a given address"""
+"""Email this device's IP addresses and hostname to a given address.
+
+--from must be the account FROM_EMAIL_ADDRESS_PASSWORD belongs to: the Hermes
+bot's, so a script never holds a personal mailbox's password.
+"""
 
 import argparse
 import os
