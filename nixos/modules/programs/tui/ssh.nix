@@ -46,6 +46,10 @@ in {
         HostName = hosts.moria.lan;
         User = hosts.moria.user;
       };
+      "moriats" = {
+        HostName = hosts.moria.tailscale;
+        User = hosts.moria.user;
+      };
       "mines" = {
         HostName = hosts.mines.lan;
         User = hosts.mines.user;

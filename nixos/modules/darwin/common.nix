@@ -24,6 +24,7 @@ in {
   users.users.${vars.user.name} = {
     home = "/Users/${vars.user.name}";
     shell = pkgs.${vars.user.packages.shell};
+    openssh.authorizedKeys.keys = vars.user.authorizedKeys;
   };
 
   # System packages (CLI tools available system-wide).
