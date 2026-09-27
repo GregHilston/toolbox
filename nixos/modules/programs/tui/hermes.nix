@@ -16,14 +16,16 @@
   # tree, so these are linked individually — see the activation script.
   botSkills = {
     builder = ["verify-agent-output"];
-    researcher = ["verify-agent-output" "reddit" "hacker-news"];
+    researcher = ["verify-agent-output" "lab-tools/reddit" "lab-tools/hacker-news"];
     orchestrator = ["verify-agent-output"];
     reviewer = ["verify-agent-output"];
     librarian = ["llm-wiki-review"];
   };
   bots = lib.attrNames botSkills;
   # The default profile (CLI, Telegram) reads ~/.hermes/skills/ directly.
-  defaultSkills = ["reddit" "hacker-news"];
+  # Capability skills sit under lab-tools/: a skill with no category is listed
+  # as "reddit:" then "- reddit", and Gemma called that "reddit:reddit".
+  defaultSkills = ["lab-tools/reddit" "lab-tools/hacker-news"];
 in {
   options.custom.programs.hermes.enable =
     lib.mkEnableOption "Hermes bot profiles symlinked from the toolbox repo";
@@ -48,6 +50,7 @@ in {
       # link_repo SRC DST -- refresh a symlink, create a missing one, and refuse
       # to clobber a real file so a hand-made profile is never silently lost.
       link_repo() {
+        mkdir -p "$(dirname "$2")"
         if [ -L "$2" ]; then
           ln -sfn "$1" "$2"
         elif [ ! -e "$2" ]; then
@@ -64,10 +67,10 @@ in {
       # removing a grant revokes it. Hermes' own skills are never touched.
       prune_skills() {
         dir=$1; shift
-        for link in "$dir"/*; do
+        for link in "$dir"/* "$dir"/*/*; do
           [ -L "$link" ] || continue
           case "$(readlink "$link")" in "${toolboxDir}/hermes/skills/"*) ;; *) continue ;; esac
-          case " $* " in *" $(basename "$link") "*) ;; *) rm "$link" ;; esac
+          case " $* " in *" ''${link#"$dir"/} "*) ;; *) rm "$link" ;; esac
         done
       }
 

@@ -13,7 +13,8 @@ metadata:
 
 # Hacker News
 
-Two commands. Run them with the `terminal` tool; they are not tools themselves.
+Two commands, already on `PATH`. Run them with the `terminal` tool exactly as
+shown: no `python3` in front and no directory. They are not tools themselves.
 
 ```bash
 hn-search.py "<query>"                                          # stories: points, comments, thread link
