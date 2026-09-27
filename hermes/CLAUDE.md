@@ -191,7 +191,12 @@ The rules:
   If a bot must be unable to use a tool, that needs a terminal restriction, which
   nothing here provides.
 
-`tests/test_hermes_skills.py` fails if a skill runs a script that is not in `bin/`.
+- **No bare colon in a frontmatter value.** `description: Look it up: a summary`
+  is invalid YAML, and Hermes drops the skill without a word: it is missing from
+  `hermes skills list`, and the bot improvises with `curl`.
+
+`tests/test_hermes_skills.py` fails if a skill runs a script that is not in
+`bin/`, or has a frontmatter value with a bare colon.
 
 ## The librarian's review gate
 
