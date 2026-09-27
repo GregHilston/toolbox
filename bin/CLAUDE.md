@@ -57,7 +57,8 @@ a new terminal.
 ### Hermes can run these
 
 Scripts here are the tools both Hermes agents run, so write agent tools here rather
-than in `home-lab/hermes/scripts/`.
+than in `home-lab/hermes/scripts/`. A bot uses one only if a skill it has been
+granted names it: `hermes/CLAUDE.md` → Capability skills.
 
 - **moria** needs nothing: its gateway's `PATH` includes `bin/`.
 - **dungeon** mounts `bin/` read-only at `/toolbox/bin`, but Hermes resets the

@@ -149,6 +149,28 @@ kanban board, and an approvals system. See the root `CLAUDE.md`.
 **Agent tools are scripts in `bin/`**, shared by every machine and both Hermes
 deployments. `bin/CLAUDE.md` has the conventions and the one step dungeon needs.
 
+## Capability skills: which bot knows which tool
+
+A script on `PATH` is not enough: a bot that is not told about it never reaches
+for it. Asked about Reddit, the default profile tried DuckDuckGo and gave up
+after 4.5 minutes. A skill is what tells a bot, and it is also the unit a profile
+is granted:
+
+- **One skill per capability**, in `skills/<capability>/SKILL.md` (`reddit`,
+  `hacker-news`). It names the commands, says to run them with `terminal`, and
+  says what not to use instead. Keep them small so granting one grants only it.
+- **Grants are per profile.** moria: `botSkills` and `defaultSkills` in
+  `nixos/modules/programs/tui/hermes.nix`. dungeon: one read-only mount per skill
+  on the `hermes` service in home-lab's `docker-compose.yaml`. The researcher and
+  the default profiles get research skills; the builder does not.
+- **SOULs name no tools.** They carry one line, "check your skills before
+  searching the web", which stays true as skills are added.
+- **A grant is advice, not a fence.** Every bot can still run anything on `PATH`.
+  If a bot must be unable to use a tool, that needs a terminal restriction, which
+  nothing here provides.
+
+`tests/test_hermes_skills.py` fails if a skill runs a script that is not in `bin/`.
+
 ## The librarian's review gate
 
 `skills/llm-wiki-review/` is Wanderloots' free Review Companion v1.0.0 from
