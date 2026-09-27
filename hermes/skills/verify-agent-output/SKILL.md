@@ -1,10 +1,7 @@
 ---
 name: verify-agent-output
 description: "Review an agent's tree with deterministic checks first: clean-tree install, diff, output profile, dead-symbol sweep. Use before judging any code an agent wrote."
-version: 1.0.0
-author: Greg Hilston
 license: MIT
-platforms: [macos, linux]
 metadata:
   hermes:
     tags: [code-review, verification, data-quality, agent-output, gates]

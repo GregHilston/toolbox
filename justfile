@@ -25,7 +25,7 @@ setup-claude:
     }
 
     link_repo "$repo/claude-commands"             "$HOME/.claude/commands"
-    link_repo "$repo/claude-skills"               "$HOME/.claude/skills"
+    link_repo "$repo/skills"                      "$HOME/.claude/skills"
     link_repo "$repo/dot/claude/.claude/CLAUDE.md"     "$HOME/.claude/CLAUDE.md"
     link_repo "$repo/dot/claude/.claude/settings.json" "$HOME/.claude/settings.json"
 
