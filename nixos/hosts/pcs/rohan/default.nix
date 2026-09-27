@@ -169,16 +169,13 @@
       # stow + `just secrets` instead (they need the 1Password api key).
       custom.programs.pi = {
         enable = true;
-        defaultModel = "Qwen3.6-27B-8bit";
+        # dungeon's one model: home-lab docs/local-llms.md
+        defaultModel = "Qwen3.6-35B-A3B-4bit:lab";
         omlxBaseUrl = "http://${vars.networking.hosts.dungeon.lan}:8000/v1";
         models = [
           {
-            id = "Qwen3.6-27B-8bit";
-            name = "Qwen 3.6 27B 8-bit (thinking, 262k ctx, balanced)";
-          }
-          {
-            id = "Qwen3.6-27B-4bit";
-            name = "Qwen 3.6 27B 4-bit (thinking, 262k ctx, fast)";
+            id = "Qwen3.6-35B-A3B-4bit:lab";
+            name = "Qwen 3.6 35B A3B 4-bit (MoE, vision, thinking off: dungeon's one model)";
           }
         ];
       };
