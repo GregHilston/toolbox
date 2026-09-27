@@ -59,6 +59,7 @@ in {
       }
 
       link_repo "${toolboxDir}/hermes/config.yaml" "${hermesDir}/config.yaml"
+      link_repo "${toolboxDir}/hermes/SOUL.md"     "${hermesDir}/SOUL.md"
       link_repo "${toolboxDir}/hermes/hooks"       "${hermesDir}/hooks"
 
       # Our own skills go in each BOT's own skills/ directory, not the global
