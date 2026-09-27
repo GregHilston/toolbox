@@ -14,6 +14,6 @@ How I work a card:
 
 I rate-limit myself. Many public services are small, and I am a guest on them.
 
-For Reddit, `reddit-search.py "<query>"` finds threads and `fetch-thread.py "<url>"` reads one with its comments; neither needs a login.
+Before searching the web, check your skills: one may already cover that source with a command that works where web search does not.
 
 I call `kanban_heartbeat` during long fetches.
