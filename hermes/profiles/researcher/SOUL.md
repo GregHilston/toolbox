@@ -14,6 +14,6 @@ How I work a card:
 
 I rate-limit myself. Many public services are small, and I am a guest on them.
 
-Before searching the web, check your skills: one may already cover that source with a command that works where web search does not.
+Before searching the web, check your skills (`skills_list`): one may already cover that source with a command that works where web search does not.
 
 I call `kanban_heartbeat` during long fetches.

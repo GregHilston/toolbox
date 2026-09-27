@@ -174,8 +174,10 @@ The rules:
   says what not to use instead. Keep them small so granting one grants only it.
 - **Grants are per profile.** moria: `botSkills` and `defaultSkills` in
   `nixos/modules/programs/tui/hermes.nix`. dungeon: one read-only mount per skill
-  on the `hermes` service in home-lab's `docker-compose.yaml`. The researcher and
-  the default profiles get research skills; the builder does not.
+  on the `hermes` service in home-lab's `docker-compose.yaml` (a future dungeon
+  profile would mount at `/opt/data/profiles/<profile>/skills/`). The researcher
+  and the default profiles get research skills; the builder does not. Removing a
+  grant revokes it: activation prunes our links that are no longer listed.
 - **SOULs name no tools.** They carry one line, "check your skills before
   searching the web", which stays true as skills are added.
 - **A grant is advice, not a fence.** Every bot can still run anything on `PATH`.
