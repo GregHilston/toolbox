@@ -43,6 +43,8 @@
     "lab-tools/wikipedia"
     "lab-tools/steam-game"
     "lab-tools/read-page"
+    "lab-tools/youtube-transcript"
+    "lab-tools/home-assistant"
   ];
 in {
   options.custom.programs.hermes.enable =
