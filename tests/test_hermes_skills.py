@@ -32,7 +32,7 @@ def commands(skill_md: str) -> set[str]:
 
 class TestSkillCommands(unittest.TestCase):
     def test_every_command_is_a_bin_script(self):
-        for skill in sorted(SKILLS.glob("*/SKILL.md")):
+        for skill in sorted(SKILLS.glob("**/SKILL.md")):
             for name in commands(skill.read_text()):
                 with self.subTest(skill=skill.parent.name, command=name):
                     script = BIN / name
@@ -42,14 +42,21 @@ class TestSkillCommands(unittest.TestCase):
     def test_every_grant_names_a_skill(self):
         # The only `name = [ ... ];` lines are the botSkills entries and defaultSkills.
         lists = re.findall(r"^\s+[A-Za-z]+ = \[(.*?)\];$", HERMES_NIX.read_text(), re.M)
-        grants = re.findall(r'"([\w-]+)"', " ".join(lists))
-        self.assertIn("reddit", grants, "the grant parser found nothing")
+        grants = re.findall(r'"([\w/-]+)"', " ".join(lists))
+        self.assertIn("lab-tools/reddit", grants, "the grant parser found nothing")
         for name in set(grants):
             with self.subTest(skill=name):
                 self.assertTrue((SKILLS / name / "SKILL.md").exists(), f"hermes.nix grants {name}, which has no hermes/skills/{name}/SKILL.md")
 
     def test_the_reddit_skill_is_checked(self):
-        self.assertEqual(commands((SKILLS / "reddit" / "SKILL.md").read_text()), {"reddit-search.py", "fetch-thread.py"})
+        self.assertEqual(commands((SKILLS / "lab-tools" / "reddit" / "SKILL.md").read_text()), {"reddit-search.py", "fetch-thread.py"})
+
+    def test_capability_skills_have_a_category(self):
+        # Uncategorised, "reddit" is indexed as "reddit:" / "- reddit", and Gemma
+        # joined those into a tool name, "reddit:reddit".
+        for skill in SKILLS.glob("lab-tools/*/SKILL.md"):
+            self.assertEqual(skill.parent.parent.name, "lab-tools")
+        self.assertFalse((SKILLS / "reddit").exists(), "capability skills go under lab-tools/")
 
 
 if __name__ == "__main__":
