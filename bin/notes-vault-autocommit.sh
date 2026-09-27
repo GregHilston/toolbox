@@ -13,8 +13,8 @@
 #   * Fast no-op when the working tree is clean (cheap `git status` guard).
 #   * roger index is best-effort: if oMLX is down or errors, still commit the
 #     note changes so nothing is lost.
-#   * Reads the oMLX API key from the gitignored roger/.env.local and forces the
-#     light gemma-4 E4B model for fast summarisation.
+#   * Reads the oMLX API key from the gitignored roger/.env.local and uses
+#     dungeon's one model (home-lab docs/local-llms.md).
 set -uo pipefail
 
 NOTES="${HOME}/Git/notes"
@@ -30,7 +30,7 @@ if [ -d "$ROGER" ] && command -v uv >/dev/null 2>&1; then
     set -a
     [ -f .env.local ] && . ./.env.local
     set +a
-    ROGER_MODEL="openai:gemma-4-e4b-it-qat-4bit" uv run roger index
+    ROGER_MODEL="openai:Qwen3.6-35B-A3B-4bit:lab" uv run roger index
   ) >/dev/null 2>&1 || true
 fi
 
