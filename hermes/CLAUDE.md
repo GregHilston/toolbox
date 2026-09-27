@@ -151,10 +151,23 @@ deployments. `bin/CLAUDE.md` has the conventions and the one step dungeon needs.
 
 ## Capability skills: which bot knows which tool
 
-A script on `PATH` is not enough: a bot that is not told about it never reaches
-for it. Asked about Reddit, the default profile tried DuckDuckGo and gave up
-after 4.5 minutes. A skill is what tells a bot, and it is also the unit a profile
-is granted:
+**This is the one way to give a bot a tool.** A script in `bin/` does the work;
+a skill in `skills/<capability>/` tells the bots that were granted it how to
+call the script. Don't put tool logic in a skill, a SOUL, a Hermes plugin or
+`home-lab/hermes/scripts/`.
+
+Why:
+
+- **Portable.** The scripts are the functionality, and they run from any shell,
+  Claude Code and pi included. Leaving Hermes loses only the thin skill files.
+- **A bot must be told.** A script on `PATH` is not enough: asked about Reddit,
+  the default profile tried DuckDuckGo and gave up after 4.5 minutes.
+- **Granular.** A skill is the unit a profile is granted, so the researcher can
+  know about Reddit while the builder does not.
+- **Cheap.** Only a skill's one-line description sits in every prompt; its body
+  loads when the bot needs it.
+
+The rules:
 
 - **One skill per capability**, in `skills/<capability>/SKILL.md` (`reddit`,
   `hacker-news`). It names the commands, says to run them with `terminal`, and
