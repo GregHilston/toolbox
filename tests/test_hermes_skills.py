@@ -51,12 +51,17 @@ class TestSkillCommands(unittest.TestCase):
     def test_the_reddit_skill_is_checked(self):
         self.assertEqual(commands((SKILLS / "lab-tools" / "reddit" / "SKILL.md").read_text()), {"reddit-search.py", "fetch-thread.py"})
 
-    def test_capability_skills_have_a_category(self):
+    def test_new_skills_have_a_category(self):
         # Uncategorised, "reddit" is indexed as "reddit:" / "- reddit", and Gemma
         # joined those into a tool name, "reddit:reddit".
-        for skill in SKILLS.glob("lab-tools/*/SKILL.md"):
-            self.assertEqual(skill.parent.parent.name, "lab-tools")
-        self.assertFalse((SKILLS / "reddit").exists(), "capability skills go under lab-tools/")
+        flat = {p.parent.name for p in SKILLS.glob("*/SKILL.md")}
+        self.assertEqual(flat, {"verify-agent-output", "llm-wiki-review"}, "put new skills under lab-tools/")
+
+    def test_grants_are_at_most_one_level_deep(self):
+        # prune_skills in hermes.nix looks one level down; deeper grants never revoke.
+        lists = re.findall(r"^\s+[A-Za-z]+ = \[(.*?)\];$", HERMES_NIX.read_text(), re.M)
+        for name in re.findall(r'"([\w/-]+)"', " ".join(lists)):
+            self.assertLessEqual(name.count("/"), 1, name)
 
 
 if __name__ == "__main__":
