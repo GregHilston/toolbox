@@ -29,18 +29,34 @@ PROTON = {"tier": "platinum", "total": 751, "confidence": "strong", "trendingTie
 
 class TestSteamGame(unittest.TestCase):
     def test_an_id_or_store_url_skips_search(self):
-        self.assertEqual(steam.find("1145360", "us"), (1145360, []))
-        self.assertEqual(steam.find("https://store.steampowered.com/app/1145360/Hades/", "us")[0], 1145360)
+        with mock.patch.object(steam, "details", return_value=HADES) as details, \
+             mock.patch.object(steam, "search") as search:
+            self.assertEqual(steam.lookup("1145360", "us")[0], 1145360)
+            self.assertEqual(steam.lookup("https://store.steampowered.com/app/1145360/Hades/", "us")[0], 1145360)
+        search.assert_not_called()
+        self.assertEqual(details.call_count, 2)
+
+    def test_an_all_digit_name_falls_back_to_search(self):
+        # "140" is a game called 140, not app 140.
+        with mock.patch.object(steam, "details", side_effect=[steam.SteamError("no page"), HADES]), \
+             mock.patch.object(steam, "search", return_value=(242820, [])):
+            self.assertEqual(steam.lookup("140", "us")[0], 242820)
+
+    def test_a_failing_side_source_is_left_out(self):
+        def down(_appid):
+            raise steam.URLError("403 from Cloudflare")
+        self.assertEqual(steam.optional(down, 1), {})
+        self.assertIn("ProtonDB: no reports", steam.format_game(1, HADES, REVIEWS, DECK, {}, []))
 
     def test_an_exact_name_beats_relevance(self):
         items = {"items": [{"type": "app", "id": 2, "name": "Hades II"}, {"type": "app", "id": 1, "name": "Hades"}]}
         with mock.patch.object(steam, "_get", return_value=items):
-            self.assertEqual(steam.find("hades", "us"), (1, [{"id": 2, "name": "Hades II"}]))
+            self.assertEqual(steam.search("hades", "us"), (1, [{"id": 2, "name": "Hades II"}]))
 
     def test_no_match_says_so(self):
         with mock.patch.object(steam, "_get", return_value={"items": []}):
             with self.assertRaisesRegex(steam.SteamError, "no Steam game"):
-                steam.find("zzz", "us")
+                steam.search("zzz", "us")
 
     def test_details_are_keyed_by_whatever_id_steam_chooses(self):
         with mock.patch.object(steam, "_get", return_value={"1206340": {"success": True, "data": HADES}}):
@@ -56,7 +72,7 @@ class TestSteamGame(unittest.TestCase):
             self.assertIn(line, out)
 
     def test_missing_ratings_read_as_missing(self):
-        out = steam.format_game(1, {**HADES, "price_overview": None, "metacritic": None}, {}, {}, None, [])
+        out = steam.format_game(1, {**HADES, "price_overview": None, "metacritic": None}, {}, {}, {}, [])
         for line in ("Price: not for sale", "Steam reviews: none yet", "Steam Deck: Unknown", "ProtonDB: no reports"):
             self.assertIn(line, out)
 

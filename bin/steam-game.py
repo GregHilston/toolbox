@@ -7,7 +7,7 @@
 
 Keyless, but unofficial: the store's own storesearch, appdetails, appreviews and
 Deck-compatibility endpoints, plus ProtonDB's summary file. They have been
-stable for years; a KeyError here means one of them changed shape.
+stable for years; a KeyError here means the store's JSON changed.
 
 Usage:
     steam-game.py "hades"
@@ -50,16 +50,27 @@ def _get(url: str) -> dict | None:
         raise
 
 
-def find(query: str, country: str) -> tuple[int, list[dict]]:
+def search(query: str, country: str) -> tuple[int, list[dict]]:
     """(appid, other matches). An exact name wins over Steam's relevance order."""
-    if m := re.fullmatch(r"\d+|.*store\.steampowered\.com/app/(\d+).*", query.strip()):
-        return int(m.group(1) or m.group(0)), []
     items = (_get(f"{STORE}/api/storesearch/?" + urlencode({"term": query, "cc": country, "l": "en"})) or {}).get("items") or []
     apps = [{"id": i["id"], "name": i["name"]} for i in items if i.get("type") == "app"]
     if not apps:
         raise SteamError(f'no Steam game matches "{query}"')
     best = next((a for a in apps if a["name"].casefold() == query.strip().casefold()), apps[0])
     return best["id"], [a for a in apps if a is not best]
+
+
+def lookup(query: str, country: str) -> tuple[int, dict, list[dict]]:
+    """(appid, store details, other matches) for a name, an app id or a store URL."""
+    if m := re.search(r"store\.steampowered\.com/app/(\d+)", query):
+        return int(m.group(1)), details(int(m.group(1)), country), []
+    if query.strip().isdigit():
+        try:
+            return int(query), details(int(query), country), []
+        except SteamError:
+            pass  # "140" and "2048" are also game names
+    appid, others = search(query, country)
+    return appid, details(appid, country), others
 
 
 def details(appid: int, country: str) -> dict:
@@ -69,6 +80,14 @@ def details(appid: int, country: str) -> dict:
     if not entry.get("success"):
         raise SteamError(f"Steam has no store page for app {appid}")
     return entry["data"]
+
+
+def optional(fetch, appid: int) -> dict:
+    """A side source that is down must not sink the store answer."""
+    try:
+        return fetch(appid) or {}
+    except (URLError, TimeoutError, ValueError):
+        return {}
 
 
 def reviews(appid: int) -> dict:
@@ -81,7 +100,7 @@ def deck(appid: int) -> dict:
     return (_get(f"{STORE}/saleaction/ajaxgetdeckappcompatibilityreport?{q}") or {}).get("results") or {}
 
 
-def protondb(appid: int) -> dict | None:
+def protondb(appid: int) -> dict:
     return _get(PROTONDB.format(appid))
 
 
@@ -90,7 +109,7 @@ def _caveat(token: str) -> str:
     return words[:1] + words[1:].lower()
 
 
-def format_game(appid: int, d: dict, r: dict, dk: dict, pdb: dict | None, others: list[dict]) -> str:
+def format_game(appid: int, d: dict, r: dict, dk: dict, pdb: dict, others: list[dict]) -> str:
     lines = [f"# {d['name']} (app {appid})", f"{STORE}/app/{appid}", ""]
     release = d.get("release_date") or {}
     meta = [", ".join(d.get("developers") or []),
@@ -121,9 +140,9 @@ def format_game(appid: int, d: dict, r: dict, dk: dict, pdb: dict | None, others
                  + (f" (notes: {'; '.join(caveats)})" if caveats else ""))
     lines.append(f"SteamOS: {STEAMOS.get(dk.get('steamos_resolved_category', 0), 'Unknown')}")
     lines.append(f"Native Linux build: {'yes' if (d.get('platforms') or {}).get('linux') else 'no'}")
-    if pdb:
-        lines.append(f"ProtonDB: {pdb['tier'].title()} ({pdb['total']} reports, {pdb['confidence']} confidence,"
-                     f" trending {pdb['trendingTier'].title()})")
+    if pdb.get("tier"):
+        lines.append(f"ProtonDB: {pdb['tier'].title()} ({pdb.get('total', '?')} reports,"
+                     f" {pdb.get('confidence', 'unknown')} confidence, trending {pdb.get('trendingTier', '?').title()})")
     else:
         lines.append("ProtonDB: no reports")
 
@@ -138,8 +157,8 @@ def main() -> None:
     parser.add_argument("--country", default="us", help="store country for prices (default: us)")
     args = parser.parse_args()
     try:
-        appid, others = find(args.game, args.country)
-        print(format_game(appid, details(appid, args.country), reviews(appid), deck(appid), protondb(appid), others))
+        appid, store, others = lookup(args.game, args.country)
+        print(format_game(appid, store, optional(reviews, appid), optional(deck, appid), optional(protondb, appid), others))
     except SteamError as e:
         sys.exit(f"steam-game: {e}")
     except (URLError, TimeoutError, KeyError, ValueError) as e:
