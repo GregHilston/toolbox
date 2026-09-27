@@ -48,6 +48,13 @@ class TestSkillCommands(unittest.TestCase):
             with self.subTest(skill=name):
                 self.assertTrue((SKILLS / name / "SKILL.md").exists(), f"hermes.nix grants {name}, which has no hermes/skills/{name}/SKILL.md")
 
+    def test_every_config_puts_toolbox_on_the_terminal_path(self):
+        # The launchd gateway's bash never reads .zshrc, and a profile never reads
+        # the root config, so each one must source terminal-env.sh itself.
+        for config in [REPO / "hermes" / "config.yaml", *sorted((REPO / "hermes" / "profiles").glob("*/config.yaml"))]:
+            with self.subTest(config=str(config.relative_to(REPO))):
+                self.assertIn("~/Git/toolbox/hermes/terminal-env.sh", config.read_text())
+
     def test_the_reddit_skill_is_checked(self):
         self.assertEqual(commands((SKILLS / "lab-tools" / "reddit" / "SKILL.md").read_text()), {"reddit-search.py", "fetch-thread.py"})
 
