@@ -11,15 +11,15 @@ OMLX_LOG="${OMLX_LOG:-$HOME/Library/Logs/omlx.log}"
 mkdir -p "$TEXTFILE_DIR"
 OUT="$TEXTFILE_DIR/memory.prom"
 TMP="$OUT.$$"
+trap 'rm -f "$TMP"' EXIT
 
 vm="$(vm_stat)"
 page="$(printf '%s\n' "$vm" | sed -n 's/.*page size of \([0-9]*\) bytes.*/\1/p')"
 count() { printf '%s\n' "$vm" | awk -v k="$1" '$0 ~ "^"k":" {gsub(/\./, "", $NF); print $NF}'; }
 swapins=$(( $(count Swapins) * page ))
 swapouts=$(( $(count Swapouts) * page ))
-# 1 normal, 2 warning, 4 critical.
 level="$(sysctl -n kern.memorystatus_vm_pressure_level)"
-free_pct="$(memory_pressure -Q 2>/dev/null | sed -n 's/.*percentage: \([0-9]*\)%.*/\1/p')"
+free_pct="$(memory_pressure -Q 2>/dev/null | sed -n 's/.*percentage: \([0-9]*\)%.*/\1/p' || true)"
 throttled=0
 [ -f "$OMLX_LOG" ] && throttled="$(grep -c adaptive_prefill_throttle "$OMLX_LOG" || true)"
 
