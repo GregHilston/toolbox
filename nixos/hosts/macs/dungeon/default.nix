@@ -448,13 +448,11 @@ in {
     };
   };
 
-  # Deploy oMLX with dungeon-specific settings. 4 GB hot cache: with Gemma 26B and Frigate's
-  # vision model resident (18 GB of weights) an 8 GB cache pushed the box into swap and oMLX
-  # into prefill throttling (2026-09-04); Hermes' stable ~13k-token system prompt still fits.
+  # 2 GB: RAM goes to the model (home-lab docs/local-llms.md)
   # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
     enable = true;
-    cacheSize = "4GB";
+    cacheSize = "2GB";
   };
 
   # Dungeon-specific activation: clamshell-sleep prevention and NFS mount points.
@@ -591,12 +589,8 @@ in {
   home-manager.users.${vars.user.name}.custom.programs.pi = {
     searxngBaseUrl = lib.mkForce "http://localhost:8214";
 
-    # The darwin/home.nix default is the 35B-A3B, whose 19GB of weights does
-    # not fit this host's ~27GB Metal ceiling beside Docker + Frigate once KV
-    # cache is added (the 15GB gemma-4-26b-a4b already trips
-    # prefill_memory_exceeded here). The 9B is the strongest model that does
-    # fit; its entry in dot/omlx/.omlx/model_settings.json has the numbers.
-    defaultModel = lib.mkForce "Qwen3.5-9B-MLX-4bit";
+    # dungeon's one model: home-lab docs/local-llms.md
+    defaultModel = lib.mkForce "Qwen3.6-35B-A3B-4bit:lab";
   };
 
   # Engine. Run in AUTO mode: Frigate ships the yolov9 model over ZMQ on connect.

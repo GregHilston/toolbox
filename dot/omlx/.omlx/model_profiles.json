@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "profiles": {
+    "Qwen3.6-35B-A3B-4bit": {
+      "lab": {
+        "name": "lab",
+        "display_name": "Lab (thinking off)",
+        "api_name": "lab",
+        "expose_as_model": true,
+        "description": "dungeon's one model for Hermes, hermes-ops, Old Gregg and Frigate (home-lab docs/local-llms.md). Thinking off: Frigate sends no max_tokens, so a thinking model reasons until its 120 s timeout. Sampling is the DWQ entry's, which the skill test was measured under. A profile, not a copy: it resolves to the loaded base model, so there is no second load.",
+        "created_at": "2026-09-27T00:00:00+00:00",
+        "updated_at": "2026-09-27T00:00:00+00:00",
+        "settings": {
+          "enable_thinking": false,
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0,
+          "presence_penalty": 0.0,
+          "max_context_window": 65536
+        },
+        "source_template": null
+      }
+    }
+  }
+}

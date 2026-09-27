@@ -18,6 +18,14 @@
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
+          "id": "Qwen3.6-35B-A3B-4bit:lab",
+          "name": "Qwen 3.6 35B A3B 4-bit, thinking off (dungeon's one model)",
+          "contextWindow": 65536,
+          "maxTokens": 32768,
+          "input": ["text", "image"],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
           "id": "Qwen3.6-35B-A3B-4bit-DWQ",
           "name": "Qwen 3.6 35B A3B 4-bit DWQ (MoE, 104 t/s, quality-leaning)",
           "contextWindow": 262144,
@@ -43,7 +51,7 @@
         },
         {
           "id": "Qwen3.5-9B-MLX-4bit",
-          "name": "Qwen 3.5 9B 4-bit (dense, dungeon DEFAULT: fits beside Docker + Frigate)",
+          "name": "Qwen 3.5 9B 4-bit (dense, small)",
           "contextWindow": 131072,
           "maxTokens": 32768,
           "input": ["text"],
