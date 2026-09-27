@@ -60,6 +60,17 @@ class TestSkillCommands(unittest.TestCase):
             with self.subTest(config=str(config.relative_to(REPO))):
                 self.assertIn("~/Git/toolbox/hermes/terminal-env.sh", config.read_text())
 
+    def test_frontmatter_values_have_no_bare_colon(self):
+        # YAML reads "key: a: b" as a nested mapping and fails, and Hermes then
+        # drops the whole skill without a word. The wikipedia skill did this.
+        for skill in sorted(SKILLS.glob("**/SKILL.md")):
+            front = skill.read_text().split("---")[1]
+            for line in front.splitlines():
+                key, _, value = line.partition(": ")
+                with self.subTest(skill=skill.parent.name, key=key.strip()):
+                    if value and not value.startswith(("'", '"', "[", "{")):
+                        self.assertNotIn(": ", value, "quote this value, or reword it without a colon")
+
     def test_the_reddit_skill_is_checked(self):
         self.assertEqual(commands((SKILLS / "lab-tools" / "reddit" / "SKILL.md").read_text()), {"reddit-search.py", "fetch-thread.py"})
 

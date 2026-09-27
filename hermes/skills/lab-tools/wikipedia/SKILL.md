@@ -1,6 +1,6 @@
 ---
 name: wikipedia
-description: Look things up on Wikipedia: an article's summary, or a list of matching articles. Use for facts about people, places, things and events.
+description: Look things up on Wikipedia, as an article's summary or a list of matching articles. Use for facts about people, places, things and events.
 version: 1.0.0
 author: Greg Hilston
 license: MIT
