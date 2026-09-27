@@ -63,6 +63,20 @@ class TestWeather(unittest.TestCase):
         self.assertIn("Sat Jan 10: Snow, high 21°F, low 4°F, 80% chance, 0.31 in", out)
         self.assertIn("Sun Jan 11: Unknown, high 25°F, low 9°F, dry", out)
 
+    def test_the_json_keys_the_digest_reads(self):
+        # home-lab's digest/weather.py parses these; renaming one drops its weather card.
+        day = {"date", "high_f", "low_f", "precip_in", "precip_chance", "summary", "icon"}
+        self.assertLessEqual({"location", "yesterday", "days", "hours"}, set(self.w))
+        self.assertLessEqual(day, set(self.w["yesterday"]))
+        self.assertLessEqual(day, set(self.w["days"][0]))
+        self.assertLessEqual({"time", "temp_f", "precip_chance", "precip_in", "icon"}, set(self.w["hours"][0]))
+
+    def test_uk_means_great_britain(self):
+        london = {"results": [{"name": "London", "admin1": "Ontario", "country": "Canada", "country_code": "CA", "latitude": 1, "longitude": 1},
+                              {"name": "London", "admin1": "England", "country": "United Kingdom", "country_code": "GB", "latitude": 2, "longitude": 2}]}
+        with mock.patch.object(weather, "_get", return_value=london):
+            self.assertEqual(weather.geocode("London, UK")[0], "London, England, United Kingdom")
+
     def test_a_state_abbreviation_picks_the_right_town(self):
         with mock.patch.object(weather, "_get", return_value=BURLINGTONS):
             self.assertEqual(weather.geocode("Burlington, VT")[0], "Burlington, Vermont, United States")

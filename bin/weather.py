@@ -95,6 +95,8 @@ def geocode(place: str) -> tuple[str, float, float]:
     name, _, qualifier = (s.strip() for s in place.partition(","))
     # Both readings: "CA" is California and Canada.
     wanted = {qualifier.lower(), STATES.get(qualifier.upper(), "").replace("_", " ").lower()} - {""}
+    if "uk" in wanted:
+        wanted.add("gb")  # Open-Meteo's code for the UK
     hits = _get(GEOCODE, {"name": name, "count": 10}).get("results") or []
     if wanted:
         hits = [

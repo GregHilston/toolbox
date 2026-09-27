@@ -25,7 +25,7 @@ class TestKeylessLive(unittest.TestCase):
         self.assertIn("Vermont", label, "geocoding lost admin1, or its ranking moved")
         w = weather.parse(weather.fetch(lat, lon, 2), label)
         self.assertEqual(len(w["days"]), 2)
-        self.assertEqual(len(w["hours"]), 24, "hourly rows no longer line up with today")
+        self.assertIn(len(w["hours"]), (23, 24, 25), "hourly rows no longer line up with today")
 
     def test_wikipedia(self):
         found, _ = wiki.lookup("steam deck")
@@ -33,9 +33,9 @@ class TestKeylessLive(unittest.TestCase):
         self.assertTrue(found["extract"])
 
     def test_steam(self):
-        appid, _ = steam.find("Hades", "us")
+        appid, store, _ = steam.lookup("Hades", "us")
         self.assertEqual(appid, 1145360)
-        self.assertEqual(steam.details(appid, "us")["name"], "Hades")
+        self.assertEqual(store["name"], "Hades")
         self.assertTrue(steam.reviews(appid).get("total_reviews"), "appreviews lost query_summary")
         self.assertEqual(steam.deck(appid).get("resolved_category"), 3, "the Deck report changed shape")
         self.assertTrue(steam.protondb(appid), "ProtonDB's summary file moved")
