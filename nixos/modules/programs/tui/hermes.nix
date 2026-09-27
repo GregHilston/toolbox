@@ -60,6 +60,17 @@ in {
         fi
       }
 
+      # prune_skills DIR GRANTED... -- drop our skill links no longer granted, so
+      # removing a grant revokes it. Hermes' own skills are never touched.
+      prune_skills() {
+        dir=$1; shift
+        for link in "$dir"/*; do
+          [ -L "$link" ] || continue
+          case "$(readlink "$link")" in "${toolboxDir}/hermes/skills/"*) ;; *) continue ;; esac
+          case " $* " in *" $(basename "$link") "*) ;; *) rm "$link" ;; esac
+        done
+      }
+
       link_repo "${toolboxDir}/hermes/config.yaml" "${hermesDir}/config.yaml"
       link_repo "${toolboxDir}/hermes/SOUL.md"     "${hermesDir}/SOUL.md"
       link_repo "${toolboxDir}/hermes/hooks"       "${hermesDir}/hooks"
@@ -77,6 +88,7 @@ in {
             link_repo "${toolboxDir}/hermes/profiles/${bot}/SOUL.md"     "${profilesDir}/${bot}/SOUL.md"
           link_repo "${toolboxDir}/hermes/profiles/${bot}/config.yaml" "${profilesDir}/${bot}/config.yaml"
           mkdir -p "${profilesDir}/${bot}/skills"
+          prune_skills "${profilesDir}/${bot}/skills" ${lib.concatStringsSep " " botSkills.${bot}}
           ${lib.concatMapStringsSep "\n          " (skill: ''
               link_repo "${toolboxDir}/hermes/skills/${skill}" "${profilesDir}/${bot}/skills/${skill}"
             '')
@@ -84,6 +96,8 @@ in {
         '')
         bots}
 
+      mkdir -p "${hermesDir}/skills"
+      prune_skills "${hermesDir}/skills" ${lib.concatStringsSep " " defaultSkills}
       ${lib.concatMapStringsSep "\n      " (skill: ''
           link_repo "${toolboxDir}/hermes/skills/${skill}" "${hermesDir}/skills/${skill}"
         '')
