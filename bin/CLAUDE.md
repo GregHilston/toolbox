@@ -21,7 +21,10 @@ This causes scripts to fail fast on errors (`set -e`), undefined variables (`set
 - Kebab-case filenames for executables (`.sh`/`.py`); use snake_case only for
   Python modules that other scripts `import` (hyphens aren't importable) — e.g.
   `fetch_hn.py` / `_thread_converters.py`, imported by `fetch-thread.py`
-- A one-line comment near the top explaining what the script does
+- A header block comment: one line saying what the script does, then a
+  short paragraph for the non-obvious parts (why this approach, what breaks it).
+  Keep it to a few lines; `-h` carries the full usage.
+- Bash for simple or terminal-heavy scripts; Python once there is real logic
 - Bash scripts: strict mode header (see above)
 - Python scripts: shebang + [PEP 723](https://peps.python.org/pep-0723/) inline metadata:
 
@@ -50,6 +53,21 @@ a new terminal.
 1. Create the script in this directory (or a subdirectory for grouped tools)
 2. Make it executable (`chmod +x`)
 3. Optionally add a convenience alias in `dot/zsh/.zshrc`
+
+### Hermes can run these
+
+Scripts here are the tools both Hermes agents run, so write agent tools here rather
+than in `home-lab/hermes/scripts/`.
+
+- **moria** needs nothing: its gateway's `PATH` includes `bin/`.
+- **dungeon** mounts `bin/` read-only at `/toolbox/bin`, but Hermes resets the
+  tool `PATH` to `/usr/local/bin:/usr/bin:/bin`. Add the script's name to the
+  symlink loop in `home-lab/hermes/Dockerfile`, then
+  `docker compose up -d --build hermes`.
+
+For an agent tool, prefer the standard library (a PEP 723 dependency makes `uv`
+download it inside dungeon's container), print plain text, and make each error
+say what broke.
 
 ### Tests
 
