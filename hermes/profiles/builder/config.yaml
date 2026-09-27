@@ -19,6 +19,7 @@ model:
 # there is 23 KB heavier than from anywhere else, for instructions written to
 # Claude Code about a repo this bot has no business editing.
 terminal:
+  shell_init_files: ["~/Git/toolbox/hermes/terminal-env.sh"]  # toolbox/bin on PATH; see the file
   cwd: "${HOME}/Git/agent-runs/workspace"
 
 # The judge for this bot's Kanban goal loops. The root's `auxiliary` block does
