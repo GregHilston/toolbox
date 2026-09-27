@@ -30,6 +30,8 @@ cannot be honoured. Say so; do not look for another way.
 `homeassistant.json.tpl` (token `Infra/Hermes/hass_token_pi_harness`, one token per
 consumer so it can be revoked alone). The endpoint is `https://home-assistant.grehg2.xyz`,
 so the machine must be on the tailnet. `HA_URL` / `HA_BEARER` override the file.
+On dungeon's Hermes, home-lab's `hermes/cont-init/05-ha-config` writes the file from
+`hermes/secrets/.env` at container start; a restart picks up a changed token.
 
 ## Tool mapping
 
