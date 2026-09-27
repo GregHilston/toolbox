@@ -11,9 +11,9 @@ actuate a device.
     ha-state.py <domain>        one domain, e.g. lock, binary_sensor, climate
     ha-state.py <entity_id>     one entity with its attributes
 
-Endpoint and token come from HA_URL / HA_BEARER, else ~/.pi/agent/homeassistant.json
-(rendered by `just secrets` in toolbox/nixos). The same script, in bash, serves Hermes:
-home-lab/hermes/scripts/ha-state.sh.
+Endpoint and token come from HA_URL / HA_BEARER, else ~/.pi/agent/homeassistant.json:
+rendered by `just secrets` in toolbox/nixos, and on dungeon's Hermes by home-lab's
+hermes/cont-init/05-ha-config.
 """
 from __future__ import annotations
 
