@@ -282,6 +282,20 @@ Runtime state, so none of it is in git.
   a SOUL or skill change, send `/new` in Telegram, or the bot won't see it. One
   chat ran from 2026-09-22 and scraped DuckDuckGo for Reddit instead of using
   the reddit skill. `hermes gateway restart` does not start a new session.
+- **The gateway's terminal does not see toolbox's `PATH`.** launchd starts the
+  gateway with no `$SHELL`, so Hermes runs a bash login shell, which never reads
+  `.zshrc`. Every toolbox script was "command not found" from Telegram, while
+  `hermes -z` in a terminal worked, because it inherited zsh. So
+  `terminal.shell_init_files` sources `terminal-env.sh` in the root config and in
+  every profile with its own `terminal:` block. A profile without one does not
+  inherit the root's. Test with the gateway's environment, not your shell's:
+
+  ```bash
+  P=$(plutil -extract EnvironmentVariables.PATH raw ~/Library/LaunchAgents/ai.hermes.gateway.plist)
+  cd ~/.hermes && env -i HOME=$HOME PATH="$P" HERMES_HOME=$HOME/.hermes \
+    ~/.hermes/hermes-agent/venv/bin/python -m hermes_cli.main -p <bot> -z \
+    'Use the terminal tool to run: command -v reddit-search.py'
+  ```
 - **`${VAR}` in `config.yaml` resolves against the profile's own `.env`, not
   your shell.** `api_key: ${OMLX_API_KEY}` with the key only in
   `nixos/secrets/.env` means every model call goes out keyless and oMLX answers

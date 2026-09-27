@@ -60,7 +60,8 @@ Scripts here are the tools both Hermes agents run, so write agent tools here rat
 than in `home-lab/hermes/scripts/`. A bot uses one only if a skill it has been
 granted names it: `hermes/CLAUDE.md` → Capability skills.
 
-- **moria** needs nothing: its gateway's `PATH` includes `bin/`.
+- **moria** puts `bin/` on the tool `PATH` through `hermes/terminal-env.sh`
+  (`terminal.shell_init_files`). The gateway's own `PATH` is not enough.
 - **dungeon** needs a `docker restart hermes`. It mounts `bin/` at `/toolbox/bin`,
   and Hermes resets the tool `PATH` to `/usr/local/bin:/usr/bin:/bin`, so
   `home-lab/hermes/cont-init/04-toolbox-path` links every top-level executable
