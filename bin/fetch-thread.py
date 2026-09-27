@@ -39,7 +39,7 @@ try:
     from _thread_converters import detect_thread_type
 except ImportError as e:
     print(f"Error: Could not import converters: {e}", file=sys.stderr)
-    print("Make sure fetch-hn.py, fetch-reddit.py, and _thread_converters.py are in the same directory.", file=sys.stderr)
+    print("Make sure fetch_hn.py, fetch_reddit.py, and _thread_converters.py are in the same directory.", file=sys.stderr)
     sys.exit(1)
 
 
@@ -119,6 +119,13 @@ def build_parser() -> argparse.ArgumentParser:
         default="markdown",
         help="Output format: markdown (default) or json",
     )
+    parser.add_argument(
+        "-n",
+        "--limit",
+        type=int,
+        default=25,
+        help="Reddit only: max comments (default: 25; each 25 more costs requests and ~10 kB)",
+    )
     return parser
 
 
@@ -155,7 +162,7 @@ def main() -> None:
         if platform == "hn":
             result = convert_hn(source, args.format)
         elif platform == "reddit":
-            result = convert_reddit(source, args.format)
+            result = convert_reddit(source, args.format, args.limit)
         else:
             raise ValueError(f"Unknown platform: {platform}")
 

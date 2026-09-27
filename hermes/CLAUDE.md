@@ -146,6 +146,9 @@ bot, a run loop, a scorer, a preflight — has been deleted, because Hermes ship
 a Docker terminal backend, native Telegram and eighteen other transports, the
 kanban board, and an approvals system. See the root `CLAUDE.md`.
 
+**Agent tools are scripts in `bin/`**, shared by every machine and both Hermes
+deployments. `bin/CLAUDE.md` has the conventions and the one step dungeon needs.
+
 ## The librarian's review gate
 
 `skills/llm-wiki-review/` is Wanderloots' free Review Companion v1.0.0 from

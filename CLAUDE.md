@@ -371,17 +371,13 @@ detailed event stream the whole time.
 or Hacker News thread as markdown (`--format json` for JSON). `-h` has the full
 reference for both.
 
-**Reddit needs auth** — it has required it on `.json` endpoints since mid-2026. Both
-tools read the same cookie as pi's reddit tools; a 403 means logging in to reddit.com
-**in Firefox** and running `bin/reddit-cookie-sync.sh`. See `dot/pi/CLAUDE.md`.
-
-**Reddit's JSON search is dead, which is why `reddit-search.py` scrapes
-old.reddit.com instead.** `search.json` does not fail — it answers HTTP 200 with an
-empty `children` array, so callers just see "no results". That silently takes out
-pi's `reddit_search`, `reddit_pack` and `reddit_trends`, which call the same
-endpoint. `reddit-cookie-sync.sh` still reports OK because it probes a *listing*
-endpoint, so a healthy cookie is not evidence that search works. Listing endpoints
-and thread permalinks are unaffected.
+**Reddit needs no login.** Both go through `bin/fetch_reddit.py`, which reads
+Reddit's `/svc/shreddit/` HTML partials; its docstring says why. The thread's post
+text comes from RSS, which is tightly rate-limited, so a busy run can
+return comments with the post text missing, and says so.
+`tests/test_fetch_reddit_live.py` (opt-in, `REDDIT_LIVE=1`) is the check that
+Reddit has changed something. `reddit-cookie-sync.sh` now serves only pi's
+`reddit_*` tools.
 
 ## Local Diff & PR Viewers — diff2html & difit
 
