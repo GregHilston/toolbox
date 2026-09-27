@@ -1,11 +1,14 @@
-"""Every command a Hermes skill tells the agent to run must exist in bin/.
+"""Hermes skills name real scripts, and every grant names a real skill.
 
-A renamed script otherwise leaves the skill advertising a command that
-answers "not found", and the agent falls back to web search.
+A renamed script leaves a skill advertising a command that answers "not
+found"; a typo in a grant links nothing and says nothing. Dungeon links every
+bin/ script onto the agent's PATH at start (home-lab hermes/cont-init), so
+existing here is enough there too.
 """
 
 from __future__ import annotations
 
+import os
 import re
 import unittest
 from pathlib import Path
@@ -13,6 +16,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 SKILLS = REPO / "hermes" / "skills"
 BIN = REPO / "bin"
+HERMES_NIX = REPO / "nixos" / "modules" / "programs" / "tui" / "hermes.nix"
 
 
 def commands(skill_md: str) -> set[str]:
@@ -31,7 +35,18 @@ class TestSkillCommands(unittest.TestCase):
         for skill in sorted(SKILLS.glob("*/SKILL.md")):
             for name in commands(skill.read_text()):
                 with self.subTest(skill=skill.parent.name, command=name):
-                    self.assertTrue((BIN / name).exists(), f"{skill.parent.name} runs {name}, which is not in bin/")
+                    script = BIN / name
+                    self.assertTrue(script.exists(), f"{skill.parent.name} runs {name}, which is not in bin/")
+                    self.assertTrue(os.access(script, os.X_OK), f"bin/{name} is not executable")
+
+    def test_every_grant_names_a_skill(self):
+        # The only `name = [ ... ];` lines are the botSkills entries and defaultSkills.
+        lists = re.findall(r"^\s+[A-Za-z]+ = \[(.*?)\];$", HERMES_NIX.read_text(), re.M)
+        grants = re.findall(r'"([\w-]+)"', " ".join(lists))
+        self.assertIn("reddit", grants, "the grant parser found nothing")
+        for name in set(grants):
+            with self.subTest(skill=name):
+                self.assertTrue((SKILLS / name / "SKILL.md").exists(), f"hermes.nix grants {name}, which has no hermes/skills/{name}/SKILL.md")
 
     def test_the_reddit_skill_is_checked(self):
         self.assertEqual(commands((SKILLS / "reddit" / "SKILL.md").read_text()), {"reddit-search.py", "fetch-thread.py"})
