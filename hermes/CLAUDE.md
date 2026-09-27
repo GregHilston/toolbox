@@ -287,8 +287,10 @@ Runtime state, so none of it is in git.
   `.zshrc`. Every toolbox script was "command not found" from Telegram, while
   `hermes -z` in a terminal worked, because it inherited zsh. So
   `terminal.shell_init_files` sources `terminal-env.sh` in the root config and in
-  every profile with its own `terminal:` block. A profile without one does not
-  inherit the root's. Test with the gateway's environment, not your shell's:
+  every profile's config: a profile never reads the root's.
+  `tests/test_hermes_skills.py` checks each one. Test with the gateway's
+  environment, not your shell's (drop `-p <bot>` for the default profile, which
+  is the one Telegram reaches):
 
   ```bash
   P=$(plutil -extract EnvironmentVariables.PATH raw ~/Library/LaunchAgents/ai.hermes.gateway.plist)
