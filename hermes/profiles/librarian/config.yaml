@@ -12,6 +12,7 @@ model:
 
 # Relative paths in write_file/patch resolve here, and the gate assumes so.
 terminal:
+  shell_init_files: ["~/Git/toolbox/hermes/terminal-env.sh"]  # toolbox/bin on PATH; see the file
   cwd: "${HOME}/Git/notes/wiki"
 
 hooks_auto_accept: true

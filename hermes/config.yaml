@@ -123,6 +123,7 @@ compression:
   hygiene_timeout_seconds: 300
 
 terminal:
+  shell_init_files: ["~/Git/toolbox/hermes/terminal-env.sh"]  # toolbox/bin on PATH; see the file
   # NOTE the premise below is now stale: the image it argues from was deleted
   # with the container harness, and a clean build resolves from the uv cache on
   # the host instead. Measured 2026-09-22: `installs-from-clean.sh` over

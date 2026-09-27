@@ -26,6 +26,7 @@ model:
 # work is not a reviewer, and the Bot Mode walkthrough names this as the thing
 # to test with a harmless file before trusting a run.
 terminal:
+  shell_init_files: ["~/Git/toolbox/hermes/terminal-env.sh"]  # toolbox/bin on PATH; see the file
   cwd: "${HOME}/Git/agent-runs/workspace"
 
 agent:

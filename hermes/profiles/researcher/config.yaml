@@ -12,6 +12,9 @@ model:
   api_key: ${MODEL_API_KEY}
   request_timeout_seconds: 1800
 
+terminal:
+  shell_init_files: ["~/Git/toolbox/hermes/terminal-env.sh"]  # toolbox/bin on PATH; see the file
+
 hooks_auto_accept: true
 hooks:
   pre_tool_call:
