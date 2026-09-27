@@ -96,7 +96,8 @@ in {
         # the merge meant "unchanged — left running" while the running server
         # held a stale context bound, which the harness then disagreed with.
         MODEL_STAMP="$OMLX_DIR/.model_settings.sha"
-        MODEL_NOW="$(shasum -a 256 "$TOOLBOX/omlx/.omlx/model_settings.json" 2>/dev/null | cut -d" " -f1)"
+        # oMLX reads profiles only at startup.
+        MODEL_NOW="$(cat "$TOOLBOX/omlx/.omlx/model_settings.json" "$TOOLBOX/omlx/.omlx/model_profiles.json" 2>/dev/null | shasum -a 256 | cut -d" " -f1)"
         MODEL_WAS="$(cat "$MODEL_STAMP" 2>/dev/null || true)"
 
         OMLX_SVC="gui/$(id -u ${user})/org.nixos.omlx"
