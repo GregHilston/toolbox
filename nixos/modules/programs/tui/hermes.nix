@@ -16,12 +16,14 @@
   # tree, so these are linked individually — see the activation script.
   botSkills = {
     builder = ["verify-agent-output"];
-    researcher = ["verify-agent-output"];
+    researcher = ["verify-agent-output" "reddit" "hacker-news"];
     orchestrator = ["verify-agent-output"];
     reviewer = ["verify-agent-output"];
     librarian = ["llm-wiki-review"];
   };
   bots = lib.attrNames botSkills;
+  # The default profile (CLI, Telegram) reads ~/.hermes/skills/ directly.
+  defaultSkills = ["reddit" "hacker-news"];
 in {
   options.custom.programs.hermes.enable =
     lib.mkEnableOption "Hermes bot profiles symlinked from the toolbox repo";
@@ -81,6 +83,11 @@ in {
             botSkills.${bot}}
         '')
         bots}
+
+      ${lib.concatMapStringsSep "\n      " (skill: ''
+          link_repo "${toolboxDir}/hermes/skills/${skill}" "${hermesDir}/skills/${skill}"
+        '')
+        defaultSkills}
 
       # llm-wiki-review wraps the bundled llm-wiki and loads it by name, and a
       # bot sees only its own skills/. Linked from Hermes' copy, so updates land.
