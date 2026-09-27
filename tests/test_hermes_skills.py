@@ -30,6 +30,13 @@ def commands(skill_md: str) -> set[str]:
     return found
 
 
+def granted() -> list[str]:
+    """Every skill named in hermes.nix's botSkills entries and defaultSkills."""
+    # The only `name = [ ... ];` lists are those; one may span several lines.
+    lists = re.findall(r"^\s+[A-Za-z]+ = \[(.*?)\];$", HERMES_NIX.read_text(), re.M | re.S)
+    return re.findall(r'"([\w/-]+)"', " ".join(lists))
+
+
 class TestSkillCommands(unittest.TestCase):
     def test_every_command_is_a_bin_script(self):
         for skill in sorted(SKILLS.glob("**/SKILL.md")):
@@ -40,9 +47,7 @@ class TestSkillCommands(unittest.TestCase):
                     self.assertTrue(os.access(script, os.X_OK), f"bin/{name} is not executable")
 
     def test_every_grant_names_a_skill(self):
-        # The only `name = [ ... ];` lines are the botSkills entries and defaultSkills.
-        lists = re.findall(r"^\s+[A-Za-z]+ = \[(.*?)\];$", HERMES_NIX.read_text(), re.M)
-        grants = re.findall(r'"([\w/-]+)"', " ".join(lists))
+        grants = granted()
         self.assertIn("lab-tools/reddit", grants, "the grant parser found nothing")
         for name in set(grants):
             with self.subTest(skill=name):
@@ -55,6 +60,17 @@ class TestSkillCommands(unittest.TestCase):
             with self.subTest(config=str(config.relative_to(REPO))):
                 self.assertIn("~/Git/toolbox/hermes/terminal-env.sh", config.read_text())
 
+    def test_frontmatter_values_have_no_bare_colon(self):
+        # YAML reads "key: a: b" as a nested mapping and fails, and Hermes then
+        # drops the whole skill without a word. The wikipedia skill did this.
+        for skill in sorted(SKILLS.glob("**/SKILL.md")):
+            front = skill.read_text().split("---")[1]
+            for line in front.splitlines():
+                key, _, value = line.partition(": ")
+                with self.subTest(skill=skill.parent.name, key=key.strip()):
+                    if value and not value.startswith(("'", '"', "[", "{")):
+                        self.assertNotIn(": ", value, "quote this value, or reword it without a colon")
+
     def test_the_reddit_skill_is_checked(self):
         self.assertEqual(commands((SKILLS / "lab-tools" / "reddit" / "SKILL.md").read_text()), {"reddit-search.py", "fetch-thread.py"})
 
@@ -66,8 +82,7 @@ class TestSkillCommands(unittest.TestCase):
 
     def test_grants_are_at_most_one_level_deep(self):
         # prune_skills in hermes.nix looks one level down; deeper grants never revoke.
-        lists = re.findall(r"^\s+[A-Za-z]+ = \[(.*?)\];$", HERMES_NIX.read_text(), re.M)
-        for name in re.findall(r'"([\w/-]+)"', " ".join(lists)):
+        for name in granted():
             self.assertLessEqual(name.count("/"), 1, name)
 
 
