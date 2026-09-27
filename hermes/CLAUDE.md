@@ -169,9 +169,12 @@ Why:
 
 The rules:
 
-- **One skill per capability**, in `skills/<capability>/SKILL.md` (`reddit`,
-  `hacker-news`). It names the commands, says to run them with `terminal`, and
-  says what not to use instead. Keep them small so granting one grants only it.
+- **One skill per capability**, in `skills/lab-tools/<capability>/SKILL.md`
+  (`reddit`, `hacker-news`), granted as `lab-tools/<capability>`. The category
+  directory is load-bearing: Hermes lists an uncategorised skill as `reddit:` then
+  `- reddit`, and Gemma called the tool `reddit:reddit`. It names the commands, says to run them with `terminal`, and
+  says what not to use instead, and that the command is on `PATH` and typed exactly:
+  otherwise Gemma prefixes `python3 /opt/data/scripts/`. Keep them small so granting one grants only it.
 - **Grants are per profile.** moria: `botSkills` and `defaultSkills` in
   `nixos/modules/programs/tui/hermes.nix`. dungeon: one read-only mount per skill
   on the `hermes` service in home-lab's `docker-compose.yaml` (a future dungeon
