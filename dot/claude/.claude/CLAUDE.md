@@ -81,7 +81,7 @@ Two steps, both in `~/Git/toolbox/bin`:
    Works for Hacker News too.
 
 No login, cookie or key: both go through Reddit's own `/svc/shreddit/` HTML
-partials, because old.reddit.com and every `.json` endpoint are login-walled.
+partials, because old.reddit.com redirects to a login page and `.json` answers 403.
 `bin/fetch_reddit.py` explains the details. If they break,
 `REDDIT_LIVE=1 python3 -m unittest test_fetch_reddit_live` in `toolbox/tests/`
 says what Reddit changed. pi's `reddit_*` tools use the old endpoints and are

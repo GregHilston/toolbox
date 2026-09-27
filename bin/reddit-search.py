@@ -60,7 +60,7 @@ def main() -> None:
 
     subreddits = [s.removeprefix("r/").strip("/") for s in args.subreddit]
     try:
-        # Reddit's partial rejects a multireddit, so search each sub on its own.
+        # A multireddit (a+b) returns no results, so search each sub on its own.
         posts = [p for sub in subreddits or [""] for p in search(args.query, sub, args.sort, args.period, args.limit)]
     except RedditError as e:
         sys.exit(f"reddit-search: {e}")

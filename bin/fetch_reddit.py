@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Search Reddit and read threads without a login, cookie or API key.
 
-old.reddit.com and every .json endpoint are login-walled. The HTML partials
+old.reddit.com redirects to a login page and the .json endpoints answer 403. The HTML partials
 Reddit's own web UI lazy-loads (/svc/shreddit/) are not, given a browser
 User-Agent. Parsing them breaks when Reddit changes its markup;
 tests/test_fetch_reddit_live.py is the check that notices.
@@ -88,7 +88,7 @@ def get(path: str, form: dict | None = None) -> str:
     if "/login" in final:
         raise RedditError(
             f"{path} redirected to the login page: Reddit has login-walled it, "
-            "as it did old.reddit.com in 2026-08."
+            "as it did old.reddit.com."
         )
     return body
 
@@ -257,8 +257,8 @@ def fetch_thread(post_id: str, subreddit: str, limit: int = 50) -> tuple[Post, l
 
     Branches Reddit folds behind "more replies" are not expanded.
     """
-    # No shreddit partial serves a post by id, and RSS allows ~1 request a
-    # minute, so the comments must not depend on it.
+    # No shreddit partial serves a post by id, and RSS is tightly
+    # rate-limited, so the comments must not depend on it.
     try:
         post = parse_post_rss(get(f"/r/{subreddit}/comments/{post_id}/.rss?limit=1"), subreddit, post_id)
     except RedditError as e:

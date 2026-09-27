@@ -47,7 +47,7 @@ class TestRedditLive(unittest.TestCase):
             post = fr.parse_post_rss(fr.get(f"/r/{SUB}/comments/{POST}/.rss?limit=1"), SUB, POST)
         except fr.RedditError as e:
             if "429" in str(e):
-                self.skipTest("RSS is rate-limited to ~1 request a minute; retry shortly")
+                self.skipTest("RSS is rate-limited; retry in a minute")
             raise
         self.assertTrue(post.title and post.body, "the thread feed lost its title or content")
 

@@ -373,7 +373,7 @@ reference for both.
 
 **Reddit needs no login.** Both go through `bin/fetch_reddit.py`, which reads
 Reddit's `/svc/shreddit/` HTML partials; its docstring says why. The thread's post
-text comes from RSS, which allows about one request a minute, so a busy run can
+text comes from RSS, which is tightly rate-limited, so a busy run can
 return comments with the post text missing, and says so.
 `tests/test_fetch_reddit_live.py` (opt-in, `REDDIT_LIVE=1`) is the check that
 Reddit has changed something. `reddit-cookie-sync.sh` now serves only pi's
