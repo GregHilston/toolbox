@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from dataclasses import asdict
 
 from fetch_reddit import Post, RedditError, search
@@ -32,7 +33,8 @@ def format_markdown(posts: list[Post], query: str, subreddits: list[str], sort: 
         return "\n".join(lines + ["_No results._"])
     for i, p in enumerate(posts, 1):
         lines.append(f"{i}. **{p.title}**")
-        lines.append(f"   r/{p.subreddit} · {p.score} votes · {p.comments} comments · {p.created[:10]} · u/{p.author}")
+        votes, comments = (x if x is not None else "?" for x in (p.score, p.comments))
+        lines.append(f"   r/{p.subreddit} · {votes} votes · {comments} comments · {p.created[:10]} · u/{p.author}")
         lines.append(f"   {p.url}")
         if p.snippet:
             lines.append(f"   > {p.snippet}")
@@ -61,7 +63,11 @@ def main() -> None:
     subreddits = [s.removeprefix("r/").strip("/") for s in args.subreddit]
     try:
         # A multireddit (a+b) returns no results, so search each sub on its own.
-        posts = [p for sub in subreddits or [""] for p in search(args.query, sub, args.sort, args.period, args.limit)]
+        posts = []
+        for i, sub in enumerate(subreddits or [""]):
+            if i:
+                time.sleep(1)
+            posts += search(args.query, sub, args.sort, args.period, args.limit)
     except RedditError as e:
         sys.exit(f"reddit-search: {e}")
 
