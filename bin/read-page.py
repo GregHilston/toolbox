@@ -19,12 +19,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import shutil
 import subprocess
 import sys
 import urllib.request
 from urllib.error import URLError
+from urllib.parse import urlparse
 
 DEFUDDLE_VERSION = "0.19.4"
 JINA = "https://r.jina.ai/"
@@ -67,9 +69,20 @@ def jina(url: str) -> tuple[str, str] | None:
     return (title, body) if len(body) >= MIN_CHARS else None
 
 
+def public(url: str) -> bool:
+    """Whether a third party may be sent this URL."""
+    host = urlparse(url).hostname or ""
+    try:
+        return ipaddress.ip_address(host).is_global
+    except ValueError:
+        return "." in host and not host.endswith((".local", ".internal", ".lan", ".home.arpa"))
+
+
 def read(url: str) -> tuple[str, str, str]:
     """(title, markdown, extractor). Raises when neither extractor gets real text."""
-    for name, extract in (("defuddle", defuddle), ("jina", jina)):
+    # Jina is a third party: lab hosts and their tokens stay here.
+    extractors = (("defuddle", defuddle), ("jina", jina)) if public(url) else (("defuddle", defuddle),)
+    for name, extract in extractors:
         if got := extract(url):
             return (*got, name)
     raise LookupError(
