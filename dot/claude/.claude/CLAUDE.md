@@ -80,16 +80,12 @@ Two steps, both in `~/Git/toolbox/bin`:
 2. **`fetch-thread.py <url>`** — prints one thread's post + threaded comments.
    Works for Hacker News too.
 
-**Do not use Reddit's `search.json`, and do not trust pi's `reddit_search`,
-`reddit_pack` or `reddit_trends`.** That endpoint answers HTTP 200 with an empty
-`children` array rather than failing, so everything built on it silently returns
-nothing. `reddit-search.py` exists because of this: it scrapes old.reddit.com's HTML
-search, which still works and still carries score, comment count, author, date and a
-body snippet. Listing endpoints and thread permalinks were never affected.
-
-`reddit-cookie-sync.sh` reports OK regardless, because it probes a *listing* — a
-healthy cookie is not evidence that search works. A 403 (rather than empty results)
-*is* the cookie: log into reddit.com **in Firefox**, then run that script.
+No login, cookie or key: both go through Reddit's own `/svc/shreddit/` HTML
+partials, because old.reddit.com and every `.json` endpoint are login-walled.
+`bin/fetch_reddit.py` explains the details. If they break,
+`REDDIT_LIVE=1 python3 -m unittest test_fetch_reddit_live` in `toolbox/tests/`
+says what Reddit changed. pi's `reddit_*` tools use the old endpoints and are
+unreliable.
 
 **Don't reach for `searxngr` to find Reddit threads.** It was the old workaround and
 it no longer earns its place — the self-hosted instance's egress IP is blocked by
