@@ -35,6 +35,28 @@ class TestNoAiAttribution(unittest.TestCase):
             self.assertEqual(run("gh pr create --title t --body-file body.md", cwd=d), 2)
             self.assertEqual(run("gh pr edit 7 --body-file=body.md", cwd=d), 2)
 
+    def test_a_trailer_as_its_own_argument_is_blocked(self):
+        self.assertEqual(run(f'git commit -m "fix" -m "{TRAILER}"'), 2)
+        self.assertEqual(run(f'git commit -m fix --trailer "{TRAILER}"'), 2)
+        self.assertEqual(run(f'git commit -m fix --trailer="{TRAILER}"'), 2)
+
+    def test_other_github_writes_are_checked(self):
+        self.assertEqual(run(f'gh pr merge 7 --squash --body "x\n\n{TRAILER}"'), 2)
+        self.assertEqual(run(f'gh pr review 7 --comment --body "{FOOTER}"'), 2)
+        self.assertEqual(run(f'gh release create v1 --notes "{FOOTER}"'), 2)
+        self.assertEqual(run(f'gh api repos/o/r/pulls -f body="{FOOTER}"'), 2)
+
+    def test_every_way_of_naming_a_message_file_is_read(self):
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "msg").write_text(f"fix: x\n\n{TRAILER}\n")
+            self.assertEqual(run("git commit -Fmsg", cwd=d), 2)
+            self.assertEqual(run('git commit -m "$(cat msg)"', cwd=d), 2)
+            self.assertEqual(run("git commit -F msg && echo \"don't", cwd=d), 2, "an unmatched quote")
+
+    def test_a_directory_named_as_a_file_is_skipped(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(run("git commit -F .", cwd=d), 0)
+
     def test_clean_writes_pass(self):
         self.assertEqual(run('git commit -m "fix: x"'), 0)
         with tempfile.TemporaryDirectory() as d:
@@ -51,8 +73,11 @@ class TestNoAiAttribution(unittest.TestCase):
             self.assertEqual(run("gh pr create --title t --body-file body.md", cwd=d), 0)
 
     def test_bad_input_never_blocks(self):
-        result = subprocess.run([sys.executable, str(HOOK)], input="not json", text=True, capture_output=True)
-        self.assertEqual(result.returncode, 0)
+        for payload in ("not json", "[]", '{"tool_input": "x"}', "{}"):
+            with self.subTest(payload=payload):
+                result = subprocess.run([sys.executable, str(HOOK)], input=payload, text=True, capture_output=True)
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(result.stderr, "", "no traceback noise")
 
 
 if __name__ == "__main__":
