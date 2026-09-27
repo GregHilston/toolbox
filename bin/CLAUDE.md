@@ -57,13 +57,15 @@ a new terminal.
 ### Hermes can run these
 
 Scripts here are the tools both Hermes agents run, so write agent tools here rather
-than in `home-lab/hermes/scripts/`.
+than in `home-lab/hermes/scripts/`. A bot uses one only if a skill it has been
+granted names it: `hermes/CLAUDE.md` → Capability skills.
 
 - **moria** needs nothing: its gateway's `PATH` includes `bin/`.
-- **dungeon** mounts `bin/` read-only at `/toolbox/bin`, but Hermes resets the
-  tool `PATH` to `/usr/local/bin:/usr/bin:/bin`. Add the script's name to the
-  symlink loop in `home-lab/hermes/Dockerfile`, then
-  `docker compose up -d --build hermes`.
+- **dungeon** needs a `docker restart hermes`. It mounts `bin/` at `/toolbox/bin`,
+  and Hermes resets the tool `PATH` to `/usr/local/bin:/usr/bin:/bin`, so
+  `home-lab/hermes/cont-init/04-toolbox-path` links every top-level executable
+  here into `/usr/local/bin` on each start. Scripts in subdirectories are not
+  linked.
 
 For an agent tool, prefer the standard library (a PEP 723 dependency makes `uv`
 download it inside dungeon's container), print plain text, and make each error

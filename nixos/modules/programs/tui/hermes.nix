@@ -16,12 +16,14 @@
   # tree, so these are linked individually — see the activation script.
   botSkills = {
     builder = ["verify-agent-output"];
-    researcher = ["verify-agent-output"];
+    researcher = ["verify-agent-output" "reddit" "hacker-news"];
     orchestrator = ["verify-agent-output"];
     reviewer = ["verify-agent-output"];
     librarian = ["llm-wiki-review"];
   };
   bots = lib.attrNames botSkills;
+  # The default profile (CLI, Telegram) reads ~/.hermes/skills/ directly.
+  defaultSkills = ["reddit" "hacker-news"];
 in {
   options.custom.programs.hermes.enable =
     lib.mkEnableOption "Hermes bot profiles symlinked from the toolbox repo";
@@ -58,6 +60,17 @@ in {
         fi
       }
 
+      # prune_skills DIR GRANTED... -- drop our skill links no longer granted, so
+      # removing a grant revokes it. Hermes' own skills are never touched.
+      prune_skills() {
+        dir=$1; shift
+        for link in "$dir"/*; do
+          [ -L "$link" ] || continue
+          case "$(readlink "$link")" in "${toolboxDir}/hermes/skills/"*) ;; *) continue ;; esac
+          case " $* " in *" $(basename "$link") "*) ;; *) rm "$link" ;; esac
+        done
+      }
+
       link_repo "${toolboxDir}/hermes/config.yaml" "${hermesDir}/config.yaml"
       link_repo "${toolboxDir}/hermes/SOUL.md"     "${hermesDir}/SOUL.md"
       link_repo "${toolboxDir}/hermes/hooks"       "${hermesDir}/hooks"
@@ -75,12 +88,20 @@ in {
             link_repo "${toolboxDir}/hermes/profiles/${bot}/SOUL.md"     "${profilesDir}/${bot}/SOUL.md"
           link_repo "${toolboxDir}/hermes/profiles/${bot}/config.yaml" "${profilesDir}/${bot}/config.yaml"
           mkdir -p "${profilesDir}/${bot}/skills"
+          prune_skills "${profilesDir}/${bot}/skills" ${lib.concatStringsSep " " botSkills.${bot}}
           ${lib.concatMapStringsSep "\n          " (skill: ''
               link_repo "${toolboxDir}/hermes/skills/${skill}" "${profilesDir}/${bot}/skills/${skill}"
             '')
             botSkills.${bot}}
         '')
         bots}
+
+      mkdir -p "${hermesDir}/skills"
+      prune_skills "${hermesDir}/skills" ${lib.concatStringsSep " " defaultSkills}
+      ${lib.concatMapStringsSep "\n      " (skill: ''
+          link_repo "${toolboxDir}/hermes/skills/${skill}" "${hermesDir}/skills/${skill}"
+        '')
+        defaultSkills}
 
       # llm-wiki-review wraps the bundled llm-wiki and loads it by name, and a
       # bot sees only its own skills/. Linked from Hermes' copy, so updates land.
