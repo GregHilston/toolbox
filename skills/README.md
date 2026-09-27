@@ -12,7 +12,8 @@ harness's own directory, unless only one harness could ever use it.
 - **Frontmatter:** `name` must equal the directory name: lowercase, digits and
   hyphens. `description` is at most 1024 characters, and it is the only part
   loaded on every request. Say what the skill does and when to use it. Optional
-  fields: `license`, `compatibility`, `metadata` (string values), `allowed-tools`,
+  fields: `license`, `compatibility`, `metadata` (string values; Hermes-only
+  skills may nest), `allowed-tools`,
   and the Claude Code extensions `disable-model-invocation`, `argument-hint`,
   `model` and `disallowed-tools`, which pi ignores. Nothing else.
 - **No bare colon in a frontmatter value.** `description: Look it up: a summary`
@@ -51,7 +52,7 @@ text out, and errors that say what broke.
 | Harness | Gets | Where it is set |
 |---|---|---|
 | Claude Code | every skill here | `~/.claude/skills` → `skills/` (`nixos/modules/programs/tui/claude.nix`) |
-| pi | every skill here except claude.ai's `synced/` | `skills` setting in `nixos/modules/programs/tui/pi.nix` |
+| pi | every skill here except claude.ai's `synced/` | `skills` setting in `nixos/modules/programs/tui/pi.nix`: the exclusion must be an absolute path, because pi's globs skip `.claude` |
 | Hermes on moria | per profile, by grant | `botSkills` and `defaultSkills` in `nixos/modules/programs/tui/hermes.nix` |
 | Hermes on dungeon | per mount | the `hermes` service in home-lab's `docker-compose.yaml` |
 

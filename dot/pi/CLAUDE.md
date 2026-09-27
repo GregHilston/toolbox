@@ -853,8 +853,8 @@ pi -p 'Use the reddit_search tool to search Reddit for "nixos flakes". Report th
 
 ## Skills — shared with Claude Code, not duplicated
 
-`custom.programs.pi.settings` (`pi.nix`) sets `skills = ["~/.claude/skills" "!**/synced/**"]`
-(`synced/` is claude.ai's, for Claude only),
+`custom.programs.pi.settings` (`pi.nix`) reads `~/.claude/skills` minus claude.ai's `synced/`
+(the exclusion is an absolute path: pi's globs skip `.claude`),
 so pi reads the exact same `skills/` directory Claude Code does (`~/.claude/skills`
 → `skills/`, per the root `CLAUDE.md`). Pi implements the same Agent Skills
 standard Claude Code does, and documents this exact cross-harness mechanism
@@ -862,7 +862,7 @@ standard Claude Code does, and documents this exact cross-harness mechanism
 `.pi/agent/skills/` copy to keep in sync.
 
 Every discoverable skill's description is in the system prompt on every
-request, in both harnesses — the eight in `skills/` measured 1,296
+request, in both harnesses — the eight then in `skills/` measured 1,296
 tokens before the trim. Skills you invoke by name (grill-me, simple-english,
 the review and planning ones) carry `disable-model-invocation: true`, which
 both pi (`docs/skills.md`) and Claude Code read the same way: not in the

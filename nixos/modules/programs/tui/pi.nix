@@ -263,8 +263,12 @@ in {
         # without restarting, so the local model stays the default everywhere.
         enabledModels = ["omlx/*"] ++ lib.optionals cfg.deepseek ["deepseek/*"];
 
-        # The shared skills (skills/README.md). synced/ is claude.ai's, for Claude only.
-        skills = ["${config.home.homeDirectory}/.claude/skills" "!**/synced/**"];
+        # synced/ is claude.ai's; pi can't use it.
+        # Absolute: pi's globs skip dot-directories like .claude.
+        skills = [
+          "${config.home.homeDirectory}/.claude/skills"
+          "!${config.home.homeDirectory}/.claude/skills/synced/**"
+        ];
 
         # pi-powerline-footer. This file is a read-only /nix/store symlink, so
         # its `/powerline` and `/vibe` slash commands cannot persist a change —

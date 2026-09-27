@@ -28,7 +28,7 @@
     librarian = ["llm-wiki-review"];
   };
   bots = lib.attrNames botSkills;
-  # lab-tools/<name> is the shared skills/<name>; the rest are Hermes-only.
+  # lab-tools/<name> links shared skills/<name>.
   skillSource = skill:
     if lib.hasPrefix "lab-tools/" skill
     then "${toolboxDir}/skills/${lib.removePrefix "lab-tools/" skill}"

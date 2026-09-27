@@ -5,7 +5,9 @@ description: Read live Home Assistant state — is a door locked, is anything op
 
 # Home Assistant (read-only)
 
-One script, on `$PATH` from toolbox `bin/`:
+One command, already on `PATH`. Run it in your shell (the `terminal` tool in
+Hermes, Bash in Claude Code, `bash` in pi) exactly as shown: no `python3` in
+front and no directory. It is not a tool itself.
 
 ```bash
 ha-state.py                     # every entity: id, state, friendly name (200 lines max)

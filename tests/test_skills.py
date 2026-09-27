@@ -20,7 +20,7 @@ HERMES_ONLY = REPO / "hermes" / "skills"
 BIN = REPO / "bin"
 HERMES_NIX = REPO / "nixos" / "modules" / "programs" / "tui" / "hermes.nix"
 
-# agentskills.io's fields, plus the Claude Code extensions pi also tolerates.
+# agentskills.io plus Claude extensions pi tolerates.
 ALLOWED_KEYS = {
     "name", "description", "license", "compatibility", "metadata", "allowed-tools",
     "disable-model-invocation", "argument-hint", "model", "disallowed-tools",
@@ -39,10 +39,10 @@ def frontmatter(skill_md: str) -> dict[str, str]:
     fields: dict[str, str] = {}
     key = None
     for line in front.splitlines():
-        if m := re.match(r"^([A-Za-z-]+):\s?(.*)$", line):
+        if m := re.match(r"^([A-Za-z0-9_-]+):\s?(.*)$", line):
             key, fields[key] = m.group(1), m.group(2)
         elif key and line.startswith(" "):
-            fields[key] = (fields[key].lstrip("|>").strip() + " " + line.strip()).strip()
+            fields[key] = (fields[key].lstrip("|>-+").strip() + " " + line.strip()).strip()
     return fields
 
 
@@ -92,7 +92,7 @@ class TestSkills(unittest.TestCase):
                 key, _, value = line.partition(": ")
                 with self.subTest(skill=skill.parent.name, key=key.strip()):
                     if value and not line.startswith(" ") and not value.startswith(("'", '"', "[", "{", "|", ">")):
-                        self.assertNotIn(": ", value, "quote this value, or reword it without a colon")
+                        self.assertFalse(": " in value or value.endswith(":"), "quote this value, or reword it without a colon")
 
     def test_skills_are_one_level_deep(self):
         # Claude Code loads only ~/.claude/skills/<name>/SKILL.md.
