@@ -16,7 +16,13 @@
   # tree, so these are linked individually — see the activation script.
   botSkills = {
     builder = ["verify-agent-output"];
-    researcher = ["verify-agent-output" "lab-tools/reddit" "lab-tools/hacker-news"];
+    researcher = [
+      "verify-agent-output"
+      "lab-tools/reddit"
+      "lab-tools/hacker-news"
+      "lab-tools/wikipedia"
+      "lab-tools/read-page"
+    ];
     orchestrator = ["verify-agent-output"];
     reviewer = ["verify-agent-output"];
     librarian = ["llm-wiki-review"];
@@ -25,7 +31,14 @@
   # The default profile (CLI, Telegram) reads ~/.hermes/skills/ directly.
   # Capability skills sit under lab-tools/: a skill with no category is listed
   # as "reddit:" then "- reddit", and Gemma called that "reddit:reddit".
-  defaultSkills = ["lab-tools/reddit" "lab-tools/hacker-news"];
+  defaultSkills = [
+    "lab-tools/reddit"
+    "lab-tools/hacker-news"
+    "lab-tools/weather"
+    "lab-tools/wikipedia"
+    "lab-tools/steam-game"
+    "lab-tools/read-page"
+  ];
 in {
   options.custom.programs.hermes.enable =
     lib.mkEnableOption "Hermes bot profiles symlinked from the toolbox repo";

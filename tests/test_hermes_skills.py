@@ -30,6 +30,13 @@ def commands(skill_md: str) -> set[str]:
     return found
 
 
+def granted() -> list[str]:
+    """Every skill named in hermes.nix's botSkills entries and defaultSkills."""
+    # The only `name = [ ... ];` lists are those; one may span several lines.
+    lists = re.findall(r"^\s+[A-Za-z]+ = \[(.*?)\];$", HERMES_NIX.read_text(), re.M | re.S)
+    return re.findall(r'"([\w/-]+)"', " ".join(lists))
+
+
 class TestSkillCommands(unittest.TestCase):
     def test_every_command_is_a_bin_script(self):
         for skill in sorted(SKILLS.glob("**/SKILL.md")):
@@ -40,9 +47,7 @@ class TestSkillCommands(unittest.TestCase):
                     self.assertTrue(os.access(script, os.X_OK), f"bin/{name} is not executable")
 
     def test_every_grant_names_a_skill(self):
-        # The only `name = [ ... ];` lines are the botSkills entries and defaultSkills.
-        lists = re.findall(r"^\s+[A-Za-z]+ = \[(.*?)\];$", HERMES_NIX.read_text(), re.M)
-        grants = re.findall(r'"([\w/-]+)"', " ".join(lists))
+        grants = granted()
         self.assertIn("lab-tools/reddit", grants, "the grant parser found nothing")
         for name in set(grants):
             with self.subTest(skill=name):
@@ -66,8 +71,7 @@ class TestSkillCommands(unittest.TestCase):
 
     def test_grants_are_at_most_one_level_deep(self):
         # prune_skills in hermes.nix looks one level down; deeper grants never revoke.
-        lists = re.findall(r"^\s+[A-Za-z]+ = \[(.*?)\];$", HERMES_NIX.read_text(), re.M)
-        for name in re.findall(r'"([\w/-]+)"', " ".join(lists)):
+        for name in granted():
             self.assertLessEqual(name.count("/"), 1, name)
 
 
