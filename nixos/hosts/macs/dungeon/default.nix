@@ -574,6 +574,20 @@ in {
     };
   };
 
+  # Real swap traffic and pressure; home-lab's dungeon-memory-pressure alert.
+  launchd.user.agents.mac-memory-textfile = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/toolbox/bin/mac-memory-textfile.sh"
+      ];
+      RunAtLoad = true;
+      StartInterval = 60;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/mac-memory-textfile.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/mac-memory-textfile.log";
+    };
+  };
+
   # ---------------------------------------------------------------------------
   # Frigate object detection on the Apple Neural Engine.
   # Frigate runs in OrbStack's Linux VM, which can't reach the ANE — so the
