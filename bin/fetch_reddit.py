@@ -12,6 +12,7 @@ A module, imported by fetch-thread.py, reddit-search.py and notes-triage-fetch.p
 from __future__ import annotations
 
 import html
+import http.client
 import json
 import re
 import time
@@ -20,7 +21,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
 from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 BASE = "https://www.reddit.com"
 # Reddit answers 403 to a non-browser User-Agent, curl's included.
@@ -85,7 +86,9 @@ def get(path: str, form: dict | None = None) -> str:
         raise RedditError(f"could not reach reddit.com: {e.reason}") from e
     except TimeoutError as e:
         raise RedditError(f"{path} timed out after 20s") from e
-    if "/login" in final:
+    except (OSError, http.client.HTTPException) as e:
+        raise RedditError(f"{path} failed mid-response: {e!r}") from e
+    if urlparse(final).path.startswith("/login"):
         raise RedditError(
             f"{path} redirected to the login page: Reddit has login-walled it, "
             "as it did old.reddit.com."
@@ -252,18 +255,20 @@ def search(query: str, subreddit: str = "", sort: str = "relevance", period: str
     return posts[:limit]
 
 
-def fetch_thread(post_id: str, subreddit: str, limit: int = 50) -> tuple[Post, list[Comment]]:
+def fetch_thread(post_id: str, subreddit: str, limit: int = 25, comment_id: str = "") -> tuple[Post, list[Comment]]:
     """The post and up to `limit` comments, top-voted first.
 
-    Branches Reddit folds behind "more replies" are not expanded.
+    With `comment_id`, that comment's chain comes first. Branches Reddit folds
+    behind "more replies" are not expanded.
     """
     # No shreddit partial serves a post by id, and RSS is tightly
     # rate-limited, so the comments must not depend on it.
     try:
         post = parse_post_rss(get(f"/r/{subreddit}/comments/{post_id}/.rss?limit=1"), subreddit, post_id)
-    except RedditError as e:
+    except (RedditError, ET.ParseError) as e:
         post = Post(post_id, subreddit, "", f"{BASE}/r/{subreddit}/comments/{post_id}/", body=f"(post text unavailable: {e})")
-    comments, more = parse_comments(get(f"/svc/shreddit/comments/r/{subreddit}/t3_{post_id}?sort=top"))
+    focus = f"/t1_{comment_id}" if comment_id else ""
+    comments, more = parse_comments(get(f"/svc/shreddit/comments/r/{subreddit}/t3_{post_id}{focus}?sort=top"))
     while more and len(comments) < limit:
         time.sleep(1)
         batch, more = parse_comments(get(more[0], {"cursor": more[1]}))
@@ -305,10 +310,10 @@ def format_thread(post: Post, comments: list[Comment], mark: str = "") -> str:
     return "\n".join(lines)
 
 
-def convert_reddit(source: str, output_format: str = "markdown") -> str:
+def convert_reddit(source: str, output_format: str = "markdown", limit: int = 25) -> str:
     """fetch-thread.py's entry point."""
     post_id, subreddit = extract_reddit_info(source)
-    post, comments = fetch_thread(post_id, subreddit)
+    post, comments = fetch_thread(post_id, subreddit, limit)
     if output_format == "json":
         return json.dumps({"post": asdict(post), "comments": [asdict(c) for c in comments]}, indent=2)
     return format_thread(post, comments)

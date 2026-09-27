@@ -136,22 +136,52 @@ class TestGetErrors(unittest.TestCase):
         msg = self._raises([_response("https://www.reddit.com/login/?reason=lor2")])
         self.assertIn("login-walled", msg)
 
+    def test_a_dropped_connection_is_a_reddit_error(self):
+        self.assertIn("failed mid-response", self._raises(ConnectionResetError("reset")))
+
+    def test_a_subreddit_named_login_is_not_a_wall(self):
+        url = "https://www.reddit.com/svc/shreddit/more-comments/loginhelp/t3_x"
+        with mock.patch.object(fr.urllib.request, "urlopen", return_value=_response(url, "ok")):
+            self.assertEqual(fr.get("/x"), "ok")
+
     def test_success_returns_the_body(self):
         with mock.patch.object(fr.urllib.request, "urlopen", return_value=_response("https://www.reddit.com/x", "ok")):
             self.assertEqual(fr.get("/x"), "ok")
 
 
 class TestFetchThread(unittest.TestCase):
-    def test_a_rate_limited_feed_still_returns_the_comments(self):
+    def _fetch(self, feed, **kwargs):
+        self.paths = []
+
         def fake_get(path, form=None):
+            self.paths.append(path)
             if path.endswith(".rss?limit=1"):
-                raise fr.RedditError("HTTP 429 on feed: rate-limited.")
+                return feed()
             return fixture("thread.html") if form is None else fixture("more-comments.html")
 
         with mock.patch.object(fr, "get", side_effect=fake_get), mock.patch.object(fr.time, "sleep"):
-            post, comments = fr.fetch_thread("1wmbj0u", "hermesagent")
+            return fr.fetch_thread("1wmbj0u", "hermesagent", **kwargs)
+
+    def test_a_rate_limited_feed_still_returns_the_comments(self):
+        def feed():
+            raise fr.RedditError("HTTP 429 on feed: rate-limited.")
+
+        post, comments = self._fetch(feed, limit=50)
         self.assertIn("rate-limited", post.body)
         self.assertEqual(len(comments), 32, "first page plus one more-comments batch")
+
+    def test_a_feed_that_is_not_atom_still_returns_the_comments(self):
+        post, comments = self._fetch(lambda: "<html>interstitial</html>")
+        self.assertIn("unavailable", post.body)
+        self.assertEqual(len(comments), 25)
+
+    def test_the_default_limit_costs_no_extra_requests(self):
+        self._fetch(lambda: fixture("thread.rss"))
+        self.assertEqual(len(self.paths), 2, "feed + first comments page only")
+
+    def test_a_comment_id_focuses_the_page(self):
+        self._fetch(lambda: fixture("thread.rss"), comment_id="pban6xd")
+        self.assertTrue(self.paths[1].startswith("/svc/shreddit/comments/r/hermesagent/t3_1wmbj0u/t1_pban6xd?"))
 
 
 class TestCommentContext(unittest.TestCase):
@@ -164,6 +194,13 @@ class TestCommentContext(unittest.TestCase):
 
     def test_an_unloaded_comment_keeps_the_whole_thread(self):
         self.assertEqual(len(triage.comment_context(self.comments, "nothere")), 25)
+
+    def test_an_unloaded_comment_is_called_out(self):
+        post = fr.parse_post_rss(fixture("thread.rss"), "hermesagent", "1wmbj0u")
+        it = triage.Item(url="https://www.reddit.com/r/hermesagent/comments/1wmbj0u/comment/nothere/")
+        with mock.patch.object(triage, "fetch_reddit_thread", return_value=(post, self.comments)):
+            triage.fetch_reddit_comment(it)
+        self.assertTrue(it.body.startswith("(saved comment nothere was not in the loaded comments"))
 
 
 if __name__ == "__main__":

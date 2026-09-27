@@ -176,10 +176,12 @@ def fetch_reddit_comment(it: Item) -> None:
     parts = [p for p in urlparse(it.url).path.split("/") if p]
     # r/<sub>/comments/<post>/<slug or "comment">/<comment>
     sub, post_id, cid = parts[1], parts[3], parts[5]
-    post, comments = fetch_reddit_thread(post_id, sub)
+    post, comments = fetch_reddit_thread(post_id, sub, comment_id=cid)
     it.title = post.title or it.title
     it.meta = {"subreddit": sub, "post_url": post.url}
     it.body = format_thread(post, comment_context(comments, cid), mark=cid)
+    if cid not in {c.id for c in comments}:
+        it.body = f"(saved comment {cid} was not in the loaded comments; showing the thread)\n\n" + it.body
 
 
 def fetch_article(it: Item) -> None:
