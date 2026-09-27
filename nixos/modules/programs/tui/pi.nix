@@ -263,12 +263,12 @@ in {
         # without restarting, so the local model stays the default everywhere.
         enabledModels = ["omlx/*"] ++ lib.optionals cfg.deepseek ["deepseek/*"];
 
-        # Point pi at Claude Code's skill directory instead of maintaining a
-        # second copy. Both agents implement the same Agent Skills standard
-        # (docs/skills.md: "Using Skills from Other Harnesses"), so one
-        # SKILL.md in claude-skills/ works unmodified in both — see
-        # claude-skills/teach/SKILL.md for the first one written this way.
-        skills = ["${config.home.homeDirectory}/.claude/skills"];
+        # synced/ is claude.ai's; pi can't use it.
+        # Absolute: pi's globs skip dot-directories like .claude.
+        skills = [
+          "${config.home.homeDirectory}/.claude/skills"
+          "!${config.home.homeDirectory}/.claude/skills/synced/**"
+        ];
 
         # pi-powerline-footer. This file is a read-only /nix/store symlink, so
         # its `/powerline` and `/vibe` slash commands cannot persist a change —

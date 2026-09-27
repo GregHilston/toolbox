@@ -43,7 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fetch_hn import fetch_item  # noqa: E402
 from fetch_reddit import Comment, fetch_thread as fetch_reddit_thread, format_thread  # noqa: E402
 
-YT_SCRIPT = Path.home() / ".claude/skills/youtube-transcript/fetch_transcript.py"
+YT_SCRIPT = Path(__file__).resolve().parent / "youtube-transcript.py"
 OUT_ROOT = Path.home() / ".cache/notes-triage"
 
 CAP = {"youtube": 7000, "reddit-comment": 3000, "reddit": 4500, "hn": 4500, "article": 3500}

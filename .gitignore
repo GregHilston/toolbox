@@ -77,6 +77,8 @@ nixos/secrets/.env
 # A subdirectory namespaces its commands, so these are invoked /mozilla:<name>.
 claude-commands/mozilla/
 # Skills are found as top-level dirs, so they take a prefix instead of a subdir.
+skills/mozilla-*/
+# Until every host has moved them into skills/.
 claude-skills/mozilla-*/
 
 # pi extension dependencies. Each needs `npm install` in its own directory
@@ -92,4 +94,5 @@ hermes/.env
 # Anthropic bundled skills, synced into place by Claude Code. A 209-file
 # cache under a UUID directory — generated, not authored, and it churns on
 # every sync.
+skills/synced/
 claude-skills/synced/

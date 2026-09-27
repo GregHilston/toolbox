@@ -49,7 +49,7 @@ in {
     }
 
     link_repo "${toolboxDir}/claude-commands"             "${claudeDir}/commands"
-    link_repo "${toolboxDir}/claude-skills"               "${claudeDir}/skills"
+    link_repo "${toolboxDir}/skills"                      "${claudeDir}/skills"
     link_repo "${toolboxDir}/dot/claude/.claude/CLAUDE.md"     "${claudeDir}/CLAUDE.md"
     link_repo "${toolboxDir}/dot/claude/.claude/settings.json" "${claudeDir}/settings.json"
 

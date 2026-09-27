@@ -28,6 +28,11 @@
     librarian = ["llm-wiki-review"];
   };
   bots = lib.attrNames botSkills;
+  # lab-tools/<name> links shared skills/<name>.
+  skillSource = skill:
+    if lib.hasPrefix "lab-tools/" skill
+    then "${toolboxDir}/skills/${lib.removePrefix "lab-tools/" skill}"
+    else "${toolboxDir}/hermes/skills/${skill}";
   # The default profile (CLI, Telegram) reads ~/.hermes/skills/ directly.
   # Capability skills sit under lab-tools/: a skill with no category is listed
   # as "reddit:" then "- reddit", and Gemma called that "reddit:reddit".
@@ -38,6 +43,8 @@
     "lab-tools/wikipedia"
     "lab-tools/steam-game"
     "lab-tools/read-page"
+    "lab-tools/youtube-transcript"
+    "lab-tools/home-assistant"
   ];
 in {
   options.custom.programs.hermes.enable =
@@ -82,7 +89,7 @@ in {
         dir=$1; shift
         for link in "$dir"/* "$dir"/*/*; do
           [ -L "$link" ] || continue
-          case "$(readlink "$link")" in "${toolboxDir}/hermes/skills/"*) ;; *) continue ;; esac
+          case "$(readlink "$link")" in "${toolboxDir}/hermes/skills/"* | "${toolboxDir}/skills/"*) ;; *) continue ;; esac
           case " $* " in *" ''${link#"$dir"/} "*) ;; *) rm "$link" ;; esac
         done
       }
@@ -106,7 +113,7 @@ in {
           mkdir -p "${profilesDir}/${bot}/skills"
           prune_skills "${profilesDir}/${bot}/skills" ${lib.concatStringsSep " " botSkills.${bot}}
           ${lib.concatMapStringsSep "\n          " (skill: ''
-              link_repo "${toolboxDir}/hermes/skills/${skill}" "${profilesDir}/${bot}/skills/${skill}"
+              link_repo "${skillSource skill}" "${profilesDir}/${bot}/skills/${skill}"
             '')
             botSkills.${bot}}
         '')
@@ -115,7 +122,7 @@ in {
       mkdir -p "${hermesDir}/skills"
       prune_skills "${hermesDir}/skills" ${lib.concatStringsSep " " defaultSkills}
       ${lib.concatMapStringsSep "\n      " (skill: ''
-          link_repo "${toolboxDir}/hermes/skills/${skill}" "${hermesDir}/skills/${skill}"
+          link_repo "${skillSource skill}" "${hermesDir}/skills/${skill}"
         '')
         defaultSkills}
 

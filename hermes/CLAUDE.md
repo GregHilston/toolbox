@@ -151,55 +151,22 @@ deployments. `bin/CLAUDE.md` has the conventions and the one step dungeon needs.
 
 ## Capability skills: which bot knows which tool
 
-**This is the one way to give a bot a tool.** A script in `bin/` does the work;
-a skill in `skills/lab-tools/<capability>/` tells the bots that were granted it how to
-call the script. Don't put tool logic in a skill, a SOUL, a Hermes plugin or
-`home-lab/hermes/scripts/`.
+**The convention is `skills/README.md`**: one skill set for Claude Code, pi and
+Hermes, with the tool itself a script in `bin/`. What is Hermes-only:
 
-Why:
-
-- **Portable.** The scripts are the functionality, and they run from any shell,
-  Claude Code and pi included. Leaving Hermes loses only the thin skill files.
-- **A bot must be told.** A script on `PATH` is not enough: asked about Reddit,
-  the default profile tried DuckDuckGo and gave up after 4.5 minutes.
-- **Granular.** A skill is the unit a profile is granted, so the researcher can
-  know about Reddit while the builder does not.
-- **Cheap.** Only a skill's one-line description sits in every prompt; its body
-  loads when the bot needs it.
-
-The rules:
-
-- **One skill per capability**, in `skills/lab-tools/<capability>/SKILL.md`
-  (`reddit`, `hacker-news`), granted as `lab-tools/<capability>`. The category
-  directory is load-bearing: Hermes lists an uncategorised skill as `reddit:`
-  then `- reddit`, and Gemma called the tool `reddit:reddit`. Pruning looks one
-  level down, so no deeper nesting.
-- **A skill names its commands**, says to run them with `terminal`, says what
-  not to use instead, and says each command is on `PATH` and typed exactly:
-  otherwise Gemma prefixes `python3 /opt/data/scripts/`. Keep skills small so
-  granting one grants only it.
-- **Grants are per profile.** moria: `botSkills` and `defaultSkills` in
-  `nixos/modules/programs/tui/hermes.nix`. dungeon: one read-only mount per skill
-  on the `hermes` service in home-lab's `docker-compose.yaml` (a future dungeon
-  profile would mount at `/opt/data/profiles/<profile>/skills/`). The researcher
-  and the default profiles get research skills; the builder does not. Removing a
-  grant revokes it: activation prunes our links that are no longer listed.
-- **SOULs name no tools.** They carry one line pointing at skills, which stays
-  true as skills are added. dungeon's also says to open a skill with
-  `skill_view`.
+- **Grants.** moria: `botSkills` and `defaultSkills` in
+  `nixos/modules/programs/tui/hermes.nix`, written `lab-tools/<name>`. dungeon:
+  one read-only mount per skill on the `hermes` service in home-lab's
+  `docker-compose.yaml`. The researcher and the default profiles get research
+  skills; the builder does not.
+- **SOULs name no tools.** They carry one line pointing at skills. dungeon's also
+  says to open a skill with `skill_view`.
 - **Skills need a model that uses them.** Gemma 4 does not: it calls a skill as
   a tool (`lab-tools:reddit`) and never opens it, 0 of 8 on 2026-09-27, while the
   Qwen models managed every run. No SOUL wording fixed it. Numbers are in
-  home-lab `hermes/README.md` → Gemma does not use skills.
-- **A grant is advice, not a fence.** Every bot can still run anything on `PATH`.
-  If a bot must be unable to use a tool, that needs a terminal restriction, which
-  nothing here provides.
-- **No bare colon in a frontmatter value.** `description: Look it up: a summary`
-  is invalid YAML, and Hermes drops the skill without a word: it is missing from
-  `hermes skills list`, and the bot improvises with `curl`.
-
-`tests/test_hermes_skills.py` fails if a skill runs a script that is not in
-`bin/`, or has a frontmatter value with a bare colon.
+  home-lab `docs/local-llms.md`.
+- **`hermes/skills/`** is for skills only Hermes can use (`verify-agent-output`,
+  `llm-wiki-review`); Claude Code would otherwise load them.
 
 ## The librarian's review gate
 
@@ -296,7 +263,7 @@ Runtime state, so none of it is in git.
   `hermes -z` in a terminal worked, because it inherited zsh. So
   `terminal.shell_init_files` sources `terminal-env.sh` in the root config and in
   every profile's config: a profile never reads the root's.
-  `tests/test_hermes_skills.py` checks each one. Test with the gateway's
+  `tests/test_skills.py` checks each one. Test with the gateway's
   environment, not your shell's (drop `-p <bot>` for the default profile, which
   is the one Telegram reaches):
 
