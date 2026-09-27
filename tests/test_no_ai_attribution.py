@@ -45,6 +45,11 @@ class TestNoAiAttribution(unittest.TestCase):
         self.assertEqual(run(f'git log --grep="{TRAILER}"'), 0)
         self.assertEqual(run(f"grep -r '{TRAILER}' ."), 0)
 
+    def test_prose_about_the_lines_is_not_the_lines(self):
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "body.md").write_text('Blocks a `Co-Authored-By: Claude` trailer or a "Generated with Claude Code" line.\n')
+            self.assertEqual(run("gh pr create --title t --body-file body.md", cwd=d), 0)
+
     def test_bad_input_never_blocks(self):
         result = subprocess.run([sys.executable, str(HOOK)], input="not json", text=True, capture_output=True)
         self.assertEqual(result.returncode, 0)

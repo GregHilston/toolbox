@@ -15,7 +15,9 @@ import sys
 from pathlib import Path
 
 WRITES = re.compile(r"\bgit\b[^|;&]*\b(commit|tag|notes)\b|\bgh\s+(pr|issue)\s+(create|edit|comment)\b")
-ATTRIBUTION = re.compile(r"co-authored-by:\s*claude|generated with \[?claude code", re.I)
+# The real forms only: a trailer starting a line, and the footer's Markdown link.
+# Prose that mentions them, such as a PR describing this hook, passes.
+ATTRIBUTION = re.compile(r"^\s*co-authored-by:\s*claude|generated with \[claude code\]", re.I | re.M)
 FILE_FLAGS = {"-F", "--file", "--body-file"}
 
 
