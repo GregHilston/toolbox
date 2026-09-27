@@ -1,181 +1,286 @@
-#!/usr/bin/env -S uv run
-# /// script
-# requires-python = ">=3.11"
-# dependencies = []
-# ///
-"""Fetch Reddit threads and format as markdown or JSON.
+#!/usr/bin/env python3
+"""Search Reddit and read threads without a login, cookie or API key.
 
-Fetches a Reddit thread (post + comments) via the official Reddit JSON API
-and formats it as markdown or JSON with comment threading (indented by nesting
-depth for markdown output).
+old.reddit.com and every .json endpoint are login-walled. The HTML partials
+Reddit's own web UI lazy-loads (/svc/shreddit/) are not, given a browser
+User-Agent. Parsing them breaks when Reddit changes its markup;
+tests/test_fetch_reddit_live.py is the check that notices.
 
-The Reddit JSON endpoint requires a User-Agent header, which is automatically
-provided. Comments are nested by depth (indented based on reply nesting).
-
-Usage:
-    fetch-reddit.py r/python/comments/abc123/title
-    fetch-reddit.py https://reddit.com/r/python/comments/abc123/title
-    fetch-reddit.py https://old.reddit.com/r/python/comments/abc123/title
-    fetch-reddit.py abc123 python              # post_id subreddit
-
-Examples:
-    fetch-reddit.py abc123 python
-    fetch-reddit.py r/python/comments/abc123 > thread.md
-    fetch-reddit.py abc123 python --format json | jq .
-    fetch-reddit.py https://reddit.com/r/python/comments/abc123/title
+A module, imported by fetch-thread.py, reddit-search.py and notes-triage-fetch.py.
 """
 
 from __future__ import annotations
 
-import argparse
+import html
 import json
-import os
 import re
-import sys
+import time
 import urllib.request
-from pathlib import Path
+import xml.etree.ElementTree as ET
+from dataclasses import asdict, dataclass
+from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
-from urllib.parse import urljoin
+from urllib.parse import urlencode
 
-from _thread_converters import strip_html_tags
-
-
-# ============================================================================
-# Reddit API
-# ============================================================================
-
-REDDIT_USER_AGENT = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+BASE = "https://www.reddit.com"
+# Reddit answers 403 to a non-browser User-Agent, curl's included.
+USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/128.0 Safari/537.36"
 )
+ATOM = "{http://www.w3.org/2005/Atom}"
 
 
-def load_reddit_cookie() -> str | None:
-    """Return a Reddit session cookie, or None if none is configured.
+class RedditError(RuntimeError):
+    """Reddit refused, walled or reshaped a request; the message says which."""
 
-    Reddit has required authentication on its .json endpoints since mid-2026,
-    so this script returns HTTP 403 for every thread without one.
 
-    The lookup order deliberately matches pi-reddit-research's, and the default
-    path is the same file, so both tools share one cookie and the daily refresh
-    in bin/reddit-cookie-sync.sh keeps both working.
-    """
-    env_cookie = os.environ.get("PI_REDDIT_COOKIE")
-    if env_cookie:
-        return env_cookie
+@dataclass
+class Post:
+    id: str
+    subreddit: str
+    title: str
+    url: str
+    author: str = ""
+    created: str = ""
+    score: int | None = None
+    comments: int | None = None
+    body: str = ""
+    snippet: str = ""
 
-    env_file = os.environ.get("PI_REDDIT_COOKIE_FILE")
-    candidates = [Path(env_file)] if env_file else []
 
-    # pi's own config may redirect to a different file.
-    config_path = Path(
-        os.environ.get("PI_REDDIT_CONFIG_PATH", Path.home() / ".pi/agent/reddit-research.json")
-    )
+@dataclass
+class Comment:
+    id: str
+    parent_id: str
+    author: str
+    score: int | None
+    depth: int
+    created: str
+    body: str
+
+
+# ============================================================================
+# HTTP
+# ============================================================================
+
+
+def get(path: str, form: dict | None = None) -> str:
+    """GET, or POST when `form` is given, a reddit.com path; the body as text."""
+    data = urlencode(form).encode() if form is not None else None
+    req = urllib.request.Request(BASE + path, data=data, headers={"User-Agent": USER_AGENT})
     try:
-        config = json.loads(config_path.read_text())
-    except (OSError, ValueError):
-        config = {}
-    if isinstance(config, dict):
-        if isinstance(config.get("cookie"), str) and config["cookie"]:
-            return config["cookie"]
-        if isinstance(config.get("cookieFile"), str):
-            candidates.append(Path(config["cookieFile"]).expanduser())
-
-    candidates.append(Path.home() / ".config/pi-reddit-research/cookie.txt")
-
-    for path in candidates:
-        try:
-            value = path.read_text().strip()
-        except OSError:
-            continue
-        if value:
-            return value
-    return None
-
-
-def fetch_thread(post_id: str, subreddit: str) -> tuple[dict, dict]:
-    """Fetch a Reddit thread (post + comments) from the API.
-
-    Args:
-        post_id: The post ID (without 't3_' prefix).
-        subreddit: The subreddit name (without '/r/' prefix).
-
-    Returns:
-        Tuple of (post_data, comments_data) dictionaries.
-
-    Raises:
-        URLError: If the API request fails.
-        ValueError: If the response cannot be parsed.
-    """
-    url = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json"
-
-    req = urllib.request.Request(url)
-    req.add_header("User-Agent", REDDIT_USER_AGENT)
-
-    cookie = load_reddit_cookie()
-    if cookie:
-        req.add_header("Cookie", cookie)
-
-    try:
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read())
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            final, body = resp.geturl(), resp.read().decode("utf-8", "replace")
     except HTTPError as e:
-        # 403 here is almost always auth, not a genuinely private thread, and the
-        # bare "HTTP Error 403: Blocked" gives no clue what to do about it.
-        if e.code in (401, 403):
-            detail = (
-                "no Reddit cookie found"
-                if not cookie
-                else "the configured Reddit cookie was rejected (it has probably expired)"
-            )
-            print(
-                f"Error fetching {url}: HTTP {e.code} — {detail}.\n"
-                "Reddit has required authentication on .json endpoints since mid-2026.\n"
-                "Fix: log in to reddit.com in Firefox, then run "
-                "~/Git/toolbox/bin/reddit-cookie-sync.sh\n"
-                "(or write the cookie by hand to ~/.config/pi-reddit-research/cookie.txt).",
-                file=sys.stderr,
-            )
-        else:
-            print(f"Error fetching {url}: {e}", file=sys.stderr)
-        raise
+        if e.code == 403:
+            raise RedditError(
+                f"HTTP 403 on {path}: Reddit blocked the request. The User-Agent in "
+                "fetch_reddit.py may look too old, or this IP is flagged."
+            ) from e
+        if e.code == 429:
+            raise RedditError(f"HTTP 429 on {path}: rate-limited. Wait a minute and slow down.") from e
+        raise RedditError(f"HTTP {e.code} on {path}") from e
     except URLError as e:
-        print(f"Error fetching {url}: {e}", file=sys.stderr)
-        raise
+        raise RedditError(f"could not reach reddit.com: {e.reason}") from e
+    except TimeoutError as e:
+        raise RedditError(f"{path} timed out after 20s") from e
+    if "/login" in final:
+        raise RedditError(
+            f"{path} redirected to the login page: Reddit has login-walled it, "
+            "as it did old.reddit.com in 2026-08."
+        )
+    return body
 
-    if not isinstance(data, list) or len(data) < 2:
-        raise ValueError("Unexpected Reddit API response format")
 
-    post = data[0]["data"]["children"][0]["data"]
-    comments_listing = data[1]["data"]
+# ============================================================================
+# Parsing
+# ============================================================================
 
-    return post, comments_listing
+
+def _int(value: str | None) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _text(fragment: str) -> str:
+    """Rendered HTML to plain text, one blank line between paragraphs."""
+    fragment = re.sub(r"<br\s*/?>", "\n", fragment)
+    fragment = re.sub(r"<li\b[^>]*>", "\n- ", fragment)
+    fragment = re.sub(r"</(p|ol|ul|pre|blockquote|h\d)>", "\n\n", fragment)
+    text = html.unescape(re.sub(r"<[^>]+>", "", fragment))
+    lines = [ln.strip() for ln in text.splitlines()]
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+
+
+def parse_search(page: str) -> tuple[list[Post], str | None]:
+    """Search results, and the path of the next page if there is one."""
+    posts = []
+    for unit in page.split('data-testid="sdui-post-unit"')[1:]:
+        title = re.search(
+            r'data-testid="post-title-text"[^>]*href="(/r/([^/]+)/comments/(\w+)/[^"]*)"[^>]*>(.*?)</a>',
+            unit,
+            re.S,
+        )
+        if not title:
+            continue
+        path, sub, post_id, text = title.groups()
+        context = re.search(r'data-faceplate-tracking-context="([^"]*)"', unit)
+        tracking = json.loads(html.unescape(context.group(1))) if context else {}
+        created = re.search(r'<faceplate-timeago[^>]*ts="([^"]+)"', unit)
+        counts = re.search(r'data-testid="search-counter-row".*?</div>', unit, re.S)
+        numbers = re.findall(r'number="(\d+)"', counts.group(0)) if counts else []
+        posts.append(
+            Post(
+                id=post_id,
+                subreddit=sub,
+                title=_text(text),
+                url=BASE + path,
+                author=tracking.get("profile", {}).get("name", ""),
+                created=created.group(1) if created else "",
+                score=_int(numbers[0]) if numbers else None,
+                comments=_int(numbers[1]) if len(numbers) > 1 else None,
+                snippet=tracking.get("search", {}).get("snippet", ""),
+            )
+        )
+    cursor = re.search(r'<faceplate-partial[^>]*src="(/svc/shreddit/[^"]*search/[^"]*cursor=[^"]*)"', page)
+    return posts, html.unescape(cursor.group(1)) if cursor else None
+
+
+class _CommentParser(HTMLParser):
+    """Collects <shreddit-comment> attributes and the text of each comment body."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=False)
+        self.comments: list[Comment] = []
+        self._body: list[str] | None = None
+        self._divs = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        a = dict(attrs)
+        if tag == "shreddit-comment":
+            self.comments.append(
+                Comment(
+                    id=(a.get("thingid") or "").removeprefix("t1_"),
+                    parent_id=(a.get("parentid") or "").removeprefix("t1_"),
+                    author=a.get("author") or "[deleted]",
+                    score=_int(a.get("score")),
+                    depth=_int(a.get("depth")) or 0,
+                    created=a.get("created") or "",
+                    body="",
+                )
+            )
+        elif self._body is not None:
+            if tag == "div":
+                self._divs += 1
+            self._body.append(self.get_starttag_text() or "")
+        elif tag == "div" and (a.get("id") or "").endswith("-comment-rtjson-content"):
+            self._body, self._divs = [], 0
+
+    def handle_endtag(self, tag: str) -> None:
+        if self._body is None:
+            return
+        if tag == "div":
+            if self._divs == 0:
+                if self.comments:
+                    self.comments[-1].body = _text("".join(self._body))
+                self._body = None
+                return
+            self._divs -= 1
+        self._body.append(f"</{tag}>")
+
+    def handle_data(self, data: str) -> None:
+        if self._body is not None:
+            self._body.append(data)
+
+    def handle_entityref(self, name: str) -> None:
+        self.handle_data(f"&{name};")
+
+    def handle_charref(self, name: str) -> None:
+        self.handle_data(f"&#{name};")
+
+
+def parse_comments(page: str) -> tuple[list[Comment], tuple[str, str] | None]:
+    """Comments in page order, and (path, cursor) for the next top-level batch."""
+    parser = _CommentParser()
+    parser.feed(page)
+    more = re.search(
+        r'<faceplate-partial[^>]*src="(/svc/shreddit/more-comments/[^"]*top-level=1[^"]*)"[^>]*>'
+        r'\s*<input[^>]*name="cursor"[^>]*value="([^"]+)"',
+        page,
+    )
+    return parser.comments, (html.unescape(more.group(1)), more.group(2)) if more else None
+
+
+def parse_post_rss(feed: str, subreddit: str, post_id: str) -> Post:
+    """The post itself: the first entry of the thread's Atom feed."""
+    entry = ET.fromstring(feed).find(f"{ATOM}entry")
+    if entry is None:
+        raise RedditError(f"the feed for r/{subreddit} post {post_id} has no entries")
+    return Post(
+        id=post_id,
+        subreddit=subreddit,
+        title=(entry.findtext(f"{ATOM}title") or "").strip(),
+        url=f"{BASE}/r/{subreddit}/comments/{post_id}/",
+        author=(entry.findtext(f"{ATOM}author/{ATOM}name") or "").removeprefix("/u/"),
+        created=entry.findtext(f"{ATOM}published") or entry.findtext(f"{ATOM}updated") or "",
+        body=_text(entry.findtext(f"{ATOM}content") or ""),
+    )
+
+
+# ============================================================================
+# High level
+# ============================================================================
+
+
+def search(query: str, subreddit: str = "", sort: str = "relevance", period: str = "all", limit: int = 25) -> list[Post]:
+    """Up to `limit` posts matching `query`, optionally within one subreddit."""
+    scope = f"/r/{subreddit}" if subreddit else ""
+    path: str | None = f"/svc/shreddit{scope}/search/?" + urlencode(
+        {"q": query, "type": "posts", "sort": sort, "t": period}
+    )
+    posts: list[Post] = []
+    while path and len(posts) < limit:
+        if posts:
+            time.sleep(1)
+        page, path = parse_search(get(path))
+        if not page:
+            break
+        posts.extend(page)
+    return posts[:limit]
+
+
+def fetch_thread(post_id: str, subreddit: str, limit: int = 50) -> tuple[Post, list[Comment]]:
+    """The post and up to `limit` comments, top-voted first.
+
+    Branches Reddit folds behind "more replies" are not expanded.
+    """
+    # No shreddit partial serves a post by id, and RSS allows ~1 request a
+    # minute, so the comments must not depend on it.
+    try:
+        post = parse_post_rss(get(f"/r/{subreddit}/comments/{post_id}/.rss?limit=1"), subreddit, post_id)
+    except RedditError as e:
+        post = Post(post_id, subreddit, "", f"{BASE}/r/{subreddit}/comments/{post_id}/", body=f"(post text unavailable: {e})")
+    comments, more = parse_comments(get(f"/svc/shreddit/comments/r/{subreddit}/t3_{post_id}?sort=top"))
+    while more and len(comments) < limit:
+        time.sleep(1)
+        batch, more = parse_comments(get(more[0], {"cursor": more[1]}))
+        if not batch:
+            break
+        comments.extend(batch)
+    return post, comments[:limit]
 
 
 def extract_reddit_info(source: str) -> tuple[str, str]:
-    """Extract post ID and subreddit from a URL or shorthand.
-
-    Args:
-        source: URL like 'https://reddit.com/r/python/comments/abc123/title',
-            or shorthand like 'r/python/comments/abc123' or 'abc123 python'.
-
-    Returns:
-        Tuple of (post_id, subreddit).
-
-    Raises:
-        ValueError: If the source cannot be parsed.
-    """
-    # Try: "abc123 python" format
-    if " " in source:
-        parts = source.split()
-        if len(parts) == 2:
-            return parts[0], parts[1]
-
-    # Try: URL format
-    match = re.search(r"/r/(\w+)/comments/(\w+)", source)
+    """(post_id, subreddit) from a thread URL, 'r/sub/comments/id', or 'id sub'."""
+    parts = source.split()
+    if len(parts) == 2:
+        return parts[0], parts[1]
+    match = re.search(r"r/(\w+)/comments/(\w+)", source)
     if match:
         return match.group(2), match.group(1)
-
     raise ValueError(
         "Could not parse Reddit source. Expected:\n"
         "  - URL: https://reddit.com/r/python/comments/abc123/title\n"
@@ -184,220 +289,26 @@ def extract_reddit_info(source: str) -> tuple[str, str]:
     )
 
 
-# ============================================================================
-# Comment tree processing
-# ============================================================================
-
-def flatten_comments(
-    listing: dict,
-    depth: int = 0,
-    max_comments: int = 100,
-    collected: list | None = None,
-) -> list[tuple[dict, int]]:
-    """Flatten Reddit's nested comment tree into a list with depth info.
-
-    Args:
-        listing: The Reddit listing object (from API response).
-        depth: Current nesting depth.
-        max_comments: Maximum comments to collect (to avoid excessive fetching).
-        collected: Accumulator list (internal use).
-
-    Returns:
-        List of (comment_data, depth) tuples.
-    """
-    if collected is None:
-        collected = []
-
-    if len(collected) >= max_comments:
-        return collected
-
-    children = listing.get("children", [])
-    for child in children:
-        if len(collected) >= max_comments:
-            break
-
-        kind = child.get("kind")
-        data = child.get("data", {})
-
-        if kind == "t1":  # Comment
-            collected.append((data, depth))
-
-            # Recursively process replies
-            if "replies" in data and isinstance(data["replies"], dict):
-                flatten_comments(data["replies"].get("data", {}), depth + 1, max_comments, collected)
-        elif kind == "more":
-            # "Load more comments" node — skip for simplicity
-            pass
-
-    return collected
-
-
-# ============================================================================
-# Markdown formatting
-# ============================================================================
-
-def format_post(post: dict) -> str:
-    """Format a Reddit post as markdown.
-
-    Args:
-        post: The post data dict from the Reddit API.
-
-    Returns:
-        Formatted markdown string.
-    """
-    title = post.get("title", "")
-    author = post.get("author", "[deleted]")
-    score = post.get("score", 0)
-    text = strip_html_tags(post.get("selftext", ""))
-
-    lines = [
-        f"# {title}",
-        f"**By u/{author}** | {score} points",
-        "",
-    ]
-
-    if text:
-        lines.extend([text, ""])
-
+def format_thread(post: Post, comments: list[Comment], mark: str = "") -> str:
+    """Markdown, replies indented under their parents; `mark` flags one comment id."""
+    byline = " | ".join(x for x in (f"**r/{post.subreddit}**", post.author and f"u/{post.author}", post.created[:10]) if x)
+    lines = [f"# {post.title or post.url}", byline, ""]
+    if post.body:
+        lines += [post.body, ""]
+    for c in comments:
+        indent = "  " * c.depth
+        score = c.score if c.score is not None else "?"
+        flag = "  <-- SAVED COMMENT" if c.id == mark else ""
+        lines.append(f"{indent}**u/{c.author}** ({score} points){flag}:")
+        lines += [f"{indent}> {ln}" for ln in c.body.splitlines()]
+        lines.append("")
     return "\n".join(lines)
 
-
-def format_comment(comment: dict, depth: int = 0) -> str:
-    """Format a single Reddit comment as markdown.
-
-    Args:
-        comment: The comment data dict.
-        depth: Nesting depth (used for indentation).
-
-    Returns:
-        Formatted markdown string.
-    """
-    if not comment:
-        return ""
-
-    indent = "  " * depth
-    author = comment.get("author", "[deleted]")
-    text = strip_html_tags(comment.get("body", ""))
-
-    lines = [f"{indent}**u/{author}**:"]
-    for line in text.split("\n"):
-        lines.append(f"{indent}> {line}")
-    lines.append("")
-
-    return "\n".join(lines)
-
-
-def format_thread(post: dict, comments_listing: dict) -> str:
-    """Format an entire Reddit thread (post + comments) as markdown.
-
-    Args:
-        post: The post data dict.
-        comments_listing: The comments listing data dict.
-
-    Returns:
-        Formatted markdown string.
-    """
-    lines = [format_post(post)]
-
-    # Flatten comment tree and format
-    flattened = flatten_comments(comments_listing, max_comments=50)
-    for comment, depth in flattened:
-        lines.append(format_comment(comment, depth))
-
-    return "\n".join(lines)
-
-
-# ============================================================================
-# High-level converter
-# ============================================================================
 
 def convert_reddit(source: str, output_format: str = "markdown") -> str:
-    """Convert a Reddit thread to markdown or JSON.
-
-    Args:
-        source: Reddit URL, shorthand, or post_id + subreddit.
-        output_format: 'markdown' or 'json'.
-
-    Returns:
-        Formatted string (markdown or JSON).
-
-    Raises:
-        ValueError: If the source cannot be parsed.
-        URLError: If the API request fails.
-    """
-    try:
-        post_id, subreddit = extract_reddit_info(source)
-    except ValueError as e:
-        raise ValueError(f"Invalid Reddit source: {e}") from e
-
-    post, comments_listing = fetch_thread(post_id, subreddit)
-
+    """fetch-thread.py's entry point."""
+    post_id, subreddit = extract_reddit_info(source)
+    post, comments = fetch_thread(post_id, subreddit)
     if output_format == "json":
-        return json.dumps({"post": post, "comments": comments_listing}, indent=2)
-    else:
-        return format_thread(post, comments_listing)
-
-
-# ============================================================================
-# CLI
-# ============================================================================
-
-def build_parser() -> argparse.ArgumentParser:
-    """Build the argparse argument parser."""
-    parser = argparse.ArgumentParser(
-        prog="fetch-reddit",
-        description="Fetch Reddit threads and format as markdown or JSON.",
-        epilog=(
-            "Examples:\n"
-            "  fetch-reddit.py abc123 python\n"
-            "  fetch-reddit.py r/python/comments/abc123\n"
-            "  fetch-reddit.py https://reddit.com/r/python/comments/abc123/title\n"
-            "  fetch-reddit.py abc123 python --format json | jq .\n"
-            "  fetch-reddit.py abc123 python > thread.md"
-        ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument(
-        "source",
-        metavar="SOURCE",
-        help="Reddit post ID + subreddit, URL, or r/sub/comments/id format",
-    )
-    parser.add_argument(
-        "subreddit",
-        nargs="?",
-        metavar="SUBREDDIT",
-        help="Subreddit name (optional, if not in SOURCE)",
-    )
-    parser.add_argument(
-        "--format",
-        choices=["markdown", "json"],
-        default="markdown",
-        help="Output format: markdown (default) or json",
-    )
-    return parser
-
-
-def main() -> None:
-    """Parse arguments and fetch/format the Reddit thread."""
-    parser = build_parser()
-    args = parser.parse_args()
-
-    # Combine source and optional subreddit argument
-    if args.subreddit:
-        source = f"{args.source} {args.subreddit}"
-    else:
-        source = args.source
-
-    try:
-        result = convert_reddit(source, args.format)
-        print(result)
-    except ValueError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-    except URLError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
+        return json.dumps({"post": asdict(post), "comments": [asdict(c) for c in comments]}, indent=2)
+    return format_thread(post, comments)

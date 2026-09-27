@@ -13,7 +13,7 @@ Sources, combined if several are given:
 
 Each URL is classified and fetched in parallel:
   youtube        transcript via the youtube-transcript skill (yt-dlp)
-  reddit-comment the comment plus its parents and replies, via Reddit's JSON API
+  reddit-comment the comment plus its parents and replies, via fetch_reddit.py
   reddit / hn    the thread via fetch-thread.py
   article        Defuddle (same extractor as Obsidian Web Clipper)
 
@@ -33,7 +33,6 @@ import os
 import re
 import subprocess
 import sys
-import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -42,7 +41,7 @@ from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fetch_hn import fetch_item  # noqa: E402
-from fetch_reddit import REDDIT_USER_AGENT, load_reddit_cookie  # noqa: E402
+from fetch_reddit import Comment, fetch_thread as fetch_reddit_thread, format_thread  # noqa: E402
 
 YT_SCRIPT = Path.home() / ".claude/skills/youtube-transcript/fetch_transcript.py"
 OUT_ROOT = Path.home() / ".cache/notes-triage"
@@ -154,43 +153,33 @@ def fetch_hn(it: Item) -> None:
             it.meta["article_url"] = item["url"]
 
 
-def _reddit_json(url: str) -> object:
-    req = urllib.request.Request(url)
-    req.add_header("User-Agent", REDDIT_USER_AGENT)
-    cookie = load_reddit_cookie()
-    if cookie:
-        req.add_header("Cookie", cookie)
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        return json.loads(resp.read())
+def comment_context(comments: list[Comment], cid: str) -> list[Comment]:
+    """The comment's ancestors, itself and its replies; everything if it is not loaded."""
+    ids = [c.id for c in comments]
+    if cid not in ids:
+        return comments
+    i = ids.index(cid)
+    by_id = {c.id: c for c in comments}
+    chain, parent = [], comments[i].parent_id
+    while parent in by_id:
+        chain.insert(0, by_id[parent])
+        parent = by_id[parent].parent_id
+    tail = [comments[i]]
+    for c in comments[i + 1 :]:
+        if c.depth <= comments[i].depth:
+            break
+        tail.append(c)
+    return chain + tail
 
 
 def fetch_reddit_comment(it: Item) -> None:
     parts = [p for p in urlparse(it.url).path.split("/") if p]
-    sub, post, cid = parts[1], parts[3], parts[5]
-    data = _reddit_json(f"https://www.reddit.com/r/{sub}/comments/{post}/_/{cid}.json?context=3")
-    p = data[0]["data"]["children"][0]["data"]
-    it.title = p.get("title", it.title)
-    it.meta = {"subreddit": sub, "post_url": "https://www.reddit.com" + p.get("permalink", "")}
-    lines = [f"Post: {p.get('title', '')} (r/{sub}, {p.get('score', 0)} points)"]
-    if p.get("selftext"):
-        lines.append("> " + p["selftext"][:600].replace("\n", "\n> "))
-    lines.append("")
-
-    def walk(listing: dict, depth: int) -> None:
-        for ch in listing.get("data", {}).get("children", []):
-            if ch.get("kind") != "t1":
-                continue
-            d = ch["data"]
-            marker = " <-- SAVED COMMENT" if d["id"] == cid else ""
-            lines.append("  " * depth + f"u/{d.get('author')} ({d.get('score', 0)}){marker}:")
-            for ln in d.get("body", "").splitlines():
-                lines.append("  " * depth + "  " + ln)
-            lines.append("")
-            if isinstance(d.get("replies"), dict):
-                walk(d["replies"], depth + 1)
-
-    walk(data[1], 0)
-    it.body = "\n".join(lines)
+    # r/<sub>/comments/<post>/<slug or "comment">/<comment>
+    sub, post_id, cid = parts[1], parts[3], parts[5]
+    post, comments = fetch_reddit_thread(post_id, sub)
+    it.title = post.title or it.title
+    it.meta = {"subreddit": sub, "post_url": post.url}
+    it.body = format_thread(post, comment_context(comments, cid), mark=cid)
 
 
 def fetch_article(it: Item) -> None:

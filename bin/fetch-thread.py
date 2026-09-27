@@ -39,7 +39,7 @@ try:
     from _thread_converters import detect_thread_type
 except ImportError as e:
     print(f"Error: Could not import converters: {e}", file=sys.stderr)
-    print("Make sure fetch-hn.py, fetch-reddit.py, and _thread_converters.py are in the same directory.", file=sys.stderr)
+    print("Make sure fetch_hn.py, fetch_reddit.py, and _thread_converters.py are in the same directory.", file=sys.stderr)
     sys.exit(1)
 
 
