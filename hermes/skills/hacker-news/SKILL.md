@@ -1,6 +1,6 @@
 ---
 name: hacker-news
-description: Read a Hacker News thread with its comments. Use when given a news.ycombinator.com link or asked what HN said about something.
+description: Search Hacker News and read threads with their comments, no key needed. Use when given a news.ycombinator.com link or asked what HN said about something.
 version: 1.0.0
 author: Greg Hilston
 license: MIT
@@ -13,11 +13,12 @@ metadata:
 
 # Hacker News
 
-Run with the `terminal` tool:
+Two commands. Run them with the `terminal` tool; they are not tools themselves.
 
 ```bash
-fetch-thread.py "https://news.ycombinator.com/item?id=<id>"   # story and comment tree
+hn-search.py "<query>"                                          # stories: points, comments, thread link
+hn-search.py "<query>" -s date                                  # newest first
+fetch-thread.py "https://news.ycombinator.com/item?id=<id>"     # story and comment tree
 ```
 
-To find a thread, web-search `site:news.ycombinator.com <topic>`, then read the
-best match.
+Search first, then read the one or two threads whose titles fit.
