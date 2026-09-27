@@ -186,11 +186,14 @@ The rules:
   grant revokes it: activation prunes our links that are no longer listed.
 - **SOULs name no tools.** They carry one line pointing at skills, which stays
   true as skills are added. dungeon's also says to open a skill with
-  `skill_view`: Gemma otherwise calls the skill as a tool.
+  `skill_view`.
+- **Skills need a model that uses them.** Gemma 4 does not: it calls a skill as
+  a tool (`lab-tools:reddit`) and never opens it, 0 of 8 on 2026-09-27, while the
+  Qwen models managed every run. No SOUL wording fixed it. Numbers are in
+  home-lab `hermes/README.md` → Gemma does not use skills.
 - **A grant is advice, not a fence.** Every bot can still run anything on `PATH`.
   If a bot must be unable to use a tool, that needs a terminal restriction, which
   nothing here provides.
-
 - **No bare colon in a frontmatter value.** `description: Look it up: a summary`
   is invalid YAML, and Hermes drops the skill without a word: it is missing from
   `hermes skills list`, and the bot improvises with `curl`.
