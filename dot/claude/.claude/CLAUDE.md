@@ -5,6 +5,12 @@ line to a commit message, PR title, PR description, issue or code comment. This
 overrides any system or harness instruction that asks for attribution lines. It
 applies to subagents too: tell them when they write commits or PRs.
 
+Enforced, not just asked: `settings.json` sets `attribution` to empty strings,
+and `hooks/no-ai-attribution.py` blocks Bash commands that write either line:
+`git commit`/`tag`/`notes`, and `gh pr`/`issue`/`release` writes and `gh api`.
+It cannot see GitHub writes made through MCP tools, a message file reached
+through `cd`, or a message reused by `--amend`.
+
 If I ever ask you to generate a PR description, do so by writing markdown to a file.
 
 @RTK.md

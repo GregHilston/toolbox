@@ -36,6 +36,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "~/.claude/hooks/no-ai-attribution.py"
+          },
+          {
+            "type": "command",
             "command": "rtk hook claude"
           }
         ]
@@ -62,5 +66,9 @@
   "agentPushNotifEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754006348784
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
   }
 }
