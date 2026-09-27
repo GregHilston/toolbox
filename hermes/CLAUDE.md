@@ -277,6 +277,11 @@ Runtime state, so none of it is in git.
 
 ## Traps
 
+- **A Telegram chat keeps its system prompt until `/new`.** Gateway sessions
+  never reset on their own, and a session keeps the prompt it started with. After
+  a SOUL or skill change, send `/new` in Telegram, or the bot won't see it. One
+  chat ran from 2026-09-22 and scraped DuckDuckGo for Reddit instead of using
+  the reddit skill. `hermes gateway restart` does not start a new session.
 - **`${VAR}` in `config.yaml` resolves against the profile's own `.env`, not
   your shell.** `api_key: ${OMLX_API_KEY}` with the key only in
   `nixos/secrets/.env` means every model call goes out keyless and oMLX answers
