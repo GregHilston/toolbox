@@ -10,7 +10,7 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 ├── bin/                                    # Helper scripts. Added to $PATH (recursive) for user convenience.
 ├── claude-code/                            # Dockerfile + docs for running Claude Code in a container.
 ├── claude-commands/                        # Global Claude Code slash commands (→ ~/.claude/commands/).
-├── claude-skills/                          # Global Claude Code agent skills (→ ~/.claude/skills/).
+├── skills/                                 # Skills for Claude Code, pi and Hermes (→ ~/.claude/skills/).
 ├── dot/                                    # Dotfiles to configure a slew of programs and environments.
 ├── nixos/                                  # NixOS and nix-darwin configurations for all hosts.
 ├── tests/                                  # Tests for bin/ scripts (`just test`). Not under bin/, which is on $PATH.

@@ -16,18 +16,13 @@ Drop a `.md` in `claude-commands/`; it becomes `/<name>` everywhere.
 
 ### Adding a new skill
 
-A `claude-skills/<name>/SKILL.md` with `name`/`description` frontmatter becomes
-`/<name>`. Copy an existing skill for the shape.
-
-The description is the only part that is in context on every request, in both
-Claude Code and pi (which reads the same directory). Keep it to two or three
-sentences, and add `disable-model-invocation: true` to any skill you invoke by
-name — grill-me, simple-english, the review and planning skills — so its
-description leaves the system prompt entirely; `/<name>` still works.
+**Follow `skills/README.md`.** One skill set reaches Claude Code, pi and
+Hermes, and a tool is a script in `bin/` plus a thin skill that names it.
+`tests/test_skills.py` enforces the rules.
 
 ### Wayfinder, and the rest of Matt Pocock's planning chain
 
-`claude-skills/wayfinder/` is the entry point (`/wayfinder` here, `/skill:wayfinder`
+`skills/wayfinder/` is the entry point (`/wayfinder` here, `/skill:wayfinder`
 in pi) for planning work too big for one session: a map of decision tickets on the
 repo's issue tracker, resolved one per session. The model-invoked primitives it calls
 (grilling, domain-modeling, research, prototype), the downstream `to-spec` and
@@ -50,7 +45,7 @@ targets, all symlinked into this repo (so they're version-controlled and deploy 
 every host that imports `programs/tui`):
 
 - `~/.claude/commands`     → `claude-commands/`
-- `~/.claude/skills`       → `claude-skills/`
+- `~/.claude/skills`       → `skills/`
 - `~/.claude/CLAUDE.md`    → `dot/claude/.claude/CLAUDE.md`   (global, cross-repo memory)
 - `~/.claude/settings.json`→ `dot/claude/.claude/settings.json` (permissions, hooks, plugins)
 - `~/.config/ccstatusline/settings.json` → `dot/ccstatusline/…` (status line layout)

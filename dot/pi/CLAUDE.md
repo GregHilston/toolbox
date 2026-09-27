@@ -853,15 +853,16 @@ pi -p 'Use the reddit_search tool to search Reddit for "nixos flakes". Report th
 
 ## Skills — shared with Claude Code, not duplicated
 
-`custom.programs.pi.settings` (`pi.nix`) sets `skills = ["~/.claude/skills"]`,
-so pi reads the exact same `claude-skills/` directory Claude Code does (`~/.claude/skills`
-→ `claude-skills/`, per the root `CLAUDE.md`). Pi implements the same Agent Skills
+`custom.programs.pi.settings` (`pi.nix`) sets `skills = ["~/.claude/skills" "!**/synced/**"]`
+(`synced/` is claude.ai's, for Claude only),
+so pi reads the exact same `skills/` directory Claude Code does (`~/.claude/skills`
+→ `skills/`, per the root `CLAUDE.md`). Pi implements the same Agent Skills
 standard Claude Code does, and documents this exact cross-harness mechanism
 (`docs/skills.md` → "Using Skills from Other Harnesses") — so there is no second
 `.pi/agent/skills/` copy to keep in sync.
 
 Every discoverable skill's description is in the system prompt on every
-request, in both harnesses — the eight in `claude-skills/` measured 1,296
+request, in both harnesses — the eight in `skills/` measured 1,296
 tokens before the trim. Skills you invoke by name (grill-me, simple-english,
 the review and planning ones) carry `disable-model-invocation: true`, which
 both pi (`docs/skills.md`) and Claude Code read the same way: not in the
@@ -872,11 +873,11 @@ github-code-researcher's was 185 words of examples that belonged in the body.
 The catch: a `SKILL.md` written for one harness can still name that harness's
 tools by name (`AskUserQuestion`, a `quiz` extension, `Agent`). A skill meant to
 work in both names the *capability* generically in its body and maps it to each
-harness's concrete tool in a small table — see `claude-skills/teach/SKILL.md` for
+harness's concrete tool in a small table — see `skills/teach/SKILL.md` for
 the pattern (adapted from [amosblomqvist/learn](https://github.com/amosblomqvist/learn),
 a `pi`-only config this repo does not otherwise vendor).
 
-The wayfinder set (`claude-skills/wayfinder/` and the skills beside it, vendored
+The wayfinder set (`skills/wayfinder/` and the skills beside it, vendored
 from mattpocock/skills) uses the same table. In pi, "call the Skill tool with X"
 means read `~/.claude/skills/X/SKILL.md` and follow it, a round of grilling is
 numbered questions in the reply, and research subagents exist only under
@@ -914,13 +915,13 @@ everything under `deprecated/`) had no matching need here.
 - **`extensions/ask-user-question.ts`** — a UI popup for open questions with no
   right answer. Single file, no npm deps (uses pi's own bundled
   `@mariozechner/pi-tui`, like `web-search.ts` already does), so nothing extra
-  to install. This is exactly the extension `claude-skills/teach/SKILL.md`'s
+  to install. This is exactly the extension `skills/teach/SKILL.md`'s
   tool-mapping table already anticipates ("if an ask_user_question-style
   popup extension is installed, use it — not required") — with it installed,
   pi's `teach` sessions get the same popup UX as Claude Code's
   `AskUserQuestion`, not just a plain-text fallback.
-- **`claude-skills/youtube-transcript/`** — not pi-only: a real skill, vendored
-  into the shared `claude-skills/` directory (see "Skills" above) so both
+- **`skills/youtube-transcript/`** — not pi-only: a real skill, vendored
+  into the shared `skills/` directory (see "Skills" above) so both
   agents get it from one copy. Fetches a video's title and transcript via
   `yt-dlp`, which is already in `nixos/config/base-packages.nix` on every
   managed host — no new system dependency.

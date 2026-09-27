@@ -2,6 +2,11 @@
 
 ## Agent skills
 
+### Writing a skill or an agent tool
+
+Follow `~/Git/toolbox/skills/README.md`: one skill set for Claude Code, pi and
+Hermes, with the tool itself a script in `~/Git/toolbox/bin/`.
+
 ### Issue tracker
 
 Wayfinder, to-spec and to-tickets need to know where this repo tracks issues.
