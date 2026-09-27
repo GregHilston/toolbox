@@ -152,7 +152,7 @@ deployments. `bin/CLAUDE.md` has the conventions and the one step dungeon needs.
 ## Capability skills: which bot knows which tool
 
 **This is the one way to give a bot a tool.** A script in `bin/` does the work;
-a skill in `skills/<capability>/` tells the bots that were granted it how to
+a skill in `skills/lab-tools/<capability>/` tells the bots that were granted it how to
 call the script. Don't put tool logic in a skill, a SOUL, a Hermes plugin or
 `home-lab/hermes/scripts/`.
 
@@ -171,18 +171,22 @@ The rules:
 
 - **One skill per capability**, in `skills/lab-tools/<capability>/SKILL.md`
   (`reddit`, `hacker-news`), granted as `lab-tools/<capability>`. The category
-  directory is load-bearing: Hermes lists an uncategorised skill as `reddit:` then
-  `- reddit`, and Gemma called the tool `reddit:reddit`. It names the commands, says to run them with `terminal`, and
-  says what not to use instead, and that the command is on `PATH` and typed exactly:
-  otherwise Gemma prefixes `python3 /opt/data/scripts/`. Keep them small so granting one grants only it.
+  directory is load-bearing: Hermes lists an uncategorised skill as `reddit:`
+  then `- reddit`, and Gemma called the tool `reddit:reddit`. Pruning looks one
+  level down, so no deeper nesting.
+- **A skill names its commands**, says to run them with `terminal`, says what
+  not to use instead, and says each command is on `PATH` and typed exactly:
+  otherwise Gemma prefixes `python3 /opt/data/scripts/`. Keep skills small so
+  granting one grants only it.
 - **Grants are per profile.** moria: `botSkills` and `defaultSkills` in
   `nixos/modules/programs/tui/hermes.nix`. dungeon: one read-only mount per skill
   on the `hermes` service in home-lab's `docker-compose.yaml` (a future dungeon
   profile would mount at `/opt/data/profiles/<profile>/skills/`). The researcher
   and the default profiles get research skills; the builder does not. Removing a
   grant revokes it: activation prunes our links that are no longer listed.
-- **SOULs name no tools.** They carry one line, "check your skills before
-  searching the web", which stays true as skills are added.
+- **SOULs name no tools.** They carry one line pointing at skills, which stays
+  true as skills are added. dungeon's also says to open a skill with
+  `skill_view`: Gemma otherwise calls the skill as a tool.
 - **A grant is advice, not a fence.** Every bot can still run anything on `PATH`.
   If a bot must be unable to use a tool, that needs a terminal restriction, which
   nothing here provides.
