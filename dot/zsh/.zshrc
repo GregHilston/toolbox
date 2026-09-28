@@ -267,7 +267,7 @@ alias zjk='zellij kill-session'
 rc() {
   # Inside zellij, --layout would add a tab to this session.
   env -u ZELLIJ -u ZELLIJ_SESSION_NAME -u ZELLIJ_PANE_ID \
-    zellij --layout claude-rc attach --create-background claude-rc &&
+    zellij --layout claude-rc attach --create-background --force-run-commands claude-rc &&
     print "Claude Remote Control is serving. Stop it with: zjk claude-rc"
 }
 
