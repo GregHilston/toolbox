@@ -1,0 +1,22 @@
+// Remote Control servers for the Claude app, started by `rc` in .zshrc.
+// Each pane restarts its server, which exits when long offline.
+layout {
+    pane split_direction="vertical" {
+        pane split_direction="horizontal" {
+            pane name="toolbox" command="bash" {
+                args "-c" "while :; do CLAUDE_RC_PERMISSION_MODE=bypassPermissions $HOME/Git/toolbox/bin/claude-rc.sh toolbox; sleep 10; done"
+            }
+            pane name="home-lab" command="bash" {
+                args "-c" "while :; do CLAUDE_RC_PERMISSION_MODE=bypassPermissions $HOME/Git/toolbox/bin/claude-rc.sh home-lab; sleep 10; done"
+            }
+        }
+        pane split_direction="horizontal" {
+            pane name="ccs" command="bash" {
+                args "-c" "while :; do CLAUDE_RC_PERMISSION_MODE=bypassPermissions $HOME/Git/toolbox/bin/claude-rc.sh ccs; sleep 10; done"
+            }
+            pane name="notes" command="bash" {
+                args "-c" "while :; do CLAUDE_RC_PERMISSION_MODE=bypassPermissions $HOME/Git/toolbox/bin/claude-rc.sh notes; sleep 10; done"
+            }
+        }
+    }
+}

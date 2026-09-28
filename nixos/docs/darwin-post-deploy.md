@@ -79,6 +79,23 @@ things cannot be expressed in nix and the agent fails — loudly, nightly — wi
 
 Restore procedure and failure triage: home-lab `docs/runbooks/backup-tier1.md`.
 
+## Claude Remote Control (dungeon; moria on demand)
+The `claude-rc-<repo>` launchd agents (hosts/macs/dungeon/default.nix) serve toolbox,
+home-lab, ccs and notes to the Claude app through `bin/claude-rc.sh`. On moria, `rc` starts
+the same four in a background zellij session, and `zjk claude-rc` stops them. A server with
+no TTY cannot answer a prompt, so do these once per host in a GUI session (VNC on dungeon):
+- [ ] `claude` then `/login` with the Claude account. A `claude setup-token` token cannot
+      serve Remote Control.
+- [ ] In each of `~/Git/{toolbox,home-lab,ccs,notes}`, run `claude` once and accept the
+      workspace trust dialog.
+- [ ] Run `claude remote-control` once in any repo, answer `Enable Remote Control?` with `y`,
+      then quit it.
+- [ ] dungeon only: run `claude --permission-mode auto` once and accept the auto mode opt-in.
+      moria's bypass mode needs no prompt: `skipDangerousModePermissionPrompt` is in the
+      stowed settings.json.
+- [ ] Verify: `tail ~/Library/Logs/claude-rc-home-lab.log` shows `Connected`, and the repos
+      appear under the Code tab in the Claude app.
+
 ## Voice Input (Karabiner + Handy)
 Hold Caps Lock to dictate; a quick tap is Escape. Until these are done Karabiner is inert
 and Caps Lock still toggles caps. On headless dungeon, do them over VNC. Background and

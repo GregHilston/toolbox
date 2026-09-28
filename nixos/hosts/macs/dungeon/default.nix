@@ -79,6 +79,24 @@
       StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/${name}-run.log";
     };
   };
+
+  # A Claude Remote Control server for one ~/Git repo, so the Claude app can
+  # start sessions in it (toolbox bin/claude-rc.sh). KeepAlive because the
+  # server exits when it has been offline for a while.
+  mkClaudeRcAgent = repo: {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/toolbox/bin/claude-rc.sh"
+        repo
+      ];
+      RunAtLoad = true;
+      KeepAlive = true;
+      ThrottleInterval = 30;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/claude-rc-${repo}.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/claude-rc-${repo}.log";
+    };
+  };
 in {
   imports = [
     ../../../modules/darwin/common.nix
@@ -514,6 +532,12 @@ in {
       StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/home-lab-sync.log";
     };
   };
+
+  # One-time setup before these can serve: nixos/docs/darwin-post-deploy.md.
+  launchd.user.agents.claude-rc-toolbox = mkClaudeRcAgent "toolbox";
+  launchd.user.agents.claude-rc-home-lab = mkClaudeRcAgent "home-lab";
+  launchd.user.agents.claude-rc-ccs = mkClaudeRcAgent "ccs";
+  launchd.user.agents.claude-rc-notes = mkClaudeRcAgent "notes";
 
   # ---------------------------------------------------------------------------
   # Monitoring exporters for the home-lab Prometheus/Grafana stack.

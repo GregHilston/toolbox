@@ -261,6 +261,16 @@ zj() {
 
 alias zjk='zellij kill-session'
 
+# Serve ~/Git's repos to the Claude app from a background zellij session
+# (bin/claude-rc.sh). `zj claude-rc` to watch, `zjk claude-rc` to stop.
+# dungeon doesn't need this: launchd serves its repos all the time.
+rc() {
+  # Inside zellij, --layout would add a tab to this session.
+  env -u ZELLIJ -u ZELLIJ_SESSION_NAME -u ZELLIJ_PANE_ID \
+    zellij --layout claude-rc attach --create-background --force-run-commands claude-rc &&
+    print "Claude Remote Control is serving. Stop it with: zjk claude-rc"
+}
+
 # Clipboard (pbcopy on macOS, xclip on Linux)
 if [[ "$OSTYPE" == "darwin"* ]]; then
   alias clip="pbcopy <"
