@@ -265,9 +265,11 @@ alias zjk='zellij kill-session'
 # (bin/claude-rc.sh). `zj claude-rc` to watch, `zjk claude-rc` to stop.
 # dungeon doesn't need this: launchd serves its repos all the time.
 rc() {
+  # A dead session resurrects its old layout. Refuses a running one.
+  zellij delete-session claude-rc >/dev/null 2>&1
   # Inside zellij, --layout would add a tab to this session.
   env -u ZELLIJ -u ZELLIJ_SESSION_NAME -u ZELLIJ_PANE_ID \
-    zellij --layout claude-rc attach --create-background --force-run-commands claude-rc &&
+    zellij --layout claude-rc attach --create-background claude-rc &&
     print "Claude Remote Control is serving. Stop it with: zjk claude-rc"
 }
 
