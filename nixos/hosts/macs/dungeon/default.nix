@@ -82,8 +82,7 @@
 
   # A Claude Remote Control server for one ~/Git repo, so the Claude app can
   # start sessions in it (toolbox bin/claude-rc.sh). KeepAlive because the
-  # server exits after ~10 minutes without network. `auto`, not bypass: these
-  # sessions have the Docker socket of the whole lab.
+  # server exits when it has been offline for a while.
   mkClaudeRcAgent = repo: {
     serviceConfig = {
       ProgramArguments = [
@@ -91,7 +90,6 @@
         "/Users/${vars.user.name}/Git/toolbox/bin/claude-rc.sh"
         repo
       ];
-      EnvironmentVariables.CLAUDE_RC_PERMISSION_MODE = "auto";
       RunAtLoad = true;
       KeepAlive = true;
       ThrottleInterval = 30;
