@@ -18,5 +18,8 @@ layout {
                 args "-c" "while :; do CLAUDE_RC_PERMISSION_MODE=bypassPermissions $HOME/Git/toolbox/bin/claude-rc.sh notes; sleep 10; done"
             }
         }
+        pane name="blurts-server" command="bash" {
+            args "-c" "while :; do CLAUDE_RC_PERMISSION_MODE=bypassPermissions $HOME/Git/toolbox/bin/claude-rc.sh blurts-server; sleep 10; done"
+        }
     }
 }
