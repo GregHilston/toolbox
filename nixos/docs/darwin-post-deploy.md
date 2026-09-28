@@ -90,6 +90,9 @@ no TTY cannot answer a prompt, so do these once per host in a GUI session (VNC o
       workspace trust dialog.
 - [ ] Run `claude remote-control` once in any repo, answer `Enable Remote Control?` with `y`,
       then quit it.
+- [ ] dungeon only: run `claude --permission-mode auto` once and accept the auto mode opt-in.
+      moria's bypass mode needs no prompt: `skipDangerousModePermissionPrompt` is in the
+      stowed settings.json.
 - [ ] Verify: `tail ~/Library/Logs/claude-rc-home-lab.log` shows `Connected`, and the repos
       appear under the Code tab in the Claude app.
 
