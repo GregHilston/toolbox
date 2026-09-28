@@ -538,6 +538,7 @@ in {
   launchd.user.agents.claude-rc-home-lab = mkClaudeRcAgent "home-lab";
   launchd.user.agents.claude-rc-ccs = mkClaudeRcAgent "ccs";
   launchd.user.agents.claude-rc-notes = mkClaudeRcAgent "notes";
+  launchd.user.agents.claude-rc-blurts-server = mkClaudeRcAgent "blurts-server";
 
   # ---------------------------------------------------------------------------
   # Monitoring exporters for the home-lab Prometheus/Grafana stack.

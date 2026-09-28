@@ -81,12 +81,12 @@ Restore procedure and failure triage: home-lab `docs/runbooks/backup-tier1.md`.
 
 ## Claude Remote Control (dungeon; moria on demand)
 The `claude-rc-<repo>` launchd agents (hosts/macs/dungeon/default.nix) serve toolbox,
-home-lab, ccs and notes to the Claude app through `bin/claude-rc.sh`. On moria, `rc` starts
-the same four in a background zellij session, and `zjk claude-rc` stops them. A server with
+home-lab, ccs, notes and blurts-server to the Claude app through `bin/claude-rc.sh`. On moria, `rc` starts
+the same five in a background zellij session, and `zjk claude-rc` stops them. A server with
 no TTY cannot answer a prompt, so do these once per host in a GUI session (VNC on dungeon):
 - [ ] `claude` then `/login` with the Claude account. A `claude setup-token` token cannot
       serve Remote Control.
-- [ ] In each of `~/Git/{toolbox,home-lab,ccs,notes}`, run `claude` once and accept the
+- [ ] In each of `~/Git/{toolbox,home-lab,ccs,notes,blurts-server}`, run `claude` once and accept the
       workspace trust dialog.
 - [ ] Run `claude remote-control` once in any repo, answer `Enable Remote Control?` with `y`,
       then quit it.
