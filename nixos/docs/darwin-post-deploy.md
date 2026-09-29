@@ -200,15 +200,8 @@ open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
 ## Launch Applications
 
 - [ ] Set up AeroSpace tiling
-- [ ] **Ice** (menu bar manager, replaced Bartender) - it's launched at login by the launchd
-      agent in `modules/darwin/ice.nix`, but its permissions are GUI-gated: on first launch
-      approve Accessibility (move/hide menu bar items) and Screen Recording (item search and
-      menu bar appearance). Leave Ice's own Settings → General → "Launch Ice at login"
-      **off** — the launchd agent owns that, and both would double-register.
-- [ ] Arrange the menu bar in Ice: drag icons above/below the divider with ⌘-drag to choose
-      what stays visible vs. hidden
-- [ ] **Vorssaint** (moria, citadel) - the menu-bar utility suite. Like Ice, it is launched
-      at login by `modules/darwin/vorssaint.nix`, and unlike Ice it also seeds its own
+- [ ] **Vorssaint** (moria, citadel) - the menu-bar utility suite. Like Handy, it is launched
+      at login by `modules/darwin/vorssaint.nix`, and unlike Handy it also seeds its own
       Features hub, so there is nothing to pick on first launch — only permissions to grant.
       Leave its Settings → "Launch at login" **off**; the launchd agent owns that.
       Grant these, in rough order of how much stops working without them:
@@ -226,13 +219,14 @@ open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
       > and says so on Vorssaint's own Permissions page, which also lists which features
       > use each grant. Nothing here can be declared: TCC is outside nix's reach.
 - [ ] Confirm the seed ran. It happens during `just dr` itself, after Homebrew, so the
-      output is in the rebuild's own log: `seeding the Features hub with mixer, keepAwake,
+      output is in the rebuild's own log: `seeding the Features hub with mixer, switcher,
       …` the first time and `already set up, leaving the Features hub alone` on every
       rebuild after. A `WARNING: the Vorssaint seed did not finish` line means it fell
       back to the app's own wizard — the rebuild is not failed by it.
       > To re-seed deliberately after editing the feature list — it is otherwise a
       > once-per-Mac write, so an edit alone changes nothing on a host already set up:
       > ```
+      > osascript -e 'quit app "Vorssaint"'
       > defaults delete com.vorssaint.utils hasOnboarded
-      > launchctl kickstart -k "gui/$(id -u)/org.nixos.vorssaint"
+      > just dr <host>
       > ```

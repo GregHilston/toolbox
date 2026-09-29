@@ -72,7 +72,7 @@
       "thunderbird"
 
       # Dev
-      "google-cloud-sdk"
+      "gcloud-cli"
 
       # Docker Desktop is citadel-only ON PURPOSE. It used to live in
       # homebrew-base.nix (every Mac), which put it on dungeon and moria alongside
@@ -99,7 +99,7 @@
   # Vorssaint — menu-bar utility suite (imported above). Seeds its Features hub
   # once on a Mac that has never run it; after that the hub owns the choice.
   # The feature list, and what it deliberately leaves out to stay clear of
-  # Karabiner, AeroSpace and Raycast, is in modules/darwin/vorssaint.nix.
+  # Karabiner and AeroSpace, is in modules/darwin/vorssaint.nix.
   services.vorssaint.enable = true;
 
   home-manager.users.${vars.user.name} = {
@@ -150,7 +150,7 @@
     # One-shot, because `quick update` self-updates from the prod bucket. To
     # reinstall, delete ~/.local/bin/quick and re-run `just dr citadel`.
     #
-    # The CLI itself still needs `gcloud auth login` (google-cloud-sdk is in the
+    # The CLI itself still needs `gcloud auth login` (gcloud-cli is in the
     # casks above) — it shells out to gcloud for every command.
     home.activation.install-quick = inputs.home-manager.lib.hm.dag.entryAfter ["installPackages"] ''
       if [ ! -x "$HOME/.local/bin/quick" ]; then

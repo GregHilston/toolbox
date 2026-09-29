@@ -122,11 +122,12 @@ on NixOS GUI hosts.
 Launching, permissions, and why the app's own "launch at login" stays off are all in
 `nixos/CLAUDE.md` → "Launching GUI apps at login", which owns this.
 
-## Menu Bar — Ice
+## Menu Bar — no manager
 
-[Ice](https://github.com/jordanbaird/Ice) manages the macOS menu bar. Cask in
-`modules/darwin/homebrew-base.nix`, launched by `modules/darwin/ice.nix` — same
-launchd pattern as Handy, documented in `nixos/CLAUDE.md`.
+macOS 27 folds overflow icons behind a » button on its own, and it broke Ice, which
+had been unmaintained since 2025: its menu went dead, so quitting took a `kill`. Before
+adding a replacement, check it names macOS 27 support. Hidden Bar (`hiddenbar`) does;
+Thaw, Ice's successor, only has it in an alpha.
 
 ## Mac Utilities — Vorssaint
 
@@ -145,16 +146,15 @@ worth knowing from here:
   anyone has opened the app. (Not from the launchd agent: agents activate *before*
   Homebrew, so that version raced the cask and then raced the human — and lost.) It is a
   **one-time** seed gated on the app's own `hasOnboarded` marker, not a rebuild-time
-  rewrite — editing the feature list does nothing to a Mac already set up until you
-  `defaults delete com.vorssaint.utils hasOnboarded` and kickstart the agent.
-- **It overlaps four things already deployed here**, and the list only dodges some of
+  rewrite — editing the feature list does nothing to a Mac already set up until you quit
+  Vorssaint, `defaults delete com.vorssaint.utils hasOnboarded` and `just dr <host>`.
+- **It overlaps things already deployed here**, and the list only dodges some of
   them on purpose. Out for good: `superKey` (Karabiner owns Caps Lock — two event taps
   on one key is broken, not just redundant) and `scrollInverter` (it would double-invert
   against `com.apple.swipescrolldirection = false` in `modules/darwin/common.nix`).
-  Deliberately in, despite overlapping: the app switcher and Dock previews (AeroSpace),
-  the command bar and clipboard history (Raycast), and the `monitor*` readouts (the
-  `stats` cask). The command bar is installed with its shortcut left **off**, because its
-  default is ⌥Space — Raycast's hotkey.
+  Deliberately in, despite overlapping: the app switcher and Dock previews (AeroSpace).
+  Vorssaint also stands in for Raycast (command bar, clipboard history), `stats` and
+  Amphetamine, so none of those are installed.
 
 Permissions are still manual — TCC is outside nix's reach. See
 `nixos/docs/darwin-post-deploy.md`.

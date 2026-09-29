@@ -122,14 +122,13 @@ for an ARM host.
 ## Launching GUI apps at login: a launchd `open -a` agent
 
 Menu-bar apps have to already be running to do anything, and they fail *silently* when
-they aren't — no Handy means Caps Lock still behaves and nothing dictates; no Ice means
-the stock cluttered menu bar. So each gets a launchd user agent:
+they aren't — no Handy means Caps Lock still behaves and nothing dictates. So each gets a
+launchd user agent:
 
-- `modules/darwin/ice.nix` — imported from `modules/darwin/common.nix`, so all three Macs.
 - `modules/darwin/handy.nix` — per-host (citadel, moria); headless dungeon has the cask but
   no use for a dictation app.
 - `modules/darwin/vorssaint.nix` — per-host (citadel, moria), for the same reason. Plain
-  `open -a` like the other two; its *other* job, seeding Vorssaint's Features hub (the app
+  `open -a` like Handy; its *other* job, seeding Vorssaint's Features hub (the app
   has no config file, only a UserDefaults domain), deliberately does **not** live in the
   agent. Activation order is agents → Homebrew → postActivation, so an agent-hosted seed
   runs before the cask exists and then has to race whoever opens the app first — a race it

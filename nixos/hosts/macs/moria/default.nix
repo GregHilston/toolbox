@@ -45,6 +45,7 @@
   #               maintained "on a best-effort basis only" and "commits to main
   #               may break these packages at any point", and its container mode
   #               is NixOS-only anyway.
+  #   anki      — flashcards; bin/anki/ scripts read its collection.
   # Note: the gaming apps' state (CrossOver bottles, Moonlight host pairing) is
   # runtime config, not declarative — same as oMLX model downloads.
   homebrew.casks = [
@@ -52,6 +53,7 @@
     "moonlight"
     "telegram"
     "hermes-desktop"
+    "anki"
   ];
 
   home-manager.users.${vars.user.name} = {
@@ -91,7 +93,7 @@
   # Vorssaint — menu-bar utility suite (imported above). Seeds its Features hub
   # once on a Mac that has never run it; after that the hub owns the choice.
   # The feature list, and what it deliberately leaves out to stay clear of
-  # Karabiner, AeroSpace and Raycast, is in modules/darwin/vorssaint.nix.
+  # Karabiner and AeroSpace, is in modules/darwin/vorssaint.nix.
   services.vorssaint.enable = true;
 
   # Keep pi's Reddit session cookie current by copying it out of Firefox.

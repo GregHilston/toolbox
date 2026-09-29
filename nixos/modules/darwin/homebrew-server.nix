@@ -6,9 +6,6 @@
 
   homebrew = {
     brews = [
-      "go"
-      "hugo"
-
       # Runtime (needed by pi for npm: packages)
       "node"
 
@@ -39,7 +36,6 @@
       "orbstack"
       "shortcat"
       "tailscale-app"
-      "1password-cli"
 
       # AI
       "claude"

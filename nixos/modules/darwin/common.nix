@@ -5,12 +5,6 @@
 }: let
   basePackages = import ../../config/base-packages.nix pkgs;
 in {
-  imports = [
-    # Launch Ice (menu bar manager) at login. Here rather than per-host because
-    # every Mac gets the cask from ./homebrew-base.nix and wants it running.
-    ./ice.nix
-  ];
-
   # Let Determinate manage the Nix daemon; disable nix-darwin's nix management
   nix.enable = false;
 
@@ -180,6 +174,15 @@ in {
     # https://news.ycombinator.com/item?id=47618946
     defaults -currentHost write -globalDomain NSStatusItemSpacing -int 2
     defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 2
+
+    # Spotlight on ⌘Space. -dict-add keeps other shortcuts.
+    (
+      set -eu
+      as_user() { launchctl asuser "$(id -u -- ${vars.user.name})" sudo --user=${vars.user.name} -- "$@"; }
+      as_user /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 64 \
+        '<dict><key>enabled</key><true/><key>value</key><dict><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>1048576</integer></array><key>type</key><string>standard</string></dict></dict>'
+      as_user /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
+    ) || echo "WARNING: could not bind Spotlight to ⌘Space; continuing." >&2
   '';
 
   # Enable zsh system-wide so nix-darwin registers it as a valid shell.

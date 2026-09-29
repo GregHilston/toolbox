@@ -42,11 +42,14 @@
 # The seed is gated on `hasOnboarded`, which the app itself sets the moment
 # setup finishes. So it fires exactly once per Mac — on the first activation
 # after the cask lands — and never fights the hub afterwards. To re-seed a host
-# deliberately (say, after changing the list below), clear the marker and let
-# the agent re-run:
+# deliberately (say, after changing the list below), quit the app, clear the
+# marker and re-run activation:
 #
+#   osascript -e 'quit app "Vorssaint"'
 #   defaults delete com.vorssaint.utils hasOnboarded
-#   launchctl kickstart -k "gui/$(id -u)/org.nixos.vorssaint"
+#   just dr <host>
+#
+# Kickstarting the agent instead just opens the wizard, which re-locks the seed.
 #
 # A plain `brew uninstall --cask vorssaint` does NOT reset this: its cask only
 # quits the app and removes the bundle, and the preferences plist is listed
@@ -81,23 +84,23 @@
 # `launchctl asuser "$(id -u -- user)" sudo --user=user --`
 # (modules/system/defaults-write.nix), and that is exactly what is copied here.
 #
-# What is left in the agent is only the launch, in the plain shape ./ice.nix
-# and ./handy.nix use. Why `open -g -j -a` and not the inner binary, why
+# What is left in the agent is only the launch, in the plain shape
+# ./handy.nix uses. Why `open -g -j -a` and not the inner binary, why
 # RunAtLoad without KeepAlive, and why the app's own launch-at-login toggle
 # stays off: nixos/CLAUDE.md → "Launching GUI apps at login". This is that
-# pattern's third user, and it needs no exception to it.
+# pattern's second user, and it needs no exception to it.
 #
 # ## Permissions are still manual
 #
 # Nothing here can grant TCC. Accessibility and Screen Recording are clicked
-# through by hand per host exactly like Ice and Handy — see
+# through by hand per host exactly like Handy — see
 # ../../docs/darwin-post-deploy.md. Features that need a grant simply sit inert
 # until it is given, so a half-configured host is quiet rather than broken.
 #
 # ## Overlap with what these Macs already run
 #
-# Vorssaint is wide enough to reach into four things already deployed here.
-# The list below does not dodge all of them, and that is a choice made at the
+# Vorssaint is wide enough to reach into two things already deployed here.
+# The list below does not dodge both of them, and that is a choice made at the
 # machine rather than an oversight — worth knowing before reading it as an
 # accident:
 #
@@ -106,14 +109,6 @@
 #     different job, so they coexist. The tiling-hostile half of Vorssaint —
 #     `windowLayout` (edge snapping, drag-to-move) and `windowMaximizer` — is
 #     the part left out.
-#   * `commandBar` and `clipboardHistory` overlap the `raycast` cask outright.
-#     See the shortcut note below; this is the overlap most likely to bite.
-#   * The `monitor*` features overlap the `stats` cask. Both put CPU, GPU,
-#     memory, network and battery readouts in the menu bar, so this is two sets
-#     of samplers for one set of numbers. If Vorssaint's version earns its
-#     place — it carries the speed test, disk health and battery power draw in
-#     the same panel — dropping `stats` from ./homebrew-base.nix is the
-#     follow-up.
 #
 # `superKey` is the one genuine incompatibility and stays out for good. It
 # reimplements the Caps Lock hold this repo already does in
@@ -121,17 +116,9 @@
 # modifier, tap for Escape. Two event taps grabbing one key is broken rather
 # than merely redundant.
 #
-# ## The one shortcut this deliberately leaves off
+# ## What is left out, and why
 #
-# `commandBar` is installed but its shortcut is NOT switched on, and it is the
-# only chosen feature treated that way. Its default binding is ⌥Space, which is
-# also Raycast's default hotkey — turning it on from here would quietly take
-# over the launcher key on both Macs. The bar still opens from the menu panel,
-# and picking a combination for it is a decision to make in Settings with
-# Raycast's own binding in view. Everything else that needed switching on got
-# switched on; see `featureEnableKeys`.
-#
-# `scrollInverter` is absent for a different reason, and it is the subtle one.
+# `scrollInverter` is absent too, and it is the subtle one.
 # Its whole purpose is to invert the wheel for a mouse *only*, leaving natural
 # scrolling on for the trackpad. But ./common.nix sets
 # `NSGlobalDomain."com.apple.swipescrolldirection" = false`, which already
@@ -146,10 +133,9 @@
 # It started as the set https://youtu.be/s8dzlv4WuNk singles out after a month
 # of use. It is now moria's actual hub, read back off the machine after that
 # host was set up by hand, so citadel comes up matching moria rather than
-# matching a video. Two things changed in that trip worth noticing if you are
-# reconsidering the list: `keepAwake` — the video's headline feature, closing
-# the lid on an external display without the charger — is NOT in it, and
-# neither are `uninstaller`, `cleaner` or `homebrew`.
+# matching a video. `uninstaller`, `cleaner` and `homebrew` stayed out of it.
+# `shelf` and `keepAwake` are the exception: chosen here, then switched on
+# by hand on moria and citadel, which were already set up.
 #
 {
   config,
@@ -178,14 +164,19 @@
     "autoQuit"
     # Mouse and keyboard
     "scrollInverter"
+    "scrollHorizontal"
     "focusFollowsMouse"
     "smoothScroll"
+    "linearScroll"
+    "mouseAcceleration"
     "mouseNavigation"
     "mouseButtonShortcuts"
     "middleClick"
+    "mouseClickDebounce"
     "keyboardDebounce"
     "textSnippets"
     "superKey"
+    "quitWindowProtection"
     # Clipboard and files
     "clipboardHistory"
     "pastePlain"
@@ -197,6 +188,7 @@
     # Sound
     "mixer"
     "soundOutputSwitcher"
+    "audioPriority"
     "micMute"
     "musicBlock"
     # Energy and display
@@ -221,7 +213,21 @@
     "scratchpad"
     "commandBar"
     "screenRecorder"
+    "wallpaper"
     "killProcess"
+    "portManager"
+    # Dynamic Island, then its extensions
+    "notch"
+    "notchCalendar"
+    "notchNotifications"
+    "notchGestures"
+    "notchTimer"
+    "notchAccessories"
+    "notchLyrics"
+    "notchQueue"
+    "notchLiveEqualizer"
+    "notchDownloads"
+    "notchAgents"
     # System monitor, one entry per metric family
     "monitorCPU"
     "monitorGPU"
@@ -229,6 +235,7 @@
     "monitorNetwork"
     "monitorDisk"
     "monitorPower"
+    "connectedDevices"
     "fanControl"
   ];
 
@@ -254,12 +261,12 @@
   # in Settings and instantiate its service, but a feature that listens for
   # something — a wheel event, a window closing, a ⌘X — still checks its own
   # switch, and every one of those ships off. Seeding availability alone would
-  # hand over five features that are present and do nothing.
+  # hand over features that are present and do nothing.
   #
-  # So: for each chosen feature, also switch on what makes it act. The last two
-  # are not `enabledKeys` at all but the shortcut switches for two on-demand
-  # tools, off by default, without which the capture and OCR bindings
-  # (⌃⌥⌘4, ⌃⌥⌘T) are printed in Settings but dead. Everything omitted here —
+  # So: for each chosen feature, also switch on what makes it act. The second
+  # group is not `enabledKeys` at all but shortcut switches for on-demand
+  # tools, off by default, without which their bindings are printed in
+  # Settings but dead. Everything omitted here —
   # mixer, keepAwake, the monitors, quickToggles, cleaningMode, uninstaller,
   # cleaner, homebrew — is on-demand: `enabledKeys` is empty for those, and the
   # app counts being installed as being engaged.
@@ -293,6 +300,9 @@
     screenOCR = "screenOCRShortcutEnabled";
     screenRecorder = "recorderShortcutEnabled";
     cameraPreview = "cameraPreviewShortcutEnabled";
+
+    # ⌥Space, the keyboard launcher; ships off.
+    commandBar = "commandBarShortcutEnabled";
   };
 
   enableWrites = lib.concatMapStringsSep "\n" (
@@ -397,10 +407,14 @@ in {
         "pastePlain"
         "finderCutPaste"
         "urlCleaner"
+        "shelf"
 
         # Display. Brightness for external screens over their own control
         # channel, which the keyboard keys do not reach.
         "brightness"
+
+        # Energy. Toggled by hand, not by nix.
+        "keepAwake"
 
         # Capture and tools. The three capture tools share one selector and sit
         # on the free ⌃⌥⌘ layer (4, T, 5), so macOS keeps ⌘⇧3/4/5 and the
@@ -412,8 +426,7 @@ in {
         "mediaTools"
         "commandBar"
 
-        # System monitor, one id per metric family. Overlaps the `stats` cask
-        # in ./homebrew-base.nix — see the header's conflicts section.
+        # System monitor, one id per metric family.
         "monitorCPU"
         "monitorGPU"
         "monitorMemory"
@@ -465,7 +478,7 @@ in {
       fi
     '';
 
-    # Plain ./ice.nix shape, now that the seed has moved out: RunAtLoad, no
+    # Plain ./handy.nix shape: RunAtLoad, no
     # KeepAlive, `open -a` rather than the inner binary. See nixos/CLAUDE.md →
     # "Launching GUI apps at login" for why each of those.
     launchd.user.agents.vorssaint = {
