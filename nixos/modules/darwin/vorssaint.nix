@@ -133,11 +133,9 @@
 # It started as the set https://youtu.be/s8dzlv4WuNk singles out after a month
 # of use. It is now moria's actual hub, read back off the machine after that
 # host was set up by hand, so citadel comes up matching moria rather than
-# matching a video. Two things changed in that trip worth noticing if you are
-# reconsidering the list: `keepAwake` — the video's headline feature, closing
-# the lid on an external display without the charger — is NOT in it, and
-# neither are `uninstaller`, `cleaner` or `homebrew`. `shelf` was added
-# later, in place of the Dropover app.
+# matching a video. `uninstaller`, `cleaner` and `homebrew` stayed out of it.
+# `shelf` and `keepAwake` were added later, in place of the Dropover and
+# Amphetamine apps.
 #
 {
   config,
@@ -414,6 +412,9 @@ in {
         # Display. Brightness for external screens over their own control
         # channel, which the keyboard keys do not reach.
         "brightness"
+
+        # Energy. A menu bar toggle; replaces Amphetamine.
+        "keepAwake"
 
         # Capture and tools. The three capture tools share one selector and sit
         # on the free ⌃⌥⌘ layer (4, T, 5), so macOS keeps ⌘⇧3/4/5 and the
