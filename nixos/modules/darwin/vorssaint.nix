@@ -116,17 +116,9 @@
 # modifier, tap for Escape. Two event taps grabbing one key is broken rather
 # than merely redundant.
 #
-# ## The one shortcut this deliberately leaves off
+# ## What is left out, and why
 #
-# `commandBar` is installed but its shortcut is NOT switched on, and it is the
-# only chosen feature treated that way. Its default binding is ⌥Space, which is
-# also Raycast's default hotkey — turning it on from here would quietly take
-# over the launcher key on both Macs. The bar still opens from the menu panel,
-# and picking a combination for it is a decision to make in Settings with
-# Raycast's own binding in view. Everything else that needed switching on got
-# switched on; see `featureEnableKeys`.
-#
-# `scrollInverter` is absent for a different reason, and it is the subtle one.
+# `scrollInverter` is absent too, and it is the subtle one.
 # Its whole purpose is to invert the wheel for a mouse *only*, leaving natural
 # scrolling on for the trackpad. But ./common.nix sets
 # `NSGlobalDomain."com.apple.swipescrolldirection" = false`, which already
@@ -144,7 +136,8 @@
 # matching a video. Two things changed in that trip worth noticing if you are
 # reconsidering the list: `keepAwake` — the video's headline feature, closing
 # the lid on an external display without the charger — is NOT in it, and
-# neither are `uninstaller`, `cleaner` or `homebrew`.
+# neither are `uninstaller`, `cleaner` or `homebrew`. `shelf` was added
+# later, in place of the Dropover app.
 #
 {
   config,
@@ -305,6 +298,9 @@
     # are here because a capture tool you cannot reach from the keyboard is
     # most of a capture tool missing, and all four default onto the free ⌃⌥⌘
     # layer, which nothing else here uses.
+    #
+    # The command bar's ⌥Space ships off; Raycast is gone.
+    commandBar = "commandBarShortcutEnabled";
     screenshot = "screenshotShortcutEnabled";
     screenOCR = "screenOCRShortcutEnabled";
     screenRecorder = "recorderShortcutEnabled";
@@ -413,6 +409,7 @@ in {
         "pastePlain"
         "finderCutPaste"
         "urlCleaner"
+        "shelf"
 
         # Display. Brightness for external screens over their own control
         # channel, which the keyboard keys do not reach.
