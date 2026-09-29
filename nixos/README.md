@@ -459,7 +459,7 @@ sudo nixos-rebuild boot
 
 #### Within the NixOS VM
 - **GUI Applications (VS Code, etc.)**: `Ctrl+C` to copy, `Ctrl+V` to paste
-- **Alacritty Terminal**: `Ctrl+Shift+C` to copy, `Ctrl+Shift+V` to paste
+- **Ghostty Terminal**: `Ctrl+Shift+C` to copy, `Ctrl+Shift+V` to paste
 
 #### Between macOS Host and NixOS VM
 
