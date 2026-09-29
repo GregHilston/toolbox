@@ -148,13 +148,13 @@ worth knowing from here:
   **one-time** seed gated on the app's own `hasOnboarded` marker, not a rebuild-time
   rewrite — editing the feature list does nothing to a Mac already set up until you
   `defaults delete com.vorssaint.utils hasOnboarded` and kickstart the agent.
-- **It overlaps four things already deployed here**, and the list only dodges some of
+- **It overlaps things already deployed here**, and the list only dodges some of
   them on purpose. Out for good: `superKey` (Karabiner owns Caps Lock — two event taps
   on one key is broken, not just redundant) and `scrollInverter` (it would double-invert
   against `com.apple.swipescrolldirection = false` in `modules/darwin/common.nix`).
   Deliberately in, despite overlapping: the app switcher and Dock previews (AeroSpace).
-  The command bar and clipboard history replaced Raycast, and the `monitor*` readouts
-  replaced the `stats` cask; both are gone, and Spotlight has ⌘Space back.
+  Vorssaint also stands in for Raycast (command bar, clipboard history), `stats` and
+  Amphetamine, so none of those are installed.
 
 Permissions are still manual — TCC is outside nix's reach. See
 `nixos/docs/darwin-post-deploy.md`.

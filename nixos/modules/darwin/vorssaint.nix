@@ -96,8 +96,8 @@
 #
 # ## Overlap with what these Macs already run
 #
-# Vorssaint is wide enough to reach into four things already deployed here.
-# The list below does not dodge all of them, and that is a choice made at the
+# Vorssaint is wide enough to reach into two things already deployed here.
+# The list below does not dodge both of them, and that is a choice made at the
 # machine rather than an oversight — worth knowing before reading it as an
 # accident:
 #
@@ -106,9 +106,6 @@
 #     different job, so they coexist. The tiling-hostile half of Vorssaint —
 #     `windowLayout` (edge snapping, drag-to-move) and `windowMaximizer` — is
 #     the part left out.
-#   * `commandBar` and `clipboardHistory` took over from Raycast, which is
-#     gone; Spotlight has ⌘Space back (./common.nix).
-#   * The `monitor*` features replaced the `stats` cask, which is gone.
 #
 # `superKey` is the one genuine incompatibility and stays out for good. It
 # reimplements the Caps Lock hold this repo already does in
@@ -134,8 +131,8 @@
 # of use. It is now moria's actual hub, read back off the machine after that
 # host was set up by hand, so citadel comes up matching moria rather than
 # matching a video. `uninstaller`, `cleaner` and `homebrew` stayed out of it.
-# `shelf` and `keepAwake` were added later, in place of the Dropover and
-# Amphetamine apps.
+# `shelf` and `keepAwake` are the exception: chosen here, then switched on
+# by hand on moria and citadel, which were already set up.
 #
 {
   config,
@@ -261,12 +258,12 @@
   # in Settings and instantiate its service, but a feature that listens for
   # something — a wheel event, a window closing, a ⌘X — still checks its own
   # switch, and every one of those ships off. Seeding availability alone would
-  # hand over five features that are present and do nothing.
+  # hand over features that are present and do nothing.
   #
-  # So: for each chosen feature, also switch on what makes it act. The last two
-  # are not `enabledKeys` at all but the shortcut switches for two on-demand
-  # tools, off by default, without which the capture and OCR bindings
-  # (⌃⌥⌘4, ⌃⌥⌘T) are printed in Settings but dead. Everything omitted here —
+  # So: for each chosen feature, also switch on what makes it act. The second
+  # group is not `enabledKeys` at all but shortcut switches for on-demand
+  # tools, off by default, without which their bindings are printed in
+  # Settings but dead. Everything omitted here —
   # mixer, keepAwake, the monitors, quickToggles, cleaningMode, uninstaller,
   # cleaner, homebrew — is on-demand: `enabledKeys` is empty for those, and the
   # app counts being installed as being engaged.
@@ -296,13 +293,13 @@
     # are here because a capture tool you cannot reach from the keyboard is
     # most of a capture tool missing, and all four default onto the free ⌃⌥⌘
     # layer, which nothing else here uses.
-    #
-    # The command bar's ⌥Space ships off; Raycast is gone.
-    commandBar = "commandBarShortcutEnabled";
     screenshot = "screenshotShortcutEnabled";
     screenOCR = "screenOCRShortcutEnabled";
     screenRecorder = "recorderShortcutEnabled";
     cameraPreview = "cameraPreviewShortcutEnabled";
+
+    # ⌥Space, the keyboard launcher; ships off.
+    commandBar = "commandBarShortcutEnabled";
   };
 
   enableWrites = lib.concatMapStringsSep "\n" (
@@ -413,7 +410,7 @@ in {
         # channel, which the keyboard keys do not reach.
         "brightness"
 
-        # Energy. A menu bar toggle; replaces Amphetamine.
+        # Energy. Toggled by hand, not by nix.
         "keepAwake"
 
         # Capture and tools. The three capture tools share one selector and sit
@@ -478,7 +475,7 @@ in {
       fi
     '';
 
-    # Plain ./handy.nix shape, now that the seed has moved out: RunAtLoad, no
+    # Plain ./handy.nix shape: RunAtLoad, no
     # KeepAlive, `open -a` rather than the inner binary. See nixos/CLAUDE.md →
     # "Launching GUI apps at login" for why each of those.
     launchd.user.agents.vorssaint = {
