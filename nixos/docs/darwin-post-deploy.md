@@ -219,13 +219,14 @@ open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
       > and says so on Vorssaint's own Permissions page, which also lists which features
       > use each grant. Nothing here can be declared: TCC is outside nix's reach.
 - [ ] Confirm the seed ran. It happens during `just dr` itself, after Homebrew, so the
-      output is in the rebuild's own log: `seeding the Features hub with mixer, keepAwake,
+      output is in the rebuild's own log: `seeding the Features hub with mixer, switcher,
       …` the first time and `already set up, leaving the Features hub alone` on every
       rebuild after. A `WARNING: the Vorssaint seed did not finish` line means it fell
       back to the app's own wizard — the rebuild is not failed by it.
       > To re-seed deliberately after editing the feature list — it is otherwise a
       > once-per-Mac write, so an edit alone changes nothing on a host already set up:
       > ```
+      > osascript -e 'quit app "Vorssaint"'
       > defaults delete com.vorssaint.utils hasOnboarded
-      > launchctl kickstart -k "gui/$(id -u)/org.nixos.vorssaint"
+      > just dr <host>
       > ```

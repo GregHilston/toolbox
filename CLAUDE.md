@@ -146,8 +146,8 @@ worth knowing from here:
   anyone has opened the app. (Not from the launchd agent: agents activate *before*
   Homebrew, so that version raced the cask and then raced the human — and lost.) It is a
   **one-time** seed gated on the app's own `hasOnboarded` marker, not a rebuild-time
-  rewrite — editing the feature list does nothing to a Mac already set up until you
-  `defaults delete com.vorssaint.utils hasOnboarded` and kickstart the agent.
+  rewrite — editing the feature list does nothing to a Mac already set up until you quit
+  Vorssaint, `defaults delete com.vorssaint.utils hasOnboarded` and `just dr <host>`.
 - **It overlaps things already deployed here**, and the list only dodges some of
   them on purpose. Out for good: `superKey` (Karabiner owns Caps Lock — two event taps
   on one key is broken, not just redundant) and `scrollInverter` (it would double-invert

@@ -42,11 +42,14 @@
 # The seed is gated on `hasOnboarded`, which the app itself sets the moment
 # setup finishes. So it fires exactly once per Mac — on the first activation
 # after the cask lands — and never fights the hub afterwards. To re-seed a host
-# deliberately (say, after changing the list below), clear the marker and let
-# the agent re-run:
+# deliberately (say, after changing the list below), quit the app, clear the
+# marker and re-run activation:
 #
+#   osascript -e 'quit app "Vorssaint"'
 #   defaults delete com.vorssaint.utils hasOnboarded
-#   launchctl kickstart -k "gui/$(id -u)/org.nixos.vorssaint"
+#   just dr <host>
+#
+# Kickstarting the agent instead just opens the wizard, which re-locks the seed.
 #
 # A plain `brew uninstall --cask vorssaint` does NOT reset this: its cask only
 # quits the app and removes the bundle, and the preferences plist is listed
