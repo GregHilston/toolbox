@@ -6,9 +6,6 @@
 
   homebrew = {
     brews = [
-      "go"
-      "hugo"
-
       # Runtime (needed by pi for npm: packages)
       "node"
 
