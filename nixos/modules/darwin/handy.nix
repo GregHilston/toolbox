@@ -6,8 +6,8 @@
 #
 # Why an `open -a` agent instead of the inner binary, why no KeepAlive, and why
 # not Handy's own `autostart_enabled` setting: nixos/CLAUDE.md → "Launching GUI
-# apps at login". Handy is one of two users of that pattern; ./ice.nix is the
-# other. The cask itself is in ./homebrew-base.nix; the Linux half is the systemd
+# apps at login". Handy is one of two users of that pattern;
+# ./vorssaint.nix is the other. The cask itself is in ./homebrew-base.nix; the Linux half is the systemd
 # user service in ../home/default.nix.
 #
 # Handy-specific: imported per-host (citadel, moria) rather than from

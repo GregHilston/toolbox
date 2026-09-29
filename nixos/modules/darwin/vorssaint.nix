@@ -81,16 +81,16 @@
 # `launchctl asuser "$(id -u -- user)" sudo --user=user --`
 # (modules/system/defaults-write.nix), and that is exactly what is copied here.
 #
-# What is left in the agent is only the launch, in the plain shape ./ice.nix
-# and ./handy.nix use. Why `open -g -j -a` and not the inner binary, why
+# What is left in the agent is only the launch, in the plain shape
+# ./handy.nix uses. Why `open -g -j -a` and not the inner binary, why
 # RunAtLoad without KeepAlive, and why the app's own launch-at-login toggle
 # stays off: nixos/CLAUDE.md → "Launching GUI apps at login". This is that
-# pattern's third user, and it needs no exception to it.
+# pattern's second user, and it needs no exception to it.
 #
 # ## Permissions are still manual
 #
 # Nothing here can grant TCC. Accessibility and Screen Recording are clicked
-# through by hand per host exactly like Ice and Handy — see
+# through by hand per host exactly like Handy — see
 # ../../docs/darwin-post-deploy.md. Features that need a grant simply sit inert
 # until it is given, so a half-configured host is quiet rather than broken.
 #
@@ -459,7 +459,7 @@ in {
       fi
     '';
 
-    # Plain ./ice.nix shape, now that the seed has moved out: RunAtLoad, no
+    # Plain ./handy.nix shape, now that the seed has moved out: RunAtLoad, no
     # KeepAlive, `open -a` rather than the inner binary. See nixos/CLAUDE.md →
     # "Launching GUI apps at login" for why each of those.
     launchd.user.agents.vorssaint = {

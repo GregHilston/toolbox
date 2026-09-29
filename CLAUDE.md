@@ -122,11 +122,12 @@ on NixOS GUI hosts.
 Launching, permissions, and why the app's own "launch at login" stays off are all in
 `nixos/CLAUDE.md` → "Launching GUI apps at login", which owns this.
 
-## Menu Bar — Ice
+## Menu Bar — no manager
 
-[Ice](https://github.com/jordanbaird/Ice) manages the macOS menu bar. Cask in
-`modules/darwin/homebrew-base.nix`, launched by `modules/darwin/ice.nix` — same
-launchd pattern as Handy, documented in `nixos/CLAUDE.md`.
+macOS 27 folds overflow icons behind a » button on its own, and it broke Ice, which
+had been unmaintained since 2025: its menu went dead, so quitting took a `kill`. Before
+adding a replacement, check it names macOS 27 support. Hidden Bar (`hiddenbar`) does;
+Thaw, Ice's successor, only has it in an alpha.
 
 ## Mac Utilities — Vorssaint
 
