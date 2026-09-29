@@ -29,7 +29,6 @@ backup
 .*.sw[po]
 
 .DS_Store
-iterm2-colors
 
 dot/env/dyn.env
 
