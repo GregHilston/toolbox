@@ -173,14 +173,19 @@
     "autoQuit"
     # Mouse and keyboard
     "scrollInverter"
+    "scrollHorizontal"
     "focusFollowsMouse"
     "smoothScroll"
+    "linearScroll"
+    "mouseAcceleration"
     "mouseNavigation"
     "mouseButtonShortcuts"
     "middleClick"
+    "mouseClickDebounce"
     "keyboardDebounce"
     "textSnippets"
     "superKey"
+    "quitWindowProtection"
     # Clipboard and files
     "clipboardHistory"
     "pastePlain"
@@ -192,6 +197,7 @@
     # Sound
     "mixer"
     "soundOutputSwitcher"
+    "audioPriority"
     "micMute"
     "musicBlock"
     # Energy and display
@@ -216,7 +222,21 @@
     "scratchpad"
     "commandBar"
     "screenRecorder"
+    "wallpaper"
     "killProcess"
+    "portManager"
+    # Dynamic Island, then its extensions
+    "notch"
+    "notchCalendar"
+    "notchNotifications"
+    "notchGestures"
+    "notchTimer"
+    "notchAccessories"
+    "notchLyrics"
+    "notchQueue"
+    "notchLiveEqualizer"
+    "notchDownloads"
+    "notchAgents"
     # System monitor, one entry per metric family
     "monitorCPU"
     "monitorGPU"
@@ -224,6 +244,7 @@
     "monitorNetwork"
     "monitorDisk"
     "monitorPower"
+    "connectedDevices"
     "fanControl"
   ];
 
