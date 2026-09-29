@@ -151,9 +151,9 @@ worth knowing from here:
   them on purpose. Out for good: `superKey` (Karabiner owns Caps Lock — two event taps
   on one key is broken, not just redundant) and `scrollInverter` (it would double-invert
   against `com.apple.swipescrolldirection = false` in `modules/darwin/common.nix`).
-  Deliberately in, despite overlapping: the app switcher and Dock previews (AeroSpace),
-  and the `monitor*` readouts (the `stats` cask). The command bar and clipboard history
-  replaced Raycast, which is gone; Spotlight has ⌘Space back.
+  Deliberately in, despite overlapping: the app switcher and Dock previews (AeroSpace).
+  The command bar and clipboard history replaced Raycast, and the `monitor*` readouts
+  replaced the `stats` cask; both are gone, and Spotlight has ⌘Space back.
 
 Permissions are still manual — TCC is outside nix's reach. See
 `nixos/docs/darwin-post-deploy.md`.

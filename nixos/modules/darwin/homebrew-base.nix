@@ -91,7 +91,6 @@
 
       # Productivity
       "obsidian"
-      "stats"
       "jordanbaird-ice"
       "aerospace"
     ];

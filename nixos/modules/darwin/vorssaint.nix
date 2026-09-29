@@ -108,12 +108,7 @@
 #     the part left out.
 #   * `commandBar` and `clipboardHistory` took over from Raycast, which is
 #     gone; Spotlight has ⌘Space back (./common.nix).
-#   * The `monitor*` features overlap the `stats` cask. Both put CPU, GPU,
-#     memory, network and battery readouts in the menu bar, so this is two sets
-#     of samplers for one set of numbers. If Vorssaint's version earns its
-#     place — it carries the speed test, disk health and battery power draw in
-#     the same panel — dropping `stats` from ./homebrew-base.nix is the
-#     follow-up.
+#   * The `monitor*` features replaced the `stats` cask, which is gone.
 #
 # `superKey` is the one genuine incompatibility and stays out for good. It
 # reimplements the Caps Lock hold this repo already does in
@@ -412,8 +407,7 @@ in {
         "mediaTools"
         "commandBar"
 
-        # System monitor, one id per metric family. Overlaps the `stats` cask
-        # in ./homebrew-base.nix — see the header's conflicts section.
+        # System monitor, one id per metric family.
         "monitorCPU"
         "monitorGPU"
         "monitorMemory"
