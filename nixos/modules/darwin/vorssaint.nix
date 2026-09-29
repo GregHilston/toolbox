@@ -309,8 +309,6 @@
     feature: "  /usr/bin/defaults write \"$DOMAIN\" ${featureEnableKeys.${feature}} -bool true"
   ) (builtins.filter (feature: featureEnableKeys ? ${feature}) cfg.features);
 
-  # Only ever reaches ~/Library/Logs/vorssaint.log, but it is the one place a
-  # host says out loud which set it came up with.
   userArg = lib.escapeShellArg user;
 
   # Runs AS THE USER — see the postActivation block below for how, and why it
