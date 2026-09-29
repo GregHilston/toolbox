@@ -36,7 +36,6 @@
       "orbstack"
       "shortcat"
       "tailscale-app"
-      "1password-cli"
 
       # AI
       "claude"

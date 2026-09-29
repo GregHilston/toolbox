@@ -62,6 +62,7 @@
       "firefox"
       "visual-studio-code"
       "1password"
+      "1password-cli" # `just secrets` needs `op`
 
       # Communication
       "slack"
