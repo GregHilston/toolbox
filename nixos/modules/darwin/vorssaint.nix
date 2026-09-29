@@ -106,8 +106,8 @@
 #     different job, so they coexist. The tiling-hostile half of Vorssaint —
 #     `windowLayout` (edge snapping, drag-to-move) and `windowMaximizer` — is
 #     the part left out.
-#   * `commandBar` and `clipboardHistory` overlap the `raycast` cask outright.
-#     See the shortcut note below; this is the overlap most likely to bite.
+#   * `commandBar` and `clipboardHistory` took over from Raycast, which is
+#     gone; Spotlight has ⌘Space back (./common.nix).
 #   * The `monitor*` features overlap the `stats` cask. Both put CPU, GPU,
 #     memory, network and battery readouts in the menu bar, so this is two sets
 #     of samplers for one set of numbers. If Vorssaint's version earns its

@@ -99,7 +99,7 @@
   # Vorssaint — menu-bar utility suite (imported above). Seeds its Features hub
   # once on a Mac that has never run it; after that the hub owns the choice.
   # The feature list, and what it deliberately leaves out to stay clear of
-  # Karabiner, AeroSpace and Raycast, is in modules/darwin/vorssaint.nix.
+  # Karabiner and AeroSpace, is in modules/darwin/vorssaint.nix.
   services.vorssaint.enable = true;
 
   home-manager.users.${vars.user.name} = {

@@ -152,9 +152,8 @@ worth knowing from here:
   on one key is broken, not just redundant) and `scrollInverter` (it would double-invert
   against `com.apple.swipescrolldirection = false` in `modules/darwin/common.nix`).
   Deliberately in, despite overlapping: the app switcher and Dock previews (AeroSpace),
-  the command bar and clipboard history (Raycast), and the `monitor*` readouts (the
-  `stats` cask). The command bar is installed with its shortcut left **off**, because its
-  default is ⌥Space — Raycast's hotkey.
+  and the `monitor*` readouts (the `stats` cask). The command bar and clipboard history
+  replaced Raycast, which is gone; Spotlight has ⌘Space back.
 
 Permissions are still manual — TCC is outside nix's reach. See
 `nixos/docs/darwin-post-deploy.md`.
