@@ -5,10 +5,13 @@ Caps Lock remap for macOS, managed via GNU Stow. Caps Lock **never toggles caps 
 | Gesture | Result |
 | --- | --- |
 | quick tap (< 250ms) | `Escape` |
-| hold (> 250ms) | `F18` held for as long as you hold Caps Lock — Handy's push-to-talk key |
+| hold (> 250ms) | `F18` held for as long as you hold Caps Lock — the dictation key |
+| Shift + hold | `F19`, held the same way — FluidVoice's Command Mode (macOS only) |
 
-The Linux half of the same behavior is `services.keyd` in `nixos/modules/common/keyd.nix`;
-both platforms emit `F18` so Handy has one hotkey everywhere.
+FluidVoice owns both keys on citadel and moria (`nixos/modules/darwin/fluidvoice.nix`).
+The Linux half is `services.keyd` in `nixos/modules/common/keyd.nix`, where Handy takes `F18`.
+Shift + Caps Lock has no keyd equivalent. Its manipulator sits first because the plain one
+accepts any modifier; Karabiner drops the mandatory Shift from the `F19` it sends.
 
 ## Retuning the thresholds
 
@@ -57,31 +60,25 @@ Its `automatic_backups/` and UI-imported `assets/` output is gitignored.
 
 ## Setup and per-host caveats
 
-The one-time GUI steps (Karabiner's driver extension + Input Monitoring, Handy's
-Microphone/Accessibility grants, and setting Handy's hotkey to `F18`) are in
+The one-time GUI steps (Karabiner's driver extension + Input Monitoring, FluidVoice's
+onboarding and permission grants) are in
 `nixos/docs/darwin-post-deploy.md`, which `just checklist` prints. macOS gates all of it
 behind TCC prompts and per-app state, so nix can't declare any of it.
 
 - **Until the driver extension is approved on a host, Karabiner is inert there** and Caps
   Lock keeps toggling caps. On headless **dungeon** that approval needs a VNC session.
-- **Handy launching is declarative, its permissions aren't.** A launchd agent
-  (`nixos/modules/darwin/handy.nix`, on citadel and moria) runs `open -g -j -a Handy` at
-  login; check it with `launchctl list | grep org.nixos.handy` and read
-  `~/Library/Logs/handy.log` if it didn't come up. Leave Handy's own "Launch at login"
-  setting off so both aren't registering it. dungeon has the cask but not the agent.
-  Why it's shaped that way is in `nixos/CLAUDE.md` → "Launching GUI apps at login".
+- **FluidVoice launching and hotkeys are declarative, its permissions aren't.**
+  `nixos/modules/darwin/fluidvoice.nix` seeds the hotkeys and launches it at login; check
+  with `launchctl list | grep org.nixos.fluidvoice` and `~/Library/Logs/fluidvoice.log`.
 - **citadel is a work-managed Mac.** If MDM policy blocks driver/system extensions,
   Karabiner won't load there at all. Nothing to do about it from this repo.
-- **Handy stores the binding as `fn+f18`, not `f18`.** That's correct: macOS stamps the
-  function-key flag on every F-key event, so `fn` is what the OS reported while the picker
-  was capturing, not something this config sends. It matches at runtime. If a future version
-  ever fails to match, plain `"f18"` in Handy's `settings_store.json` is the fallback.
-- If Handy's shortcut picker refuses `F18` outright, switch this file and the keyd config to
-  a hyper combo instead — `command+control+option+shift+d` here, `C-A-S-d` in keyd.
+- **Dictation apps see `fn+F18`, not `F18`.** macOS stamps the function-key flag on every
+  F-key event; this config does not send it. Handy stored its binding as `fn+f18` for that
+  reason, and the FluidVoice seed binds both forms.
 - If a long dictation ever re-triggers itself, the cause is macOS auto-repeat on the held
   `F18` (Karabiner's `repeat` defaults to true, which is *also* what makes the key stay
   held — so don't "fix" it with `"repeat": false`, which would turn the hold into a tap).
-  Handle it with `hold_down_milliseconds` or on Handy's side.
+  Handle it with `hold_down_milliseconds` or in the dictation app.
 
 ## Troubleshooting
 

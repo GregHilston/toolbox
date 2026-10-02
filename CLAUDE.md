@@ -115,9 +115,13 @@ config dir, so your live line is untouched.
 
 ## Voice Input — Hold Caps Lock to Dictate
 
-Caps Lock: a tap sends Escape, a hold sends F18, which [Handy](https://handy.computer/)
-transcribes locally. Karabiner-Elements does this on macOS (`dot/karabiner/`), `services.keyd`
-on NixOS GUI hosts.
+Caps Lock: a tap sends Escape, a hold sends F18. Karabiner-Elements does this on macOS
+(`dot/karabiner/`), `services.keyd` on NixOS GUI hosts.
+
+On moria and citadel, [FluidVoice](https://github.com/altic-dev/FluidVoice) dictates on
+F18, and Shift plus a hold (F19, macOS only) starts its Command Mode, an LLM agent that
+runs shell commands. NixOS dictates with [Handy](https://handy.computer/), which the Macs
+keep installed but dormant.
 
 Launching, permissions, and why the app's own "launch at login" stays off are all in
 `nixos/CLAUDE.md` → "Launching GUI apps at login", which owns this.

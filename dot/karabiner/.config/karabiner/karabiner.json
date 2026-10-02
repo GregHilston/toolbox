@@ -13,14 +13,37 @@
         },
         "rules": [
           {
-            "description": "Caps Lock: tap = Escape, hold = F18 (Handy push-to-talk). Never toggles caps lock. Keep both thresholds EQUAL and matched to keyd in nixos/modules/common/keyd.nix — see dot/karabiner/README.md.",
+            "description": "Caps Lock: tap = Escape, hold = F18 (FluidVoice dictation), Shift+hold = F19 (FluidVoice Command Mode). Never toggles caps lock. Keep both thresholds EQUAL and matched to keyd in nixos/modules/common/keyd.nix — see dot/karabiner/README.md.",
             "manipulators": [
               {
                 "type": "basic",
                 "from": {
                   "key_code": "caps_lock",
                   "modifiers": {
-                    "optional": ["any"]
+                    "mandatory": [
+                      "shift"
+                    ]
+                  }
+                },
+                "to_if_alone": [
+                  {
+                    "key_code": "escape"
+                  }
+                ],
+                "to_if_held_down": [
+                  {
+                    "key_code": "f19"
+                  }
+                ]
+              },
+              {
+                "type": "basic",
+                "from": {
+                  "key_code": "caps_lock",
+                  "modifiers": {
+                    "optional": [
+                      "any"
+                    ]
                   }
                 },
                 "to_if_alone": [
