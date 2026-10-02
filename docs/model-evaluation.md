@@ -180,17 +180,17 @@ Check oMLX's log, not the client's config: `grep "Chat completion"
 ~/.omlx/logs/server.log | tail`.
 
 - **pi**: `pi -p --model omlx/<model> "…"` works; `--model=X` does not parse in 0.87.1.
-  If `timeout 5 printf '[%s]' -p x` prints `[x]` rather than `[-p][x]`, a broken
-  `timeout` wrapper is first on PATH and will drop pi's flags; nix's GNU one must win. pi's permission system refuses
-  reads outside the working directory in `-p` mode, so test tool calls on a file in it.
-- **Hermes**: run it with an argument list, not a shell string. This shell's command
-  rewriter mangled `hermes chat -Q -q "…"` into argument errors every time:
+  pi's permission system refuses reads outside the working directory in `-p` mode, so
+  test tool calls on a file in it.
+- **Hermes**: `-Q` answers once and exits, so a plain shell command works:
 
   ```bash
-  python3 -c 'import subprocess; print(subprocess.run(["hermes","chat","-Q","-m","<model>","--provider","custom","-q","Use your terminal tool to run: wc -l /etc/shells . Reply with only the number."],capture_output=True,text=True,stdin=subprocess.DEVNULL).stdout[-300:])'
+  hermes chat -Q -m <model> --provider custom \
+    -q "Use your terminal tool to run: wc -l /etc/shells . Reply with only the number." </dev/null
   ```
 
-  On dungeon, prefix the list with `"docker","exec","hermes"`.
+  On dungeon, prefix it with `docker exec hermes`. To cap a run, Hermes has its own
+  `--run-budget SECONDS`.
 
 ## Traps we hit
 
@@ -202,3 +202,9 @@ Check oMLX's log, not the client's config: `grep "Chat completion"
 - Sequential speed comparisons on this laptop drift 15–30% as it heats. Pair them.
 - The auto-mode safety policy blocks an unattended pi worker with `yoloMode`, which is
   why the eval has the model write files rather than drive pi's tools.
+- On moria, `timeout` was a hand-written script in `~/.local/bin` (a copy is in
+  `/usr/local/bin`), not GNU's. It drops every argument that starts with `-`, and the
+  argument after it too. So `timeout 300 pi -p --model X "hi"` ran the default model,
+  and `timeout 500 hermes chat -Q -m X -q "…"` opened the TUI or failed with
+  `unrecognized arguments`. We blamed pi, the shell and RTK first. Nix now installs GNU
+  `timeout`; check with `timeout 5 printf '[%s]' -p x`, which must print `[-p][x]`.
