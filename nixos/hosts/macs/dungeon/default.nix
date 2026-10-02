@@ -207,6 +207,21 @@ in {
     };
   };
 
+  # OrbStack forgets USB attaches on restart; re-attach.
+  # User agent: it needs the OrbStack docker context.
+  launchd.user.agents.orb-usb-attach = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/orb-usb-attach.sh"
+      ];
+      RunAtLoad = true;
+      StartInterval = 60;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/orb-usb-attach.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/orb-usb-attach.log";
+    };
+  };
+
   # Detect & auto-heal stale NFS file handles (ESTALE) on the home-lab_nfs-* Docker volumes.
   # Runs as a USER agent (not a system daemon) so it inherits the GUI/OrbStack docker context.
   # Root cause + manual fix: home-lab/CLAUDE.md → "NFS Stale File Handle (ESTALE)".
