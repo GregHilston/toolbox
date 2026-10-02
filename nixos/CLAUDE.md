@@ -122,13 +122,12 @@ for an ARM host.
 ## Launching GUI apps at login: a launchd `open -a` agent
 
 Menu-bar apps have to already be running to do anything, and they fail *silently* when
-they aren't — no Handy means Caps Lock still behaves and nothing dictates. So each gets a
+they aren't — no FluidVoice means Caps Lock still behaves and nothing dictates. So each gets a
 launchd user agent:
 
-- `modules/darwin/handy.nix` — per-host (citadel, moria); headless dungeon has the cask but
-  no use for a dictation app.
+- `modules/darwin/fluidvoice.nix` — per-host (citadel, moria); see "FluidVoice" below.
 - `modules/darwin/vorssaint.nix` — per-host (citadel, moria), for the same reason. Plain
-  `open -a` like Handy; its *other* job, seeding Vorssaint's Features hub (the app
+  `open -a`; its *other* job, seeding Vorssaint's Features hub (the app
   has no config file, only a UserDefaults domain), deliberately does **not** live in the
   agent. Activation order is agents → Homebrew → postActivation, so an agent-hosted seed
   runs before the cask exists and then has to race whoever opens the app first — a race it
@@ -136,7 +135,8 @@ launchd user agent:
   "already set up" marker the seed is gated on. Its header has the full reasoning.
 
 The Linux equivalent is a home-manager `systemd.user.services.*` unit bound to
-`graphical-session.target` — see handy in `modules/home/default.nix`.
+`graphical-session.target` — see handy in `modules/home/default.nix` (Linux still dictates
+with Handy).
 
 The shape is always the same, and *why* is the part worth remembering:
 
@@ -161,6 +161,36 @@ The shape is always the same, and *why* is the part worth remembering:
 - **Log to `~/Library/Logs/<app>.log`.** On a fresh host the agent can load before Homebrew
   installs the cask; `Unable to find application named ...` shows up there rather than
   failing the rebuild.
+
+## FluidVoice — dictation and voice commands on citadel and moria
+
+`modules/darwin/fluidvoice.nix`, enabled with `services.fluidvoice.enable`. Karabiner
+turns a Caps Lock hold into F18 (dictate) and a Shift+Caps Lock hold into F19 (Command
+Mode, an LLM agent that runs shell commands, asking first by default). Handy stays
+installed but no longer starts at login or owns F18; Linux hosts keep Handy.
+
+What it does, all from `postActivation` as the user (the Vorssaint shape, same reasons):
+
+- **Seeds hotkeys once**, gated on `PrimaryDictationShortcuts` being absent in the
+  `com.FluidApp.app` domain, so a hotkey changed in the app is never overwritten. Shortcuts
+  are JSON stored as plist data (`Models/HotkeyShortcut.swift` upstream). To re-seed: quit
+  FluidVoice, `defaults delete com.FluidApp.app PrimaryDictationShortcuts`, `just dr <host>`.
+- **Writes `OnboardingCompleted = false`.** Any pre-set hotkey counts as "used before" and
+  the app would skip onboarding, which is where permissions and the model download happen.
+- **Binds both `fn+F18` and bare F18.** macOS sets the fn flag on F-key events (why Handy
+  stored `fn+f18`) and FluidVoice matches modifiers exactly. Command Mode takes a single
+  shortcut, so it gets `fn+F19` only — rebind in the app if it never fires.
+- **Takes F18 and launch-at-login from Handy** by editing its `settings_store.json`,
+  quitting Handy first because it writes the store back on quit. Handy applies
+  `autostart_enabled` on its own next launch, so its login item unregisters itself then.
+- **Launches silently at login.** FluidVoice reveals and focuses its window on any launch it
+  does not see as a login item, `-g -j` notwithstanding. The agent passes
+  `--env FLUID_SIMULATE_LOGIN_LAUNCH=1` and the seed sets `ShowMainWindowAtLoginLaunch = false`.
+  Upstream calls that variable a testing hook; if it disappears, the cost is a window at login.
+
+Command Mode needs a chat provider; FluidVoice's bundled model is refused for it. API keys
+live in the Keychain and each provider must pass the app's own verify step, so pointing it at
+local oMLX is manual — `docs/darwin-post-deploy.md`.
 
 ## PI WEB is the exception to the launchd rule above
 

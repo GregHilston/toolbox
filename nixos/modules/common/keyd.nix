@@ -7,8 +7,8 @@
 # GUI/per-user app, so it lives in ../home/default.nix behind the same
 # custom.desktop.enable gate, per nixos/CLAUDE.md's app-placement rule.
 #
-# The macOS half is Karabiner-Elements + the Handy cask — see dot/karabiner/.
-# Both platforms emit F18 so Handy needs one hotkey everywhere.
+# The macOS half is Karabiner-Elements + FluidVoice — see dot/karabiner/.
+# Both platforms emit F18 for dictation.
 #
 # THRESHOLD COUPLING: the 200 below is the tap/hold split and must equal BOTH
 # Karabiner parameters in dot/karabiner/.config/karabiner/karabiner.json. keyd
