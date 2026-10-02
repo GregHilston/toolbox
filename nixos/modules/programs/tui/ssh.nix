@@ -50,6 +50,10 @@ in {
         HostName = hosts.moria.tailscale;
         User = hosts.moria.user;
       };
+      "citadelts" = {
+        HostName = hosts.citadel.tailscale;
+        User = hosts.citadel.user;
+      };
       "mines" = {
         HostName = hosts.mines.lan;
         User = hosts.mines.user;

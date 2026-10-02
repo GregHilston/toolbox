@@ -87,6 +87,11 @@ _: {
         tailscale = "100.115.155.85";
         user = "ghilston";
       };
+      citadel = {
+        # specifically NOT ghilston
+        tailscale = "100.93.190.106";
+        user = "greghilston";
+      };
       mines = {
         # Pinned via a VMware NAT DHCP reservation on the host (moria):
         # /Library/Preferences/VMware Fusion/vmnet8/dhcpd.conf maps the VM's MAC
