@@ -1,9 +1,13 @@
 {
+  config,
+  lib,
   vars,
   pkgs,
   ...
 }: let
   basePackages = import ../../config/base-packages.nix pkgs;
+  # Vorssaint's command bar takes ⌘Space there.
+  spotlightOn = !(lib.attrByPath ["services" "vorssaint" "enable"] false config);
 in {
   # Let Determinate manage the Nix daemon; disable nix-darwin's nix management
   nix.enable = false;
@@ -175,14 +179,15 @@ in {
     defaults -currentHost write -globalDomain NSStatusItemSpacing -int 2
     defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 2
 
-    # Spotlight on ⌘Space. -dict-add keeps other shortcuts.
+    # Spotlight on ⌘Space, unless Vorssaint owns it.
+    # -dict-add keeps other shortcuts.
     (
       set -eu
       as_user() { launchctl asuser "$(id -u -- ${vars.user.name})" sudo --user=${vars.user.name} -- "$@"; }
       as_user /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 64 \
-        '<dict><key>enabled</key><true/><key>value</key><dict><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>1048576</integer></array><key>type</key><string>standard</string></dict></dict>'
+        '<dict><key>enabled</key><${lib.boolToString spotlightOn}/><key>value</key><dict><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>1048576</integer></array><key>type</key><string>standard</string></dict></dict>'
       as_user /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
-    ) || echo "WARNING: could not bind Spotlight to ⌘Space; continuing." >&2
+    ) || echo "WARNING: could not set Spotlight's ⌘Space; continuing." >&2
   '';
 
   # Enable zsh system-wide so nix-darwin registers it as a valid shell.

@@ -301,7 +301,7 @@
     screenRecorder = "recorderShortcutEnabled";
     cameraPreview = "cameraPreviewShortcutEnabled";
 
-    # ⌥Space, the keyboard launcher; ships off.
+    # The keyboard launcher; ships off. Bound to ⌘Space below.
     commandBar = "commandBarShortcutEnabled";
   };
 
@@ -366,6 +366,16 @@
       # Last, deliberately: it is the marker that stops the next run. A seed
       # that dies before here leaves it unset and simply redoes the whole thing.
       /usr/bin/defaults write "$DOMAIN" hasOnboarded -bool true
+    fi
+
+    # ⌘Space opens the command bar, not Spotlight.
+    # Outside the seed, so seeded hosts get it.
+    # ./common.nix frees the key; the app
+    # refuses a shortcut macOS still holds.
+    # Takes effect on the app's next launch.
+    if /usr/bin/defaults read "$DOMAIN" featureAvailable.commandBar 2>/dev/null | grep -qx 1; then
+      /usr/bin/defaults write "$DOMAIN" commandBarShortcutEnabled -bool true
+      /usr/bin/defaults write "$DOMAIN" commandBarShortcut -string "command:49"
     fi
 
     # So a fresh `just dr` ends with the app running and configured, rather than
