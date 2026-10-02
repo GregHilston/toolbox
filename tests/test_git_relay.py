@@ -126,11 +126,29 @@ class GitRelayTest(unittest.TestCase):
         self.assertEqual((self.far / "a.txt").read_text(), "uncommitted\n")
         self.assertEqual(self.run_git(self.far, "worktree", "list").count("\n"), 0)
 
+    def test_clean_far_main_is_fast_forwarded(self):
+        self.commit(self.near, "b.txt", "two\n", "add b")
+        result = self.relay()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("updated ~/Git/toolbox", result.stderr)
+        self.assertEqual(self.run_git(self.far, "rev-parse", "main"), self.run_git(self.origin, "rev-parse", "main"))
+
+    def test_dirty_far_main_is_left_alone(self):
+        (self.far / "a.txt").write_text("uncommitted\n")
+        self.commit(self.near, "b.txt", "two\n", "add b")
+        before = self.run_git(self.far, "rev-parse", "main")
+        result = self.relay()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("as it was", result.stderr)
+        self.assertEqual(self.run_git(self.far, "rev-parse", "main"), before)
+        self.assertEqual((self.far / "a.txt").read_text(), "uncommitted\n")
+
     def test_far_unpushed_commits_stay_unpushed(self):
         self.commit(self.far, "f.txt", "far only\n", "far unpushed")
         self.commit(self.near, "b.txt", "two\n", "add b")
         self.assertEqual(self.relay().returncode, 0)
         self.assertEqual([line.split("|")[0] for line in self.origin_log()], ["add b", "seed"])
+        self.assertEqual(self.run_git(self.far, "log", "-1", "--format=%s", "main"), "far unpushed")
 
     def test_nearby_upstream_edit_still_finishes(self):
         self.commit(self.far, "a.txt", "one\nx\ny\nz\n", "grow a")

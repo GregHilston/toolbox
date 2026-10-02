@@ -9,8 +9,8 @@ For a machine whose git identity must not reach the remote (citadel's work
 account): the commits travel as patches over one ssh call, so one password
 prompt and no key needed. The far host applies them with `git am -3` in a
 throwaway worktree off origin, re-authors them with its own identity (author
-date becomes now), and pushes. Its own checkout is never touched. Then this
-checkout resets main to what was pushed.
+date becomes now), and pushes. Its own checkout is only fast-forwarded, and
+only when on main and clean. Then this checkout resets main to what was pushed.
 
     git-relay.py                 relay through dungeonts, after a confirmation
     git-relay.py --host moriats -y
@@ -56,6 +56,16 @@ if ! git -c core.hooksPath="$hooks" push -q origin "HEAD:$branch"; then
   exit 13
 fi
 git rev-parse HEAD >&3
+# Fast-forward the far checkout only when safe.
+cd "$HOME/$repo"
+if [ "$(git rev-parse --abbrev-ref HEAD)" = "$branch" ] \
+  && [ -z "$(git status --porcelain --untracked-files=no)" ] \
+  && git merge-base --is-ancestor HEAD "origin/$branch" \
+  && git merge -q --ff-only "origin/$branch"; then
+  echo "updated ~/$repo on $(hostname -s) to origin/$branch" >&2
+else
+  echo "left ~/$repo on $(hostname -s) as it was; pull there when ready" >&2
+fi
 """
 
 TAILNET = ipaddress.ip_network("100.64.0.0/10")

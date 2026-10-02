@@ -1,8 +1,28 @@
 {
+  config,
+  lib,
   pkgs,
   vars,
   ...
 }: {
+  # Stray [user] in ~/.gitconfig silently wins.
+  home.activation.warnStrayGitIdentity = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    (
+      git=${lib.getExe config.programs.git.package}
+      want_name=${lib.escapeShellArg config.programs.git.settings.user.name}
+      want_email=${lib.escapeShellArg config.programs.git.settings.user.email}
+      for f in "$HOME/.gitconfig" "$HOME"/Git/*/.git/config; do
+        [ -f "$f" ] || continue
+        name=$("$git" config --file "$f" --get user.name || true)
+        email=$("$git" config --file "$f" --get user.email || true)
+        if { [ -n "$name" ] && [ "$name" != "$want_name" ]; } \
+          || { [ -n "$email" ] && [ "$email" != "$want_email" ]; }; then
+          echo "WARNING: $f overrides git identity ($name <$email>); remove its [user] lines"
+        fi
+      done
+    ) || true
+  '';
+
   home.packages = with pkgs; [
     diff2html-cli # HTML diff viewer - opens diffs in browser like a PR
     difftastic # Structural diff tool - used as git's external diff
