@@ -156,6 +156,11 @@
         };
       };
 
+    # Citadel-specific packages. gitleaks scans work repos for secrets.
+    home.packages = with pkgs; [
+      gitleaks
+    ];
+
     # Disable modules not needed on this host
     custom.programs.opencode.enable = lib.mkForce false;
 
