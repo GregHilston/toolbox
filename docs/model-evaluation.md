@@ -28,8 +28,9 @@ is missing. Swapping a model is a one-line change there plus the four places in
 - **Speed tricks are welcome when quality holds**: smaller quants, oQ mixed-precision
   quants, MTP. Each must be measured against the unaccelerated build, not assumed free.
 - **Quality first.** A faster model that finishes correct less often loses.
-- **No swap**, on any host, for any model we keep. On dungeon this is checked with
-  Docker and Frigate up, because they hold ~12 GB.
+- **No swap growth**, on any host, for any model we keep: `swap_growth_mb` must be 0.
+  (Absolute swap is not the test; dungeon carries some from its containers.) On dungeon
+  this is checked with Docker and Frigate up, because they hold ~12 GB.
 - **The light model needs vision** (Frigate reviews and Old Gregg send images on
   dungeon) and **must emit well-formed tool calls** (pi and Hermes).
 - **The heavy model is moria-only** and can be slow to first token; it must be right.
@@ -40,15 +41,18 @@ Measured 2026-10-02, oMLX 0.7.0rc1. Raw runs: `dot/omlx/bench/crud/results/<arm>
 `python3 dot/omlx/bench/crud/summarize.py` prints every arm. Re-measure an incumbent
 only after an oMLX upgrade, a harness change, or if a candidate's numbers look off.
 
-| role | model | CRUD correct by the end | correct, no hints | gen time | decode | prefill (16K / 64K) | resident | swap |
+| role | model | CRUD correct by the end | correct, no hints | gen time | decode | prefill (16K / 64K) | resident | swap growth |
 |---|---|---|---|---|---|---|---|---|
 | light, moria | `Qwen3.6-35B-A3B-4bit` (temp 0.6, thinking on) | 1 of 3 | 0 of 3 | 3.4 min | 112 tok/s | 1,162 / 756 tok/s | 21 GB | 0 |
 | light, dungeon | `Qwen3.6-35B-A3B-4bit:lab` (thinking off) | 0 of 2 (both 15/16) | 0 of 2 | 3.6 min | 53 tok/s | not measured | 21 GB | **+0.9 GB** in a 5.6k-token turn |
 | heavy, moria | `Swift-1.5-Qwen3.8-27b-oQ4e-mtp`, `mtp_enabled` (temp 1.0, effort medium) | 3 of 3 | 2 of 3 | 3.4 min | 38 tok/s | 183 / 129 tok/s | 16 GB | 0 |
 
-dungeon fails the no-swap rule today: with its 56 containers up it started at 1.0 GB of
+dungeon fails the no-swap-growth rule today: with its 56 containers up it started at 1.0 GB of
 swap and reached 1.9 GB during one turn. Freeing RAM there is open work; a smaller light
 model is the other lever.
+
+The thinking budgets differ: 8192 tokens for the A3B, 16384 for Swift. Equalise them
+(the `thinking_budget_tokens` entry) when a comparison hinges on it.
 
 Also measured, and what they lost on, in `docs/local-llm-benchmarks.md` → "2026-10-02":
 base Qwen3.8-27B oQ4e, Swift oQ5e/oQ6e, the A3B 6-bit, Qwen3.8-Flash-Next REAP-288.
@@ -107,6 +111,10 @@ must be taken with them up.
 
 ### 4. Quality: the CRUD eval, three runs per arm
 
+The grader drives Chromium through `playwright-core`, kept in `~/.cache/crud-eval-grader`.
+`crud_eval.py` installs it on first use and stops before round 0 if Chromium will not
+launch, so a broken grader cannot silently zero the five UI checks.
+
 ```bash
 ~/Git/toolbox/dot/omlx/bench/crud/chain.sh <model>=<arm> <model>=<arm>-r2 <model>=<arm>-r3
 EXTRA_ARGS="--host dungeon" ~/Git/toolbox/dot/omlx/bench/crud/chain.sh <model>=dungeon-<arm>
@@ -128,14 +136,18 @@ start a second run while one is going: a restart kills the other's request.
 ### 5. Speed and memory
 
 - **Decode**: from the CRUD runs (`decode_tps`).
-- **MTP**, if the checkpoint has an MTP head: symlink `<dir>-lmtp` to the model dir,
-  give it the same settings plus `"mtp_enabled": true`, then
-  `python3 ~/Git/toolbox/dot/omlx/bench/mtp_paired.py <model>`. It samples on and off
-  alternately, so thermal drift cancels, and reports whether greedy output matches.
-  Then run the CRUD eval with MTP on: speed alone does not adopt it.
+- **MTP**, if the checkpoint has an MTP head: make a twin, a symlink `<dir>-nomtp` to the
+  model dir, and give each its own `model_settings.json` entry, one with
+  `"mtp_enabled": true` and one without. Then
+  `python3 ~/Git/toolbox/dot/omlx/bench/mtp_paired.py <off-id> <on-id>`. It samples on
+  and off alternately, so thermal drift cancels, and reports whether greedy output
+  matches. Then run the CRUD eval with MTP on: speed alone does not adopt it. Remove the
+  twin and its entry afterwards. (The 2026-10-02 MTP arms are recorded under the old
+  twin id `…-lmtp`, which was MTP-on; it no longer exists.)
 - **Prefill**: `python3 ~/Git/toolbox/dot/omlx/bench/longctx.py <model>`. It matters
   most for agent turns over a large context.
-- **Swap**: every CRUD run records `swap_peak_mb`. Must be 0.
+- **Swap**: every CRUD run records `swap_growth_mb` (peak minus start); `summarize.py`
+  prints the worst round. Must be 0.
 
 ### 6. Decide
 
@@ -148,12 +160,14 @@ dense 27B's 10 of 10 against the A3B's 2 of 5) as a result.
 
 ### 7. Adopting a winner
 
-1. `nixos/modules/darwin/omlx.nix` `lightModel`, or `models` in `hosts/macs/moria`.
+1. `nixos/modules/darwin/omlx.nix` `lightModel.dir`/`.repo` (pi and opencode default to
+   it on every Mac), or `models` in `hosts/macs/moria`.
 2. `dot/omlx/.omlx/model_settings.json`: the entry's settings and why.
-3. `dot/pi/.pi/agent/models.json.tpl`, and `defaultModel` in
-   `nixos/modules/darwin/home.nix` for a new light model.
-4. `bin/hermes-mode.sh` (`worker_local` light, `judge_local` heavy); on dungeon,
-   home-lab's `hermes/config.yaml` and its `:lab` profile.
+3. `dot/pi/.pi/agent/models.json.tpl`, and `is_default` in `model_settings.json` for a
+   new light model.
+4. `bin/hermes-mode.sh` (`worker_local` light, which also does compression; `judge_local`
+   heavy). On dungeon, home-lab's `hermes/config.yaml` names `<light>:lab`, a profile in
+   this repo's `dot/omlx/.omlx/model_profiles.json`.
 5. This page's incumbents table, and a dated section in `docs/local-llm-benchmarks.md`.
 6. Verify pi and Hermes use it (below), then `just dr <host>` everywhere.
 

@@ -7,5 +7,5 @@ export OMLX_API_KEY=${OMLX_API_KEY:-$(python3 -c "import json,os;print(json.load
 read -ra extra <<< "${EXTRA_ARGS:-}"
 for pair in "$@"; do
   echo "=== ${pair#*=}"
-  python3 crud_eval.py "${pair%%=*}" "${pair#*=}" "${extra[@]}" 2>&1
+  python3 crud_eval.py "${pair%%=*}" "${pair#*=}" ${extra[@]+"${extra[@]}"} 2>&1
 done

@@ -103,9 +103,6 @@
   services.vorssaint.enable = true;
 
   home-manager.users.${vars.user.name} = {
-    # 6-bit is the best quality/memory balance for 48GB
-    custom.programs.pi.defaultModel = lib.mkForce "Qwen3.6-35B-A3B-6bit";
-
     # Exclude moonpi (cwd error on this host)
     #
     # NOTE: this mkForce replaces the module default outright, so anything added

@@ -2,10 +2,11 @@
 """
 Lightning MTP on vs off for one checkpoint, sampled alternately so drift cancels.
 
-Needs two model ids for the same weights: <model> (mtp off) and <model>-lmtp, a
-symlink whose model_settings.json entry sets "mtp_enabled": true.
+Needs two model ids for the same weights, one with "mtp_enabled": true in
+model_settings.json and one without. Make the second a symlinked twin dir
+(e.g. <dir>-nomtp) with its own entry; docs/model-evaluation.md, step 5.
 
-    mtp_paired.py <model> [--rounds 6] [--max-tokens 400]
+    mtp_paired.py <mtp-off-id> <mtp-on-id> [--rounds 6] [--max-tokens 400]
 
 Reports decode tok/s per arm, the median paired ratio, and whether greedy
 output matched (MTP should be lossless; oMLX 0.5.7's drafter was not).
@@ -49,11 +50,12 @@ def gen(model, prompt, max_tokens):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("model")
+    ap.add_argument("off", help="model id with MTP off")
+    ap.add_argument("on", help="model id with MTP on")
     ap.add_argument("--rounds", type=int, default=6)
     ap.add_argument("--max-tokens", type=int, default=400)
     a = ap.parse_args()
-    arms = [a.model, a.model + "-lmtp"]
+    arms = [a.off, a.on]
     for m in arms:
         gen(m, "Say hi.", 8)
     tps = {m: [] for m in arms}

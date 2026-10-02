@@ -25,10 +25,11 @@ judge_local="custom Swift-1.5-Qwen3.8-27b-oQ4e-mtp ${OMLX} OMLX_API_KEY"
 cloud="deepseek deepseek-flash ${DEEPSEEK} DEEPSEEK_API_KEY"
 
 # worker: builder, researcher, librarian, default. judge: orchestrator, reviewer,
-# goal judges, planner. util: triage rewrites and compression.
+# goal judges, planner. util: triage rewrites and compression, on the fast model:
+# the dense one needs ~8 min to prefill a 65k middle, past compression's timeout.
 case "${mode}" in
-  local) worker="${worker_local}" judge="${judge_local}" util="${judge_local}" ;;
-  mixed) worker="${worker_local}" judge="${cloud}"       util="${judge_local}" ;;
+  local) worker="${worker_local}" judge="${judge_local}" util="${worker_local}" ;;
+  mixed) worker="${worker_local}" judge="${cloud}"       util="${worker_local}" ;;
   cloud) worker="${cloud}"        judge="${cloud}"       util="${cloud}" ;;
   *) sed -n '2,5p' "$0" >&2; exit 64 ;;
 esac

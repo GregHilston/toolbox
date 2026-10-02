@@ -30,6 +30,11 @@ export OMLX_API_KEY=$(python3 -c "import json,os;print(json.load(
 | `mtp_paired.py` | Lightning MTP on vs off, paired, plus a greedy identity check |
 | `crud/` | model writes a SQLite + React CRUD app; graded by running it, failures fed back as recorded hints |
 
+`crud/results/` is the record `docs/model-evaluation.md` quotes, kept so nobody re-measures it.
+`results/_discarded/` holds runs ruined by an overlapping run, kept as evidence and never
+summarised. Arms named `…-mtp` with model `…-lmtp` were served through a since-removed
+MTP-on twin of the same weights.
+
 ## Running
 
 ```bash

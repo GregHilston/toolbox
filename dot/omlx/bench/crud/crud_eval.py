@@ -22,7 +22,9 @@ HOST = None
 KEY = load_key()
 API_PORT, UI_PORT = 3001, 5199
 API = f"http://localhost:{API_PORT}"
-GRADER_NODE = "/tmp/crud-eval/grader/node_modules/playwright-core"
+GRADER_DIR = os.path.expanduser("~/.cache/crud-eval-grader")
+GRADER_NODE = os.path.join(GRADER_DIR, "node_modules", "playwright-core")
+SETTINGS = os.path.join(os.path.dirname(os.path.dirname(HERE)), ".omlx", "model_settings.json")
 
 FILE_RE = re.compile(r"^#{2,4}\s+`?([\w./-]+?)`?\s*\n```[^\n]*\n(.*?)\n```", re.S | re.M)
 
@@ -41,6 +43,24 @@ def restart_omlx():
     time.sleep(15)
 
 
+def ensure_grader():
+    """Install the browser grader once; a broken one would grade every UI check 0."""
+    if not os.path.isdir(GRADER_NODE):
+        os.makedirs(GRADER_DIR, exist_ok=True)
+        subprocess.run("npm init -y >/dev/null && npm install --silent playwright-core@1.63.0", cwd=GRADER_DIR, shell=True, check=True)
+    subprocess.run("npx --no-install playwright-core install chromium-headless-shell", cwd=GRADER_DIR, shell=True, check=True,
+                   capture_output=True)
+    probe = "require('playwright-core').chromium.launch().then(b => b.close())"
+    if subprocess.run(["node", "-e", probe], cwd=GRADER_DIR, capture_output=True).returncode:
+        sys.exit(f"the browser grader in {GRADER_DIR} cannot launch Chromium; fix that before measuring")
+
+
+def model_settings(model):
+    """The served settings; arms differ in budget, so record them."""
+    entry = json.load(open(SETTINGS))["models"].get(model.split(":")[0], {})
+    return {k: v for k, v in entry.items() if not k.startswith(("_", "description"))}
+
+
 def swap_used_mb():
     cmd = ["sysctl", "-n", "vm.swapusage"]
     out = subprocess.run(["ssh", HOST, *cmd] if HOST else cmd, capture_output=True, text=True).stdout
@@ -48,7 +68,7 @@ def swap_used_mb():
 
 
 class SwapWatch(threading.Thread):
-    """Peak swap while the model generates; the no-swap rule is the user's."""
+    """Peak swap while generating; any growth fails a model."""
     def __init__(self):
         super().__init__(daemon=True)
         self.start_mb = swap_used_mb()
@@ -110,12 +130,18 @@ BUILD_ENV = {**os.environ, "CC": "clang", "CXX": "clang++"}
 
 
 def sh(cmd, cwd, timeout=600):
+    if not os.path.isdir(cwd):
+        return 1, f"there is no {os.path.basename(cwd)}/ directory"
     p = subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True, text=True, timeout=timeout, env=BUILD_ENV)
     return p.returncode, (p.stdout + p.stderr)[-3000:]
 
 
 def start(cmd, cwd, env, log):
     fh = open(log, "w")
+    if not os.path.isdir(cwd):
+        fh.write(f"there is no {os.path.basename(cwd)}/ directory\n")
+        cwd = "/"
+        cmd = "exit 1"
     return subprocess.Popen(cmd, cwd=cwd, shell=True, env={**os.environ, **env}, stdout=fh,
                             stderr=subprocess.STDOUT, start_new_session=True)
 
@@ -142,10 +168,15 @@ def http(method, path, body=None):
                                  headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
-            raw = r.read().decode()
-            return r.status, (json.loads(raw) if raw.strip() else None)
+            status, raw = r.status, r.read().decode()
     except urllib.error.HTTPError as e:
         return e.code, None
+    except Exception:
+        return 0, None
+    try:
+        return status, json.loads(raw) if raw.strip() else None
+    except ValueError:
+        return status, None
 
 
 def wait_up(url, secs=40):
@@ -161,14 +192,29 @@ def wait_up(url, secs=40):
 
 
 def as_list(b):
-    return b if isinstance(b, list) else (b or {}).get("books") or (b or {}).get("data") or []
+    if isinstance(b, dict):
+        b = b.get("books") or b.get("data")
+    return [x for x in b if isinstance(x, dict)] if isinstance(b, list) else []
 
 
 def as_book(b):
-    return (b or {}).get("book") or (b or {}).get("data") or b or {}
+    if isinstance(b, dict):
+        inner = b.get("book") or b.get("data")
+        return inner if isinstance(inner, dict) else b
+    return {}
 
 
 def grade(root, logdir):
+    procs = []
+    try:
+        return _grade(root, logdir, procs)
+    finally:
+        for p in procs:
+            stop(p)
+        free_ports()
+
+
+def _grade(root, logdir, procs):
     checks, notes = {}, {}
     server, client = os.path.join(root, "server"), os.path.join(root, "client")
     free_ports()
@@ -178,11 +224,13 @@ def grade(root, logdir):
     rc, out = sh("npm install --no-audit --no-fund", server)
     notes["server npm install"] = out if rc else ""
     srv = start("npm start", server, {"PORT": str(API_PORT)}, f"{logdir}/server.log")
+    procs.append(srv)
     up = rc == 0 and wait_up(API + "/api/books")
     checks["server_starts"] = up
     if up:
         s, b = http("GET", "/api/books")
-        checks["list"] = s == 200 and isinstance(as_list(b), list)
+        listed = b.get("books") or b.get("data") if isinstance(b, dict) else b
+        checks["list"] = s == 200 and isinstance(listed, list)
         s, b = http("POST", "/api/books", {"title": "Dune", "author": "Herbert", "year": 1965, "read": False})
         bid = as_book(b).get("id")
         checks["create"] = s in (200, 201) and bid is not None
@@ -207,9 +255,11 @@ def grade(root, logdir):
         http("POST", "/api/books", {"title": "Persist", "author": "P"})
         stop(srv)
         srv = start("npm start", server, {"PORT": str(API_PORT)}, f"{logdir}/server2.log")
-        wait_up(API + "/api/books")
-        s, b = http("GET", "/api/books")
+        procs.append(srv)
+        s, b = http("GET", "/api/books") if wait_up(API + "/api/books") else (0, None)
         checks["persists_restart"] = any(x.get("title") == "Persist" for x in as_list(b))
+        if not s:
+            notes["server log after restart"] = open(f"{logdir}/server2.log").read()[-2500:]
         checks["db_file"] = os.path.exists(os.path.join(server, "data.db"))
     else:
         for k in ("list", "create", "get_one", "update", "validation_400", "not_found_404", "delete", "persists_restart", "db_file"):
@@ -225,6 +275,7 @@ def grade(root, logdir):
     ui = {}
     if checks["server_starts"] and os.path.exists(os.path.join(client, "package.json")):
         dev = start(f"npm run dev -- --port {UI_PORT} --strictPort", client, {}, f"{logdir}/vite.log")
+        procs.append(dev)
         if wait_up(f"http://localhost:{UI_PORT}/", 60):
             p = subprocess.run(["node", os.path.join(HERE, "ui_test.js"), f"http://localhost:{UI_PORT}/", API, logdir],
                                capture_output=True, text=True, timeout=180, env={**os.environ, "PW_CORE": GRADER_NODE})
@@ -234,13 +285,10 @@ def grade(root, logdir):
                 notes["ui test"] = (p.stdout + p.stderr)[-2000:]
         else:
             notes["vite log"] = open(f"{logdir}/vite.log").read()[-2000:]
-        stop(dev)
     for k in ("list", "create", "toggle", "edit", "delete"):
         checks[f"ui_{k}"] = bool(ui.get(k))
     if ui.get("errors"):
         notes["ui errors"] = "\n".join(ui["errors"])
-    stop(srv)
-    free_ports()
     return checks, notes
 
 
@@ -273,11 +321,13 @@ def main():
     shutil.rmtree(f"/tmp/crud-eval/{a.arm}", ignore_errors=True)
     os.makedirs(root)
     os.makedirs(out, exist_ok=True)
+    ensure_grader()
     if not (a.no_restart or a.host):
         restart_omlx()
 
     messages = [{"role": "user", "content": open(os.path.join(HERE, "PROMPT.md")).read()}]
-    summary = {"model": a.model, "arm": a.arm, "host": a.host or "moria", "extra": json.loads(a.extra), "rounds": []}
+    summary = {"model": a.model, "arm": a.arm, "host": a.host or "moria", "extra": json.loads(a.extra),
+               "settings": model_settings(a.model), "rounds": []}
     for rnd in range(a.rounds + 1):
         watch = SwapWatch()
         watch.start()
@@ -296,7 +346,8 @@ def main():
                "reasoning_tokens": (u.get("completion_tokens_details") or {}).get("reasoning_tokens"),
                "prompt_tokens": u.get("prompt_tokens"), "wall_s": r["wall_s"], "ttft_s": r["ttft_s"],
                "decode_tps": round(ct / max(r["wall_s"] - r["ttft_s"], 0.1), 1),
-               "swap_start_mb": watch.start_mb, "swap_peak_mb": watch.peak_mb}
+               "swap_start_mb": watch.start_mb, "swap_peak_mb": watch.peak_mb,
+               "swap_growth_mb": round(watch.peak_mb - watch.start_mb, 1)}
         summary["rounds"].append(rec)
         print(json.dumps({k: v for k, v in rec.items() if k not in ("checks", "files")}), flush=True)
         print("  failed:", [k for k, v in checks.items() if not v], flush=True)

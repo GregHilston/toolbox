@@ -29,9 +29,9 @@
     };
   });
 
-  modelsManifest =
-    pkgs.writeText "omlx-models-${host}.manifest" (lib.concatStrings
-      (lib.mapAttrsToList (dir: repo: "${dir} ${repo}\n") (cfg.lightModel // cfg.models)));
+  modelsManifest = pkgs.writeText "omlx-models-${host}.manifest" (lib.concatStrings
+    (lib.mapAttrsToList (dir: repo: "${dir} ${repo}\n")
+      ({${cfg.lightModel.dir} = cfg.lightModel.repo;} // cfg.models)));
 in {
   options.services.omlxDeploy = {
     enable = lib.mkEnableOption ''
@@ -53,14 +53,21 @@ in {
       '';
     };
 
-    lightModel = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
-      default = {"Qwen3.6-35B-A3B-4bit" = "mlx-community/Qwen3.6-35B-A3B-4bit";};
-      description = ''
-        The always-on everyday model every oMLX host gets, in the same
-        dir -> repo form as models. Change it here when an evaluation picks a
-        new one, and every host follows on its next deploy.
-      '';
+    lightModel = {
+      dir = lib.mkOption {
+        type = lib.types.str;
+        default = "Qwen3.6-35B-A3B-4bit";
+        description = ''
+          The everyday model every oMLX host gets, as its directory name and so
+          its oMLX model id. pi and opencode default to it. Change it here when
+          an evaluation picks a new one; every host follows on its next deploy.
+        '';
+      };
+      repo = lib.mkOption {
+        type = lib.types.str;
+        default = "mlx-community/Qwen3.6-35B-A3B-4bit";
+        description = "Hugging Face repo lightModel.dir is downloaded from.";
+      };
     };
 
     cacheSize = lib.mkOption {
@@ -155,11 +162,17 @@ in {
       ''))
 
       # ── Declared models: write the manifest, fetch what is missing.
-      # Backgrounded: a 17 GB download must not hold up `just dr`.
+      # Fetch backgrounded: 17 GB must not block `just dr`.
       (lib.mkIf cfg.enable (lib.mkAfter ''
         install -o ${user} -m 644 ${modelsManifest} "/Users/${user}/.omlx/models.manifest"
-        sudo -H -u ${user} /bin/bash -c 'nohup "$HOME/Git/toolbox/bin/omlx-models.sh" >> "$HOME/Library/Logs/omlx-models.log" 2>&1 &'
-        echo "✓ oMLX declared models: checking in the background (~/Library/Logs/omlx-models.log)"
+        OMLX_MODELS_SH="/Users/${user}/Git/toolbox/bin/omlx-models.sh"
+        if OMLX_MODELS="$(sudo -H -u ${user} "$OMLX_MODELS_SH" --check)"; then
+          echo "✓ oMLX declared models present"
+        else
+          printf '%s\n' "$OMLX_MODELS" | grep -v '^extra' || true
+          sudo -H -u ${user} /bin/bash -c "nohup '$OMLX_MODELS_SH' >> \"\$HOME/Library/Logs/omlx-models.log\" 2>&1 &"
+          echo "⏳ oMLX: fetching the MISSING models in the background (~/Library/Logs/omlx-models.log)"
+        fi
       ''))
 
       # ── Model-variant symlinks for multi-configuration support.

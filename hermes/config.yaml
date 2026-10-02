@@ -146,14 +146,14 @@ terminal:
 
 # Role-split models, chosen by `bin/hermes-mode.sh`. JUDGE judges and plans:
 # DeepSeek in mixed mode, another family so the judge is not grading its own
-# kind (arXiv 2609.04270). UTIL rewrites notes and compresses: local
-# Swift-1.5-Qwen3.8-27b unless the mode is cloud.
+# kind (arXiv 2609.04270). UTIL rewrites notes and compresses: the local
+# A3B unless the mode is cloud.
 #
 # ONLY `default` reads this block. A profile does not inherit it, so the
 # builder's Kanban goal loops take their judge from profiles/builder.
 #
 # The compression model's context window must be >= the main model's or
-# compression fails SILENTLY; 3.8 serves 262144 against our 131072.
+# compression fails SILENTLY; the A3B serves 262144 against our 131072.
 auxiliary:
   # Each slot is a FULL connection block, not just a model name:
   # config_defaults.py builds {provider, model, base_url, api_key, timeout,
@@ -183,7 +183,7 @@ auxiliary:
     base_url: ${UTIL_BASE_URL}
     api_key: ${UTIL_API_KEY}
     # Default is 120s (auxiliary_client.py:6095 says so itself). Summarising a
-    # 65k middle on a ~150 t/s-prefill dense model is not a two-minute job, and the host's
+    # 65k middle costs the A3B ~85 s of prefill alone, too near 120, and the host's
     # own in-agent budget is floored at this value — so raising it raises both.
     timeout: 900
 

@@ -8,6 +8,7 @@
   inputs,
   vars,
   pkgs,
+  config,
   ...
 }: let
   open-webui-desktop = pkgs.stdenvNoCC.mkDerivation rec {
@@ -83,11 +84,11 @@ in {
     custom.programs = {
       pi = {
         enable = true;
-        defaultModel = "Qwen3.6-35B-A3B-4bit";
+        defaultModel = config.services.omlxDeploy.lightModel.dir;
       };
       opencode = {
         enable = true;
-        defaultModel = "Qwen3.6-35B-A3B-4bit";
+        defaultModel = config.services.omlxDeploy.lightModel.dir;
         omlxBaseUrl = "http://localhost:8000/v1";
       };
     };

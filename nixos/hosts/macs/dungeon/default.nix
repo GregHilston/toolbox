@@ -1,4 +1,5 @@
 {
+  config,
   vars,
   lib,
   ...
@@ -630,7 +631,7 @@ in {
     searxngBaseUrl = lib.mkForce "http://localhost:8214";
 
     # dungeon's one model: home-lab docs/local-llms.md
-    defaultModel = lib.mkForce "Qwen3.6-35B-A3B-4bit:lab";
+    defaultModel = lib.mkForce "${config.services.omlxDeploy.lightModel.dir}:lab";
   };
 
   # Engine. Run in AUTO mode: Frigate ships the yolov9 model over ZMQ on connect.

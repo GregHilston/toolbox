@@ -3,8 +3,6 @@
 // Prints one JSON object: {list, create, toggle, edit, delete, errors[]}.
 const { chromium } = require(process.env.PW_CORE || "playwright-core");
 const [ui, api, shots] = process.argv.slice(2);
-const exe = process.env.HOME +
-  "/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell";
 
 const j = (path, opts) => fetch(api + path, opts).then((r) => r.json());
 const books = async () => {
@@ -24,7 +22,7 @@ async function fillField(scope, re, value) {
 
 (async () => {
   const out = { list: false, create: false, toggle: false, edit: false, delete: false, errors: [] };
-  const browser = await chromium.launch({ executablePath: exe });
+  const browser = await chromium.launch();
   const page = await browser.newPage();
   page.on("dialog", (d) => d.accept());
   page.on("pageerror", (e) => out.errors.push(String(e).slice(0, 300)));

@@ -61,7 +61,10 @@ The one that recurs: nearly every model's first try pins a `better-sqlite3` that
 Node 26 (it needs 13.x) — a training-cutoff trap, not a compiler problem (verified with clang
 forced). So "first try" scores are mostly 1/16, and **what discriminates is whether the model
 recovers from the error**. Each model ran with its vendor's recommended sampling; Qwen3.8-family
-models with `reasoning_effort: medium`.
+models with `reasoning_effort: medium`. **The thinking budgets were not equal:** the A3B
+entries cap thinking at 8192 tokens, the Qwen3.8-family entries at 16384, so part of the
+dense model's lead may be test-time compute. Each run's `summary.json` now records the
+settings it was served with; equalise budgets when a comparison hinges on it.
 
 The pi agent loop was not used: an unattended pi worker needs `yoloMode`, which the session's
 safety policy blocked. Tool calling was checked separately (below).
@@ -79,7 +82,7 @@ safety policy blocked. Tool calling was checked separately (below).
 | `Swift-1.5-…-oQ6e-bf16-mtp` | 1 | 1 | 0 | 9.7 min | 13 | 24 GB |
 | `Qwen3.8-Flash-Next-REAP-288-MLX-4bit` | 3 | 2 | 1 | 4.1 min | 47 | 69 GB |
 
-Swap stayed at 0 MB for every run. The A3B's failures were real bugs, not grader artefacts:
+Swap stayed at 0 MB for every moria run. The A3B's failures were real bugs, not grader artefacts:
 `lastID` on sql.js (which has none), a wasm file loaded from a CDN URL through `fs`, `require`
 of an undeclared dependency, a wrong 404 path. One Flash-Next run went 1 → 10 → 1, rewriting
 what worked in a 19.5k-token final attempt.
@@ -95,7 +98,7 @@ what worked in a 19.5k-token final attempt.
    costs nothing extra. Licence: free for personal use and for organisations under US$1M
    revenue.
 3. **Quant: oQ4e. Higher bits cost speed and bought nothing.** oQ5e and oQ6e (both bf16 for
-   sensitive tensors) were 30–40% slower and no more correct. oQ4e is oMLX's own mixed
+   sensitive tensors) decoded 26–36% slower than oQ4e and were no more correct. oQ4e is oMLX's own mixed
    4/5-bit imatrix quant and carries the MTP head.
 4. **Lightning MTP (`mtp_enabled`) is now worth it: 1.90× decode** (median paired ratio over
    12 alternating pairs, 18.6 → 37.3 tok/s, 77–94% acceptance; `bench/mtp_paired.py`). The
@@ -118,7 +121,7 @@ what worked in a 19.5k-token final attempt.
 
 **Practical rule now:** A3B-4bit stays the default for interactive work — 3× the decode and
 7× the prefill, which is what an agent turn over a large context waits on. On this
-self-contained task Swift with MTP finished in the same wall time (3.4 vs 3.1–3.4 min) and was
+self-contained task Swift with MTP finished in about the same wall time (3.4 vs 3.1–4.7 min) and was
 right far more often, so the A3B's lead is in turn latency, not time-to-correct. **`Swift-1.5-Qwen3.8-27b-oQ4e-mtp` (MTP on) replaces
 `Qwen3.8-27B-4bit` as the specialist**, and is the one to pick for any multi-file build where a
 wrong answer costs more than a few minutes. Swift + A3B together are 37 GB resident.
@@ -622,11 +625,13 @@ luck, not as this box's drift, and re-read the control every time.
 - **Default:** `Qwen3.6-35B-A3B-4bit` — temp 0.6 / top_p 0.95 / top_k 20 / min_p 0.0, with an
   8192-token thinking budget as its only runaway guard (no `reasoning_effort` knob exists in
   Qwen3.6).
-- **Specialist:** `Qwen3.8-27B-4bit` — temp 1.0 / top_p 0.95 / top_k 20 / min_p 0.0,
-  `reasoning_effort: medium`, 8192-token budget.
-- **Quality-leaning alternative, on disk, not default:** `Qwen3.6-35B-A3B-4bit-DWQ`
+- **Specialist:** `Swift-1.5-Qwen3.8-27b-oQ4e-mtp` with `mtp_enabled` since 2026-10-02 (it
+  replaced `Qwen3.8-27B-4bit`) — temp 1.0 / top_p 0.95 / top_k 20 / min_p 0.0,
+  `reasoning_effort: medium`, 16384-token budget. See the 2026-10-02 section.
+- **Quality-leaning alternative, on disk, nothing uses it:** `Qwen3.6-35B-A3B-4bit-DWQ`
   (10/10, and ~10% slower — not the 21% long quoted here).
-- Speculative decoding **off** pending the losslessness bug.
+- Speculative decoding **on for the specialist only**, taken knowingly: not bit-identical,
+  quality held (2026-10-02 section).
 - Deleted: `Qwen3.6-27B-4bit`, `Qwen3.6-27B-8bit`, `Qwen3.8-27B-8bit`, DSpark drafter (~73 GB).
 
 Two honest notes on the shipped config: the headline 9/10 was measured at temp **1.0** and
@@ -641,8 +646,8 @@ capping total output.
   and several repetitions per task (these are single samples at temperature 1.0), would be
   needed to test whether Qwen3.8's stronger published scores (SWE-bench Pro 61.7,
   LiveCodeBench v6 90.3, Terminal-Bench 2.1 73.0) show up on real work.
-- **Is oMLX's `vlm_mtp` divergence a bug?** Worth reporting upstream; re-check after upgrades
-  with `bench/lossless_check.py`.
+- **Is oMLX's MTP divergence a bug?** It persists in 0.7.0rc1's Lightning MTP; re-check after
+  upgrades with `bench/mtp_paired.py`.
 - **DWQ deserves a proper test** — a bigger suite would say whether that 10/10 is real.
 - **Vision untested.** Both models are VLMs; only text was ever sent.
 

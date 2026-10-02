@@ -340,7 +340,8 @@ Runtime state, so none of it is in git.
   model, in `~/.omlx/model_settings.json`, and the A3B entry the builder runs
   has none — while the Qwen3.8-family judge has `reasoning_effort: medium`,
   because its template defaults to `xhigh`, which never terminates. What bounds
-  thinking for both is `thinking_budget_tokens: 8192` in the same file. So the
+  thinking is `thinking_budget_tokens` in the same file: 8192 for the A3B, 16384
+  for the Qwen3.8-family judge. So the
   knob is oMLX's, not Hermes'; `nixos/modules/darwin/omlx.nix` generates it.
   The builder moved from the DWQ build to plain `Qwen3.6-35B-A3B-4bit` on
   2026-10-02 so Hermes and pi share one resident copy; DWQ's edge was one
