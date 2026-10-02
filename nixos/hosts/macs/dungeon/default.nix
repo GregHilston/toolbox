@@ -467,11 +467,11 @@ in {
     };
   };
 
-  # 2 GB: RAM goes to the model (home-lab docs/local-llms.md)
+  # Off: RAM goes to the model (home-lab docs/local-llms.md)
   # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
     enable = true;
-    cacheSize = "2GB";
+    cacheSize = "0";
     # Only lightModel: a heavy model would not fit beside Docker and Frigate.
   };
 

@@ -90,8 +90,8 @@ which we do not serve). Do not re-run this investigation; `docs/local-llm-benchm
 
 **dungeon runs one model, `Qwen3.6-35B-A3B-4bit:lab`** (thinking off), for every consumer
 since 2026-09-27; `~/Git/home-lab/docs/local-llms.md` owns why. No dense 27B there: it
-measured 2–4 t/s on the M3 Pro and pushed swap from 5 to 9.5 GB. Even the A3B sits at the
-edge — oMLX logs "needs prefill headroom" pauses and the host swaps out ~3.5 GB a day.
+measured 2–4 t/s on the M3 Pro and pushed swap from 5 to 9.5 GB. Even the A3B fits only with
+the hot cache off (`cacheSize = "0"`): at 2 GB the host swapped out ~3.5 GB a day.
 
 **Set `reasoning_effort` on Qwen3.8.** Its template defaults to `xhigh`, which on moria burns
 the whole token budget and never emits an answer. `model_settings.json` pins `medium` plus an

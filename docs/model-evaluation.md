@@ -44,12 +44,13 @@ only after an oMLX upgrade, a harness change, or if a candidate's numbers look o
 | role | model | CRUD correct by the end | correct, no hints | gen time | decode | prefill (16K / 64K) | resident | swap growth |
 |---|---|---|---|---|---|---|---|---|
 | light, moria | `Qwen3.6-35B-A3B-4bit` (temp 0.6, thinking on) | 1 of 3 | 0 of 3 | 3.4 min | 112 tok/s | 1,162 / 756 tok/s | 21 GB | 0 |
-| light, dungeon | `Qwen3.6-35B-A3B-4bit:lab` (thinking off) | 0 of 2 (both 15/16) | 0 of 2 | 3.6 min | 53 tok/s | not measured | 21 GB | **+0.9 GB** in a 5.6k-token turn |
+| light, dungeon | `Qwen3.6-35B-A3B-4bit:lab` (thinking off) | 0 of 2 (both 15/16) | 0 of 2 | 3.6 min | 53 tok/s | not measured | 21 GB | flat under heavier load since the hot cache went off (+0.9 GB in one turn before) |
 | heavy, moria | `Swift-1.5-Qwen3.8-27b-oQ4e-mtp`, `mtp_enabled` (temp 1.0, effort medium) | 3 of 3 | 2 of 3 | 3.4 min | 38 tok/s | 183 / 129 tok/s | 16 GB | 0 |
 
-dungeon fails the no-swap-growth rule today: with its 56 containers up it started at 1.0 GB of
-swap and reached 1.9 GB during one turn. Freeing RAM there is open work; a smaller light
-model is the other lever.
+dungeon swapped during that eval: 1.0 → 1.9 GB in one turn, with its 56 containers up. Turning
+oMLX's 2 GB hot cache off fixed it. Two concurrent 6.9k-token prompts with 2,500-token
+replies swapped out 190 MB before and 8 MB after, at the same speed. It fits with little to
+spare; home-lab `docs/local-llms.md` → "Memory" has the budget and the next levers.
 
 The thinking budgets differ: 8192 tokens for the A3B, 16384 for Swift. Equalise them
 (the `thinking_budget_tokens` entry) when a comparison hinges on it.
@@ -74,7 +75,7 @@ Look at `mlx-community`, oMLX-quantized (`oQ4e`, `oQ5e`, `-mtp`) and `lmstudio-c
 builds; fetch sizes with `?blobs=true`. Read the base model's card for its official
 sampling and any reasoning knob. Rule a candidate out before downloading if:
 its 4-bit does not fit the role's budget, or oMLX lacks its architecture. Light: no
-bigger than today's 21 GB, since dungeon already swaps a little at that size
+bigger than today's 21 GB, which fills dungeon
 (home-lab `docs/local-llms.md`). Heavy: about 70 GB, beside the light model on moria.
 
 ### 2. Install it for the test
