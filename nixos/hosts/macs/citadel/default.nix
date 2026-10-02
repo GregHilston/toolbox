@@ -44,6 +44,7 @@
   homebrew = {
     taps = [
       "hashicorp/tap" # Terraform
+      "mozilla/mozcloud" # mzcld
     ];
 
     brews = [
@@ -53,6 +54,9 @@
       # Cloud / Infra
       "hashicorp/tap/terraform"
       "kubernetes-cli"
+      # Yardstick (Grafana): IAP proxy and CLI
+      "mozilla/mozcloud/mzcld"
+      "gcx"
 
       # Python version management
       "pyenv"
@@ -94,6 +98,23 @@
   services.omlxDeploy = {
     enable = true;
     cacheSize = "12GB";
+  };
+
+  # Yardstick (Grafana) IAP proxy on :3000.
+  # grafana MCP and gcx both point here. Needs `gcloud auth login`; mzcld
+  # shells out to gcloud, so its brew bin must be on PATH.
+  # SRE doc: https://mozilla-hub.atlassian.net/wiki/spaces/SRE/pages/2641985695
+  launchd.user.agents.yardstick-proxy = {
+    command = "/opt/homebrew/bin/mzcld iap --host yardstick.mozilla.org --proxy --port 3000";
+    serviceConfig = {
+      RunAtLoad = true;
+      KeepAlive = true;
+      # Back off when gcloud auth has expired
+      ThrottleInterval = 60;
+      EnvironmentVariables.PATH = "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/yardstick-proxy.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/yardstick-proxy.log";
+    };
   };
 
   # Vorssaint — menu-bar utility suite (imported above). Seeds its Features hub
