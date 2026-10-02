@@ -179,10 +179,10 @@ entry gets the template's defaults if anything ever asks for it.
 Check oMLX's log, not the client's config: `grep "Chat completion"
 ~/.omlx/logs/server.log | tail`.
 
-- **pi 0.87.1 ignores `--model` on the command line**; `pi -p --model X` talks to the
-  default. Switch inside a session (`/model`, Ctrl+P), or over `pi --mode rpc` with a
-  `set_model` command. pi's permission system refuses reads outside the working
-  directory in `-p` mode, so test tool calls on a file in it.
+- **pi**: `pi -p --model omlx/<model> "…"` works; `--model=X` does not parse in 0.87.1.
+  If `timeout 5 printf '[%s]' -p x` prints `[x]` rather than `[-p][x]`, a broken
+  `timeout` wrapper is first on PATH and will drop pi's flags; nix's GNU one must win. pi's permission system refuses
+  reads outside the working directory in `-p` mode, so test tool calls on a file in it.
 - **Hermes**: run it with an argument list, not a shell string. This shell's command
   rewriter mangled `hermes chat -Q -q "…"` into argument errors every time:
 

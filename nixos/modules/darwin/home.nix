@@ -65,7 +65,13 @@ in {
         jetbrains-mono
       ])
       # GUI apps (installed via nix derivation, linked to ~/Applications/Home Manager Apps/)
-      ++ [open-webui-desktop];
+      ++ [open-webui-desktop]
+      # GNU timeout alone: all of coreutils shadows BSD tools.
+      ++ [
+        (pkgs.runCommand "gnu-timeout" {} ''
+          mkdir -p $out/bin && ln -s ${pkgs.coreutils}/bin/timeout $out/bin/timeout
+        '')
+      ];
 
     # mflux — Apple Silicon image generation CLI (pip install mflux, not a brew formula).
     # Installed as a global uv tool so `mflux-generate` is on PATH system-wide.

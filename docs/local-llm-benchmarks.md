@@ -131,11 +131,13 @@ wrong answer costs more than a few minutes. Swift + A3B together are 37 GB resid
 (`lmstudio-community/Qwen3.6-35B-A3B-MLX-6bit`), Flash-Next REAP. ukisai's own
 `Swift-1.5-{4,5}bit-MLX` need a patched mlx-lm and their own server, so they cannot load in oMLX.
 
-**pi gotcha found on the way:** pi 0.87.1 ignores `--model` on the command line — every
-`pi -p --model …` request reached oMLX as `Qwen3.6-35B-A3B-4bit`, confirmed by sniffing the
-request body, with or without extensions or a clean agent dir. Switching inside a session
-works (`/model` or Ctrl+P; verified through RPC `set_model`, including a tool call on Swift).
-pi 1.0.0 is out and may fix it.
+**Shell gotcha found on the way:** `pi -p --model …` seemed to ignore `--model`, but pi
+was never told. The runs went through `timeout`, and moria's `~/.local/bin/timeout` is a
+hand-written wrapper that drops every flag *and the argument after it* — `timeout 60 pi -p
+--model X hi` runs `pi X hi`, two prompts on the default model. Sniffing the request body
+shows pi 0.87.1 and 1.0.0 both honour `--model` when called directly. Nix now installs GNU
+`timeout` on every Mac (`nixos/modules/darwin/home.nix`), which beats `/usr/local/bin`'s
+copy on PATH; the `~/.local/bin` one, which beat it, was renamed `timeout.broken-wrapper`.
 
 ---
 

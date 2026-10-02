@@ -61,8 +61,9 @@ ukisai's published coding scores; our eval could not tell them apart.
 `docs/local-llm-benchmarks.md` → "2026-10-02" has the data, including why oQ5e/oQ6e,
 the A3B 6-bit and Qwen3.8-Flash-Next were rejected.
 
-**pi 0.87.1 ignores `--model` on the command line** — `pi -p --model X` talks to the
-default model. Switch inside the session (`/model`, Ctrl+P) instead.
+**`pi -p --model omlx/<model>` picks the model.** It once seemed not to: a hand-written
+`timeout` wrapper dropped each flag with the argument after it. Nix now installs GNU
+`timeout`; `docs/local-llm-benchmarks.md` → "2026-10-02" has the details.
 
 **`Qwen3.6-35B-A3B-4bit-DWQ` costs ~10%, not the 21% this repo said for a year.** Paired A/B
 sampling measures **-9.8% decode and -9.3% prefill** against the plain build. The old figure
