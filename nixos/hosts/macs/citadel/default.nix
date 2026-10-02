@@ -116,7 +116,45 @@
       "npm:@ff-labs/pi-fff"
       "npm:pi-agent-suite"
       "npm:pi-powerline-footer"
+      # Runlayer MCPs, work machine only. Servers below.
+      "npm:pi-mcp-adapter"
     ];
+
+    # pi-mcp-adapter's config: the Runlayer servers Claude Code has in
+    # ~/.claude.json, over the same HTTP proxy URLs. pi OAuths to Runlayer
+    # once per server; Runlayer holds the upstream tokens. Not stdio
+    # `runlayer run`: that does upstream OAuth locally, which Runlayer has
+    # misconfigured for Slack and Figma (see `runlayer doctor <uuid>`).
+    # Proxy mode (directTools = false) costs one ~800-token `mcp` tool
+    # regardless of server count; see dot/pi/CLAUDE.md.
+    # allowInstall is off because this file is a read-only /nix/store symlink.
+    home.file.".pi/agent/mcp-adapter.json".text = let
+      runlayer = uuid: {
+        url = "https://mozilla.runlayer.com/api/v1/proxy/${uuid}/mcp";
+        auth = "oauth";
+      };
+    in
+      builtins.toJSON {
+        settings = {
+          directTools = false;
+          allowInstall = false;
+        };
+        mcpServers = {
+          slack = runlayer "12c6b691-9efb-4630-ba42-35aaee7e53df";
+          github-mozilla-orgs = runlayer "a256a9b0-9d38-44ae-b8ae-6bf873ff8ac8";
+          figma = runlayer "c8f06e5a-41a2-4994-b08d-645c3c6e578a";
+          gmail = runlayer "1001bd70-ca7d-49a2-b297-cb8a343cf2dc";
+          google-docs = runlayer "7620cea5-f374-4c00-9427-7cefa55d364f";
+          google-drive = runlayer "5abc0569-9253-4488-8e95-2fc7bba3a2fd";
+          google-sheets = runlayer "2cf7b2fc-b49b-49f7-923c-06b591f43b8e";
+          google-slides = runlayer "a87df1eb-4309-46f7-9ab4-a6acc1d242cb";
+          # Jira and Confluence. Atlassian's own endpoint, not Runlayer.
+          atlassian = {
+            url = "https://mcp.atlassian.com/v1/mcp";
+            auth = "oauth";
+          };
+        };
+      };
 
     # Disable modules not needed on this host
     custom.programs.opencode.enable = lib.mkForce false;

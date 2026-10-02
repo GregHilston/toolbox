@@ -750,10 +750,10 @@ Replaced by `@gotgenes/pi-permission-system` and `@narumitw/pi-plan-mode`.
   attribute-less tags).
 - **pi-mcp-adapter** (548k/mo, the #1 pi package) — genuinely the right design
   (~750–900 tok flat regardless of server count, versus 5,000+ for a natively
-  registered server). **Deferred, not rejected**: the only MCP servers configured
-  here are `sentry` and `godot`, neither worth bridging into pi. Install it the
-  day there is a server worth the ~800 tokens, with `scriptMode: false`,
-  `directTools: false`, and per-server `includeTools`.
+  registered server). **citadel only**, for the Runlayer MCPs (Slack, Google,
+  Figma, GitHub), over the same Runlayer proxy URLs Claude Code uses, OAuth
+  once per server. Declared in `hosts/macs/citadel/default.nix`. Other hosts
+  get it in `~/.pi/agent/npm` from the shared lock but never load it.
 
 ## Lazy tools — `/enable reddit`, `pi-subagents`
 
