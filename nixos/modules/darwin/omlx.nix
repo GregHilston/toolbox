@@ -15,19 +15,25 @@
   # user. Deep-merged (jq) onto the shared base settings.json during activation.
   # This replaces the old per-host dot/omlx-<host> stow packages; the model
   # block also fixes the base tpl's hardcoded username (e.g. citadel).
-  settingsOverlay = pkgs.writeText "omlx-settings-overlay-${host}.json" (builtins.toJSON {
-    cache = {
-      enabled = true;
-      ssd_cache_dir = "/Users/${user}/.omlx/kv-cache";
-      ssd_cache_max_size = "auto";
-      hot_cache_max_size = cfg.cacheSize;
-      initial_cache_blocks = 256;
-    };
-    model = {
-      model_dirs = [modelDir];
-      model_dir = modelDir;
-    };
-  });
+  settingsOverlay = pkgs.writeText "omlx-settings-overlay-${host}.json" (builtins.toJSON ({
+      cache = {
+        enabled = true;
+        ssd_cache_dir = "/Users/${user}/.omlx/kv-cache";
+        ssd_cache_max_size = "auto";
+        hot_cache_max_size = cfg.cacheSize;
+        initial_cache_blocks = 256;
+      };
+      model = {
+        model_dirs = [modelDir];
+        model_dir = modelDir;
+      };
+    }
+    // lib.optionalAttrs (cfg.memoryCeilingGB != null) {
+      memory = {
+        memory_guard_tier = "custom";
+        memory_guard_custom_ceiling_gb = cfg.memoryCeilingGB;
+      };
+    }));
 
   modelsManifest = pkgs.writeText "omlx-models-${host}.manifest" (lib.concatStrings
     (lib.mapAttrsToList (dir: repo: "${dir} ${repo}\n")
@@ -68,6 +74,17 @@ in {
         default = "mlx-community/Qwen3.6-35B-A3B-4bit";
         description = "Hugging Face repo lightModel.dir is downloaded from.";
       };
+    };
+
+    memoryCeilingGB = lib.mkOption {
+      type = lib.types.nullOr lib.types.number;
+      default = null;
+      example = 27;
+      description = ''
+        Fixed ceiling for oMLX's memory guard, in GB. Null keeps oMLX's own
+        tier. Set it where the tier's dynamic ceiling, which counts a VM's
+        memory as taken, refuses a model that fits (dungeon).
+      '';
     };
 
     cacheSize = lib.mkOption {

@@ -472,6 +472,9 @@ in {
   services.omlxDeploy = {
     enable = true;
     cacheSize = "0";
+    # oMLX 0.7.0's balanced tier left 19.8 GB for a 20 GB model;
+    # 27 GB is Apple's GPU cap, what 0.7.0rc1 allowed.
+    memoryCeilingGB = 27;
     # Only lightModel: a heavy model would not fit beside Docker and Frigate.
   };
 
