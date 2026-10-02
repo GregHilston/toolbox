@@ -10,7 +10,7 @@
 # The macOS half is Karabiner-Elements + FluidVoice — see dot/karabiner/.
 # Both platforms emit F18 for dictation.
 #
-# THRESHOLD COUPLING: the 200 below is the tap/hold split and must equal BOTH
+# THRESHOLD COUPLING: the 250 below is the tap/hold split and must equal BOTH
 # Karabiner parameters in dot/karabiner/.config/karabiner/karabiner.json. keyd
 # has one threshold where Karabiner has two; see that package's README for why
 # they must stay equal to each other as well. Retune all three together.

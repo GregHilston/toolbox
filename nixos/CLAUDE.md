@@ -145,7 +145,7 @@ The shape is always the same, and *why* is the part worth remembering:
   `open` is what a double-click does and the grants from `docs/darwin-post-deploy.md`
   survive. It's also idempotent — `open -a` on a running app just activates it, so the
   agent bootstrap on every `just dr <host>` can't leave two copies running. `-g` = don't
-  steal focus, `-j` = launch hidden.
+  steal focus, `-j` = launch hidden. (FluidVoice wraps this in a script; see below.)
 - **`RunAtLoad` only, never `KeepAlive`.** `open` exits as soon as LaunchServices takes
   over, so KeepAlive reads that as a crash and respawns forever. The tradeoff: a real
   crash isn't restarted. Fine — the missing menu-bar icon is the tell.
@@ -183,10 +183,17 @@ What it does, all from `postActivation` as the user (the Vorssaint shape, same r
 - **Takes F18 and launch-at-login from Handy** by editing its `settings_store.json`,
   quitting Handy first because it writes the store back on quit. Handy applies
   `autostart_enabled` on its own next launch, so its login item unregisters itself then.
-- **Launches silently at login.** FluidVoice reveals and focuses its window on any launch it
-  does not see as a login item, `-g -j` notwithstanding. The agent passes
-  `--env FLUID_SIMULATE_LOGIN_LAUNCH=1` and the seed sets `ShowMainWindowAtLoginLaunch = false`.
-  Upstream calls that variable a testing hook; if it disappears, the cost is a window at login.
+- **Launches silently at login, unless onboarding is unfinished.** FluidVoice reveals and
+  focuses its window on any launch it does not see as a login item, `-g -j` notwithstanding.
+  The agent's script passes `--env FLUID_SIMULATE_LOGIN_LAUNCH=1` and the seed sets
+  `ShowMainWindowAtLoginLaunch = false` and `ShowInDock = false`. Onboarding only renders in
+  that window, so while `OnboardingCompleted` is not `1` the script launches loudly instead;
+  otherwise a `just dr` over SSH would leave a Mac with no mic grant and no visible app.
+  Upstream calls the env var a testing hook. The cask is `auto_updates`, so it could vanish in
+  a Sparkle update rather than a `brew upgrade`; the cost is a window at login.
+- **The seed quits a running FluidVoice first**, because the app holds its hotkeys in memory.
+- **Handy is best-effort and runs after the seed**, so a corrupt Handy store or a Handy that
+  won't quit prints a warning and never blocks FluidVoice.
 
 Command Mode needs a chat provider; FluidVoice's bundled model is refused for it. API keys
 live in the Keychain and each provider must pass the app's own verify step, so pointing it at
