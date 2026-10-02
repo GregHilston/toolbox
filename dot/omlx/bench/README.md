@@ -27,6 +27,8 @@ export OMLX_API_KEY=$(python3 -c "import json,os;print(json.load(
 | `moe_quant_showdown.sh` | A3B-4bit vs its 4-bit-DWQ sibling, decode + prefill, one arm at a time |  *(superseded — see below)*
 | `moe_quant_verdict.py` | those raw numbers -> seconds per agent turn at a measured workload mix |
 | `contention_audit.sh` | certifies a benchmark window had no foreign traffic |
+| `mtp_paired.py` | Lightning MTP on vs off, paired, plus a greedy identity check |
+| `crud/` | model writes a SQLite + React CRUD app; graded by running it, failures fed back as recorded hints |
 
 ## Running
 

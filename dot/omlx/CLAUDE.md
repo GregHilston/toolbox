@@ -51,10 +51,18 @@ There are also `model_profiles.json` (named presets per model) and `global_templ
 dense `Qwen3.8-27B-4bit`'s **23.0** — 5.7× — while scoring 9/10 vs 8/10 on a 10-task
 executable coding eval. Faster *and* not worse.
 
-**Specialist: `Qwen3.8-27B-4bit`** (dense, newer generation). Reach for it when A3B has
-actually failed a specific hard problem, or when output tokens are precious (31.8k vs 84.1k
-to solve the same eval). We did **not** measure a quality advantage — the eval ceilings out —
-so that case rests on its published benchmarks, not on our data.
+**Specialist: `Swift-1.5-Qwen3.8-27b-oQ4e-mtp`, with `mtp_enabled`** (dense 27B, 16 GB;
+replaced `Qwen3.8-27B-4bit` on 2026-10-02). On a one-table CRUD app eval graded by running
+the app, the dense 27B finished correct in 10 of 10 runs and the A3B in 2 of 5. MTP doubles
+its decode (18.6 → 37.3 t/s) and kept quality (3 of 3). Reach for it on multi-file builds
+where a wrong answer costs more than a few minutes. Its cost is prefill: ~150 t/s against
+the A3B's ~1,100, so a 64K context waits 8 minutes. Swift over base Qwen3.8 rests on
+ukisai's published coding scores; our eval could not tell them apart.
+`docs/local-llm-benchmarks.md` → "2026-10-02" has the data, including why oQ5e/oQ6e,
+the A3B 6-bit and Qwen3.8-Flash-Next were rejected.
+
+**pi 0.87.1 ignores `--model` on the command line** — `pi -p --model X` talks to the
+default model. Switch inside the session (`/model`, Ctrl+P) instead.
 
 **`Qwen3.6-35B-A3B-4bit-DWQ` costs ~10%, not the 21% this repo said for a year.** Paired A/B
 sampling measures **-9.8% decode and -9.3% prefill** against the plain build. The old figure
@@ -69,7 +77,8 @@ design, not a sequential pass.**
 **Always prefer 4-bit over 8-bit**, but for different reasons per architecture: on a *dense*
 27B, 8-bit costs ~2× the speed (23.0 → 11.9 t/s); on the *MoE* it costs 1.50×
 (130.7 → 86.9) because only ~3B params are active per token. Cheaper, but not free — don't
-assume MoE 8-bit is a freebie. No 6-bit exists upstream for either.
+assume MoE 8-bit is a freebie. The A3B 6-bit (lmstudio-community) was 16% slower than
+4-bit and no more correct.
 
 **That includes tool calling.** Checked 2026-09-03 when pi's default moved off the 8-bit:
 through pi against oMLX, the 4-bit A3B made the same well-formed `bash`/`read`/`edit` calls
@@ -79,15 +88,10 @@ which we do not serve). Do not re-run this investigation; `docs/local-llm-benchm
 "Results: tool calling at 4-bit" has the numbers. The pi/opencode default lives in
 `nixos/modules/darwin/home.nix` and must name the same model as `is_default` here.
 
-**dungeon is the exception: `Qwen3.5-9B-MLX-4bit`.** Its oMLX ceiling is ~27GB with
-Docker and Frigate resident, and the A3B's 19GB of weights leaves no room for KV cache
-(the 15GB gemma-4-26b-a4b already trips `prefill_memory_exceeded` there). The 9B is the
-strongest model that fits, it makes well-formed tool calls (smoke-tested 2026-09-03), and
-pi caps it at 131k context because a 262k KV cache would not fit either. Set by
-`mkForce` in `nixos/hosts/macs/dungeon/default.nix`; the 35B-A3B is not even downloaded on
-that host. Two rungs down the ladder in `~/Git/notes/llm.md` → "Which Local Model For
-Which Job" (QA tier rather than personal-assistant tier), which is the honest description
-of what pi can do on that box.
+**dungeon runs one model, `Qwen3.6-35B-A3B-4bit:lab`** (thinking off), for every consumer
+since 2026-09-27; `~/Git/home-lab/docs/local-llms.md` owns why. No dense 27B there: it
+measured 2–4 t/s on the M3 Pro and pushed swap from 5 to 9.5 GB. Even the A3B sits at the
+edge — oMLX logs "needs prefill headroom" pauses and the host swaps out ~3.5 GB a day.
 
 **Set `reasoning_effort` on Qwen3.8.** Its template defaults to `xhigh`, which on moria burns
 the whole token budget and never emits an answer. `model_settings.json` pins `medium` plus an

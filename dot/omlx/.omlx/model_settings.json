@@ -32,7 +32,7 @@
       "max_context_window": 131072
     },
     "Qwen3.8-27B-4bit": {
-      "description": "SPECIALIST, not the default (dense 27B, 4-bit, 14.95GiB). Reach for it when A3B-4bit has actually failed a specific hard problem, or when output tokens are precious -- it solved our eval with 31.8k tokens vs A3B's 84.1k (2.6x fewer). Otherwise A3B-4bit is 5.7x faster and scored a point higher. IMPORTANT: we did NOT measure a quality advantage for this model; our 10-task eval hits a ceiling (8/10 vs 9/10) and cannot discriminate. Its case rests on published benchmarks (SWE-bench Pro 61.7, LiveCodeBench v6 90.3, Terminal-Bench 2.1 73.0) being a newer generation, not on our data. 4-bit not 8-bit: on a DENSE 27B the 8-bit quant measured ~2x slower (23.0 -> 11.9 t/s) for a quality difference nobody can detect at >=4 bits. No 6-bit exists upstream. Full write-up: docs/local-llm-benchmarks.md.",
+      "description": "SUPERSEDED as the specialist by Swift-1.5-Qwen3.8-27b-oQ4e-mtp (2026-10-02); still hermes-mode.sh's judge. Dense 27B, 4-bit, 14.95GiB. It was the one to reach for when A3B-4bit has actually failed a specific hard problem, or when output tokens are precious -- it solved our eval with 31.8k tokens vs A3B's 84.1k (2.6x fewer). Otherwise A3B-4bit is 5.7x faster and scored a point higher. IMPORTANT: we did NOT measure a quality advantage for this model; our 10-task eval hits a ceiling (8/10 vs 9/10) and cannot discriminate. Its case rests on published benchmarks (SWE-bench Pro 61.7, LiveCodeBench v6 90.3, Terminal-Bench 2.1 73.0) being a newer generation, not on our data. 4-bit not 8-bit: on a DENSE 27B the 8-bit quant measured ~2x slower (23.0 -> 11.9 t/s) for a quality difference nobody can detect at >=4 bits. (A 6-bit does exist: lmstudio-community/Qwen3.8-27B-MLX-6bit.) Full write-up: docs/local-llm-benchmarks.md.",
       "temperature": 1.0,
       "top_p": 0.95,
       "top_k": 20,
@@ -148,6 +148,38 @@
       "thinking_budget_enabled": false,
       "ttl_seconds": 600,
       "_comment_ttl": "Unload after 10 idle minutes: Frigate reviews arrive in bursts, and the 3 GB this frees is the difference between Gemma prefilling normally and oMLX throttling it against the 18 GB prefill cap (seen 2026-09-04 with swap at 8.4 of 9.2 GB). A cold reload costs Frigate ~8 s per burst."
+    },
+    "Qwen3.8-27B-oQ4e-mtp": {
+      "description": "Base Qwen3.8-27B in oQ4e with the MTP head. Control arm of the 2026-10-02 CRUD eval: 2 of 2 correct, same as Swift, at about the same token count. Superseded by Swift-1.5-Qwen3.8-27b-oQ4e-mtp; kept because without this entry the template's xhigh default would never terminate.",
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "top_k": 20,
+      "min_p": 0.0,
+      "repetition_penalty": 1.0,
+      "presence_penalty": 0.0,
+      "chat_template_kwargs": {
+        "reasoning_effort": "medium"
+      },
+      "thinking_budget_enabled": true,
+      "thinking_budget_tokens": 16384
+    },
+    "Swift-1.5-Qwen3.8-27b-oQ4e-mtp": {
+      "description": "SPECIALIST for hard coding: dense 27B, ukisai's Swift 1.5 fine-tune of Qwen3.8-27B (RL'd against overthinking; published LiveCodeBench v6 81.7 vs 76.8, Terminal-Bench 2.1 72.1 vs 69.2), oMLX oQ4e quant with the MTP head (yottle/Swift-1.5-Qwen3.8-27b-oQ4e-mtp, 17 GB). Measured 2026-10-02 on a one-table CRUD app eval: 6 of 6 runs fully correct, 3 with no hints, where A3B-4bit managed 2 of 5. Replaces Qwen3.8-27B-4bit in pi. Full write-up: docs/local-llm-benchmarks.md, 2026-10-02 section.",
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "top_k": 20,
+      "min_p": 0.0,
+      "repetition_penalty": 1.0,
+      "presence_penalty": 0.0,
+      "_comment_sampling": "Qwen3.8's official thinking set, which is also what ukisai benchmarked Swift with.",
+      "chat_template_kwargs": {
+        "reasoning_effort": "medium"
+      },
+      "_comment_reasoning_effort": "The template defaults to xhigh, which never terminates on Qwen3.8 (see the Qwen3.8-27B-4bit entry). Swift inherits the template.",
+      "thinking_budget_enabled": true,
+      "thinking_budget_tokens": 16384,
+      "mtp_enabled": true,
+      "_comment_mtp": "Lightning MTP via the checkpoint's own MTP head: 1.90x decode (median paired ratio, 18.6 -> 37.3 tok/s, 92% acceptance), and no parking on 7k-token generations in oMLX 0.7.0rc1. NOT bit-identical to MTP-off at temperature 0 (0/3 prompts matched; outputs fork at a near-tie and both read fine). Taken anyway: CRUD quality with it on was 3 of 3 correct, 2 with no hints. Re-check with bench/mtp_paired.py after an oMLX upgrade."
     }
   }
 }

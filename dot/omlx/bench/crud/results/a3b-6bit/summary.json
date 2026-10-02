@@ -1,0 +1,122 @@
+{
+ "model": "Qwen3.6-35B-A3B-MLX-6bit",
+ "arm": "a3b-6bit",
+ "extra": {},
+ "rounds": [
+  {
+   "round": 0,
+   "score": 1,
+   "of": 16,
+   "checks": {
+    "server_starts": false,
+    "list": false,
+    "create": false,
+    "get_one": false,
+    "update": false,
+    "validation_400": false,
+    "not_found_404": false,
+    "delete": false,
+    "persists_restart": false,
+    "db_file": false,
+    "client_build": true,
+    "ui_list": false,
+    "ui_create": false,
+    "ui_toggle": false,
+    "ui_edit": false,
+    "ui_delete": false
+   },
+   "files": [
+    "README.md",
+    "server/package.json",
+    "server/index.js",
+    "client/package.json",
+    "client/vite.config.js",
+    "client/index.html",
+    "client/src/main.jsx",
+    "client/src/index.css",
+    "client/src/App.jsx"
+   ],
+   "finish": "stop",
+   "completion_tokens": 12233,
+   "reasoning_tokens": null,
+   "prompt_tokens": 402,
+   "wall_s": 137.1,
+   "ttft_s": 8.8,
+   "decode_tps": 95.3,
+   "swap_start_mb": 0.0,
+   "swap_peak_mb": 0.0
+  },
+  {
+   "round": 1,
+   "score": 1,
+   "of": 16,
+   "checks": {
+    "server_starts": false,
+    "list": false,
+    "create": false,
+    "get_one": false,
+    "update": false,
+    "validation_400": false,
+    "not_found_404": false,
+    "delete": false,
+    "persists_restart": false,
+    "db_file": false,
+    "client_build": true,
+    "ui_list": false,
+    "ui_create": false,
+    "ui_toggle": false,
+    "ui_edit": false,
+    "ui_delete": false
+   },
+   "files": [
+    "server/package.json",
+    "server/index.js"
+   ],
+   "finish": "stop",
+   "completion_tokens": 8439,
+   "reasoning_tokens": null,
+   "prompt_tokens": 5168,
+   "wall_s": 108.2,
+   "ttft_s": 4.1,
+   "decode_tps": 81.1,
+   "swap_start_mb": 0.0,
+   "swap_peak_mb": 0.0
+  },
+  {
+   "round": 2,
+   "score": 1,
+   "of": 16,
+   "checks": {
+    "server_starts": false,
+    "list": false,
+    "create": false,
+    "get_one": false,
+    "update": false,
+    "validation_400": false,
+    "not_found_404": false,
+    "delete": false,
+    "persists_restart": false,
+    "db_file": false,
+    "client_build": true,
+    "ui_list": false,
+    "ui_create": false,
+    "ui_toggle": false,
+    "ui_edit": false,
+    "ui_delete": false
+   },
+   "files": [
+    "server/package.json",
+    "server/index.js"
+   ],
+   "finish": "stop",
+   "completion_tokens": 9409,
+   "reasoning_tokens": null,
+   "prompt_tokens": 6881,
+   "wall_s": 110.6,
+   "ttft_s": 2.5,
+   "decode_tps": 87.0,
+   "swap_start_mb": 0.0,
+   "swap_peak_mb": 0.0
+  }
+ ]
+}

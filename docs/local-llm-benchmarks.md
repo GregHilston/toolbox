@@ -19,8 +19,8 @@ work is in `dot/omlx/speculative-decoding-findings.md`.
    A3B's 84.1k to solve the same suite (2.6× fewer).
 3. **On a *dense* model, 8-bit costs ~2× the speed for nothing.** 23.0 → 11.9 tok/s. On the
    *MoE* it costs 1.50× (130.7 → 86.9), because a MoE only reads its ~3B active params.
-   The "I have 128 GB so take the 8-bit" instinct is wrong on both. No 6-bit MLX quant is
-   published for either model. Tool calling survives the 4-bit quant too — see "Results:
+   The "I have 128 GB so take the 8-bit" instinct is wrong on both. (6-bit builds do exist,
+   from lmstudio-community; the A3B 6-bit was measured on 2026-10-02 and did not help.) Tool calling survives the 4-bit quant too — see "Results:
    tool calling at 4-bit" — so there is no agentic-use exception to this rule either.
 4. **Qwen3.8-27B is a retrain on the Qwen3.6-27B skeleton** — same architecture config,
    identically-sized 14.95 GiB weights, same measured speed. Free upgrade, old one deleted.
@@ -35,6 +35,104 @@ work is in `dot/omlx/speculative-decoding-findings.md`.
 
 **Practical rule:** default to A3B-4bit. Reach for Qwen3.8-27B-4bit only when A3B has actually
 failed a specific hard problem, or when output tokens are precious. Expect ~5.7× the wait.
+
+**Superseded on 2026-10-02 for the specialist slot** — see the next section. The default is
+unchanged.
+
+---
+
+## 2026-10-02: Swift 1.5, Qwen3.8-Flash-Next, and the A3B 6-bit
+
+oMLX 0.7.0rc1. Question: which Qwen3.8-27B variant and quant is best on moria, is there a
+newer Qwen that beats `Qwen3.6-35B-A3B-4bit`, and does a dense model earn a place in reserve.
+
+### The eval
+
+A harder, agentic-shaped task than `codeeval.py`, which had hit its ceiling: the model writes a
+one-table CRUD app — Node + SQLite API, React + Vite UI — as files in one reply. The model runs
+nothing; `dot/omlx/bench/crud/crud_eval.py` installs it, starts it, and scores **16 checks**:
+server starts, the five endpoints, 400 on a missing title/author, 404 on an unknown id,
+persistence across a restart, the client build, and five headless-browser UI checks
+(list, create, toggle read, edit, delete). I chose SQLite; the prompt names Node 26.
+
+**Hints** are the grader's own failure report, sent back verbatim as the next user turn, at most
+two. Every one is saved as `results/<arm>/hints-round-N.md`. No hand-written hints were given.
+The one that recurs: nearly every model's first try pins a `better-sqlite3` that cannot build on
+Node 26 (it needs 13.x) — a training-cutoff trap, not a compiler problem (verified with clang
+forced). So "first try" scores are mostly 1/16, and **what discriminates is whether the model
+recovers from the error**. Each model ran with its vendor's recommended sampling; Qwen3.8-family
+models with `reasoning_effort: medium`.
+
+The pi agent loop was not used: an unattended pi worker needs `yoloMode`, which the session's
+safety policy blocked. Tool calling was checked separately (below).
+
+### Results (n = runs; full table: `python3 dot/omlx/bench/crud/summarize.py`)
+
+| model | runs | 16/16 at the end | 16/16 with no hints | median gen time | decode tok/s | resident |
+|---|---|---|---|---|---|---|
+| `Qwen3.6-35B-A3B-4bit` (default) | 3 | 1 | 0 | 3.4 min | 112 | 21 GB |
+| `Qwen3.6-35B-A3B-MLX-6bit` | 2 | 1 | 0 | 4.2 min | 90 | 28 GB |
+| `Qwen3.8-27B-oQ4e-mtp` (base, MTP off) | 2 | 2 | 1 | 7.6 min | 19 | 16 GB |
+| `Swift-1.5-…-oQ4e-mtp`, MTP off | 3 | 3 | 1 | 7.9 min | 20 | 16 GB |
+| **`Swift-1.5-…-oQ4e-mtp`, MTP on** | 3 | **3** | **2** | **3.4 min** | **38** | 16 GB |
+| `Swift-1.5-…-oQ5e-bf16-mtp` | 1 | 1 | 0 | 11.2 min | 15 | 20 GB |
+| `Swift-1.5-…-oQ6e-bf16-mtp` | 1 | 1 | 0 | 9.7 min | 13 | 24 GB |
+| `Qwen3.8-Flash-Next-REAP-288-MLX-4bit` | 3 | 2 | 1 | 4.1 min | 47 | 69 GB |
+
+Swap stayed at 0 MB for every run. The A3B's failures were real bugs, not grader artefacts:
+`lastID` on sql.js (which has none), a wasm file loaded from a CDN URL through `fs`, `require`
+of an undeclared dependency, a wrong 404 path. One Flash-Next run went 1 → 10 → 1, rewriting
+what worked in a 19.5k-token final attempt.
+
+### Findings
+
+1. **The dense 27B is the reliable one: 10 of 10 runs correct by the end, every quant.** The
+   A3B, at either bit-width, finished correct in 2 of 5. Each arm is n ≤ 3, but the gap
+   (10/10 vs 2/5) is the one result here that is not noise.
+2. **Swift 1.5 over base Qwen3.8: same correctness on this task, better published coding.**
+   We could not separate them (2/2 vs 3/3, ~8k tokens each). The case for Swift is ukisai's
+   published LiveCodeBench v6 81.7 vs 76.8 and Terminal-Bench 2.1 72.1 vs 69.2, and that it
+   costs nothing extra. Licence: free for personal use and for organisations under US$1M
+   revenue.
+3. **Quant: oQ4e. Higher bits cost speed and bought nothing.** oQ5e and oQ6e (both bf16 for
+   sensitive tensors) were 30–40% slower and no more correct. oQ4e is oMLX's own mixed
+   4/5-bit imatrix quant and carries the MTP head.
+4. **Lightning MTP (`mtp_enabled`) is now worth it: 1.90× decode** (median paired ratio over
+   12 alternating pairs, 18.6 → 37.3 tok/s, 77–94% acceptance; `bench/mtp_paired.py`). The
+   08-24 "parking" problem (`docs/mtplx-vs-omlx.md`) is gone in 0.7.0rc1: 5–7k-token
+   generations held 3.6–4.0 tokens per verify cycle to `finish=stop`. **Still not
+   bit-identical** — 0/3 greedy prompts matched, forking at a near-tie (`Optional` vs
+   `Union`) with both continuations sound. Taken anyway, because quality with it on was the
+   best of any arm (3/3, 2 with no hints).
+5. **Prefill has not improved, and it is the dense model's real cost.** Swift oQ4e:
+   149–183 tok/s up to 16K, 129 at 64K (8.3 min to first token). A3B: 1,000–1,160 tok/s,
+   85 s at 64K. Flash-Next: 450–490 up to 32K, 358 at 64K (3 min). pi's ~7k-token system
+   prompt costs the 27B ~45 s cold; the prefix cache makes later turns cheap.
+6. **Newer Qwen: there is no Qwen3.8 35B-A3B.** Qwen's 3.8 open weights are the 27B,
+   Flash-Next (125B + 51B n-gram embedding, 6B active) and a 2.4T. Flash-Next's full 4-bit is
+   111.5 GB, too big for this box without swap; the REAP-288 expert-pruned build (69 GB) runs,
+   decodes at 47 tok/s, and was not more reliable than Swift at 4× the memory. Not adopted;
+   weights deleted (`sh0wie/Qwen3.8-Flash-Next-REAP-288-MLX-4bit` to re-test).
+   `Qwen/Qwen-AgentWorld-35B-A3B` is an environment simulator, not an assistant.
+7. **The A3B 6-bit is not an upgrade.** 16% slower than 4-bit, 1 of 2 runs correct.
+
+**Practical rule now:** A3B-4bit stays the default for interactive work — 3× the decode and
+7× the prefill, which is what an agent turn over a large context waits on. On this
+self-contained task Swift with MTP finished in the same wall time (3.4 vs 3.1–3.4 min) and was
+right far more often, so the A3B's lead is in turn latency, not time-to-correct. **`Swift-1.5-Qwen3.8-27b-oQ4e-mtp` (MTP on) replaces
+`Qwen3.8-27B-4bit` as the specialist**, and is the one to pick for any multi-file build where a
+wrong answer costs more than a few minutes. Swift + A3B together are 37 GB resident.
+
+**Rejected builds, deleted from disk:** Swift oQ5e/oQ6e
+(`dicksondickson/Swift-1.5-Qwen3.8-27b-oQ{5,6}e-bf16-mtp-MLX`), the A3B 6-bit
+(`lmstudio-community/Qwen3.6-35B-A3B-MLX-6bit`), Flash-Next REAP. ukisai's own
+`Swift-1.5-{4,5}bit-MLX` need a patched mlx-lm and their own server, so they cannot load in oMLX.
+
+**pi gotcha found on the way:** pi 0.87.1 ignores `--model` on the command line — every
+`pi -p --model …` request reached oMLX as `Qwen3.6-35B-A3B-4bit`, confirmed by sniffing the
+request body, with or without extensions or a clean agent dir. Switching inside a session
+works (`/model` or Ctrl+P; verified through RPC `set_model`, including a tool call on Swift).
+pi 1.0.0 is out and may fix it.
 
 ---
 

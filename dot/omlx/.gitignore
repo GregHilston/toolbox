@@ -8,3 +8,6 @@ bench/omlx_key
 bench/*.json
 # Same, for the cross-engine harness (burst.py / sustained.py / prefill.py / lossless.py)
 bench/engines/*.json
+# CRUD eval: keep hints, not screenshots
+bench/crud/results/**/*.png
+bench/crud/results/**/*.log

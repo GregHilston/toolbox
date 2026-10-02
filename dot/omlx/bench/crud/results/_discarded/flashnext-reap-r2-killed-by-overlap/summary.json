@@ -1,0 +1,82 @@
+{
+ "model": "Qwen3.8-Flash-Next-REAP-288-MLX-4bit",
+ "arm": "flashnext-reap-r2",
+ "extra": {},
+ "rounds": [
+  {
+   "round": 0,
+   "score": 1,
+   "of": 16,
+   "checks": {
+    "server_starts": false,
+    "list": false,
+    "create": false,
+    "get_one": false,
+    "update": false,
+    "validation_400": false,
+    "not_found_404": false,
+    "delete": false,
+    "persists_restart": false,
+    "db_file": false,
+    "client_build": true,
+    "ui_list": false,
+    "ui_create": false,
+    "ui_toggle": false,
+    "ui_edit": false,
+    "ui_delete": false
+   },
+   "files": [
+    "README.md",
+    "server/package.json",
+    "server/index.js",
+    "client/package.json",
+    "client/vite.config.js",
+    "client/index.html",
+    "client/src/main.jsx",
+    "client/src/App.jsx"
+   ],
+   "finish": "stop",
+   "completion_tokens": 5274,
+   "reasoning_tokens": null,
+   "prompt_tokens": 402,
+   "wall_s": 123.9,
+   "ttft_s": 22.8,
+   "decode_tps": 52.2,
+   "swap_start_mb": 0.0,
+   "swap_peak_mb": 0.0
+  },
+  {
+   "round": 1,
+   "score": 1,
+   "of": 16,
+   "checks": {
+    "server_starts": false,
+    "list": false,
+    "create": false,
+    "get_one": false,
+    "update": false,
+    "validation_400": false,
+    "not_found_404": false,
+    "delete": false,
+    "persists_restart": false,
+    "db_file": false,
+    "client_build": true,
+    "ui_list": false,
+    "ui_create": false,
+    "ui_toggle": false,
+    "ui_edit": false,
+    "ui_delete": false
+   },
+   "files": [],
+   "finish": null,
+   "completion_tokens": 0,
+   "reasoning_tokens": null,
+   "prompt_tokens": null,
+   "wall_s": 18.0,
+   "ttft_s": 9.8,
+   "decode_tps": 0.0,
+   "swap_start_mb": 0.0,
+   "swap_peak_mb": 0.0
+  }
+ ]
+}

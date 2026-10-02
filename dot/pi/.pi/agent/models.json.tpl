@@ -42,8 +42,8 @@
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
-          "id": "Qwen3.8-27B-4bit",
-          "name": "Qwen 3.8 27B 4-bit (dense, 23 t/s, slow specialist)",
+          "id": "Swift-1.5-Qwen3.8-27b-oQ4e-mtp",
+          "name": "Swift 1.5 Qwen 3.8 27B oQ4e + MTP (dense, ~37 t/s, hard-coding specialist)",
           "contextWindow": 262144,
           "maxTokens": 81920,
           "input": ["text", "image"],
