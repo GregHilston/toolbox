@@ -116,7 +116,8 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
       refuses FluidVoice's bundled model. It asks before running each command; keep it so.
 - [ ] **Handy** (moria, citadel) - after the first login following the deploy, quit it from
       the menu bar once. Its login item is still registered until that launch, which reads
-      the `autostart_enabled = false` nix wrote and unregisters it.
+      the `autostart_enabled = false` nix wrote and unregisters it. Until you quit it, it
+      holds Option+Space (its default binding, which nix moved it back to).
 - [ ] Smoke test, in order: a quick Caps Lock tap sends Escape; holding it shows
       FluidVoice's overlay and speaking inserts text at the cursor; Shift + hold starts
       Command Mode; Caps Lock never toggles caps on *any* attached keyboard (each one needs

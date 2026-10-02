@@ -25,6 +25,16 @@
   dictationLegacy = builtins.toJSON (shortcut f18 fn);
   command = builtins.toJSON (shortcut f19 fn);
 
+  # Unfinished onboarding must stay visible.
+  launchScript = pkgs.writeShellScript "fluidvoice-launch" ''
+    APP="/Applications/FluidVoice.app"
+    if [ "$(/usr/bin/defaults read com.FluidApp.app OnboardingCompleted 2>/dev/null || echo 0)" != "1" ]; then
+      exec /usr/bin/open -a "$APP"
+    fi
+    /usr/bin/pgrep -xq FluidVoice && exit 0
+    exec /usr/bin/open -g -j --env FLUID_SIMULATE_LOGIN_LAUNCH=1 -a "$APP"
+  '';
+
   # Runs AS THE USER, from postActivation below.
   activateScript = pkgs.writeShellScript "fluidvoice-activate" ''
     set -eu
@@ -35,52 +45,58 @@
 
     hex() { printf '%s' "$1" | /usr/bin/xxd -p | /usr/bin/tr -d '\n'; }
 
+    # Quit an app; fail if it lingers.
+    quit_app() {
+      /usr/bin/pgrep -xq "$2" || return 0
+      /usr/bin/osascript -e "quit app \"$1\"" || true
+      for _ in 1 2 3 4 5 6 7 8 9 10; do
+        /usr/bin/pgrep -xq "$2" || return 0
+        sleep 1
+      done
+      echo "fluidvoice: $1 did not quit" >&2
+      return 1
+    }
+
     if [ ! -d "$APP" ]; then
       echo "fluidvoice: $APP is not installed, skipping"
       exit 0
     fi
 
-    # Handy rewrites its store on quit.
-    if [ -f "$HANDY_STORE" ]; then
+    if ! /usr/bin/defaults read "$DOMAIN" PrimaryDictationShortcuts >/dev/null 2>&1; then
+      # A running app ignores new defaults.
+      quit_app FluidVoice FluidVoice
+      echo "fluidvoice: seeding hotkeys (Caps Lock hold = dictate, Shift+Caps Lock hold = command)"
+      /usr/bin/defaults write "$DOMAIN" HotkeyMode -string hold
+      /usr/bin/defaults write "$DOMAIN" PressAndHoldMode -bool true
+      /usr/bin/defaults write "$DOMAIN" HotkeyShortcutKey -data "$(hex '${dictationLegacy}')"
+      /usr/bin/defaults write "$DOMAIN" CommandModeHotkeyShortcut -data "$(hex '${command}')"
+      /usr/bin/defaults write "$DOMAIN" CommandModeShortcutEnabled -bool true
+      /usr/bin/defaults write "$DOMAIN" CommandModeConfirmBeforeExecute -bool true
+      /usr/bin/defaults write "$DOMAIN" ShowMainWindowAtLoginLaunch -bool false
+      /usr/bin/defaults write "$DOMAIN" ShowInDock -bool false
+      /usr/bin/defaults write "$DOMAIN" OnboardingCompleted -bool false
+      # Last: marks the seed done.
+      /usr/bin/defaults write "$DOMAIN" PrimaryDictationShortcuts -data "$(hex '${dictation}')"
+    fi
+
+    # Best effort. `if` disables set -e here.
+    if [ -f "$HANDY_STORE" ] && ! (
       UPDATED="$(${pkgs.jq}/bin/jq '
         .settings.autostart_enabled = false
         | .settings.bindings.transcribe |=
             (if (.current_binding // "" | test("f18")) then .current_binding = .default_binding else . end)
-      ' "$HANDY_STORE")"
-      if [ "$UPDATED" != "$(${pkgs.jq}/bin/jq . "$HANDY_STORE")" ]; then
-        echo "fluidvoice: taking F18 and launch-at-login from Handy"
-        if /usr/bin/pgrep -xq handy; then
-          /usr/bin/osascript -e 'quit app "Handy"'
-          for _ in 1 2 3 4 5 6 7 8 9 10; do
-            /usr/bin/pgrep -xq handy || break
-            sleep 1
-          done
-        fi
-        printf '%s\n' "$UPDATED" > "$HANDY_STORE"
-      fi
+      ' "$HANDY_STORE")" || exit 1
+      CURRENT="$(${pkgs.jq}/bin/jq . "$HANDY_STORE")" || exit 1
+      [ "$UPDATED" != "$CURRENT" ] || exit 0
+      echo "fluidvoice: taking F18 and launch-at-login from Handy"
+      # Handy rewrites its store on quit.
+      quit_app Handy handy || exit 1
+      printf '%s\n' "$UPDATED" > "$HANDY_STORE" || exit 1
+    ); then
+      echo "fluidvoice: could not update Handy's settings; it may still own F18" >&2
     fi
 
-    if /usr/bin/defaults read "$DOMAIN" PrimaryDictationShortcuts >/dev/null 2>&1; then
-      if ! /usr/bin/pgrep -xq FluidVoice; then
-        exec /usr/bin/open -g -j --env FLUID_SIMULATE_LOGIN_LAUNCH=1 -a "$APP"
-      fi
-      exit 0
-    fi
-
-    echo "fluidvoice: seeding hotkeys (Caps Lock hold = dictate, Shift+Caps Lock hold = command)"
-    /usr/bin/defaults write "$DOMAIN" HotkeyMode -string hold
-    /usr/bin/defaults write "$DOMAIN" PressAndHoldMode -bool true
-    /usr/bin/defaults write "$DOMAIN" HotkeyShortcutKey -data "$(hex '${dictationLegacy}')"
-    /usr/bin/defaults write "$DOMAIN" CommandModeHotkeyShortcut -data "$(hex '${command}')"
-    /usr/bin/defaults write "$DOMAIN" CommandModeShortcutEnabled -bool true
-    /usr/bin/defaults write "$DOMAIN" ShowMainWindowAtLoginLaunch -bool false
-    /usr/bin/defaults write "$DOMAIN" ShowInDock -bool false
-    /usr/bin/defaults write "$DOMAIN" OnboardingCompleted -bool false
-    # Last: it is the marker that stops a re-seed.
-    /usr/bin/defaults write "$DOMAIN" PrimaryDictationShortcuts -data "$(hex '${dictation}')"
-
-    # Not silent on purpose: onboarding should show.
-    exec /usr/bin/open -a "$APP"
+    exec ${launchScript}
   '';
 in {
   options.services.fluidvoice.enable = lib.mkEnableOption ''
@@ -99,7 +115,7 @@ in {
     '';
 
     launchd.user.agents.fluidvoice = {
-      command = "/usr/bin/open -g -j --env FLUID_SIMULATE_LOGIN_LAUNCH=1 -a /Applications/FluidVoice.app";
+      command = "${launchScript}";
       serviceConfig = {
         RunAtLoad = true;
         StandardOutPath = "/Users/${user}/Library/Logs/fluidvoice.log";
