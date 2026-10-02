@@ -88,6 +88,8 @@
   services.omlxDeploy = {
     enable = true;
     cacheSize = "32GB";
+    # The heavy specialist, beside lightModel; docs/model-evaluation.md.
+    models."Swift-1.5-Qwen3.8-27b-oQ4e-mtp" = "yottle/Swift-1.5-Qwen3.8-27b-oQ4e-mtp";
   };
 
   # Vorssaint — menu-bar utility suite (imported above). Seeds its Features hub

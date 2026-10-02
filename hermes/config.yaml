@@ -36,7 +36,7 @@ model:
   # A cold prefill of the harness prompt plus tool schemas is minutes on a local
   # 35B, not seconds.
   request_timeout_seconds: 1800
-  # Matches what the DWQ entry in dot/omlx/.omlx/model_settings.json serves.
+  # Hermes' own cap; oMLX serves 262144.
   context_length: 131072
 
 agent:
@@ -147,7 +147,7 @@ terminal:
 # Role-split models, chosen by `bin/hermes-mode.sh`. JUDGE judges and plans:
 # DeepSeek in mixed mode, another family so the judge is not grading its own
 # kind (arXiv 2609.04270). UTIL rewrites notes and compresses: local
-# Qwen3.8-27B unless the mode is cloud.
+# Swift-1.5-Qwen3.8-27b unless the mode is cloud.
 #
 # ONLY `default` reads this block. A profile does not inherit it, so the
 # builder's Kanban goal loops take their judge from profiles/builder.
@@ -183,7 +183,7 @@ auxiliary:
     base_url: ${UTIL_BASE_URL}
     api_key: ${UTIL_API_KEY}
     # Default is 120s (auxiliary_client.py:6095 says so itself). Summarising a
-    # 65k middle on a 23 t/s dense model is not a two-minute job, and the host's
+    # 65k middle on a ~150 t/s-prefill dense model is not a two-minute job, and the host's
     # own in-agent budget is floored at this value — so raising it raises both.
     timeout: 900
 
@@ -230,7 +230,7 @@ kanban:
   # exactly two things (:1550, :1571): it claims via `claim_review_task`, and it
   # appends `sdlc-review` to the claimed skills. So a review is the *builder
   # model on a fresh context, with the review skill*, and the `reviewer` profile
-  # pinned to Qwen3.8-27B-4bit is unreachable this way — it has served zero
+  # pinned to the dense judge model is unreachable this way — it has served zero
   # requests in every run to date. It would need a card assigned to `reviewer`.
   #
   # Worth keeping: on long-b that arrangement rejected the work with five

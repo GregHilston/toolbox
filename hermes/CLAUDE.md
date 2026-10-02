@@ -337,14 +337,14 @@ Runtime state, so none of it is in git.
   2026-09-22: the same prompt at `low` and at `high` returned the same text,
   the same 400 completion tokens, and an empty `reasoning_content` both times.
   oMLX applies reasoning effort from **its own** `chat_template_kwargs`, per
-  model, in `~/.omlx/model_settings.json`, and the DWQ entry the builder runs
-  has none — while `Qwen3.8-27B-4bit` has `reasoning_effort: medium` under a
-  comment calling it "THE most important setting for this model". What bounds
+  model, in `~/.omlx/model_settings.json`, and the A3B entry the builder runs
+  has none — while the Qwen3.8-family judge has `reasoning_effort: medium`,
+  because its template defaults to `xhigh`, which never terminates. What bounds
   thinking for both is `thinking_budget_tokens: 8192` in the same file. So the
   knob is oMLX's, not Hermes'; `nixos/modules/darwin/omlx.nix` generates it.
-  Leave the DWQ entry alone without a reason: no `chat_template_kwargs` is the
-  configuration that scored 10/10 on our coding eval, the best of anything
-  tested.
+  The builder moved from the DWQ build to plain `Qwen3.6-35B-A3B-4bit` on
+  2026-10-02 so Hermes and pi share one resident copy; DWQ's edge was one
+  task in ten, never shown to be real (`docs/model-evaluation.md`).
 - `provider: custom:omlx` is the old form. This release wants plain
   `provider: "custom"` with `base_url` and `api_key` inline; the wrong value
   raises `Unknown provider` and the worker still exits 0.

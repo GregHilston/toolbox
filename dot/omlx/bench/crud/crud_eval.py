@@ -6,7 +6,10 @@ script installs, runs and grades it, then feeds failures back as hint turns.
 The model never runs anything itself. Every hint sent is the grader's own
 failure report, saved verbatim in results/<arm>/hints-round-N.md.
 
-    python3 crud_eval.py <model> <arm> [--rounds 2] [--no-restart]
+    python3 crud_eval.py <model> <arm> [--rounds 2] [--no-restart] [--host dungeon]
+
+--host sends generation to that host's oMLX and reads its swap over ssh;
+grading still runs here. It never restarts a remote server.
 """
 import argparse, json, os, re, shutil, signal, subprocess, sys, threading, time, urllib.request
 
@@ -15,6 +18,7 @@ sys.path.insert(0, os.path.dirname(HERE))
 from _key import load_key
 
 BASE = "http://127.0.0.1:8000"
+HOST = None
 KEY = load_key()
 API_PORT, UI_PORT = 3001, 5199
 API = f"http://localhost:{API_PORT}"
@@ -38,7 +42,8 @@ def restart_omlx():
 
 
 def swap_used_mb():
-    out = subprocess.run(["sysctl", "-n", "vm.swapusage"], capture_output=True, text=True).stdout
+    cmd = ["sysctl", "-n", "vm.swapusage"]
+    out = subprocess.run(["ssh", HOST, *cmd] if HOST else cmd, capture_output=True, text=True).stdout
     return float(re.search(r"used = ([\d.]+)M", out).group(1))
 
 
@@ -257,18 +262,22 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=32768)
     ap.add_argument("--extra", default="{}", help="JSON merged into the request body")
     ap.add_argument("--no-restart", action="store_true")
+    ap.add_argument("--host", help="remote oMLX host, e.g. dungeon")
     a = ap.parse_args()
+    global BASE, HOST
+    if a.host:
+        BASE, HOST = f"http://{a.host}:8000", a.host
 
     root = f"/tmp/crud-eval/{a.arm}/app"
     out = os.path.join(HERE, "results", a.arm)
     shutil.rmtree(f"/tmp/crud-eval/{a.arm}", ignore_errors=True)
     os.makedirs(root)
     os.makedirs(out, exist_ok=True)
-    if not a.no_restart:
+    if not (a.no_restart or a.host):
         restart_omlx()
 
     messages = [{"role": "user", "content": open(os.path.join(HERE, "PROMPT.md")).read()}]
-    summary = {"model": a.model, "arm": a.arm, "extra": json.loads(a.extra), "rounds": []}
+    summary = {"model": a.model, "arm": a.arm, "host": a.host or "moria", "extra": json.loads(a.extra), "rounds": []}
     for rnd in range(a.rounds + 1):
         watch = SwapWatch()
         watch.start()

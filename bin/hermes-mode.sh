@@ -19,8 +19,9 @@ default_mode() { if has_deepseek; then echo mixed; else echo local; fi; }
 mode="${1:-$(cat "${H}/mode" 2>/dev/null || default_mode)}"
 
 # provider model base_url key-variable
-worker_local="custom Qwen3.6-35B-A3B-4bit-DWQ ${OMLX} OMLX_API_KEY"
-judge_local="custom Qwen3.8-27B-4bit ${OMLX} OMLX_API_KEY"
+# The same two models pi uses; docs/model-evaluation.md picks them.
+worker_local="custom Qwen3.6-35B-A3B-4bit ${OMLX} OMLX_API_KEY"
+judge_local="custom Swift-1.5-Qwen3.8-27b-oQ4e-mtp ${OMLX} OMLX_API_KEY"
 cloud="deepseek deepseek-flash ${DEEPSEEK} DEEPSEEK_API_KEY"
 
 # worker: builder, researcher, librarian, default. judge: orchestrator, reviewer,

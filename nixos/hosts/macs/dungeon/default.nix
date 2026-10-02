@@ -471,6 +471,7 @@ in {
   services.omlxDeploy = {
     enable = true;
     cacheSize = "2GB";
+    # Only lightModel: a heavy model would not fit beside Docker and Frigate.
   };
 
   # Dungeon-specific activation: clamshell-sleep prevention and NFS mount points.
