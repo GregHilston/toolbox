@@ -165,8 +165,10 @@ The shape is always the same, and *why* is the part worth remembering:
 ## FluidVoice — dictation and voice commands on citadel and moria
 
 `modules/darwin/fluidvoice.nix`, enabled with `services.fluidvoice.enable`. Karabiner
-turns a Caps Lock hold into F18 (dictate) and a Shift+Caps Lock hold into F19 (Command
-Mode, an LLM agent that runs shell commands, asking first by default). Handy stays
+turns a Caps Lock hold into F18 (dictate), Shift+hold into F19 (Command Mode, an LLM agent
+that runs shell commands, asking first) and Option+hold into F20 (Write Mode). The seeded
+activation mode is "automatic": a short press toggles hands-free recording, a long hold is
+push-to-talk. Handy stays
 installed but no longer starts at login or owns F18; Linux hosts keep Handy.
 
 What it does, all from `postActivation` as the user (the Vorssaint shape, same reasons):
@@ -178,8 +180,8 @@ What it does, all from `postActivation` as the user (the Vorssaint shape, same r
 - **Writes `OnboardingCompleted = false`.** Any pre-set hotkey counts as "used before" and
   the app would skip onboarding, which is where permissions and the model download happen.
 - **Binds both `fn+F18` and bare F18.** macOS sets the fn flag on F-key events (why Handy
-  stored `fn+f18`) and FluidVoice matches modifiers exactly. Command Mode takes a single
-  shortcut, so it gets `fn+F19` only — rebind in the app if it never fires.
+  stored `fn+f18`) and FluidVoice matches modifiers exactly. Command and Write Mode take a
+  single shortcut, so they get `fn+F19` and `fn+F20` only — rebind in the app if one never fires.
 - **Takes F18 and launch-at-login from Handy** by editing its `settings_store.json`,
   quitting Handy first because it writes the store back on quit. Handy applies
   `autostart_enabled` on its own next launch, so its login item unregisters itself then.

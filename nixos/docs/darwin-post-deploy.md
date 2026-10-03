@@ -97,7 +97,8 @@ no TTY cannot answer a prompt, so do these once per host in a GUI session (VNC o
       appear under the Code tab in the Claude app.
 
 ## Voice Input (Karabiner + FluidVoice)
-Hold Caps Lock to dictate, Shift + hold it for a voice command; a quick tap is Escape.
+Hold Caps Lock to dictate (a ~half-second press toggles hands-free), Shift + hold for a
+voice command, Option + hold for Write Mode; a quick tap is Escape.
 Until these are done Karabiner is inert and Caps Lock still toggles caps. On headless
 dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
 `dot/karabiner/README.md`, `nixos/CLAUDE.md` → "FluidVoice".
@@ -107,10 +108,10 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
 - [ ] **FluidVoice** (moria, citadel) - the first `just dr` opens it on onboarding. Grant
       Microphone and Accessibility (its hotkeys stay dead until Accessibility is on), and
       let it download the default Parakeet model. **Don't change the hotkeys** onboarding
-      shows: nix seeded them (F18 dictate, F19 Command Mode). Leave "Launch at login" off.
+      shows: nix seeded them (F18 dictate, F19 Command Mode, F20 Write Mode). Leave "Launch at login" off.
       > Starting it is *not* a manual step: `modules/darwin/fluidvoice.nix` launches it at
       > login (`launchctl list | grep org.nixos.fluidvoice`).
-- [ ] **Command Mode provider** - Settings → AI: add a custom OpenAI-compatible provider,
+- [ ] **AI provider** (Command and Write Mode) - Settings → AI: add a custom OpenAI-compatible provider,
       base URL `http://localhost:8000/v1`, API key from 1Password `Infra/oMLX/api_key`,
       model `Qwen3.6-35B-A3B-4bit` (oMLX's light model), and verify it. Command Mode
       refuses FluidVoice's bundled model. It asks before running each command; keep it so.
@@ -119,8 +120,9 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
       the `autostart_enabled = false` nix wrote and unregisters it. Until you quit it, it
       holds Option+Space (its default binding, which nix moved it back to).
 - [ ] Smoke test, in order: a quick Caps Lock tap sends Escape; holding it shows
-      FluidVoice's overlay and speaking inserts text at the cursor; Shift + hold starts
-      Command Mode; Caps Lock never toggles caps on *any* attached keyboard (each one needs
+      FluidVoice's overlay and speaking inserts text at the cursor; a ~half-second press
+      starts hands-free recording and another stops it; Shift + hold starts Command Mode;
+      Option + hold starts Write Mode; Caps Lock never toggles caps on *any* attached keyboard (each one needs
       its own grab)
 
 ## PI WEB (moria only)

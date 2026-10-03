@@ -1,4 +1,4 @@
-# FluidVoice: Caps Lock hold dictates, Shift+hold commands.
+# FluidVoice: Caps Lock dictates; modifiers pick modes.
 # Rationale: nixos/CLAUDE.md → "FluidVoice".
 {
   config,
@@ -17,13 +17,15 @@
     kind = "keyboard";
     inherit keyCode modifierFlagsRawValue;
   };
-  # kVK_F18 and kVK_F19
+  # kVK_F18, kVK_F19, kVK_F20
   f18 = 79;
   f19 = 80;
+  f20 = 90;
 
   dictation = builtins.toJSON [(shortcut f18 fn) (shortcut f18 0)];
   dictationLegacy = builtins.toJSON (shortcut f18 fn);
   command = builtins.toJSON (shortcut f19 fn);
+  write = builtins.toJSON (shortcut f20 fn);
 
   # Unfinished onboarding must stay visible.
   launchScript = pkgs.writeShellScript "fluidvoice-launch" ''
@@ -65,13 +67,16 @@
     if ! /usr/bin/defaults read "$DOMAIN" PrimaryDictationShortcuts >/dev/null 2>&1; then
       # A running app ignores new defaults.
       quit_app FluidVoice FluidVoice
-      echo "fluidvoice: seeding hotkeys (Caps Lock hold = dictate, Shift+Caps Lock hold = command)"
-      /usr/bin/defaults write "$DOMAIN" HotkeyMode -string hold
-      /usr/bin/defaults write "$DOMAIN" PressAndHoldMode -bool true
+      echo "fluidvoice: seeding hotkeys (Caps Lock = dictate, +Shift = command, +Option = write)"
+      # Short press toggles, long hold talks.
+      /usr/bin/defaults write "$DOMAIN" HotkeyMode -string automatic
+      /usr/bin/defaults write "$DOMAIN" PressAndHoldMode -bool false
       /usr/bin/defaults write "$DOMAIN" HotkeyShortcutKey -data "$(hex '${dictationLegacy}')"
       /usr/bin/defaults write "$DOMAIN" CommandModeHotkeyShortcut -data "$(hex '${command}')"
       /usr/bin/defaults write "$DOMAIN" CommandModeShortcutEnabled -bool true
       /usr/bin/defaults write "$DOMAIN" CommandModeConfirmBeforeExecute -bool true
+      /usr/bin/defaults write "$DOMAIN" RewriteModeHotkeyShortcut -data "$(hex '${write}')"
+      /usr/bin/defaults write "$DOMAIN" RewriteModeShortcutEnabled -bool true
       /usr/bin/defaults write "$DOMAIN" ShowMainWindowAtLoginLaunch -bool false
       /usr/bin/defaults write "$DOMAIN" ShowInDock -bool false
       /usr/bin/defaults write "$DOMAIN" OnboardingCompleted -bool false
