@@ -165,10 +165,10 @@ The shape is always the same, and *why* is the part worth remembering:
 ## FluidVoice — dictation and voice commands on citadel and moria
 
 `modules/darwin/fluidvoice.nix`, enabled with `services.fluidvoice.enable`. Karabiner
-turns a Caps Lock hold into F18 (dictate), Shift+hold into F19 (Command Mode, an LLM agent
-that runs shell commands, asking first) and Option+hold into F20 (Write Mode). The seeded
-activation mode is "automatic": a short press toggles hands-free recording, a long hold is
-push-to-talk. Handy stays
+turns Caps Lock into F18 (dictate), Shift+Caps Lock into F19 (Command Mode, an LLM agent
+that runs shell commands, asking first) and Option+Caps Lock into F20 (Write Mode). The
+seeded activation mode is "automatic": a tap toggles hands-free recording, a hold is
+push-to-talk. Escape cancels. Handy stays
 installed but no longer starts at login or owns F18; Linux hosts keep Handy.
 
 What it does, all from `postActivation` as the user (the Vorssaint shape, same reasons):
