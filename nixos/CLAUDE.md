@@ -204,12 +204,13 @@ What it does, all from `postActivation` as the user (the Vorssaint shape, same r
   Command Mode fails with "Invalid response from LLM". The non-streaming parser reads them
   all and Command Mode runs one per step. Still unfixed upstream as of 2026-10-03; Write
   Mode and Command Mode replies now arrive whole instead of word by word.
-- **Points dictation polish at Fluid-1, once** (marker `NixDictationOnFluid1`), through the
-  default prompt's provider in `DictationPromptConfigurations`, not the global provider:
-  Write Mode follows the global one and refuses Fluid-1. Measured on moria, 2026-10-03:
-  0.06 s warm against 0.6 s for Qwen3.6 `:lab`, the same 88% usable over 69 cases, and
-  no stall behind a long pi prefill (worst 1.1 s against 85 s). Qwen did better only on
-  corrections (36/36 against 30/36). Thinking on, Qwen took 9–22 s.
+- **Does not choose the dictation model; that stays manual.** Fluid-1 is the pick. Measured
+  on moria, 2026-10-03: 0.06 s warm against 0.6 s for Qwen3.6 `:lab`, the same 88% usable
+  over 69 cases, and no stall behind a long pi prefill (worst 1.1 s against 85 s). Qwen did
+  better only on corrections (36/36 against 30/36), and took 9–22 s with thinking on. v1.6.9
+  runs Fluid-1 only as the *global* provider with its own prompt selected: the post-processing
+  gate (`DictationAIPostProcessingGate`) refuses it as a per-prompt provider, and the
+  selection's id is not public, so nix cannot set it reliably.
 - **Adds Custom Dictionary entries** on every activation, add-only by replacement, for
   jargon both models mangle ("quinn" → Qwen, "o mlx" → oMLX). Plain regex on the
   transcript, before any model.

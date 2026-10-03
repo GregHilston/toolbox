@@ -96,10 +96,15 @@ the hot cache off (`cacheSize = "0"`): at 2 GB the host swapped out ~3.5 GB a da
 `memoryCeilingGB = 27`: oMLX 0.7.0's default memory tier counts the OrbStack VM as
 taken and refuses the 20 GB model.
 
-**Qwen3.6-35B-A3B-4bit is pinned, and `chunked_prefill` is on everywhere.** Unpinned, an
-eviction cost the next request a 4–7 s reload. Without chunked prefill, a short request
-waited out a 65k-token prefill in full: 85 s on moria (2026-10-03). The overlay in
-`nixos/modules/darwin/omlx.nix` sets it, so no `just secrets` is needed.
+**`chunked_prefill` is on everywhere.** Without it, a short request waited out a
+65k-token prefill in full: 85 s on moria (2026-10-03). Upstream measured 9.9 s → 2.4 s
+worst time to first token with it on (jundot/omlx#4226); not yet re-measured here. The
+cost is somewhat slower long prefills. The overlay in `nixos/modules/darwin/omlx.nix`
+sets it, so no `just secrets` is needed.
+
+**Nothing is pinned, on purpose.** `is_pinned` stops the memory enforcer unloading a model
+under pressure, which on dungeon is what hands memory back to Frigate.
+`model_settings.json` is shared, so a moria-only pin needs a per-host mechanism first.
 
 **Set `reasoning_effort` on Qwen3.8.** Its template defaults to `xhigh`, which on moria burns
 the whole token budget and never emits an answer. `model_settings.json` pins `medium` plus an

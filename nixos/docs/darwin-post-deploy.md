@@ -118,11 +118,11 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
       refused by both Command and Write Mode, so untick **Sync** on the Command Mode page
       and on the **Edit model** row under AI Enhancement → Prompt Profiles, and pick oMLX
       in each. Command Mode asks before running each command; keep it so.
-- [ ] **Fluid-1** (dictation polish) - nix points the default dictation prompt at it, but
-      the model is a download: AI Enhancement → Fluid Intelligence, download and verify
-      Fluid-1. Until then dictation types the raw transcript. Check with
-      `grep 'processTextWithAI using provider=fluid-1' ~/Library/Logs/Fluid/Fluid.log`
-      after a dictation. Its licence is personal, non-commercial use only.
+- [ ] **Fluid-1** (dictation polish) - AI Enhancement → Fluid Intelligence: download and
+      verify Fluid-1, then make it the global provider. Do the two Sync steps above first, or
+      Write Mode follows it and refuses to run. Check with
+      `tail -f ~/Library/Logs/Fluid/Fluid.log | grep processTextWithAI` while dictating: it
+      should say `provider=fluid-1`. Its licence is personal, non-commercial use only.
 - [ ] **Handy** (moria, citadel) - after the first login following the deploy, quit it from
       the menu bar once. Its login item is still registered until that launch, which reads
       the `autostart_enabled = false` nix wrote and unregisters it. Until you quit it, it

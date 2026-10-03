@@ -28,10 +28,7 @@
   # Measured on moria: F20 arrives without fn.
   write = builtins.toJSON (shortcut f20 0);
 
-  # The private provider's id in the shipped build.
-  fluid1 = "fluid-1";
-
-  # Words Parakeet and both cleanup models get wrong.
+  # Jargon Parakeet and cleanup models mangle.
   dictionary = [
     {
       triggers = ["quinn" "quen" "kwen"];
@@ -112,18 +109,6 @@
       /usr/bin/defaults write "$DOMAIN" OnboardingCompleted -bool false
       # Last: marks the seed done.
       /usr/bin/defaults write "$DOMAIN" PrimaryDictationShortcuts -data "$(hex '${dictation}')"
-    fi
-
-    # Once, so a later in-app choice stands.
-    # Per prompt, not global: Write Mode refuses Fluid-1.
-    if [ "$(/usr/bin/defaults read "$DOMAIN" NixDictationOnFluid1 2>/dev/null || echo 0)" != "1" ]; then
-      quit_app FluidVoice FluidVoice
-      CONFIGS="$(read_data DictationPromptConfigurations)"
-      CONFIGS="$(printf '%s' "''${CONFIGS:-"{}"}" | ${pkgs.jq}/bin/jq -c \
-        '.__default__ = ((.__default__ // {}) + {providerID: "${fluid1}", modelName: "${fluid1}"})')"
-      echo "fluidvoice: dictation cleanup now runs on Fluid-1"
-      /usr/bin/defaults write "$DOMAIN" DictationPromptConfigurations -data "$(hex "$CONFIGS")"
-      /usr/bin/defaults write "$DOMAIN" NixDictationOnFluid1 -bool true
     fi
 
     # Add-only by replacement, so in-app edits stay.
