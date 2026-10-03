@@ -1,5 +1,64 @@
 {
   "providers": {
+    "litellm": {
+      "baseUrl": "https://llm.grehg2.xyz/v1",
+      "api": "openai-completions",
+      "apiKey": "{{ op://Infra/LiteLLM/master_key }}",
+      "compat": {
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false
+      },
+      "models": [
+        {
+          "id": "lab",
+          "name": "lab: Qwen 3.6 35B A3B, thinking off (moria, else dungeon)",
+          "contextWindow": 65536,
+          "maxTokens": 32768,
+          "input": ["text", "image"],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "lab-local",
+          "name": "lab-local: the same model, dungeon only",
+          "contextWindow": 65536,
+          "maxTokens": 32768,
+          "input": ["text", "image"],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "big",
+          "name": "big: Qwen 3.8 27B on moria (falls back to lab)",
+          "contextWindow": 65536,
+          "maxTokens": 32768,
+          "input": ["text", "image"],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "deepseek",
+          "name": "deepseek: DeepSeek Flash via the gateway (metered)",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "minimal": null,
+            "low": "low",
+            "medium": null,
+            "high": "high",
+            "max": "max"
+          },
+          "contextWindow": 1000000,
+          "maxTokens": 384000,
+          "input": ["text", "image"],
+          "cost": { "input": 0.3, "output": 1.2, "cacheRead": 0.006, "cacheWrite": 0 },
+          "compat": {
+            "supportsStore": false,
+            "supportsDeveloperRole": false,
+            "maxTokensField": "max_tokens",
+            "requiresReasoningContentOnAssistantMessages": true,
+            "thinkingFormat": "deepseek",
+            "supportsStrictMode": true
+          }
+        }
+      ]
+    },
     "omlx": {
       "baseUrl": "http://localhost:8000/v1",
       "api": "openai-completions",
