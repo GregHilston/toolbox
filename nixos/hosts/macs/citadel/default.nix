@@ -125,6 +125,9 @@
   services.fluidvoice.enable = true;
 
   home-manager.users.${vars.user.name} = {
+    # Personal metered spend, never from work.
+    custom.programs.pi.deepseek = false;
+
     # Exclude moonpi (cwd error on this host)
     #
     # NOTE: this mkForce replaces the module default outright, so anything added
