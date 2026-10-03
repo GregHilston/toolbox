@@ -10,32 +10,32 @@
       },
       "models": [
         {
-          "id": "lab",
-          "name": "lab: Qwen 3.6 35B A3B, thinking off (moria, else dungeon)",
+          "id": "local-small",
+          "name": "local-small: Qwen 3.6 35B A3B, thinking off (moria, else dungeon)",
           "contextWindow": 65536,
           "maxTokens": 32768,
           "input": ["text", "image"],
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
-          "id": "lab-local",
-          "name": "lab-local: the same model, dungeon only",
+          "id": "local-lab",
+          "name": "local-lab: the same model, dungeon only",
           "contextWindow": 65536,
           "maxTokens": 32768,
           "input": ["text", "image"],
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
-          "id": "big",
-          "name": "big: Qwen 3.8 27B on moria (falls back to lab)",
+          "id": "local-big",
+          "name": "local-big: Qwen 3.8 27B, moria only (fails when away)",
           "contextWindow": 65536,
           "maxTokens": 32768,
           "input": ["text", "image"],
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
-          "id": "deepseek",
-          "name": "deepseek: DeepSeek Flash via the gateway (metered)",
+          "id": "cloud",
+          "name": "cloud: DeepSeek Flash via the gateway (metered)",
           "reasoning": true,
           "thinkingLevelMap": {
             "minimal": null,

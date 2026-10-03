@@ -4,18 +4,21 @@ Dotfiles for the pi coding agent, stowed to `~/.pi`.
 
 ## Where the model comes from — the LiteLLM gateway
 
-A bare `pi` on every host is provider `litellm`, model `lab`: home-lab's LiteLLM
+A bare `pi` on every host is provider `litellm`, model `local-small`: home-lab's LiteLLM
 gateway at `https://llm.grehg2.xyz/v1`, over the tailnet. pi names only the
 gateway's aliases, never an oMLX model, and the gateway decides where each runs:
 
 | Alias | Runs on | For |
 | --- | --- | --- |
-| `lab` | moria's oMLX when awake, else dungeon's | the default |
-| `lab-local` | dungeon only | automation that must not wake moria |
-| `big` | moria only, falling back to `lab` | harder work while moria is up |
-| `deepseek` | DeepSeek's API (Flash) | metered; never a fallback |
+| `local-small` | moria's oMLX when awake, else dungeon's | the default |
+| `local-lab` | dungeon only | automation that must not wake moria |
+| `local-big` | moria only; fails in ~7 s when moria is away | harder work while moria is up |
+| `cloud` | DeepSeek's API (Flash) | metered; never a fallback |
 
-`lab` and `lab-local` are oMLX's `:lab` profile, 64k context and thinking off, and
+The `local-` prefix means the prompt stays on the tailnet; `cloud` leaves the
+house, and names the job rather than the vendor behind it.
+
+`local-small` and `local-lab` are oMLX's `:lab` profile, 64k context and thinking off, and
 dungeon's oMLX refuses prompts past ~16k tokens under memory pressure. Which host
 answered is the gateway's business; home-lab's gateway config owns the routing.
 
@@ -43,8 +46,8 @@ re-read before every request — so refreshing it needs no rebuild, no
 
 ## DeepSeek, and switching back to local
 
-The default stays free: a bare `pi` is the gateway's `lab`. DeepSeek is the
-opt-in alternative, reachable two ways. The gateway's `deepseek` alias serves
+The default stays free: a bare `pi` is the gateway's `local-small`. DeepSeek is the
+opt-in alternative, reachable two ways. The gateway's `cloud` alias serves
 Flash on the gateway's key, which tracks the spend. The direct built-in provider
 below serves Flash and Pro on `DEEPSEEK_API_KEY`, and stays because
 `/orchestrate-pi` workers run Pro and `deepseek-preflight.py` reads that key's
@@ -66,12 +69,12 @@ The three ways to reach it, cheapest first:
 
 | | |
 | --- | --- |
-| In a session | Ctrl+P cycles the gateway aliases and `deepseek`, or `/model` picks |
+| In a session | Ctrl+P cycles the gateway aliases and `deepseek/*`, or `/model` picks |
 | From the shell | `pidf` (Flash via the gateway, the default choice) / `pid` (v4-pro, direct), aliased in `dot/zsh/.zshrc` |
-| One-off | `pi --provider litellm --model deepseek` |
+| One-off | `pi --provider litellm --model cloud` |
 
 Ctrl+P only offers what `enabledModels` lists: pi.nix builds it from the
-gateway's `lab` aliases, plus `litellm/deepseek` and `deepseek/*` when
+gateway's `local-` aliases, plus `litellm/cloud` and `deepseek/*` when
 `cfg.deepseek` is on. citadel turns it off.
 
 ### Where this fits against Claude Code
@@ -114,7 +117,7 @@ For coding work in `~/Git/gridkeep`:
 | Anything unattended that will be merged **and reviewed** | Flash | `high` |
 | A failing golden test, or anything touching tick resolution / effect ordering | Pro | `high` |
 | Balance judgment, "why did this board lose", designing a mechanic | Pro | `max` |
-| Anything that should stay on the machine | `lab` (gateway) | — |
+| Anything that should stay on the machine | `local-small` (gateway) | — |
 
 **Thinking is not free, and the line that said it was has been deleted.**
 Measured over a full nine-issue orchestration on Pro at `high`: 703k of 871k
@@ -690,7 +693,7 @@ own UI/API, never what the agent can touch — the guard above is the real contr
 
 ## The token budget (read this before adding an extension)
 
-pi runs here against **local** models by default: the gateway's `lab`, served
+pi runs here against **local** models by default: the gateway's `local-small`, served
 by oMLX. Every tool schema and
 every line of injected system prompt is re-sent on **every request**, so an
 extension is not free just because it is popular. Measured on moria, pi 0.84.4,
@@ -1060,4 +1063,4 @@ extension silently vanishes and this is the first place to look.
 
 ## Gotcha: Context Window Errors
 
-Pi's `models.json` declares per-model context windows, but oMLX enforces a **global** `sampling.max_context_window` in its own settings (`dot/omlx/.omlx/settings.json`), and the `:lab` profile behind the gateway's `lab` aliases caps at 65536. If pi reports "exceeds max context window" with a suspiciously low limit, check the oMLX server config — not just pi's model definitions. Through the gateway, a rejection from dungeon's prefill guard (~16k tokens under memory pressure) arrives as the gateway's error.
+Pi's `models.json` declares per-model context windows, but oMLX enforces a **global** `sampling.max_context_window` in its own settings (`dot/omlx/.omlx/settings.json`), and the `:lab` profile behind the gateway's `local-` aliases caps at 65536. If pi reports "exceeds max context window" with a suspiciously low limit, check the oMLX server config — not just pi's model definitions. Through the gateway, a rejection from dungeon's prefill guard (~16k tokens under memory pressure) arrives as the gateway's error.
