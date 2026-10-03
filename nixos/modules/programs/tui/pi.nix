@@ -36,7 +36,16 @@ in {
     defaultModel = lib.mkOption {
       type = lib.types.str;
       default = "lab";
-      description = "Default model, as a LiteLLM gateway alias.";
+      description = "Default model: a gateway alias, or an oMLX model id when `gateway` is off.";
+    };
+
+    gateway = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Use the home lab's LiteLLM gateway. Off, pi uses only this host's own
+        oMLX, and `just secrets` leaves the gateway key out of models.json.
+      '';
     };
 
     # DeepSeek needs NO models.json entry: pi ships it as a built-in provider
@@ -201,7 +210,7 @@ in {
 
     home.file.".pi/agent/settings.json" = {
       text = builtins.toJSON {
-        defaultProvider = "litellm";
+        defaultProvider = if cfg.gateway then "litellm" else "omlx";
         inherit (cfg) defaultModel;
         lastChangelogVersion = "0.67.6";
         inherit (cfg) packages;
@@ -212,8 +221,11 @@ in {
         # without restarting. The direct `omlx` provider stays out of the cycle
         # but is still in /model, for when dungeon is down.
         enabledModels =
-          map (m: "litellm/${m.id}") (builtins.filter (m: m.id != "deepseek") modelsTemplate.providers.litellm.models)
-          ++ lib.optionals cfg.deepseek ["litellm/deepseek" "deepseek/*"];
+          if cfg.gateway
+          then
+            map (m: "litellm/${m.id}") (builtins.filter (m: m.id != "deepseek") modelsTemplate.providers.litellm.models)
+            ++ lib.optionals cfg.deepseek ["litellm/deepseek" "deepseek/*"]
+          else ["omlx/*"] ++ lib.optionals cfg.deepseek ["deepseek/*"];
 
         # synced/ is claude.ai's; pi can't use it.
         # Absolute: pi's globs skip dot-directories like .claude.

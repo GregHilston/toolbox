@@ -550,11 +550,10 @@ Its guard is `hostname -s` = `citadel`. If that host ever answers to something
 else, the key starts being injected there silently — the failure mode is quiet,
 so check it if you rename the machine.
 
-The gateway is the one gap. citadel needs its master key for `lab`, and that key
-can also call the gateway's `deepseek` alias. `just secrets` drops `deepseek`
-from citadel's `models.json`, so pi cannot pick it, but a hand-written request
-with the key would still be billed. Only per-app keys with model allowlists
-close that, and the gateway has none yet (home-lab `docs/llm-gateway.md` → Later).
+citadel does not use the home lab's LiteLLM gateway at all: `custom.programs.pi.gateway
+= false` makes its pi start on its own oMLX, and `just secrets` deletes the `litellm`
+provider from its `models.json`. The gateway's master key can reach DeepSeek, so
+keeping it off citadel is what keeps that path closed too.
 
 ### Do not `/login deepseek`
 

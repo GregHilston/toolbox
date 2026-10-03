@@ -169,9 +169,9 @@ secrets:
   }
 
   op inject -f -i ../dot/omlx/.omlx/settings.json.tpl -o ../dot/omlx/.omlx/settings.json
-  # The gateway key reaches DeepSeek too; citadel's pi must not list it.
+  # citadel never holds the gateway key (pi.nix `gateway`).
   if [ "$(hostname -s)" = "citadel" ]; then
-    jq '.providers.litellm.models |= map(select(.id != "deepseek"))' \
+    jq 'del(.providers.litellm)' \
       ../dot/pi/.pi/agent/models.json.tpl | op inject -f -o ../dot/pi/.pi/agent/models.json
   else
     op inject -f -i ../dot/pi/.pi/agent/models.json.tpl -o ../dot/pi/.pi/agent/models.json
