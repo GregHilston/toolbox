@@ -28,6 +28,29 @@
   # Measured on moria: F20 arrives without fn.
   write = builtins.toJSON (shortcut f20 0);
 
+  # The private provider's id in the shipped build.
+  fluid1 = "fluid-1";
+
+  # Words Parakeet and both cleanup models get wrong.
+  dictionary = [
+    {
+      triggers = ["quinn" "quen" "kwen"];
+      replacement = "Qwen";
+    }
+    {
+      triggers = ["o mlx" "oh mlx"];
+      replacement = "oMLX";
+    }
+    {
+      triggers = ["one password"];
+      replacement = "1Password";
+    }
+    {
+      triggers = ["fluid voice"];
+      replacement = "FluidVoice";
+    }
+  ];
+
   # Unfinished onboarding must stay visible.
   launchScript = pkgs.writeShellScript "fluidvoice-launch" ''
     APP="/Applications/FluidVoice.app"
@@ -47,6 +70,10 @@
     HANDY_STORE="/Users/${user}/Library/Application Support/com.pais.handy/settings_store.json"
 
     hex() { printf '%s' "$1" | /usr/bin/xxd -p | /usr/bin/tr -d '\n'; }
+    # Empty when the key is absent.
+    read_data() {
+      /usr/bin/defaults export "$DOMAIN" - | /usr/bin/plutil -extract "$1" raw -o - - 2>/dev/null | /usr/bin/base64 -d
+    }
 
     # Quit an app; fail if it lingers.
     quit_app() {
@@ -85,6 +112,37 @@
       /usr/bin/defaults write "$DOMAIN" OnboardingCompleted -bool false
       # Last: marks the seed done.
       /usr/bin/defaults write "$DOMAIN" PrimaryDictationShortcuts -data "$(hex '${dictation}')"
+    fi
+
+    # Once, so a later in-app choice stands.
+    # Per prompt, not global: Write Mode refuses Fluid-1.
+    if [ "$(/usr/bin/defaults read "$DOMAIN" NixDictationOnFluid1 2>/dev/null || echo 0)" != "1" ]; then
+      quit_app FluidVoice FluidVoice
+      CONFIGS="$(read_data DictationPromptConfigurations)"
+      CONFIGS="$(printf '%s' "''${CONFIGS:-"{}"}" | ${pkgs.jq}/bin/jq -c \
+        '.__default__ = ((.__default__ // {}) + {providerID: "${fluid1}", modelName: "${fluid1}"})')"
+      echo "fluidvoice: dictation cleanup now runs on Fluid-1"
+      /usr/bin/defaults write "$DOMAIN" DictationPromptConfigurations -data "$(hex "$CONFIGS")"
+      /usr/bin/defaults write "$DOMAIN" NixDictationOnFluid1 -bool true
+    fi
+
+    # Add-only by replacement, so in-app edits stay.
+    merge_dictionary() {
+      CURRENT="$(read_data CustomDictionaryEntries)"
+      printf '%s' "''${CURRENT:-"[]"}" | ${pkgs.jq}/bin/jq -c --argjson want '${builtins.toJSON dictionary}' '
+        . as $have
+        | [$want[] | select(.replacement as $r | $have | all(.replacement != $r))]
+        | if length == 0 then empty
+          else $have + [to_entries[] | .value + {id: $ARGS.positional[.key]}] end
+      ' --args $(for _ in $(/usr/bin/seq ${toString (builtins.length dictionary)}); do /usr/bin/uuidgen; done)
+    }
+    if [ -n "$(merge_dictionary)" ]; then
+      quit_app FluidVoice FluidVoice
+      MERGED="$(merge_dictionary)"
+      if [ -n "$MERGED" ]; then
+        echo "fluidvoice: adding Custom Dictionary entries"
+        /usr/bin/defaults write "$DOMAIN" CustomDictionaryEntries -data "$(hex "$MERGED")"
+      fi
     fi
 
     # Best effort. `if` disables set -e here.

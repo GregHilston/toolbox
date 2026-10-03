@@ -27,6 +27,8 @@
         model_dirs = [modelDir];
         model_dir = modelDir;
       };
+      # Otherwise a long prefill stalls short requests.
+      scheduler.chunked_prefill = true;
     }
     // lib.optionalAttrs (cfg.memoryCeilingGB != null) {
       memory = {

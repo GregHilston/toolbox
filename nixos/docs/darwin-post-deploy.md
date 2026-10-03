@@ -115,10 +115,14 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
       base URL `http://localhost:8000/v1`, API key from 1Password `Infra/oMLX/api_key`,
       model `Qwen3.6-35B-A3B-4bit` (oMLX's light model), and verify it (choose Always
       Allow at the Keychain prompt). FluidVoice's bundled model (Fluid Intelligence) is
-      refused by both Command and Write Mode, but keep it as the global provider for
-      dictation polish. Instead, untick **Sync** on the Command Mode page and on the
-      **Edit model** row under AI Enhancement → Prompt Profiles, and pick oMLX in each.
-      Command Mode asks before running each command; keep it so.
+      refused by both Command and Write Mode, so untick **Sync** on the Command Mode page
+      and on the **Edit model** row under AI Enhancement → Prompt Profiles, and pick oMLX
+      in each. Command Mode asks before running each command; keep it so.
+- [ ] **Fluid-1** (dictation polish) - nix points the default dictation prompt at it, but
+      the model is a download: AI Enhancement → Fluid Intelligence, download and verify
+      Fluid-1. Until then dictation types the raw transcript. Check with
+      `grep 'processTextWithAI using provider=fluid-1' ~/Library/Logs/Fluid/Fluid.log`
+      after a dictation. Its licence is personal, non-commercial use only.
 - [ ] **Handy** (moria, citadel) - after the first login following the deploy, quit it from
       the menu bar once. Its login item is still registered until that launch, which reads
       the `autostart_enabled = false` nix wrote and unregisters it. Until you quit it, it
