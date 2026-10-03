@@ -87,7 +87,7 @@ as the 8-bit and produced the same correct fix, and no published card or thread 
 which we do not serve). Do not re-run this investigation; `docs/local-llm-benchmarks.md` →
 "Results: tool calling at 4-bit" has the numbers. The opencode default lives in
 `nixos/modules/darwin/home.nix` and must name the same model as `is_default` here; pi
-names the LiteLLM gateway's `lab` alias instead (`dot/pi/CLAUDE.md`).
+names the LiteLLM gateway's `local-small` alias instead (`dot/pi/CLAUDE.md`).
 
 **dungeon runs one model, `Qwen3.6-35B-A3B-4bit:lab`** (thinking off), for every consumer
 since 2026-09-27; `~/Git/home-lab/docs/local-llms.md` owns why. No dense 27B there: it

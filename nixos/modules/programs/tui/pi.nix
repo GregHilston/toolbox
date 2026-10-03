@@ -35,7 +35,7 @@ in {
 
     defaultModel = lib.mkOption {
       type = lib.types.str;
-      default = "lab";
+      default = "local-small";
       description = "Default model: a gateway alias, or an oMLX model id when `gateway` is off.";
     };
 
@@ -55,7 +55,7 @@ in {
     # — as api-docs.deepseek.com still instructs — SHADOWS that catalog and
     # leaves us owning contextWindow/maxTokens/cost forever. Don't.
     #
-    # It stays direct beside the gateway's `deepseek` alias, which serves
+    # It stays direct beside the gateway's `cloud` alias, which serves
     # Flash only: /orchestrate-pi workers run deepseek-v4-pro, and
     # deepseek-preflight.py checks the balance of this very key.
     #
@@ -69,7 +69,7 @@ in {
       description = ''
         Offer DeepSeek's models in pi's model picker and Ctrl+P cycle.
         The direct provider needs DEEPSEEK_API_KEY in the environment; the
-        gateway's lab models are offered either way.
+        gateway's local- models are offered either way.
       '';
     };
 
@@ -223,8 +223,8 @@ in {
         enabledModels =
           if cfg.gateway
           then
-            map (m: "litellm/${m.id}") (builtins.filter (m: m.id != "deepseek") modelsTemplate.providers.litellm.models)
-            ++ lib.optionals cfg.deepseek ["litellm/deepseek" "deepseek/*"]
+            map (m: "litellm/${m.id}") (builtins.filter (m: m.id != "cloud") modelsTemplate.providers.litellm.models)
+            ++ lib.optionals cfg.deepseek ["litellm/cloud" "deepseek/*"]
           else ["omlx/*"] ++ lib.optionals cfg.deepseek ["deepseek/*"];
 
         # synced/ is claude.ai's; pi can't use it.

@@ -223,14 +223,14 @@ alias neofetch="neowofetch"
 alias python='/usr/bin/python3'
 alias audio="pavucontrol"
 
-# pi against DeepSeek instead of the gateway's `lab` default. Flash goes
+# pi against DeepSeek instead of the gateway's `local-small` default. Flash goes
 # through the gateway, which tracks its spend; Pro is direct, since the gateway
 # does not serve it, and needs DEEPSEEK_API_KEY, which `just secrets` injects
 # everywhere except citadel.
 # zsh aliases pass args through, so `pid -p 'hi'` and `pid @file.ts` both work.
 # In-session you do not need them: Ctrl+P cycles models, /model picks.
 alias pid='pi --provider deepseek --model deepseek-v4-pro'
-alias pidf='pi --provider litellm --model deepseek'
+alias pidf='pi --provider litellm --model cloud'
 # subagent_* tools cost 2,691 tokens/request and are not in the default load
 # (nixos/modules/programs/tui/pi.nix); this is how a session that wants them starts.
 alias pi-subagents='pi -e ~/.pi/agent/npm/node_modules/pi-agent-suite/extensions/run-subagent/index.ts'

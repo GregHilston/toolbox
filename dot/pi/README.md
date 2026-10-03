@@ -1,6 +1,6 @@
 # Pi Coding Agent Setup
 
-Local-first AI coding agent ([pi-mono](https://github.com/badlogic/pi-mono)) backed by home-lab's LiteLLM gateway, which serves the `lab` model from [oMLX](../omlx/). [CLAUDE.md](CLAUDE.md) → "Where the model comes from" has the aliases.
+Local-first AI coding agent ([pi-mono](https://github.com/badlogic/pi-mono)) backed by home-lab's LiteLLM gateway, which serves the `local-small` model from [oMLX](../omlx/). [CLAUDE.md](CLAUDE.md) → "Where the model comes from" has the aliases.
 
 ## Quick Start
 
