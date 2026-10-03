@@ -629,7 +629,7 @@ nmcli device status                                     # check connection
 
 ### Pi Mono (Remote Inference)
 
-rohan includes [pi mono](https://github.com/anthropics/pi) for local coding assistance, but the X201 is too weak to run LLMs. Instead of using the shared stow + 1Password `models.json` template, rohan declares its `models.json` inline in [`hosts/pcs/rohan/default.nix`](hosts/pcs/rohan/default.nix) pointing to dungeon's oMLX server on the LAN. No models are downloaded or run locally.
+rohan includes [pi mono](https://github.com/anthropics/pi) for local coding assistance, but the X201 is too weak to run LLMs. Nothing stows `dot/pi` there, so [`hosts/pcs/rohan/default.nix`](hosts/pcs/rohan/default.nix) sets `generateModelsJson` and pi.nix writes `models.json` from the shared template: the LiteLLM gateway at `https://llm.grehg2.xyz/v1`, its key read from `$LITELLM_API_KEY` in `secrets/.env`. That URL is a tailnet address, so rohan needs Tailscale. No models are downloaded or run locally.
 
 ## References
 
