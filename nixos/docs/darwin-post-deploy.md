@@ -113,8 +113,12 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
       > login (`launchctl list | grep org.nixos.fluidvoice`).
 - [ ] **AI provider** (Command and Write Mode) - Settings → AI: add a custom OpenAI-compatible provider,
       base URL `http://localhost:8000/v1`, API key from 1Password `Infra/oMLX/api_key`,
-      model `Qwen3.6-35B-A3B-4bit` (oMLX's light model), and verify it. Command Mode
-      refuses FluidVoice's bundled model. It asks before running each command; keep it so.
+      model `Qwen3.6-35B-A3B-4bit` (oMLX's light model), and verify it (choose Always
+      Allow at the Keychain prompt). FluidVoice's bundled model (Fluid Intelligence) is
+      refused by both Command and Write Mode, but keep it as the global provider for
+      dictation polish. Instead, untick **Sync** on the Command Mode page and on the
+      **Edit model** row under AI Enhancement → Prompt Profiles, and pick oMLX in each.
+      Command Mode asks before running each command; keep it so.
 - [ ] **Handy** (moria, citadel) - after the first login following the deploy, quit it from
       the menu bar once. Its login item is still registered until that launch, which reads
       the `autostart_enabled = false` nix wrote and unregisters it. Until you quit it, it

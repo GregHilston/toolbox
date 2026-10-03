@@ -198,6 +198,12 @@ What it does, all from `postActivation` as the user (the Vorssaint shape, same r
   Upstream calls the env var a testing hook. The cask is `auto_updates`, so it could vanish in
   a Sparkle update rather than a `brew upgrade`; the cost is a window at login.
 - **The seed quits a running FluidVoice first**, because the app holds its hotkeys in memory.
+- **Turns AI streaming off** (`EnableAIStreaming`, no UI toggle in v1.6.9). FluidVoice's
+  streaming chat-completions parser keeps only `toolCalls.first` and concatenates every
+  call's arguments regardless of `index`, so when Qwen makes two tool calls at once
+  Command Mode fails with "Invalid response from LLM". The non-streaming parser reads them
+  all and Command Mode runs one per step. Still unfixed upstream as of 2026-10-03; Write
+  Mode and Command Mode replies now arrive whole instead of word by word.
 - **Handy is best-effort and runs after the seed**, so a corrupt Handy store or a Handy that
   won't quit prints a warning and never blocks FluidVoice.
 

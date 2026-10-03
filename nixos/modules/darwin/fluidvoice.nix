@@ -76,6 +76,8 @@
       /usr/bin/defaults write "$DOMAIN" CommandModeHotkeyShortcut -data "$(hex '${command}')"
       /usr/bin/defaults write "$DOMAIN" CommandModeShortcutEnabled -bool true
       /usr/bin/defaults write "$DOMAIN" CommandModeConfirmBeforeExecute -bool true
+      # Streaming drops parallel tool calls.
+      /usr/bin/defaults write "$DOMAIN" EnableAIStreaming -bool false
       /usr/bin/defaults write "$DOMAIN" RewriteModeHotkeyShortcut -data "$(hex '${write}')"
       /usr/bin/defaults write "$DOMAIN" RewriteModeShortcutEnabled -bool true
       /usr/bin/defaults write "$DOMAIN" ShowMainWindowAtLoginLaunch -bool false
