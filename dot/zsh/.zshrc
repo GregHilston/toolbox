@@ -33,6 +33,12 @@ zjhelp() {
 "
 }
 
+# FluidVoice keys; before zellij's seen-marker exists.
+if [[ -o interactive && -d /Applications/FluidVoice.app && ! -f ~/.hide-fv-motd ]]; then
+  [[ -n $ZELLIJ && -f ${TMPDIR:-/tmp}/.zj-motd-$ZELLIJ_SESSION_NAME ]] ||
+    print -- "  \e[2mvoice\e[0m   \e[1mCaps\e[0m dictate (tap = hands-free) · \e[1m⇧Caps\e[0m command · \e[1m⌥Caps\e[0m write · \e[1mEsc\e[0m cancel"
+fi
+
 if [[ -o interactive && ! -f ~/.hide-zj-motd ]]; then
   if [[ -z $ZELLIJ ]]; then
     print -- "  \e[2mzellij\e[0m  \e[1mzj <name>\e[0m start or resume · \e[1mzj\e[0m list · \e[1mzjk <name>\e[0m kill"

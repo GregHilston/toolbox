@@ -123,6 +123,8 @@ F18. Shift plus Caps Lock (F19) starts Command Mode, an LLM agent that runs shel
 Option plus Caps Lock (F20) starts Write Mode, which writes or rewrites the selected text.
 All three work the same way: a tap toggles hands-free, a hold is push-to-talk. NixOS
 dictates with [Handy](https://handy.computer/), which the Macs keep installed but dormant.
+A new terminal on a Mac with FluidVoice prints a one-line key reminder, beside zellij's
+(top of `dot/zsh/.zshrc`); `touch ~/.hide-fv-motd` silences it.
 
 Launching, permissions, and why the app's own "launch at login" stays off are all in
 `nixos/CLAUDE.md` → "Launching GUI apps at login", which owns this.
