@@ -115,12 +115,11 @@ config dir, so your live line is untouched.
 
 ## Voice Input — Hold Caps Lock to Dictate
 
-Caps Lock: a tap sends Escape, a hold sends F18. Karabiner-Elements does this on macOS
-(`dot/karabiner/`), `services.keyd` on NixOS GUI hosts.
+Caps Lock sends F18, held for as long as the key is. Karabiner-Elements does this on macOS
+(`dot/karabiner/`), `services.keyd` on NixOS GUI hosts. It no longer doubles as Escape.
 
 On moria and citadel, [FluidVoice](https://github.com/altic-dev/FluidVoice) dictates on
-F18 (a ~half-second press toggles hands-free, a longer hold is push-to-talk). Shift plus a
-hold (F19) starts Command Mode, an LLM agent that runs shell commands; Option plus a hold
+F18 (a tap toggles hands-free, a hold is push-to-talk). Shift plus Caps Lock (F19) starts Command Mode, an LLM agent that runs shell commands; Option plus Caps Lock
 (F20) starts Write Mode, which writes or rewrites the selected text. NixOS dictates with [Handy](https://handy.computer/), which the Macs
 keep installed but dormant.
 

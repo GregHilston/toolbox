@@ -2,36 +2,21 @@
 
 Caps Lock remap for macOS, managed via GNU Stow. Caps Lock **never toggles caps lock**:
 
-| Gesture | Result |
+| Press | Sends |
 | --- | --- |
-| quick tap (< 250ms) | `Escape` |
-| hold (> 250ms) | `F18` held for as long as you hold Caps Lock — the dictation key |
-| Shift + hold | `F19`, held the same way — FluidVoice's Command Mode (macOS only) |
-| Option + hold | `F20`, held the same way — FluidVoice's Write Mode (macOS only) |
+| Caps Lock | `F18`, held for as long as Caps Lock is — dictation |
+| Shift + Caps Lock | `F19` — FluidVoice's Command Mode (macOS only) |
+| Option + Caps Lock | `F20` — FluidVoice's Write Mode (macOS only) |
 
-FluidVoice owns all three on citadel and moria (`nixos/modules/darwin/fluidvoice.nix`), in
-its "automatic" mode: an `F18` press under 0.4s toggles hands-free recording, a longer one is
-push-to-talk. Since `F18` starts 250ms into the hold, a ~half-second Caps Lock press toggles.
-The Linux half is `services.keyd` in `nixos/modules/common/keyd.nix`, where Handy takes `F18`.
-The modifier variants have no keyd equivalent. Their manipulators sit first because the plain
-one accepts any modifier; Karabiner drops the mandatory modifier from the key it sends.
+A plain remap, no tap/hold timing, so the key goes down the moment Caps Lock does. On
+citadel and moria FluidVoice owns all three (`nixos/modules/darwin/fluidvoice.nix`) in its
+"automatic" mode: a tap toggles hands-free recording, a hold is push-to-talk. Escape on its
+own key cancels a recording. The Linux half is `services.keyd` in
+`nixos/modules/common/keyd.nix`, where Handy takes `F18`; the modifier variants have no
+keyd equivalent.
 
-## Retuning the thresholds
-
-The two parameters under `complex_modifications.parameters` must stay **equal to each
-other**, and matched to keyd's single `timeout(esc, N, f18)`. Three literals, one number.
-
-- `basic.to_if_held_down_threshold_milliseconds` is the real tap/hold split, and the only
-  one keyd has an equivalent for.
-- `basic.to_if_alone_timeout_milliseconds` is the window in which a release still counts as
-  a tap. Karabiner's default is 1000ms. Raising it **above** the hold threshold risks
-  emitting `Escape` *in addition to* `F18` on a hold — a stray Escape into whatever you're
-  dictating at, which is the exact failure this design exists to avoid.
-
-250ms is a deliberate compromise. Lower makes it easy to overshoot while reaching for
-Escape, which swallows the Escape and fires a useless sub-10ms recording; higher delays the
-start of dictation. Overshooting costs more than the delay does, since a hold lasts seconds
-anyway.
+The modifier manipulators sit first because the plain one accepts any modifier. Karabiner
+drops the mandatory modifier from the key it sends, so FluidVoice sees plain `F19`/`F20`.
 
 ## Why the whole directory is symlinked, not the file
 
@@ -79,9 +64,8 @@ behind TCC prompts and per-app state, so nix can't declare any of it.
   F-key event; this config does not send it. Handy stored its binding as `fn+f18` for that
   reason, and the FluidVoice seed binds both forms.
 - If a long dictation ever re-triggers itself, the cause is macOS auto-repeat on the held
-  `F18` (Karabiner's `repeat` defaults to true, which is *also* what makes the key stay
-  held — so don't "fix" it with `"repeat": false`, which would turn the hold into a tap).
-  Handle it with `hold_down_milliseconds` or in the dictation app.
+  `F18`. Handle it in the dictation app; Karabiner's `"repeat": false` is no fix, since
+  the held key is what push-to-talk listens for.
 
 ## Troubleshooting
 

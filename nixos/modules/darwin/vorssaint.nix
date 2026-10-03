@@ -111,10 +111,10 @@
 #     the part left out.
 #
 # `superKey` is the one genuine incompatibility and stays out for good. It
-# reimplements the Caps Lock hold this repo already does in
-# ../../../dot/karabiner (macOS) and ../common/keyd.nix (NixOS): hold for a
-# modifier, tap for Escape. Two event taps grabbing one key is broken rather
-# than merely redundant.
+# remaps Caps Lock (hold for a modifier, tap for Escape), a key this repo
+# already owns in ../../../dot/karabiner (macOS) and ../common/keyd.nix
+# (NixOS). Two event taps grabbing one key is broken rather than merely
+# redundant.
 #
 # ## What is left out, and why
 #

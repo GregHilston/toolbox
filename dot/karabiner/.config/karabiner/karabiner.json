@@ -7,13 +7,9 @@
       "name": "Toolbox",
       "selected": true,
       "complex_modifications": {
-        "parameters": {
-          "basic.to_if_alone_timeout_milliseconds": 250,
-          "basic.to_if_held_down_threshold_milliseconds": 250
-        },
         "rules": [
           {
-            "description": "Caps Lock: tap = Escape, hold = F18 (FluidVoice dictation), Shift+hold = F19 (Command Mode), Option+hold = F20 (Write Mode). Never toggles caps lock. Keep both thresholds EQUAL and matched to keyd in nixos/modules/common/keyd.nix — see dot/karabiner/README.md.",
+            "description": "Caps Lock is the voice key: F18 (dictation), Shift = F19 (Command Mode), Option = F20 (Write Mode). Never toggles caps lock. See dot/karabiner/README.md.",
             "manipulators": [
               {
                 "type": "basic",
@@ -25,12 +21,7 @@
                     ]
                   }
                 },
-                "to_if_alone": [
-                  {
-                    "key_code": "escape"
-                  }
-                ],
-                "to_if_held_down": [
+                "to": [
                   {
                     "key_code": "f19"
                   }
@@ -46,12 +37,7 @@
                     ]
                   }
                 },
-                "to_if_alone": [
-                  {
-                    "key_code": "escape"
-                  }
-                ],
-                "to_if_held_down": [
+                "to": [
                   {
                     "key_code": "f20"
                   }
@@ -67,12 +53,7 @@
                     ]
                   }
                 },
-                "to_if_alone": [
-                  {
-                    "key_code": "escape"
-                  }
-                ],
-                "to_if_held_down": [
+                "to": [
                   {
                     "key_code": "f18"
                   }
