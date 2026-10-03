@@ -210,7 +210,10 @@ in {
 
     home.file.".pi/agent/settings.json" = {
       text = builtins.toJSON {
-        defaultProvider = if cfg.gateway then "litellm" else "omlx";
+        defaultProvider =
+          if cfg.gateway
+          then "litellm"
+          else "omlx";
         inherit (cfg) defaultModel;
         lastChangelogVersion = "0.67.6";
         inherit (cfg) packages;
