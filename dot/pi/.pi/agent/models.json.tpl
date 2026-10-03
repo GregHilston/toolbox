@@ -54,7 +54,13 @@
             "maxTokensField": "max_tokens",
             "requiresReasoningContentOnAssistantMessages": true,
             "thinkingFormat": "deepseek",
-            "supportsStrictMode": true
+            "supportsStrictMode": true,
+            "supportsReasoningEffort": true
+          },
+          "inputLimits": {
+            "images": {
+              "resize": { "maxWidth": 2000, "maxHeight": 2000, "maxBytes": 4718592, "jpegQuality": 80 }
+            }
           }
         }
       ]
