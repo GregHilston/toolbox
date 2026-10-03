@@ -85,8 +85,9 @@ through pi against oMLX, the 4-bit A3B made the same well-formed `bash`/`read`/`
 as the 8-bit and produced the same correct fix, and no published card or thread reports a
 4-bit tool-calling regression for this model (the one documented failure is the OptiQ build,
 which we do not serve). Do not re-run this investigation; `docs/local-llm-benchmarks.md` →
-"Results: tool calling at 4-bit" has the numbers. The pi/opencode default lives in
-`nixos/modules/darwin/home.nix` and must name the same model as `is_default` here.
+"Results: tool calling at 4-bit" has the numbers. The opencode default lives in
+`nixos/modules/darwin/home.nix` and must name the same model as `is_default` here; pi
+names the LiteLLM gateway's `lab` alias instead (`dot/pi/CLAUDE.md`).
 
 **dungeon runs one model, `Qwen3.6-35B-A3B-4bit:lab`** (thinking off), for every consumer
 since 2026-09-27; `~/Git/home-lab/docs/local-llms.md` owns why. No dense 27B there: it

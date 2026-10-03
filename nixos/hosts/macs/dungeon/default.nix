@@ -643,14 +643,7 @@ in {
   # SearXNG is a container on this host, so pi talks to it directly instead of
   # bouncing out to the tailnet address and back. Every other host keeps the
   # default in modules/programs/tui/pi.nix.
-  # One attrset, not two paths: nix refuses to merge attribute paths that go
-  # through a dynamic key like ${vars.user.name}.
-  home-manager.users.${vars.user.name}.custom.programs.pi = {
-    searxngBaseUrl = lib.mkForce "http://localhost:8214";
-
-    # dungeon's one model: home-lab docs/local-llms.md
-    defaultModel = lib.mkForce "${config.services.omlxDeploy.lightModel.dir}:lab";
-  };
+  home-manager.users.${vars.user.name}.custom.programs.pi.searxngBaseUrl = lib.mkForce "http://localhost:8214";
 
   # Engine. Run in AUTO mode: Frigate ships the yolov9 model over ZMQ on connect.
   # Manual one-time install (not auto-cloned — see darwin-post-deploy.md):
