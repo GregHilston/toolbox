@@ -25,7 +25,8 @@
   dictation = builtins.toJSON [(shortcut f18 fn) (shortcut f18 0)];
   dictationLegacy = builtins.toJSON (shortcut f18 fn);
   command = builtins.toJSON (shortcut f19 fn);
-  write = builtins.toJSON (shortcut f20 fn);
+  # Measured on moria: F20 arrives without fn.
+  write = builtins.toJSON (shortcut f20 0);
 
   # Unfinished onboarding must stay visible.
   launchScript = pkgs.writeShellScript "fluidvoice-launch" ''

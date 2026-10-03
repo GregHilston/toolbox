@@ -181,9 +181,11 @@ What it does, all from `postActivation` as the user (the Vorssaint shape, same r
   (re-seeding also reopens onboarding; click through it).
 - **Writes `OnboardingCompleted = false`.** Any pre-set hotkey counts as "used before" and
   the app would skip onboarding, which is where permissions and the model download happen.
-- **Binds both `fn+F18` and bare F18.** macOS sets the fn flag on F-key events (why Handy
-  stored `fn+f18`) and FluidVoice matches modifiers exactly. Command and Write Mode take a
-  single shortcut, so they get `fn+F19` and `fn+F20` only — rebind in the app if one never fires.
+- **Binds both `fn+F18` and bare F18.** macOS sets the fn flag on some F-key events (why
+  Handy stored `fn+f18`) and FluidVoice matches modifiers exactly. Command and Write Mode take
+  a single shortcut, so each gets the form measured on moria: `fn+F19`, but bare F20 — F20
+  arrives without fn. Rebind in the app if one never fires; a listen-only `CGEventTap`
+  printing `keyboardEventKeycode` and `flags` shows what a chord really sends.
 - **Takes F18 and launch-at-login from Handy** by editing its `settings_store.json`,
   quitting Handy first because it writes the store back on quit. Handy applies
   `autostart_enabled` on its own next launch, so its login item unregisters itself then.
