@@ -88,10 +88,7 @@ in {
     };
 
     custom.programs = {
-      pi = {
-        enable = true;
-        defaultModel = config.services.omlxDeploy.lightModel.dir;
-      };
+      pi.enable = true;
       opencode = {
         enable = true;
         defaultModel = config.services.omlxDeploy.lightModel.dir;

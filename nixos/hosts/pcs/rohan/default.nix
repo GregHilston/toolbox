@@ -163,21 +163,12 @@
         ];
       };
 
-      # Pi mono — inference runs on dungeon's oMLX server, not on this
-      # low-power writerdeck. Setting omlxBaseUrl makes modules/programs/tui/pi.nix
-      # generate ~/.pi/agent/models.json; the other hosts get that file from
-      # stow + `just secrets` instead (they need the 1Password api key).
+      # Pi mono — inference runs behind the LiteLLM gateway, not on this
+      # low-power writerdeck. Nothing stows dot/pi here, so pi.nix writes
+      # models.json and the key comes from $LITELLM_API_KEY.
       custom.programs.pi = {
         enable = true;
-        # dungeon's one model: home-lab docs/local-llms.md
-        defaultModel = "Qwen3.6-35B-A3B-4bit:lab";
-        omlxBaseUrl = "http://${vars.networking.hosts.dungeon.lan}:8000/v1";
-        models = [
-          {
-            id = "Qwen3.6-35B-A3B-4bit:lab";
-            name = "Qwen 3.6 35B A3B 4-bit (MoE, vision, thinking off: dungeon's one model)";
-          }
-        ];
+        generateModelsJson = true;
       };
 
       # Writerdeck MOTD + auto-tmux — append to .zshrc.local

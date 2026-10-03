@@ -28,44 +28,15 @@
     || (pin != null && npmManifest.dependencies.${name} != pin))
   (map packageSource cfg.packages);
 
-  # One oMLX model entry. Everything except id/name has a sane default because
-  # every model we serve shares the same shape, and `cost` is not an option at
-  # all — local inference is free, so it is always zero.
-  modelType = lib.types.submodule {
-    options = {
-      id = lib.mkOption {
-        type = lib.types.str;
-        description = "Model id exactly as oMLX serves it.";
-      };
-      name = lib.mkOption {
-        type = lib.types.str;
-        description = "Human-readable label shown in pi's model picker.";
-      };
-      contextWindow = lib.mkOption {
-        type = lib.types.int;
-        default = 262144;
-        description = "Context window in tokens.";
-      };
-      maxTokens = lib.mkOption {
-        type = lib.types.int;
-        default = 81920;
-        description = "Maximum tokens the model may generate in one response.";
-      };
-      input = lib.mkOption {
-        type = lib.types.listOf (lib.types.enum ["text" "image"]);
-        default = ["text" "image"];
-        description = "Input modalities the model accepts.";
-      };
-    };
-  };
+  modelsTemplate = builtins.fromJSON (builtins.readFile ../../../../dot/pi/.pi/agent/models.json.tpl);
 in {
   options.custom.programs.pi = {
     enable = lib.mkEnableOption "pi (pi-mono coding agent)";
 
     defaultModel = lib.mkOption {
       type = lib.types.str;
-      default = "Qwen3.6-35B-A3B-8bit";
-      description = "Default model to use";
+      default = "lab";
+      description = "Default model, as a LiteLLM gateway alias.";
     };
 
     # DeepSeek needs NO models.json entry: pi ships it as a built-in provider
@@ -75,38 +46,36 @@ in {
     # — as api-docs.deepseek.com still instructs — SHADOWS that catalog and
     # leaves us owning contextWindow/maxTokens/cost forever. Don't.
     #
+    # It stays direct beside the gateway's `deepseek` alias, which serves
+    # Flash only: /orchestrate-pi workers run deepseek-v4-pro, and
+    # deepseek-preflight.py checks the balance of this very key.
+    #
     # The key comes from nixos/secrets/.env (op inject -> .zshrc), so this
-    # option only decides whether the models are offered in the picker. On
-    # citadel the key is not injected at all, which is the real control.
+    # option only decides whether DeepSeek, direct or via the gateway, is
+    # offered in the Ctrl+P cycle. On citadel the direct key is not injected
+    # at all, which is the real control for that path.
     deepseek = lib.mkOption {
       type = lib.types.bool;
       default = true;
       description = ''
         Offer DeepSeek's models in pi's model picker and Ctrl+P cycle.
-        Requires DEEPSEEK_API_KEY in the environment; the default local oMLX
-        provider is unaffected either way.
+        The direct provider needs DEEPSEEK_API_KEY in the environment; the
+        gateway's lab models are offered either way.
       '';
     };
 
-    # models.json normally comes from stow + `just secrets` (it holds the oMLX
-    # api key, so it is templated from 1Password). Hosts that talk to *another*
-    # machine's oMLX server have no secret to inject and can declare the file
-    # here instead — set omlxBaseUrl and the module generates models.json.
-    omlxBaseUrl = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      example = "http://192.168.1.238:8000/v1";
+    # models.json normally comes from stow + `just secrets`, which injects the
+    # gateway key as a literal. A host with no stowed dot/pi declares it here
+    # instead, and pi reads the key from the environment at request time.
+    generateModelsJson = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
       description = ''
-        When non-null, generate ~/.pi/agent/models.json pointing pi's `omlx`
-        provider at this base URL, listing `models`. When null (the default),
+        Generate ~/.pi/agent/models.json holding only the `litellm` provider
+        from dot/pi/.pi/agent/models.json.tpl, with its key read from
+        $LITELLM_API_KEY (nixos/secrets/.env) instead of injected. When false,
         models.json is left to stow + `just secrets`.
       '';
-    };
-
-    models = lib.mkOption {
-      type = lib.types.listOf modelType;
-      default = [];
-      description = "Models to expose under the generated `omlx` provider. Only used when omlxBaseUrl is set.";
     };
 
     # Where the web-search extension sends queries. SearXNG runs as a container
@@ -142,8 +111,8 @@ in {
 
         # Context management, but it ships 22 extensions and we want two.
         # Excluded, and why:
-        #   codex-*        OpenAI Codex quota/verbosity features. This host is
-        #                  strictly local oMLX, so they are dead weight.
+        #   codex-*        OpenAI Codex quota/verbosity features. pi talks to
+        #                  the gateway and DeepSeek only: dead weight.
         #   mcp-wrapper    superseded by pi-mcp-adapter below; loading both
         #                  gives two MCP layers.
         #   run-subagent   2,691 tokens/request (four tool schemas plus the
@@ -205,30 +174,10 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    # Remote-oMLX hosts declare models.json here; everyone else gets it from
-    # stow + op inject (dot/pi/.pi/agent/models.json.tpl, via `just secrets`).
-    home.file.".pi/agent/models.json" = lib.mkIf (cfg.omlxBaseUrl != null) {
+    # The template stays the one list of gateway models.
+    home.file.".pi/agent/models.json" = lib.mkIf cfg.generateModelsJson {
       text = builtins.toJSON {
-        providers.omlx = {
-          baseUrl = cfg.omlxBaseUrl;
-          api = "openai-completions";
-          apiKey = "no-key-needed"; # oMLX does not authenticate
-          compat = {
-            supportsDeveloperRole = false;
-            supportsReasoningEffort = false;
-          };
-          models = map (m:
-            m
-            // {
-              cost = {
-                input = 0;
-                output = 0;
-                cacheRead = 0;
-                cacheWrite = 0;
-              };
-            })
-          cfg.models;
-        };
+        providers.litellm = modelsTemplate.providers.litellm // {apiKey = "$LITELLM_API_KEY";};
       };
     };
 
@@ -252,7 +201,7 @@ in {
 
     home.file.".pi/agent/settings.json" = {
       text = builtins.toJSON {
-        defaultProvider = "omlx";
+        defaultProvider = "litellm";
         inherit (cfg) defaultModel;
         lastChangelogVersion = "0.67.6";
         inherit (cfg) packages;
@@ -260,8 +209,11 @@ in {
         # Which models Ctrl+P cycles through. Provider globs, same format as
         # the --models flag. `defaultProvider`/`defaultModel` above still decide
         # what a bare `pi` starts on — this only widens what you can switch TO
-        # without restarting, so the local model stays the default everywhere.
-        enabledModels = ["omlx/*"] ++ lib.optionals cfg.deepseek ["deepseek/*"];
+        # without restarting. The direct `omlx` provider stays out of the cycle
+        # but is still in /model, for when dungeon is down.
+        enabledModels =
+          map (m: "litellm/${m.id}") (builtins.filter (m: m.id != "deepseek") modelsTemplate.providers.litellm.models)
+          ++ lib.optionals cfg.deepseek ["litellm/deepseek" "deepseek/*"];
 
         # synced/ is claude.ai's; pi can't use it.
         # Absolute: pi's globs skip dot-directories like .claude.
@@ -279,8 +231,8 @@ in {
         # every entry point returns early on a null theme, so `workingVibeMode`
         # defaulting to "generate" against `openai-codex/gpt-5.4-mini` never
         # fires on its own. Pinning "off" is what stops a stray `/vibe pirate`
-        # in one session from leaving every later session calling a model oMLX
-        # does not serve.
+        # in one session from leaving every later session calling a model the
+        # gateway does not serve.
         workingVibe = "off";
 
         powerline = {
