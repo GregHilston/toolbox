@@ -98,7 +98,7 @@ no TTY cannot answer a prompt, so do these once per host in a GUI session (VNC o
 
 ## Voice Input (Karabiner + FluidVoice)
 Hold Caps Lock to dictate, or tap it to toggle hands-free; add Shift for a voice command,
-Option for Write Mode. Escape cancels a recording.
+Option for Write Mode (tap and hold work the same with either). Escape cancels a recording.
 Until these are done Karabiner is inert and Caps Lock still toggles caps. On headless
 dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
 `dot/karabiner/README.md`, `nixos/CLAUDE.md` → "FluidVoice".
@@ -119,11 +119,12 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
       the menu bar once. Its login item is still registered until that launch, which reads
       the `autostart_enabled = false` nix wrote and unregisters it. Until you quit it, it
       holds Option+Space (its default binding, which nix moved it back to).
-- [ ] Smoke test, in order: holding Caps Lock shows
-      FluidVoice's overlay and speaking inserts text at the cursor; a tap starts
-      hands-free recording and another tap stops it; Shift + Caps Lock starts Command Mode;
-      Option + Caps Lock starts Write Mode; Caps Lock never toggles caps on *any* attached keyboard (each one needs
-      its own grab)
+- [ ] Smoke test, in order: holding Caps Lock shows FluidVoice's overlay and speaking
+      inserts text at the cursor; a tap starts hands-free recording and another tap stops
+      it; Shift + Caps Lock starts Command Mode (a tap keeps listening until a second
+      Shift + Caps Lock tap); Option + Caps Lock starts Write Mode; Caps Lock never toggles
+      caps on *any* attached keyboard (each one needs its own grab). If Shift or Option +
+      Caps Lock does nothing, rebind that mode in FluidVoice's settings by pressing the chord.
 
 ## PI WEB (moria only)
 

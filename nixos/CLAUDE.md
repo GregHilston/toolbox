@@ -167,16 +167,18 @@ The shape is always the same, and *why* is the part worth remembering:
 `modules/darwin/fluidvoice.nix`, enabled with `services.fluidvoice.enable`. Karabiner
 turns Caps Lock into F18 (dictate), Shift+Caps Lock into F19 (Command Mode, an LLM agent
 that runs shell commands, asking first) and Option+Caps Lock into F20 (Write Mode). The
-seeded activation mode is "automatic": a tap toggles hands-free recording, a hold is
-push-to-talk. Escape cancels. Handy stays
-installed but no longer starts at login or owns F18; Linux hosts keep Handy.
+seeded activation mode is "automatic", and it covers all three keys: a tap toggles
+hands-free recording, a hold is push-to-talk. A hands-free Command or Write capture ends on
+the same chord; a plain Caps Lock tap switches it to dictation instead. Escape cancels.
+Handy stays installed but no longer starts at login or owns F18; Linux hosts keep Handy.
 
 What it does, all from `postActivation` as the user (the Vorssaint shape, same reasons):
 
 - **Seeds hotkeys once**, gated on `PrimaryDictationShortcuts` being absent in the
   `com.FluidApp.app` domain, so a hotkey changed in the app is never overwritten. Shortcuts
   are JSON stored as plist data (`Models/HotkeyShortcut.swift` upstream). To re-seed: quit
-  FluidVoice, `defaults delete com.FluidApp.app PrimaryDictationShortcuts`, `just dr <host>`.
+  FluidVoice, `defaults delete com.FluidApp.app PrimaryDictationShortcuts`, `just dr <host>`
+  (re-seeding also reopens onboarding; click through it).
 - **Writes `OnboardingCompleted = false`.** Any pre-set hotkey counts as "used before" and
   the app would skip onboarding, which is where permissions and the model download happen.
 - **Binds both `fn+F18` and bare F18.** macOS sets the fn flag on F-key events (why Handy

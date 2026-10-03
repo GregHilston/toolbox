@@ -10,13 +10,15 @@ Caps Lock remap for macOS, managed via GNU Stow. Caps Lock **never toggles caps 
 
 A plain remap, no tap/hold timing, so the key goes down the moment Caps Lock does. On
 citadel and moria FluidVoice owns all three (`nixos/modules/darwin/fluidvoice.nix`) in its
-"automatic" mode: a tap toggles hands-free recording, a hold is push-to-talk. Escape on its
-own key cancels a recording. The Linux half is `services.keyd` in
+"automatic" mode, for all three keys: a tap toggles hands-free recording, a hold is
+push-to-talk. Escape on its own key cancels a recording. The Linux half is `services.keyd` in
 `nixos/modules/common/keyd.nix`, where Handy takes `F18`; the modifier variants have no
 keyd equivalent.
 
 The modifier manipulators sit first because the plain one accepts any modifier. Karabiner
 drops the mandatory modifier from the key it sends, so FluidVoice sees plain `F19`/`F20`.
+They also list `caps_lock` as optional: if the caps-lock state was already on when
+Karabiner loaded, that modifier is set and they would otherwise fall through to `F18`.
 
 ## Why the whole directory is symlinked, not the file
 

@@ -80,8 +80,8 @@
       # Drivers
       "displaylink"
 
-      # Voice input: hold Caps Lock to dictate. Karabiner does the tap-vs-hold
-      # remap (dot/karabiner/). Casks rather than nixpkgs on purpose: macOS TCC
+      # Voice input: Caps Lock is the dictation key. Karabiner remaps it to F18
+      # (dot/karabiner/). Casks rather than nixpkgs on purpose: macOS TCC
       # permissions key on the binary path, so a nix-store app re-prompts for
       # Microphone/Accessibility on every rebuild. Handy stays installed but
       # dormant on citadel and moria, where ./fluidvoice.nix takes over F18.
