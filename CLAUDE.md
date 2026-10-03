@@ -119,8 +119,9 @@ Caps Lock: a tap sends Escape, a hold sends F18. Karabiner-Elements does this on
 (`dot/karabiner/`), `services.keyd` on NixOS GUI hosts.
 
 On moria and citadel, [FluidVoice](https://github.com/altic-dev/FluidVoice) dictates on
-F18, and Shift plus a hold (F19, macOS only) starts its Command Mode, an LLM agent that
-runs shell commands. NixOS dictates with [Handy](https://handy.computer/), which the Macs
+F18 (a ~half-second press toggles hands-free, a longer hold is push-to-talk). Shift plus a
+hold (F19) starts Command Mode, an LLM agent that runs shell commands; Option plus a hold
+(F20) starts Write Mode, which writes or rewrites the selected text. NixOS dictates with [Handy](https://handy.computer/), which the Macs
 keep installed but dormant.
 
 Launching, permissions, and why the app's own "launch at login" stays off are all in

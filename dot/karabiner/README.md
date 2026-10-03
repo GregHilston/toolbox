@@ -7,11 +7,14 @@ Caps Lock remap for macOS, managed via GNU Stow. Caps Lock **never toggles caps 
 | quick tap (< 250ms) | `Escape` |
 | hold (> 250ms) | `F18` held for as long as you hold Caps Lock — the dictation key |
 | Shift + hold | `F19`, held the same way — FluidVoice's Command Mode (macOS only) |
+| Option + hold | `F20`, held the same way — FluidVoice's Write Mode (macOS only) |
 
-FluidVoice owns both keys on citadel and moria (`nixos/modules/darwin/fluidvoice.nix`).
+FluidVoice owns all three on citadel and moria (`nixos/modules/darwin/fluidvoice.nix`), in
+its "automatic" mode: an `F18` press under 0.4s toggles hands-free recording, a longer one is
+push-to-talk. Since `F18` starts 250ms into the hold, a ~half-second Caps Lock press toggles.
 The Linux half is `services.keyd` in `nixos/modules/common/keyd.nix`, where Handy takes `F18`.
-Shift + Caps Lock has no keyd equivalent. Its manipulator sits first because the plain one
-accepts any modifier; Karabiner drops the mandatory Shift from the `F19` it sends.
+The modifier variants have no keyd equivalent. Their manipulators sit first because the plain
+one accepts any modifier; Karabiner drops the mandatory modifier from the key it sends.
 
 ## Retuning the thresholds
 
