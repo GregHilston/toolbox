@@ -10,9 +10,8 @@
     ../../../modules/darwin/home.nix
     ../../../modules/darwin/homebrew-base.nix
     ../../../modules/darwin/omlx.nix
-    # Launch Handy at login so the Caps-Lock-hold → F18 dictation hotkey works
-    # without opening the app by hand.
-    ../../../modules/darwin/handy.nix
+    # FluidVoice: Caps Lock dictates; Shift/Option pick Command/Write Mode.
+    ../../../modules/darwin/fluidvoice.nix
     # Vorssaint — the menu-bar utility suite. Per-host (citadel, moria) rather
     # than from common.nix: headless dungeon has no one sitting at a menu bar,
     # and almost every feature is an interactive one. The feature set it comes
@@ -122,6 +121,8 @@
   # The feature list, and what it deliberately leaves out to stay clear of
   # Karabiner and AeroSpace, is in modules/darwin/vorssaint.nix.
   services.vorssaint.enable = true;
+
+  services.fluidvoice.enable = true;
 
   home-manager.users.${vars.user.name} = {
     # Exclude moonpi (cwd error on this host)

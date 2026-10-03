@@ -96,25 +96,35 @@ no TTY cannot answer a prompt, so do these once per host in a GUI session (VNC o
 - [ ] Verify: `tail ~/Library/Logs/claude-rc-home-lab.log` shows `Connected`, and the repos
       appear under the Code tab in the Claude app.
 
-## Voice Input (Karabiner + Handy)
-Hold Caps Lock to dictate; a quick tap is Escape. Until these are done Karabiner is inert
-and Caps Lock still toggles caps. On headless dungeon, do them over VNC. Background and
-per-host caveats: `dot/karabiner/README.md`.
+## Voice Input (Karabiner + FluidVoice)
+Hold Caps Lock to dictate, or tap it to toggle hands-free; add Shift for a voice command,
+Option for Write Mode (tap and hold work the same with either). Escape cancels a recording.
+Until these are done Karabiner is inert and Caps Lock still toggles caps. On headless
+dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
+`dot/karabiner/README.md`, `nixos/CLAUDE.md` → "FluidVoice".
 - [ ] **Karabiner** - approve the driver extension (System Settings → Privacy & Security;
       may need a reboot), then grant Input Monitoring. Leave System Settings → Keyboard →
       Modifier Keys at its default — Karabiner's own remap supersedes it.
-- [ ] **Handy** - grant Microphone and Accessibility (needed to paste into the focused app),
-      then download a model: Parakeet V3 (CPU-efficient English) or Whisper Turbo/Large
-      (better accuracy, 100+ languages)
-      > Starting Handy is *not* a manual step: `modules/darwin/handy.nix` launches it at
-      > login (`launchctl list | grep org.nixos.handy`). Leave Handy's own "Launch at
-      > login" setting off so the two don't both register it.
-- [ ] **Handy hotkey** - set the binding to `F18` by *holding* Caps Lock while the picker is
-      capturing, and leave push-to-talk mode on (its default). It will display and store this
-      as `fn + F18` — that's correct, macOS flags all F-keys with `fn`
-- [ ] Smoke test, in order: a quick Caps Lock tap sends Escape; holding it opens Handy's
-      recording overlay and speaking inserts text at the cursor; Caps Lock never toggles caps
-      on *any* attached keyboard (each one needs its own grab)
+- [ ] **FluidVoice** (moria, citadel) - the first `just dr` opens it on onboarding. Grant
+      Microphone and Accessibility (its hotkeys stay dead until Accessibility is on), and
+      let it download the default Parakeet model. **Don't change the hotkeys** onboarding
+      shows: nix seeded them (F18 dictate, F19 Command Mode, F20 Write Mode). Leave "Launch at login" off.
+      > Starting it is *not* a manual step: `modules/darwin/fluidvoice.nix` launches it at
+      > login (`launchctl list | grep org.nixos.fluidvoice`).
+- [ ] **AI provider** (Command and Write Mode) - Settings → AI: add a custom OpenAI-compatible provider,
+      base URL `http://localhost:8000/v1`, API key from 1Password `Infra/oMLX/api_key`,
+      model `Qwen3.6-35B-A3B-4bit` (oMLX's light model), and verify it. Command Mode
+      refuses FluidVoice's bundled model. It asks before running each command; keep it so.
+- [ ] **Handy** (moria, citadel) - after the first login following the deploy, quit it from
+      the menu bar once. Its login item is still registered until that launch, which reads
+      the `autostart_enabled = false` nix wrote and unregisters it. Until you quit it, it
+      holds Option+Space (its default binding, which nix moved it back to).
+- [ ] Smoke test, in order: holding Caps Lock shows FluidVoice's overlay and speaking
+      inserts text at the cursor; a tap starts hands-free recording and another tap stops
+      it; Shift + Caps Lock starts Command Mode (a tap keeps listening until a second
+      Shift + Caps Lock tap); Option + Caps Lock starts Write Mode; Caps Lock never toggles
+      caps on *any* attached keyboard (each one needs its own grab). If Shift or Option +
+      Caps Lock does nothing, rebind that mode in FluidVoice's settings by pressing the chord.
 
 ## PI WEB (moria only)
 
@@ -200,8 +210,8 @@ open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
 ## Launch Applications
 
 - [ ] Set up AeroSpace tiling
-- [ ] **Vorssaint** (moria, citadel) - the menu-bar utility suite. Like Handy, it is launched
-      at login by `modules/darwin/vorssaint.nix`, and unlike Handy it also seeds its own
+- [ ] **Vorssaint** (moria, citadel) - the menu-bar utility suite. Like FluidVoice, it is launched
+      at login by `modules/darwin/vorssaint.nix`, and like it, it also seeds its own
       Features hub, so there is nothing to pick on first launch — only permissions to grant.
       Leave its Settings → "Launch at login" **off**; the launchd agent owns that.
       Grant these, in rough order of how much stops working without them:

@@ -83,9 +83,9 @@ in {
     ]);
 
   # Launch Handy with the graphical session (Linux half of "hold Caps Lock to
-  # dictate"; the macOS half is a launchd agent in ../darwin/handy.nix). Handy is
-  # a tray app and has to already be running for the F18 that keyd emits on a
-  # Caps Lock hold to land anywhere — otherwise Caps Lock behaves correctly and
+  # dictate"; the macOS half is FluidVoice, ../darwin/fluidvoice.nix). Handy is
+  # a tray app and has to already be running for the F18 that keyd emits for
+  # Caps Lock to land anywhere — otherwise Caps Lock behaves correctly and
   # nothing dictates. Same enableGui gate as the package itself above.
   #
   # graphical-session.target, not default.target: Handy is webkitgtk + a tray

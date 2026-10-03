@@ -84,8 +84,8 @@
 # `launchctl asuser "$(id -u -- user)" sudo --user=user --`
 # (modules/system/defaults-write.nix), and that is exactly what is copied here.
 #
-# What is left in the agent is only the launch, in the plain shape
-# ./handy.nix uses. Why `open -g -j -a` and not the inner binary, why
+# What is left in the agent is only the launch, in the plain `open -a`
+# shape. Why `open -g -j -a` and not the inner binary, why
 # RunAtLoad without KeepAlive, and why the app's own launch-at-login toggle
 # stays off: nixos/CLAUDE.md → "Launching GUI apps at login". This is that
 # pattern's second user, and it needs no exception to it.
@@ -93,7 +93,7 @@
 # ## Permissions are still manual
 #
 # Nothing here can grant TCC. Accessibility and Screen Recording are clicked
-# through by hand per host exactly like Handy — see
+# through by hand per host exactly like FluidVoice — see
 # ../../docs/darwin-post-deploy.md. Features that need a grant simply sit inert
 # until it is given, so a half-configured host is quiet rather than broken.
 #
@@ -111,10 +111,9 @@
 #     the part left out.
 #
 # `superKey` is the one genuine incompatibility and stays out for good. It
-# reimplements the Caps Lock hold this repo already does in
-# ../../../dot/karabiner (macOS) and ../common/keyd.nix (NixOS): hold for a
-# modifier, tap for Escape. Two event taps grabbing one key is broken rather
-# than merely redundant.
+# remaps Caps Lock (hold for a modifier, tap for Escape), a key this repo
+# already owns in ../../../dot/karabiner. Two event taps grabbing one key is broken rather than merely
+# redundant.
 #
 # ## What is left out, and why
 #
@@ -486,7 +485,7 @@ in {
       fi
     '';
 
-    # Plain ./handy.nix shape: RunAtLoad, no
+    # Plain `open -a` agent shape: RunAtLoad, no
     # KeepAlive, `open -a` rather than the inner binary. See nixos/CLAUDE.md →
     # "Launching GUI apps at login" for why each of those.
     launchd.user.agents.vorssaint = {
