@@ -13,8 +13,8 @@
 # Gated on custom.desktop.enable (isengard, mines): dictation needs a graphical
 # session and audio, so the headless hosts and rohan's TTY writerdeck skip it.
 #
-# NOT YET EXERCISED ON LINUX. The macOS half worked end to end on moria with
-# Handy; this half is verified only by eval. The risk worth knowing when you do
+# NOT YET EXERCISED ON LINUX. Only the old macOS setup (Karabiner hold → F18 →
+# Handy) ran end to end, on moria; this half is verified only by eval. The risk worth knowing when you do
 # deploy it: Handy's X11 hotkey path has historically delivered key-press more
 # reliably than key-release, and push-to-talk needs the release. If a hold starts
 # recording and never stops, switch Handy to toggle mode rather than chasing keyd.

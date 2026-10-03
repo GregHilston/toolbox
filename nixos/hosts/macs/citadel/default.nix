@@ -10,7 +10,7 @@
     ../../../modules/darwin/home.nix
     ../../../modules/darwin/homebrew-base.nix
     ../../../modules/darwin/omlx.nix
-    # FluidVoice: hold Caps Lock to dictate.
+    # FluidVoice: Caps Lock dictates; Shift/Option pick Command/Write Mode.
     ../../../modules/darwin/fluidvoice.nix
     # Vorssaint — the menu-bar utility suite. Per-host (citadel, moria) rather
     # than from common.nix: headless dungeon has no one sitting at a menu bar,

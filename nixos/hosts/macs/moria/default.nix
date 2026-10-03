@@ -14,7 +14,7 @@
     # measured 86-87 GB steady with the builder and orchestrator models both
     # resident, so nine gigabytes from a wall oMLX cannot see.
     ../../../modules/darwin/gpu-wired-limit.nix
-    # FluidVoice: hold Caps Lock to dictate.
+    # FluidVoice: Caps Lock dictates; Shift/Option pick Command/Write Mode.
     ../../../modules/darwin/fluidvoice.nix
     # Vorssaint — the menu-bar utility suite. Per-host (citadel, moria) rather
     # than from common.nix: headless dungeon has no one sitting at a menu bar,
