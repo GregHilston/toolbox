@@ -377,6 +377,26 @@
       /usr/bin/defaults write "$DOMAIN" commandBarShortcut -string "command:49"
     fi
 
+    # Add-only, so exceptions added in-app stay.
+    ADDED=""
+    for ID in ${lib.escapeShellArgs cfg.autoQuitExceptions}; do
+      if ! /usr/bin/defaults export "$DOMAIN" - \
+        | /usr/bin/plutil -extract autoQuitExceptions json -o - - 2>/dev/null \
+        | ${pkgs.jq}/bin/jq -e --arg id "$ID" 'index($id) != null' >/dev/null; then
+        /usr/bin/defaults write "$DOMAIN" autoQuitExceptions -array-add "$ID"
+        ADDED="$ADDED $ID"
+      fi
+    done
+    # Exceptions are only read at launch.
+    if [ -n "$ADDED" ] && /usr/bin/pgrep -xq Vorssaint; then
+      echo "vorssaint: relaunching to keep running after their last window closes:$ADDED"
+      /usr/bin/osascript -e 'quit app "Vorssaint"' || true
+      for _ in 1 2 3 4 5 6 7 8 9 10; do
+        /usr/bin/pgrep -xq Vorssaint || break
+        sleep 1
+      done
+    fi
+
     # So a fresh `just dr` ends with the app running and configured, rather than
     # configured but not visible until the next login. Idempotent: `open` on a
     # running app just activates it, and -g/-j keep it quiet and hidden.
@@ -449,6 +469,29 @@ in {
         later, here or in the hub, returns with its old settings.
 
         Only ever applied to a Mac that has not been set up yet; see the header.
+      '';
+    };
+
+    autoQuitExceptions = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [
+        "com.FluidApp.app" # Caps Lock dictation
+        "com.vmware.fusion" # the mines VM
+        "dev.kdrag0n.MacVirt" # OrbStack: containers and machines
+        "com.1password.1password" # browser unlock, Quick Access
+        "ch.protonvpn.mac" # the VPN connection
+        "com.spotify.client" # playback
+        "ru.keepcoder.Telegram"
+        "com.tinyspeck.slackmacgap"
+        "com.hnc.Discord"
+        "com.valvesoftware.steam" # background downloads
+      ];
+      description = ''
+        Bundle ids `autoQuit` must never quit when their last window closes:
+        Dock apps whose job outlives the window. Menu-bar apps (LSUIElement)
+        are already exempt upstream. Merged into the app's list on every
+        activation, add-only, so exceptions added in Vorssaint survive; an id
+        removed here has to be removed in Vorssaint too.
       '';
     };
   };

@@ -160,6 +160,10 @@ worth knowing from here:
   Deliberately in, despite overlapping: the app switcher and Dock previews (AeroSpace).
   Vorssaint also stands in for Raycast (command bar, clipboard history), `stats` and
   Amphetamine, so none of those are installed.
+- **Quit-on-close spares apps whose job outlives their window** — FluidVoice, the mines VM
+  in Fusion, OrbStack, 1Password, the VPN, music, chat. Unlike the features, that list
+  (`autoQuitExceptions`) is merged in on every `just dr`, add-only, so one added in
+  Vorssaint stays. Menu-bar apps are exempt upstream already.
 
 Permissions are still manual — TCC is outside nix's reach. See
 `nixos/docs/darwin-post-deploy.md`.
