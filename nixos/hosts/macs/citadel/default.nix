@@ -1,4 +1,5 @@
 {
+  config,
   inputs,
   vars,
   lib,
@@ -126,6 +127,9 @@
   home-manager.users.${vars.user.name} = {
     # Personal metered spend, never from work.
     custom.programs.pi.deepseek = false;
+    # Work machine: its own oMLX, never the home lab's gateway.
+    custom.programs.pi.gateway = false;
+    custom.programs.pi.defaultModel = "${config.services.omlxDeploy.lightModel.dir}:lab";
 
     # Exclude moonpi (cwd error on this host)
     #
