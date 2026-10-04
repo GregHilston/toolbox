@@ -117,7 +117,10 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
       Allow at the Keychain prompt). FluidVoice's bundled model (Fluid Intelligence) is
       refused by both Command and Write Mode, so untick **Sync** on the Command Mode page
       and on the **Edit model** row under AI Enhancement → Prompt Profiles, and pick oMLX
-      in each. Command Mode asks before running each command; keep it so.
+      in each. Give the Edit model `Qwen3.6-35B-A3B-4bit:lab` (thinking off): measured
+      0.4 s per rewrite against 10.6 s with thinking on, at nearly the same quality; the
+      2B Qwen3.5 was twice as fast but unusable. Command Mode asks before running each
+      command; keep it so.
 - [ ] **Fluid-1** (dictation polish) - AI Enhancement → Fluid Intelligence: download and
       verify Fluid-1, then make it the global provider. Do the two Sync steps above first, or
       Write Mode follows it and refuses to run. Check with
