@@ -711,7 +711,7 @@ in {
     };
   };
 
-  # Which models dungeon's and moria's oMLX hold; home-lab's LLM Gateway dashboard.
+  # Which models each Mac's oMLX holds; home-lab's LLM Gateway dashboard.
   launchd.user.agents.omlx-textfile = {
     serviceConfig = {
       ProgramArguments = [
