@@ -711,6 +711,20 @@ in {
     };
   };
 
+  # Which models dungeon's and moria's oMLX hold; home-lab's LLM Gateway dashboard.
+  launchd.user.agents.omlx-textfile = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/usr/bin/python3"
+        "/Users/${vars.user.name}/Git/toolbox/bin/omlx-textfile.py"
+      ];
+      RunAtLoad = true;
+      StartInterval = 60;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/omlx-textfile.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/omlx-textfile.log";
+    };
+  };
+
   # ---------------------------------------------------------------------------
   # Frigate object detection on the Apple Neural Engine.
   # Frigate runs in OrbStack's Linux VM, which can't reach the ANE — so the
