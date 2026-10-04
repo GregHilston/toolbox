@@ -67,7 +67,8 @@
       exec /usr/bin/open -a "$APP"
     fi
     /usr/bin/pgrep -xq FluidVoice && exit 0
-    exec /usr/bin/open -g -j --env FLUID_SIMULATE_LOGIN_LAUNCH=1 -a "$APP"
+    # Not -j: a hidden app hides its overlay.
+    exec /usr/bin/open -g --env FLUID_SIMULATE_LOGIN_LAUNCH=1 -a "$APP"
   '';
 
   # Runs AS THE USER, from postActivation below.
@@ -84,14 +85,21 @@
       /usr/bin/defaults export "$DOMAIN" - | /usr/bin/plutil -extract "$1" raw -o - - 2>/dev/null | /usr/bin/base64 -d
     }
 
-    # Quit an app; fail if it lingers.
-    quit_app() {
-      /usr/bin/pgrep -xq "$2" || return 0
-      /usr/bin/osascript -e "quit app \"$1\"" || true
+    gone() {
       for _ in 1 2 3 4 5 6 7 8 9 10; do
-        /usr/bin/pgrep -xq "$2" || return 0
+        /usr/bin/pgrep -xq "$1" || return 0
         sleep 1
       done
+      return 1
+    }
+    # Quit politely, then SIGTERM: a wedged app ignores quit.
+    quit_app() {
+      /usr/bin/pgrep -xq "$2" || return 0
+      /usr/bin/osascript -e 'with timeout of 10 seconds' -e "tell application \"$1\" to quit" -e 'end timeout' || true
+      gone "$2" && return 0
+      echo "fluidvoice: $1 ignored quit; sending SIGTERM" >&2
+      /usr/bin/pkill -x "$2" || true
+      gone "$2" && return 0
       echo "fluidvoice: $1 did not quit" >&2
       return 1
     }
