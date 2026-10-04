@@ -285,6 +285,15 @@ in {
       fi
     '';
 
+    # Firefox's own switch; AXEnhancedUserInterface slows AeroSpace.
+    system.defaults.CustomUserPreferences."org.mozilla.firefox" = {
+      EnterprisePoliciesEnabled = true;
+      Preferences."accessibility.force_disabled" = {
+        Value = -1;
+        Status = "default";
+      };
+    };
+
     # A real daemon, so KeepAlive, unlike the open -a agent.
     launchd.user.agents.fluidvoice-ax.serviceConfig = {
       ProgramArguments = [axBin] ++ cfg.accessibleApps;
