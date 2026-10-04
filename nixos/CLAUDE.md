@@ -239,8 +239,68 @@ What it does, all from `postActivation` as the user (the Vorssaint shape, same r
   won't quit prints a warning and never blocks FluidVoice.
 
 What stays manual: permissions, and downloading Parakeet and Fluid-1, both from the app
-(`docs/darwin-post-deploy.md`). Selected text in some apps (Firefox, Obsidian) never reaches
-Write Mode: 1.6.9 reads it only through Accessibility (upstream #259).
+(`docs/darwin-post-deploy.md`).
+
+### Write Mode in Electron apps: `fluidvoice-ax`
+
+**Symptom.** Select text in Slack, Obsidian or VS Code, say "make this more formal", and
+FluidVoice *types* "Please provide the text you would like me to make more formal." at the
+cursor instead of replacing the selection. `~/Library/Logs/Fluid/Fluid.log` says:
+
+```
+[TextSelectionService] Frontmost app fallback could not resolve focused element
+[TextSelectionService] Selection capture failed: no selected text found
+[ContentView] Rewrite mode triggered, text captured: false
+```
+
+**Why.** FluidVoice 1.6.9 gets the selection one way only: the Accessibility API, reading
+`kAXSelectedTextAttribute` off the focused element (`Services/TextSelectionService.swift`).
+There is no clipboard fallback (upstream #220) and the bug is open upstream (#259, where
+Obsidian fails and TextEdit works). Native Cocoa apps always answer. **Electron apps do not**:
+Chromium builds its accessibility tree only once an assistive tool asks for it, and on macOS
+the ask is setting the attribute `AXManualAccessibility = true` on the app's AXApplication
+element — Electron's documented switch for third-party assistive tech. VoiceOver flips it
+for itself; FluidVoice never does. With no tree, there is no focused element, so Write Mode
+gets no text and the model, correctly, asks for some.
+
+**What.** `modules/darwin/fluidvoice-ax.swift`, ~60 lines: it sets `AXManualAccessibility`
+on every app in `services.fluidvoice.accessibleApps` (default Slack, Obsidian, VS Code) when
+it starts, and again whenever one launches or comes to the front. Re-setting is a no-op, and
+doing it on activation covers an app that was not ready at launch. It logs only changes, to
+`~/Library/Logs/fluidvoice-ax.log`, one line per app pid with the AX result code: `0` worked,
+`-25211` means it lacks the Accessibility permission.
+
+**How it is built and run**, and why each piece:
+
+- **Compiled during activation with `/usr/bin/swiftc`** into
+  `~/Library/Application Support/fluidvoice-ax/fluidvoice-ax`, only when the source's store
+  path changes (recorded beside it in `source`). A **stable path** because macOS keys the
+  Accessibility grant on the binary: a nix store path would change and silently drop it. An
+  ad-hoc-signed binary is also keyed on its hash, so **editing the source means granting
+  Accessibility again** (the first run re-prompts). Needs the Command Line Tools; without them
+  activation warns and skips, rather than letting the `swiftc` shim pop an install dialog.
+- **A `KeepAlive` launchd agent**, `org.nixos.fluidvoice-ax`, unlike the `open -a` agents
+  above, because this is a real long-running process rather than a launcher. On a first deploy
+  the agent loads before activation builds the binary; `ThrottleInterval = 30` keeps launchd's
+  retries quiet until it exists, and activation `kickstart -k`s it after each build.
+- **The Accessibility prompt** comes from the binary itself
+  (`AXIsProcessTrustedWithOptions` with the prompt option), which also adds it to the list in
+  System Settings → Privacy & Security → Accessibility.
+
+**Costs.** An Electron app with its accessibility tree on uses somewhat more CPU and memory,
+the same as it would under VoiceOver. VS Code additionally needs
+`"editor.accessibilitySupport": "on"` in its settings (not managed here on macOS) so Monaco
+mirrors the selection into the hidden text area the tree exposes; with Vim mode on, the
+reply is pasted after the selection rather than over it, since Vim owns the keystroke.
+
+**Debugging.** `tail -f ~/Library/Logs/fluidvoice-ax.log` shows what it set;
+`launchctl print gui/$(id -u)/org.nixos.fluidvoice-ax` shows whether it runs. If an app still
+fails, bring it to the front once (that re-applies) and check Fluid.log for
+`text captured: true`.
+
+**Measured on moria, 2026-10-04:** with the attribute set, Slack, Obsidian and VS Code all
+logged `text captured: true` and Write Mode rewrote the selection; without it, all three
+failed as above.
 
 ## PI WEB is the exception to the launchd rule above
 

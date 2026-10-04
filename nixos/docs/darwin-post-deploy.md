@@ -177,6 +177,14 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
       `tail -f ~/Library/Logs/Fluid/Fluid.log | grep processTextWithAI` while dictating: it
       should say `provider=fluid-1`. Its licence is personal, non-commercial use only.
       Command Mode asks before running each command; keep it so.
+- [ ] **fluidvoice-ax** (moria, citadel) - allow it under System Settings → Privacy &
+      Security → Accessibility when it asks (it is `fluidvoice-ax` in the list). Without it,
+      Write Mode cannot read selected text in Slack, Obsidian or VS Code. Again after any
+      edit to `modules/darwin/fluidvoice-ax.swift`, since the grant is keyed on the binary.
+      Check with `tail ~/Library/Logs/fluidvoice-ax.log`: `-> 0` per app is working,
+      `-> -25211` is still waiting for the grant. For VS Code also set
+      `"editor.accessibilitySupport": "on"` in its settings. Why: `nixos/CLAUDE.md` →
+      "Write Mode in Electron apps".
 - [ ] **Handy** (moria, citadel) - after the first login following the deploy, quit it from
       the menu bar once. Its login item is still registered until that launch, which reads
       the `autostart_enabled = false` nix wrote and unregisters it. Until you quit it, it
