@@ -1,19 +1,6 @@
-// fluidvoice-ax: turn on accessibility in Electron apps, so FluidVoice's Write
-// Mode can read their selected text.
-//
+// fluidvoice-ax: turn on accessibility in Electron apps.
 // Usage: fluidvoice-ax <bundle-id>...
-//
-// Electron apps (Slack, Obsidian, VS Code) build no accessibility tree until an
-// assistive tool asks, by setting AXManualAccessibility on the app. FluidVoice
-// 1.6.9 never asks: it reads kAXSelectedTextAttribute off the focused element,
-// gets nothing, and Write Mode runs with no text ("Please provide the text...").
-// This asks for it, for the listed apps, at startup and every time one launches
-// or comes to the front. Setting it again is a no-op, and re-applying on
-// activation covers an app that reset it or was not ready at launch.
-//
-// It needs the Accessibility permission itself; until granted, every set fails
-// with kAXErrorAPIDisabled (-25211). The rationale lives in nixos/CLAUDE.md →
-// "FluidVoice".
+// Why and how: nixos/CLAUDE.md → "Write Mode in Electron apps".
 
 import AppKit
 import ApplicationServices
@@ -24,13 +11,13 @@ guard !bundleIDs.isEmpty else {
     exit(2)
 }
 
-// The prompt adds this binary to the Accessibility list.
+// The prompt lists it under Accessibility.
 let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
 if !AXIsProcessTrustedWithOptions([promptKey: true] as CFDictionary) {
     print("not trusted: allow \(CommandLine.arguments[0]) in System Settings → Privacy & Security → Accessibility")
 }
 
-// Last result per pid, so the log records changes only.
+// Per pid: log changes only.
 var lastResult: [pid_t: AXError] = [:]
 
 func enable(_ app: NSRunningApplication) {
