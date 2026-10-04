@@ -129,6 +129,12 @@ A new terminal on a Mac with FluidVoice prints a one-line key reminder, beside z
 Launching, permissions, and why the app's own "launch at login" stays off are all in
 `nixos/CLAUDE.md` → "Launching GUI apps at login", which owns this.
 
+Nix owns FluidVoice's model routing: Fluid-1 polishes dictation, oMLX serves Write and
+Command Mode. Write Mode can read a selection only through macOS Accessibility, which
+Electron apps and Firefox keep switched off: `fluidvoice-ax` turns it on in Slack, Obsidian
+and VS Code, and a Firefox policy does it for Firefox. All of it, with the reasons, is in
+`nixos/CLAUDE.md` → "FluidVoice".
+
 ## Menu Bar — no manager
 
 macOS 27 folds overflow icons behind a » button on its own, and it broke Ice, which

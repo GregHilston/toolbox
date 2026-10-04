@@ -302,6 +302,86 @@ fails, bring it to the front once (that re-applies) and check Fluid.log for
 logged `text captured: true` and Write Mode rewrote the selection; without it, all three
 failed as above.
 
+### Write Mode in Firefox: a Firefox policy, not `fluidvoice-ax`
+
+**Symptom.** The same "Please provide the text…" in Firefox. Probing Firefox's AXApplication
+element shows why: its focused element is the bare `AXWindow`, with nothing inside, until
+something turns Firefox's accessibility service on.
+
+**Why `fluidvoice-ax` cannot do it.** Firefox is not Electron: `AXManualAccessibility`
+returns `-25205` (attribute unsupported); the string appears nowhere in Gecko. Gecko decides
+in `accessible/mac/Platform.mm`:
+
+```cpp
+bool ShouldA11yBeEnabled() {
+  EPlatformDisabledState disabledState = PlatformDisabledState();
+  return (disabledState == ePlatformIsForceEnabled) ||
+         ((disabledState == ePlatformIsEnabled) && sA11yShouldBeEnabled);
+}
+```
+
+`sA11yShouldBeEnabled` is set only when an assistive tool sets **`AXEnhancedUserInterface`**
+on the app (VoiceOver's way), or reads `AXRole` on the app element, which Gecko answers by
+setting that same flag on itself (for Voice Control). It does not latch: every AX call
+re-checks, so clearing the flag hides the tree again. **That flag is the problem.** AppKit
+sees it too, and window managers that move windows through the Accessibility API (AeroSpace
+here) get animated, sluggish moves for any app that has it. Tested and rejected for that
+reason.
+
+**What we use instead.** `ePlatformIsForceEnabled` comes from the pref
+**`accessibility.force_disabled = -1`** (`accessible/base/nsAccessibilityService.cpp`), which
+turns the service on with `AXEnhancedUserInterface` left at 0. It is a supported setup:
+Mozilla's own macOS accessibility tests run with exactly this pref
+(`accessible/tests/browser/mac/browser.toml`). The name reads backwards; `-1` means
+"force enabled", `0` "on demand", `1` "force disabled".
+
+**How it is applied.** As a Firefox enterprise policy in the **user** defaults domain, from
+`fluidvoice.nix`:
+
+```nix
+system.defaults.CustomUserPreferences."org.mozilla.firefox" = {
+  EnterprisePoliciesEnabled = true;
+  Preferences."accessibility.force_disabled" = { Value = -1; Status = "default"; };
+};
+```
+
+Firefox's macOS policy reader (`xpcom/base/nsMacPreferencesReader.mm`) reads
+`[NSUserDefaults standardUserDefaults]` for `org.mozilla.firefox`, which includes
+`~/Library/Preferences`, once `EnterprisePoliciesEnabled` is true; `Preferences` may set any
+`accessibility.*` pref. Why this route and not the others:
+
+- **Not `user.js` in the profile**: the profile folder's name is random per Mac, and macOS
+  privacy protection denied a terminal even `ls` of `~/Library/Application Support/Firefox`.
+- **Not `policies.json` in `Firefox.app/Contents/Resources/distribution/`**: a Firefox update
+  replaces the app bundle and the file with it. (macOS Firefox does not read
+  `/Library/Application Support/Mozilla/policies`.)
+- `Status = "default"` sets the default only, so `about:config` can still change it;
+  `"locked"` would forbid that.
+
+**Costs and gotchas.**
+- Firefox reads policies at startup only: **quit and reopen Firefox once** after the first
+  deploy. Check `about:policies` (Active → `Preferences`) and `about:config` for the pref.
+- Any policy makes Firefox say "Your browser is being managed by your organization" at the
+  top of Settings. That is this policy, nothing else.
+- The accessibility service then runs all the time, as under VoiceOver: some memory, and
+  slower pages under heavy DOM churn.
+- The value must be a real integer. `defaults write … '{ Value = -1; }'` stores the string
+  `"-1"`, which does not work; nix-darwin writes `<integer>`.
+- Removing the nix lines does **not** remove the keys (`CustomUserPreferences` never
+  deletes). Undo with `defaults delete org.mozilla.firefox EnterprisePoliciesEnabled` and
+  `defaults delete org.mozilla.firefox Preferences`. Never delete the whole domain; Firefox
+  keeps window state there.
+- **Do not read `AXRole` on Firefox's app element** in anything we write: Gecko answers by
+  setting `AXEnhancedUserInterface` on itself, policy or not. FluidVoice's own typing code
+  can (its recursive search starts at the app element), but only on an Accessibility-insertion
+  fallback that never ran here: it types by pasting.
+
+**Tested 2026-10-04** on a throwaway Firefox launched through LaunchServices
+(`open -n -g -a Firefox --args -no-remote -profile <tmp>`; launched as a child of a terminal
+it cannot read its own profile folder and shows "Profile Missing") with only the policy in
+place: the page's `<textarea>` was reachable as `AXTextArea`, its selected text read back,
+and `AXEnhancedUserInterface` stayed 0. `about:policies` listed it as active.
+
 ## PI WEB is the exception to the launchd rule above
 
 Every other long-running user service here gets a nix-declared

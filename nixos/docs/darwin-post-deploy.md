@@ -185,6 +185,12 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
       `-> -25211` is still waiting for the grant. For VS Code also set
       `"editor.accessibilitySupport": "on"` in its settings. Why: `nixos/CLAUDE.md` →
       "Write Mode in Electron apps".
+- [ ] **Firefox** (moria, citadel) - quit and reopen it once after the first deploy, so it
+      reads the accessibility policy nix set (it reads policies only at startup).
+      `about:policies` should list `Preferences` → `accessibility.force_disabled`. Settings
+      will now say the browser "is being managed by your organization"; that is this policy.
+      Why, and why not the simpler `AXEnhancedUserInterface`: `nixos/CLAUDE.md` → "Write
+      Mode in Firefox".
 - [ ] **Handy** (moria, citadel) - after the first login following the deploy, quit it from
       the menu bar once. Its login item is still registered until that launch, which reads
       the `autostart_enabled = false` nix wrote and unregisters it. Until you quit it, it
