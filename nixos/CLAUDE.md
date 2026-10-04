@@ -173,7 +173,10 @@ hands-free recording, a hold is push-to-talk. A hands-free Command or Write capt
 the same chord; a plain Caps Lock tap switches it to dictation instead. Escape cancels.
 Handy stays installed but no longer starts at login or owns F18; Linux hosts keep Handy.
 
-What it does, all from `postActivation` as the user (the Vorssaint shape, same reasons):
+What it does, all from `postActivation` as the user (the Vorssaint shape, same reasons).
+The logic is `modules/darwin/fluidvoice-activate.sh`, a plain bash file; `fluidvoice.nix`
+only passes it values in the environment, so `tests/test_fluidvoice_activate.py` runs the
+real script against a scratch defaults domain with `pgrep`/`osascript`/`pkill` stubbed.
 
 - **Seeds hotkeys once**, gated on `PrimaryDictationShortcuts` being absent in the
   `com.FluidApp.app` domain, so a hotkey changed in the app is never overwritten. Shortcuts
@@ -205,7 +208,8 @@ What it does, all from `postActivation` as the user (the Vorssaint shape, same r
   memory and writes them back. `quit_app` asks with a 10 s AppleEvent timeout, then sends
   SIGTERM. A plain `quit app` waited out AppleScript's default 120 s on a FluidVoice wedged
   after a Command Mode run (hotkeys arrived, recording never started) and the deploy applied
-  nothing.
+  nothing. If it survives even SIGTERM, only the step that needed the quit is skipped, with a
+  warning; Handy, `fluidvoice-ax` and the relaunch still run.
 - **Turns AI streaming off** (`EnableAIStreaming`, no UI toggle in v1.6.9). FluidVoice's
   streaming chat-completions parser keeps only `toolCalls.first` and concatenates every
   call's arguments regardless of `index`, so when Qwen makes two tool calls at once
@@ -230,8 +234,18 @@ What it does, all from `postActivation` as the user (the Vorssaint shape, same r
     `~/.omlx/settings.json` and goes into `SavedProviders[].apiKey`; the app moves it into its
     Keychain item itself at launch (`scrubSavedProviderAPIKeys`), so nothing touches the
     Keychain and no access prompt appears.
-  - A FluidVoice that survives even SIGTERM fails the step with "did not quit" and nothing
-    is written; deploy again once it is gone.
+  - **Waits for onboarding.** Onboarding writes the provider keys itself, so while
+    `OnboardingCompleted` is not `1` the step only says so: a fresh Mac gets its routing on
+    the first deploy *after* onboarding.
+  - **Writes nothing unless every value computed.** The providers, prompt configs and
+    fingerprint are built before the app is quit; if `jq` cannot parse what is stored, the
+    step is skipped rather than writing an empty value over it.
+  - Compares providers sorted by id, so one added in the app is kept and causes no drift.
+  - If the app cannot store the key (a locked Keychain), it leaves it in `SavedProviders`,
+    and every deploy sees drift and quits the app again. `defaults read com.FluidApp.app
+    SavedProviders` showing a non-empty `apiKey` after a launch is the tell.
+  - The model is `services.omlxDeploy.lightModel.dir`, so a new light model reaches
+    FluidVoice too (its `:lab` profile must exist for it in `model_profiles.json`).
 - **Adds Custom Dictionary entries** on every activation, add-only by replacement, for
   jargon both models mangle ("quinn" → Qwen, "o mlx" → oMLX). Plain regex on the
   transcript, before any model.
@@ -274,11 +288,15 @@ doing it on activation covers an app that was not ready at launch. It logs only 
 
 - **Compiled during activation with `/usr/bin/swiftc`** into
   `~/Library/Application Support/fluidvoice-ax/fluidvoice-ax`, only when the source's store
-  path changes (recorded beside it in `source`). A **stable path** because macOS keys the
-  Accessibility grant on the binary: a nix store path would change and silently drop it. An
-  ad-hoc-signed binary is also keyed on its hash, so **editing the source means granting
-  Accessibility again** (the first run re-prompts). Needs the Command Line Tools; without them
-  activation warns and skips, rather than letting the `swiftc` shim pop an install dialog.
+  path changes (recorded beside it in `source`). Outside the store so the entry in the
+  Accessibility list keeps one path across rebuilds. **The grant itself does not survive an
+  edit**: the binary is ad-hoc signed, so macOS ties the grant to its hash, and a rebuilt
+  binary can show as allowed in System Settings while every set returns `-25211`. After
+  editing the Swift source, remove `fluidvoice-ax` from the Accessibility list with "−", let
+  it prompt again (or add it with "+"), and check the log. A stable grant would need signing
+  with a real certificate; not worth it for a file that rarely changes. Needs the Command
+  Line Tools; without them activation warns and skips, rather than letting the `swiftc` shim
+  pop an install dialog.
 - **A `KeepAlive` launchd agent**, `org.nixos.fluidvoice-ax`, unlike the `open -a` agents
   above, because this is a real long-running process rather than a launcher. On a first deploy
   the agent loads before activation builds the binary; `ThrottleInterval = 30` keeps launchd's
@@ -363,6 +381,9 @@ Firefox's macOS policy reader (`xpcom/base/nsMacPreferencesReader.mm`) reads
   deploy. Check `about:policies` (Active → `Preferences`) and `about:config` for the pref.
 - Any policy makes Firefox say "Your browser is being managed by your organization" at the
   top of Settings. That is this policy, nothing else.
+- **A managed Mac can override it.** If an MDM profile already pushes `org.mozilla.firefox`
+  (look in `/Library/Managed Preferences`), its `Preferences` key replaces ours whole and the
+  pref never applies. Check `about:policies` on citadel after the first deploy.
 - The accessibility service then runs all the time, as under VoiceOver: some memory, and
   slower pages under heavy DOM churn.
 - The value must be a real integer. `defaults write … '{ Value = -1; }'` stores the string
@@ -381,6 +402,45 @@ Firefox's macOS policy reader (`xpcom/base/nsMacPreferencesReader.mm`) reads
 it cannot read its own profile folder and shows "Profile Missing") with only the policy in
 place: the page's `<textarea>` was reachable as `AXTextArea`, its selected text read back,
 and `AXEnhancedUserInterface` stayed 0. `about:policies` listed it as active.
+
+### Making Write Mode work in another app ("foo")
+
+Write Mode works in an app exactly when the app's focused element answers
+`kAXSelectedTextAttribute`. Most apps fall into one of four kinds, and each kind has a known
+fix. Steps:
+
+1. **Try it and read the log.** Select text in foo, use Write Mode, then
+   `grep -E 'Captured recording app context|text captured' ~/Library/Logs/Fluid/Fluid.log | tail -2`.
+   `text captured: true` means foo already works. The context line gives foo's bundle id
+   (also `osascript -e 'id of app "Foo"'`).
+2. **Find out what kind of app foo is.**
+   `ls "/Applications/Foo.app/Contents/Frameworks" | grep -i -E 'electron|chromium|cef'`
+   finds Electron (and Chromium-embedding) apps. A Gecko app (Firefox, Thunderbird,
+   Zen) has `XUL.framework` there.
+3. **Probe it** with a few lines of Swift (from a terminal that has Accessibility): with foo
+   in front and text selected, read `AXFocusedUIElement` off
+   `AXUIElementCreateApplication(pid)`, then that element's `AXRole` and `AXSelectedText`.
+   Then set the candidate switch below and read again. The probes used to work all this out
+   were throwaway; `fluidvoice-ax.swift` is the reference for the calls.
+4. **Apply the fix for its kind:**
+
+| Kind | Symptom | Fix | Effort |
+|---|---|---|---|
+| Native Cocoa (TextEdit, Notes, Mail) | already works | none | none |
+| **Electron** (Slack, Obsidian, VS Code, Discord, Notion, Linear…) | focused element missing (`-25212`) | add its bundle id to `services.fluidvoice.accessibleApps` and deploy; `fluidvoice-ax` picks it up | one line |
+| **Gecko** (Firefox, Thunderbird, Zen) | focused element is a bare `AXWindow` | a policy setting `accessibility.force_disabled = -1` in that app's own defaults domain, like the Firefox block in `fluidvoice.nix` (Thunderbird: `org.mozilla.thunderbird`) | a few lines; test `about:policies` |
+| **Chrome and other Chromium browsers** (Chrome, Arc, Brave, Edge) | like Electron | try adding the bundle id to `accessibleApps` first: Chromium honours `AXManualAccessibility` too. If that fails, the browser's own flag `--force-renderer-accessibility` | one line, maybe more |
+| Custom-drawn UI (terminals that draw their own text, games, some Java and Qt apps) | focused element exists but has no `AXSelectedText` | nothing outside the app can fix it; copy the text and use Write Mode with no selection, or wait for FluidVoice's clipboard fallback (upstream #220) | not fixable here |
+
+5. **Never use `AXEnhancedUserInterface`** to turn an app's accessibility on, even though it
+   works on most apps (it is what VoiceOver sets). Window managers, AeroSpace here, move and
+   resize any app that has it sluggishly. Reading `AXRole` on an app's *application* element
+   can make Gecko set it on itself, so a probe should read roles on focused elements only.
+6. **Write it down**: add the app to the tables and notes here, and to the post-deploy list if
+   it needs a manual step.
+
+For Electron and Chromium apps, accessibility costs the app some CPU and memory while on, the
+same as running it under VoiceOver.
 
 ## PI WEB is the exception to the launchd rule above
 

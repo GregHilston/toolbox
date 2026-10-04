@@ -172,15 +172,17 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
       > Starting it is *not* a manual step: `modules/darwin/fluidvoice.nix` launches it at
       > login (`launchctl list | grep org.nixos.fluidvoice`).
 - [ ] **Fluid-1** (dictation polish) - AI Enhancement → Fluid Intelligence: download and
-      verify it. Nix already routes dictation to it, and Write and Command Mode to oMLX
+      verify it. On a fresh Mac, run `just dr <host>` once more after onboarding: the routing
+      waits until onboarding is done. Nix already routes dictation to it, and Write and Command Mode to oMLX
       (`nixos/CLAUDE.md` → "FluidVoice"); oMLX's key comes from `just secrets`. Check with
       `tail -f ~/Library/Logs/Fluid/Fluid.log | grep processTextWithAI` while dictating: it
       should say `provider=fluid-1`. Its licence is personal, non-commercial use only.
       Command Mode asks before running each command; keep it so.
 - [ ] **fluidvoice-ax** (moria, citadel) - allow it under System Settings → Privacy &
       Security → Accessibility when it asks (it is `fluidvoice-ax` in the list). Without it,
-      Write Mode cannot read selected text in Slack, Obsidian or VS Code. Again after any
-      edit to `modules/darwin/fluidvoice-ax.swift`, since the grant is keyed on the binary.
+      Write Mode cannot read selected text in Slack, Obsidian or VS Code. After any edit to
+      `modules/darwin/fluidvoice-ax.swift`, remove it from that list with "−" and allow it
+      again: the grant is tied to the binary's hash and can look allowed while it is not.
       Check with `tail ~/Library/Logs/fluidvoice-ax.log`: `-> 0` per app is working,
       `-> -25211` is still waiting for the grant. For VS Code also set
       `"editor.accessibilitySupport": "on"` in its settings. Why: `nixos/CLAUDE.md` →
