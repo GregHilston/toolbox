@@ -171,21 +171,12 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
       shows: nix seeded them (F18 dictate, F19 Command Mode, F20 Write Mode). Leave "Launch at login" off.
       > Starting it is *not* a manual step: `modules/darwin/fluidvoice.nix` launches it at
       > login (`launchctl list | grep org.nixos.fluidvoice`).
-- [ ] **AI provider** (Command and Write Mode) - Settings → AI: add a custom OpenAI-compatible provider,
-      base URL `http://localhost:8000/v1`, API key from 1Password `Infra/oMLX/api_key`,
-      model `Qwen3.6-35B-A3B-4bit` (oMLX's light model), and verify it (choose Always
-      Allow at the Keychain prompt). FluidVoice's bundled model (Fluid Intelligence) is
-      refused by both Command and Write Mode, so untick **Sync** on the Command Mode page
-      and on the **Edit model** row under AI Enhancement → Prompt Profiles, and pick oMLX
-      in each. Give the Edit model `Qwen3.6-35B-A3B-4bit:lab` (thinking off): measured
-      0.4 s per rewrite against 10.6 s with thinking on, at nearly the same quality; the
-      2B Qwen3.5 was twice as fast but unusable. Command Mode asks before running each
-      command; keep it so.
 - [ ] **Fluid-1** (dictation polish) - AI Enhancement → Fluid Intelligence: download and
-      verify Fluid-1, then make it the global provider. Do the two Sync steps above first, or
-      Write Mode follows it and refuses to run. Check with
+      verify it. Nix already routes dictation to it, and Write and Command Mode to oMLX
+      (`nixos/CLAUDE.md` → "FluidVoice"); oMLX's key comes from `just secrets`. Check with
       `tail -f ~/Library/Logs/Fluid/Fluid.log | grep processTextWithAI` while dictating: it
       should say `provider=fluid-1`. Its licence is personal, non-commercial use only.
+      Command Mode asks before running each command; keep it so.
 - [ ] **Handy** (moria, citadel) - after the first login following the deploy, quit it from
       the menu bar once. Its login item is still registered until that launch, which reads
       the `autostart_enabled = false` nix wrote and unregisters it. Until you quit it, it

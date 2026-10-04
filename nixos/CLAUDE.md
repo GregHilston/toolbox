@@ -204,22 +204,35 @@ What it does, all from `postActivation` as the user (the Vorssaint shape, same r
   Command Mode fails with "Invalid response from LLM". The non-streaming parser reads them
   all and Command Mode runs one per step. Still unfixed upstream as of 2026-10-03; Write
   Mode and Command Mode replies now arrive whole instead of word by word.
-- **Does not choose the dictation model; that stays manual.** Fluid-1 is the pick. Measured
-  on moria, 2026-10-03: 0.06 s warm against 0.6 s for Qwen3.6 `:lab`, the same 88% usable
-  over 69 cases, and no stall behind a long pi prefill (worst 1.1 s against 85 s). Qwen did
-  better only on corrections (36/36 against 30/36), and took 9–22 s with thinking on. v1.6.9
-  runs Fluid-1 only as the *global* provider with its own prompt selected: the post-processing
-  gate (`DictationAIPostProcessingGate`) refuses it as a per-prompt provider, and the
-  selection's id is not public, so nix cannot set it reliably.
+- **Owns the model routing, on every deploy** (in-app edits to these revert). Only when a
+  value drifts does it quit FluidVoice, write, and relaunch. Values come from the 1.6.9
+  source and its binary, and were confirmed live on moria, 2026-10-04:
+  - Dictation on Fluid-1: `SelectedProviderID = fluid-1` plus `SelectedDictationPromptID =
+    __FLUID_1__`, the shipped id the startup normaliser keeps (the public source's
+    `__PRIVATE_AI_PROVIDER__` is deleted on launch). The post-processing gate refuses Fluid-1
+    as a per-prompt provider, so the default prompt's own provider/model is blanked: it
+    otherwise outranks the global one. Measured 2026-10-03: 0.06 s warm against 0.6 s for
+    Qwen3.6 `:lab`, the same 88% usable over 69 cases, no stall behind a long pi prefill
+    (worst 1.1 s against 85 s); Qwen did better only on corrections (36/36 against 30/36).
+  - Write and Command Mode unsynced (Fluid-1 refuses both) on an oMLX provider with the fixed
+    id `omlx`. Write Mode gets `:lab`: 0.42 s per rewrite against 10.6 s with thinking on, 44/45
+    usable graded blind; Qwen3.5-2B was 0.20 s but 12/45.
+  - The provider is "verified" by writing `VerifiedProviderFingerprints["custom:omlx"] =
+    sha256("<baseURL>|<key>")`, the app's own check. The key comes from
+    `~/.omlx/settings.json` and goes into `SavedProviders[].apiKey`; the app moves it into its
+    Keychain item itself at launch (`scrubSavedProviderAPIKeys`), so nothing touches the
+    Keychain and no access prompt appears.
+  - A FluidVoice that will not quit, say mid Command-Mode confirmation, fails the step with
+    "did not quit" and nothing is written; deploy again once it is idle.
 - **Adds Custom Dictionary entries** on every activation, add-only by replacement, for
   jargon both models mangle ("quinn" → Qwen, "o mlx" → oMLX). Plain regex on the
   transcript, before any model.
 - **Handy is best-effort and runs after the seed**, so a corrupt Handy store or a Handy that
   won't quit prints a warning and never blocks FluidVoice.
 
-Command Mode needs a chat provider; FluidVoice's bundled model is refused for it. API keys
-live in the Keychain and each provider must pass the app's own verify step, so pointing it at
-local oMLX is manual — `docs/darwin-post-deploy.md`.
+What stays manual: permissions, and downloading Parakeet and Fluid-1, both from the app
+(`docs/darwin-post-deploy.md`). Selected text in some apps (Firefox, Obsidian) never reaches
+Write Mode: 1.6.9 reads it only through Accessibility (upstream #259).
 
 ## PI WEB is the exception to the launchd rule above
 

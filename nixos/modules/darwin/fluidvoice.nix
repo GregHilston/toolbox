@@ -28,6 +28,18 @@
   # Measured on moria: F20 arrives without fn.
   write = builtins.toJSON (shortcut f20 0);
 
+  # Shipped ids, read from the binary.
+  fluid1 = "fluid-1";
+  fluid1Prompt = "__FLUID_1__";
+
+  # A fixed id, so every host matches.
+  omlx = {
+    id = "omlx";
+    baseURL = "http://localhost:8000/v1";
+    models = [lightModel "${lightModel}:lab"];
+  };
+  lightModel = "Qwen3.6-35B-A3B-4bit";
+
   # Jargon Parakeet and cleanup models mangle.
   dictionary = [
     {
@@ -130,6 +142,69 @@
       fi
     fi
 
+    # Enforced every deploy; in-app edits revert.
+    JQ=${pkgs.jq}/bin/jq
+    KEY="$($JQ -r '.auth.api_key // empty' "/Users/${user}/.omlx/settings.json" 2>/dev/null || true)"
+    providers() {
+      CURRENT="$(read_data SavedProviders)"
+      printf '%s' "''${CURRENT:-"[]"}" | $JQ -cS --arg key "$1" --argjson p '${builtins.toJSON omlx}' \
+        '[.[] | select(.id != $p.id and .baseURL != $p.baseURL)] + [$p + {name: "oMLX", apiKey: $key}]'
+    }
+    fingerprints() {
+      CURRENT="$(read_data VerifiedProviderFingerprints)"
+      FP="$(printf '%s' "${omlx.baseURL}|$KEY" | /usr/bin/shasum -a 256 | /usr/bin/cut -d' ' -f1)"
+      printf '%s' "''${CURRENT:-"{}"}" | $JQ -cS --arg fp "$FP" '.["custom:${omlx.id}"] = $fp'
+    }
+    # Its own model would outrank Fluid-1.
+    prompt_configs() {
+      CURRENT="$(read_data DictationPromptConfigurations)"
+      printf '%s' "''${CURRENT:-"{}"}" | $JQ -cS \
+        'if has("__default__") then .__default__ += {providerID: "", modelName: ""} else . end'
+    }
+    STRINGS="
+    SelectedProviderID=${fluid1}
+    SelectedDictationPromptID=${fluid1Prompt}
+    RewriteModeSelectedProviderID=${omlx.id}
+    RewriteModeSelectedModel=${lightModel}:lab
+    CommandModeSelectedProviderID=${omlx.id}
+    CommandModeSelectedModel=${lightModel}
+    "
+    # Fluid-1 refuses Write and Command Mode.
+    BOOLS="RewriteModeLinkedToGlobal CommandModeLinkedToGlobal"
+
+    drifted() {
+      for pair in $STRINGS; do
+        [ "$(/usr/bin/defaults read "$DOMAIN" "''${pair%%=*}" 2>/dev/null)" = "''${pair#*=}" ] || return 0
+      done
+      for k in $BOOLS; do
+        [ "$(/usr/bin/defaults read "$DOMAIN" "$k" 2>/dev/null)" = 0 ] || return 0
+      done
+      [ "$(read_data SavedProviders | $JQ -cS . 2>/dev/null)" = "$(providers "")" ] || return 0
+      [ "$(read_data DictationPromptConfigurations | $JQ -cS . 2>/dev/null)" = "$(prompt_configs)" ] || return 0
+      [ -z "$KEY" ] || [ "$(read_data VerifiedProviderFingerprints | $JQ -cS . 2>/dev/null)" = "$(fingerprints)" ] || return 0
+      return 1
+    }
+
+    if [ -z "$KEY" ]; then
+      echo "fluidvoice: no oMLX key in ~/.omlx/settings.json (run just secrets); Write and Command Mode stay unverified" >&2
+    fi
+    if drifted; then
+      quit_app FluidVoice FluidVoice
+      echo "fluidvoice: applying managed settings (Fluid-1 dictation, oMLX for Write and Command Mode)"
+      for pair in $STRINGS; do
+        /usr/bin/defaults write "$DOMAIN" "''${pair%%=*}" -string "''${pair#*=}"
+      done
+      for k in $BOOLS; do
+        /usr/bin/defaults write "$DOMAIN" "$k" -bool false
+      done
+      # The app moves this into Keychain.
+      /usr/bin/defaults write "$DOMAIN" SavedProviders -data "$(hex "$(providers "$KEY")")"
+      /usr/bin/defaults write "$DOMAIN" DictationPromptConfigurations -data "$(hex "$(prompt_configs)")"
+      if [ -n "$KEY" ]; then
+        /usr/bin/defaults write "$DOMAIN" VerifiedProviderFingerprints -data "$(hex "$(fingerprints)")"
+      fi
+    fi
+
     # Best effort. `if` disables set -e here.
     if [ -f "$HANDY_STORE" ] && ! (
       UPDATED="$(${pkgs.jq}/bin/jq '
@@ -151,7 +226,8 @@
   '';
 in {
   options.services.fluidvoice.enable = lib.mkEnableOption ''
-    FluidVoice on this Darwin host: the cask, a one-time hotkey seed, taking
+    FluidVoice on this Darwin host: the cask, a one-time hotkey seed, its
+    model routing (Fluid-1 dictation, oMLX for Write and Command Mode), taking
     F18 and launch-at-login from Handy, and an `open -a` login agent
   '';
 
