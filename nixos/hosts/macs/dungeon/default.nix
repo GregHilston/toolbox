@@ -356,6 +356,21 @@ in {
     };
   };
 
+  # Unraid array disk health → node_exporter textfile (home-lab scripts/unraid-disk-metrics.sh).
+  # Reads Unraid's own caches over SSH, never smartctl, so it cannot wake a sleeping disk.
+  launchd.user.agents.unraid-disk-metrics = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/unraid-disk-metrics.sh"
+      ];
+      RunAtLoad = true;
+      StartInterval = 600;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/unraid-disk-metrics.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/unraid-disk-metrics.log";
+    };
+  };
+
   # Detect & auto-heal a gluetun tunnel that is broken while Docker insists it is healthy.
   #
   # Incident 2026-08-14: a mains blip took the WAN down; gluetun rode it out by cycling
