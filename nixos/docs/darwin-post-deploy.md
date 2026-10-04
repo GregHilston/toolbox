@@ -79,6 +79,58 @@ things cannot be expressed in nix and the agent fails — loudly, nightly — wi
 
 Restore procedure and failure triage: home-lab `docs/runbooks/backup-tier1.md`.
 
+## Offsite backup of Unraid (dungeon only)
+The `backup-offsite` (04:30) and `backup-snapshot-probe` (09:00) launchd agents run home-lab
+`scripts/backup-offsite.sh` and `scripts/backup-snapshot-probe.sh`. They need nothing beyond
+Tier 1's prerequisites: `restic`, `SECRET_RESTIC_PASSWORD`, dungeon's key on Unraid and fob.
+B2 is optional and gated; setup in home-lab `docs/runbooks/backup-offsite.md` → Set up B2.
+
+Until `darwin-rebuild switch` can run (it needs sudo), install them by hand with the same
+plists nix would write. Then the next rebuild replaces them with identical ones.
+
+```bash
+for a in backup-offsite:4:30 backup-snapshot-probe:9:0; do
+  n=${a%%:*}; h=$(echo "$a" | cut -d: -f2); m=${a##*:}
+  f=~/Library/LaunchAgents/org.nixos.$n.plist
+  cat > "$f" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>org.nixos.$n</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>/Users/ghilston/Git/home-lab/scripts/$n.sh</string>
+	</array>
+	<key>RunAtLoad</key>
+	<false/>
+	<key>StandardErrorPath</key>
+	<string>/Users/ghilston/Library/Logs/$n.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/ghilston/Library/Logs/$n.log</string>
+	<key>StartCalendarInterval</key>
+	<array>
+		<dict>
+			<key>Hour</key>
+			<integer>$h</integer>
+			<key>Minute</key>
+			<integer>$m</integer>
+		</dict>
+	</array>
+</dict>
+</plist>
+EOF
+  chmod 444 "$f"
+  launchctl bootstrap gui/$(id -u) "$f"
+done
+launchctl list | grep -E 'backup-offsite|backup-snapshot-probe'
+```
+
+Check either by hand first: `cd ~/Git/home-lab && bash scripts/backup-offsite.sh --dry-run`
+and `bash scripts/backup-snapshot-probe.sh --dry-run`.
+
 ## Claude Remote Control (dungeon; moria on demand)
 The `claude-rc-<repo>` launchd agents (hosts/macs/dungeon/default.nix) serve toolbox,
 home-lab, ccs, notes and blurts-server to the Claude app through `bin/claude-rc.sh`. On moria, `rc` starts

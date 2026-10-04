@@ -440,6 +440,48 @@ in {
     };
   };
 
+  # Unraid's irreplaceable shares → encrypted restic repos on fob and B2.
+  # restic runs on Unraid; this only triggers and reports.
+  # Rationale: home-lab/docs/runbooks/backup-offsite.md.
+  launchd.user.agents.backup-offsite = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/backup-offsite.sh"
+      ];
+      # Starts a backup; never on rebuild. After Tier 1.
+      RunAtLoad = false;
+      StartCalendarInterval = [
+        {
+          Hour = 4;
+          Minute = 30;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/backup-offsite.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/backup-offsite.log";
+    };
+  };
+
+  # Newest snapshot of every backup repo → node_exporter textfile.
+  # Grafana alerts when one goes stale.
+  launchd.user.agents.backup-snapshot-probe = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/backup-snapshot-probe.sh"
+      ];
+      RunAtLoad = false;
+      StartCalendarInterval = [
+        {
+          Hour = 9;
+          Minute = 0;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/backup-snapshot-probe.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/backup-snapshot-probe.log";
+    };
+  };
+
   # Staggered by an hour so two scrapes don't share a minute through the same tunnel.
   # Uncanny is bimonthly and waits for an issue to finish releasing, so it is a no-op on
   # all but about six mornings a year — see its README.
