@@ -2,8 +2,8 @@
 """Write oMLX's loaded models and load for node_exporter's textfile collector.
 
 Asks each oMLX server which models sit in memory, how much they take against the
-ceiling, and how busy it is. One run covers dungeon and moria, so the LLM Gateway
-dashboard shows both. A sleeping moria writes omlx_up 0 and nothing else.
+ceiling, and how busy it is. One run covers dungeon, moria and citadel, so the LLM
+Gateway dashboard shows all three. A sleeping laptop writes omlx_up 0 and nothing else.
 
 The label is `server`, not `host`: Prometheus already sets host="dungeon" on
 everything node_exporter serves, and a clash would rename ours to exported_host.
@@ -18,7 +18,11 @@ import os
 import urllib.request
 from pathlib import Path
 
-SERVERS = {"dungeon": "http://localhost:8000", "moria": "http://100.115.155.85:8000"}
+SERVERS = {
+    "dungeon": "http://localhost:8000",
+    "moria": "http://100.115.155.85:8000",
+    "citadel": "http://100.93.190.106:8000",
+}
 TIMEOUT = 3
 
 
