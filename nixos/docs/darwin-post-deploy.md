@@ -80,8 +80,9 @@ things cannot be expressed in nix and the agent fails — loudly, nightly — wi
 Restore procedure and failure triage: home-lab `docs/runbooks/backup-tier1.md`.
 
 ## Offsite backup of Unraid (dungeon only)
-The `backup-offsite` (04:30) and `backup-snapshot-probe` (09:00) launchd agents run home-lab
-`scripts/backup-offsite.sh` and `scripts/backup-snapshot-probe.sh`. They need nothing beyond
+The `backup-offsite` (04:30), `backup-snapshot-probe` (09:00) and `backup-restore-drill`
+(the 1st of each month, 10:00) launchd agents run the home-lab scripts of the same names.
+They need nothing beyond
 Tier 1's prerequisites: `restic`, `SECRET_RESTIC_PASSWORD`, dungeon's key on Unraid and fob.
 B2 is optional and gated; setup in home-lab `docs/runbooks/backup-offsite.md` → Set up B2.
 
@@ -89,8 +90,9 @@ Until `darwin-rebuild switch` can run (it needs sudo), install them by hand with
 plists nix would write. Then the next rebuild replaces them with identical ones.
 
 ```bash
-for a in backup-offsite:4:30 backup-snapshot-probe:9:0; do
-  n=${a%%:*}; h=$(echo "$a" | cut -d: -f2); m=${a##*:}
+for a in backup-offsite:-:4:30 backup-snapshot-probe:-:9:0 backup-restore-drill:1:10:0; do
+  IFS=: read -r n d h m <<< "$a"
+  day=""; [ "$d" = - ] || day="<key>Day</key><integer>$d</integer>"
   f=~/Library/LaunchAgents/org.nixos.$n.plist
   cat > "$f" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -113,6 +115,7 @@ for a in backup-offsite:4:30 backup-snapshot-probe:9:0; do
 	<key>StartCalendarInterval</key>
 	<array>
 		<dict>
+			$day
 			<key>Hour</key>
 			<integer>$h</integer>
 			<key>Minute</key>
@@ -125,11 +128,12 @@ EOF
   chmod 444 "$f"
   launchctl bootstrap gui/$(id -u) "$f"
 done
-launchctl list | grep -E 'backup-offsite|backup-snapshot-probe'
+launchctl list | grep -E 'backup-offsite|backup-snapshot-probe|backup-restore-drill'
 ```
 
-Check either by hand first: `cd ~/Git/home-lab && bash scripts/backup-offsite.sh --dry-run`
-and `bash scripts/backup-snapshot-probe.sh --dry-run`.
+Check by hand first: `cd ~/Git/home-lab && bash scripts/backup-offsite.sh --dry-run`
+and `bash scripts/backup-snapshot-probe.sh --dry-run`. Each offsite repo is created once, by
+hand: `bash scripts/backup-offsite.sh --init fob` (and `--init b2` once B2 is set up).
 
 ## Claude Remote Control (dungeon; moria on demand)
 The `claude-rc-<repo>` launchd agents (hosts/macs/dungeon/default.nix) serve toolbox,

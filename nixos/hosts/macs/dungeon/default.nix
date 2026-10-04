@@ -482,6 +482,27 @@ in {
     };
   };
 
+  # Monthly: restore from every backup repo and verify it.
+  # Read-only (--no-lock); clear of 03:30 and 04:30.
+  launchd.user.agents.backup-restore-drill = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/backup-restore-drill.sh"
+      ];
+      RunAtLoad = false;
+      StartCalendarInterval = [
+        {
+          Day = 1;
+          Hour = 10;
+          Minute = 0;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/backup-restore-drill.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/backup-restore-drill.log";
+    };
+  };
+
   # Staggered by an hour so two scrapes don't share a minute through the same tunnel.
   # Uncanny is bimonthly and waits for an issue to finish releasing, so it is a no-op on
   # all but about six mornings a year — see its README.
