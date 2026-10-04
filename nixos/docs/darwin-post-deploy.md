@@ -134,6 +134,10 @@ launchctl list | grep -E 'backup-offsite|backup-snapshot-probe|backup-restore-dr
 Check by hand first: `cd ~/Git/home-lab && bash scripts/backup-offsite.sh --dry-run`
 and `bash scripts/backup-snapshot-probe.sh --dry-run`. Each offsite repo is created once, by
 hand: `bash scripts/backup-offsite.sh --init fob` (and `--init b2` once B2 is set up).
+Then run the restore drill once rather than waiting for the 1st (it skips repos with no
+snapshot yet): `bash scripts/backup-restore-drill.sh >> ~/Library/Logs/backup-restore-drill.log 2>&1`.
+Full checklist, including the one-time fob mountpoint step: home-lab
+`docs/runbooks/backup-offsite.md` → Deploy checklist.
 
 ## Claude Remote Control (dungeon; moria on demand)
 The `claude-rc-<repo>` launchd agents (hosts/macs/dungeon/default.nix) serve toolbox,
