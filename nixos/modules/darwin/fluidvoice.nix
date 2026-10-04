@@ -60,6 +60,11 @@
     }
   ];
 
+  # A stable path: the Accessibility grant follows it.
+  axDir = "/Users/${user}/Library/Application Support/fluidvoice-ax";
+  axBin = "${axDir}/fluidvoice-ax";
+  axSource = ./fluidvoice-ax.swift;
+
   # Unfinished onboarding must stay visible.
   launchScript = pkgs.writeShellScript "fluidvoice-launch" ''
     APP="/Applications/FluidVoice.app"
@@ -230,13 +235,44 @@
       echo "fluidvoice: could not update Handy's settings; it may still own F18" >&2
     fi
 
+    # Rebuilt only when the source's store path changes.
+    if [ "$(cat "${axDir}/source" 2>/dev/null || true)" != "${axSource}" ]; then
+      if /usr/bin/xcode-select -p >/dev/null 2>&1; then
+        mkdir -p "${axDir}"
+        if HOME="/Users/${user}" /usr/bin/swiftc -O "${axSource}" -o "${axBin}"; then
+          printf '%s' "${axSource}" > "${axDir}/source"
+          echo "fluidvoice: built fluidvoice-ax; allow it under Accessibility if asked"
+          /bin/launchctl kickstart -k "gui/$(id -u)/org.nixos.fluidvoice-ax" >/dev/null 2>&1 || true
+        else
+          echo "fluidvoice: fluidvoice-ax did not build; Write Mode stays blind in Electron apps" >&2
+        fi
+      else
+        echo "fluidvoice: no Command Line Tools (xcode-select --install); fluidvoice-ax not built" >&2
+      fi
+    fi
+
     exec ${launchScript}
   '';
 in {
+  options.services.fluidvoice.accessibleApps = lib.mkOption {
+    type = lib.types.listOf lib.types.str;
+    default = [
+      "com.tinyspeck.slackmacgap"
+      "md.obsidian"
+      "com.microsoft.VSCode"
+    ];
+    description = ''
+      Bundle ids of Electron apps whose accessibility fluidvoice-ax turns on,
+      so FluidVoice's Write Mode can read their selected text. Electron only;
+      other apps ignore the attribute it sets.
+    '';
+  };
+
   options.services.fluidvoice.enable = lib.mkEnableOption ''
     FluidVoice on this Darwin host: the cask, a one-time hotkey seed, its
     model routing (Fluid-1 dictation, oMLX for Write and Command Mode), taking
-    F18 and launch-at-login from Handy, and an `open -a` login agent
+    F18 and launch-at-login from Handy, an `open -a` login agent, and
+    fluidvoice-ax, which lets Write Mode read selections in Electron apps
   '';
 
   config = lib.mkIf cfg.enable {
@@ -248,6 +284,17 @@ in {
         echo "WARNING: FluidVoice setup did not finish (see above)." >&2
       fi
     '';
+
+    # A real daemon, so KeepAlive, unlike the open -a agent.
+    launchd.user.agents.fluidvoice-ax.serviceConfig = {
+      ProgramArguments = [axBin] ++ cfg.accessibleApps;
+      RunAtLoad = true;
+      KeepAlive = true;
+      # Absent until activation first builds it.
+      ThrottleInterval = 30;
+      StandardOutPath = "/Users/${user}/Library/Logs/fluidvoice-ax.log";
+      StandardErrorPath = "/Users/${user}/Library/Logs/fluidvoice-ax.log";
+    };
 
     launchd.user.agents.fluidvoice = {
       command = "${launchScript}";
