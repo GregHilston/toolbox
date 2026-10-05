@@ -28,6 +28,7 @@ export OMLX_API_KEY=$(python3 -c "import json,os;print(json.load(
 | `moe_quant_verdict.py` | those raw numbers -> seconds per agent turn at a measured workload mix |
 | `contention_audit.sh` | certifies a benchmark window had no foreign traffic |
 | `mtp_paired.py` | Lightning MTP on vs off, paired, plus a greedy identity check |
+| `mtp_blocks.py` | the same, in restart-separated blocks, for a model too big to hold twice |
 | `crud/` | model writes a SQLite + React CRUD app; graded by running it, failures fed back as recorded hints |
 
 `crud/results/` is the record `docs/model-evaluation.md` quotes, kept so nobody re-measures it.
