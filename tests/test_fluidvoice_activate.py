@@ -137,6 +137,42 @@ class TestFluidVoiceActivate(unittest.TestCase):
         want = hashlib.sha256(f"{BASE_URL}|k".encode()).hexdigest()
         self.assertEqual(self.read_data("VerifiedProviderFingerprints"), {"custom:omlx": want})
 
+    def models_for(self, key: str):
+        exported = subprocess.run(["defaults", "export", self.domain, "-"], capture_output=True, check=True).stdout
+        r = subprocess.run(["plutil", "-extract", f"AvailableModelsByProvider.{key}", "json", "-o", "-", "-"],
+                           input=exported, capture_output=True)
+        return json.loads(r.stdout) if r.returncode == 0 else None
+
+    def test_command_mode_model_list_is_written(self):
+        """1.6.9 Command Mode reads only AvailableModelsByProvider."""
+        self.onboarded()
+        subprocess.run(["defaults", "write", self.domain, "AvailableModelsByProvider",
+                        "-dict", "fluid-1", "<array><string>fluid-1</string></array>"], check=True)
+        self.run_script()
+        self.assertEqual(self.models_for("custom:omlx"), PROVIDER["models"])
+        self.assertEqual(self.models_for("fluid-1"), ["fluid-1"])
+
+    def test_missing_model_list_alone_is_drift(self):
+        self.onboarded()
+        self.run_script()
+        self.scrub_key()
+        subprocess.run(["defaults", "delete", self.domain, "AvailableModelsByProvider"], check=True)
+        r = self.run_script()
+        self.assertIn("applying", r.stdout)
+        self.assertEqual(self.models_for("custom:omlx"), PROVIDER["models"])
+
+    def test_an_in_app_model_refresh_is_kept_without_drift(self):
+        self.onboarded()
+        self.run_script()
+        self.scrub_key()
+        refreshed = ["gemma-4-26b-a4b-it-4bit"] + PROVIDER["models"]
+        xml = "<array>" + "".join(f"<string>{m}</string>" for m in refreshed) + "</array>"
+        subprocess.run(["defaults", "write", self.domain, "AvailableModelsByProvider",
+                        "-dict-add", "custom:omlx", xml], check=True)
+        r = self.run_script()
+        self.assertNotIn("applying", r.stdout)
+        self.assertEqual(self.models_for("custom:omlx"), refreshed)
+
     def test_no_drift_after_the_app_moves_the_key(self):
         self.onboarded()
         self.run_script()

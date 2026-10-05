@@ -110,6 +110,19 @@ prompt_configs() {
   printf '%s' "${CURRENT:-"{}"}" | jq -cS \
     'if has("__default__") then .__default__ += {providerID: "", modelName: ""} else . end'
 }
+# Command Mode reads only this list (1.6.9).
+listed_models() {
+  defaults export "$DOMAIN" - | plutil -extract "AvailableModelsByProvider.custom:$PROVIDER_ID" json -o - - 2>/dev/null || echo '[]'
+}
+models_listed() {
+  listed_models | jq -e --argjson p "$PROVIDER" '($p.models - .) == []' >/dev/null 2>&1
+}
+# Union, so an in-app refresh is kept.
+models_xml() {
+  listed_models | jq -r --argjson p "$PROVIDER" \
+    '(. + $p.models) | reduce .[] as $m ([]; if index([$m]) then . else . + [$m] end)
+     | "<array>" + (map("<string>\(@html)</string>") | join("")) + "</array>"'
+}
 # Fluid-1 refuses Write and Command Mode.
 BOOLS="RewriteModeLinkedToGlobal CommandModeLinkedToGlobal"
 
@@ -122,6 +135,7 @@ drifted() {
   done
   [ "$(read_data SavedProviders | jq -cS 'sort_by(.id)' 2>/dev/null)" = "$(providers "" 2>/dev/null)" ] || return 0
   [ "$(read_data DictationPromptConfigurations | jq -cS . 2>/dev/null)" = "$(prompt_configs 2>/dev/null)" ] || return 0
+  models_listed || return 0
   [ -z "$KEY" ] || [ "$(read_data VerifiedProviderFingerprints | jq -cS . 2>/dev/null)" = "$(fingerprints 2>/dev/null)" ] || return 0
   return 1
 }
@@ -131,6 +145,7 @@ apply_settings() {
   quit_app FluidVoice FluidVoice || return 1
   P="$(providers "$KEY")" && [ -n "$P" ] || return 1
   C="$(prompt_configs)" && [ -n "$C" ] || return 1
+  M="$(models_xml)" && [ -n "$M" ] || return 1
   F=""
   if [ -n "$KEY" ]; then
     F="$(fingerprints)" && [ -n "$F" ] || return 1
@@ -145,6 +160,7 @@ apply_settings() {
   # The app moves apiKey into Keychain.
   defaults write "$DOMAIN" SavedProviders -data "$(hex "$P")"
   defaults write "$DOMAIN" DictationPromptConfigurations -data "$(hex "$C")"
+  defaults write "$DOMAIN" AvailableModelsByProvider -dict-add "custom:$PROVIDER_ID" "$M"
   [ -z "$F" ] || defaults write "$DOMAIN" VerifiedProviderFingerprints -data "$(hex "$F")"
 }
 

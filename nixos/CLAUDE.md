@@ -241,6 +241,7 @@ real script against a scratch defaults domain with `pgrep`/`osascript`/`pkill` s
     fingerprint are built before the app is quit; if `jq` cannot parse what is stored, the
     step is skipped rather than writing an empty value over it.
   - Compares providers sorted by id, so one added in the app is kept and causes no drift.
+  - **Lists the models in `AvailableModelsByProvider["custom:omlx"]`.** 1.6.9's Command Mode reads its model list only from there, never from `SavedProviders`, and a custom provider has no built-in defaults, so without it Command Mode fails with "Command Mode needs a selected chat model" while Write Mode works (citadel, 2026-10-05). Upstream main falls back to the saved provider; drop this once a release ships that. Written as a union and checked as a subset, so the app's own model refresh is kept and causes no drift.
   - If the app cannot store the key (a locked Keychain), it leaves it in `SavedProviders`,
     and every deploy sees drift and quits the app again. `defaults read com.FluidApp.app
     SavedProviders` showing a non-empty `apiKey` after a launch is the tell.
