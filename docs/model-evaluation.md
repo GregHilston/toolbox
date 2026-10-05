@@ -55,8 +55,20 @@ spare; home-lab `docs/local-llms.md` → "Memory" has the budget and the next le
 The thinking budgets differ: 8192 tokens for the A3B, 16384 for Swift. Equalise them
 (the `thinking_budget_tokens` entry) when a comparison hinges on it.
 
-Also measured, and what they lost on, in `docs/local-llm-benchmarks.md` → "2026-10-02":
-base Qwen3.8-27B oQ4e, Swift oQ5e/oQ6e, the A3B 6-bit, Qwen3.8-Flash-Next REAP-288.
+## Rejected (do not re-test without a reason)
+
+Measured and turned down; weights deleted. Re-test one only after an oMLX upgrade that
+plausibly changes the verdict, or a new build of it. Each row's dated section in
+`docs/local-llm-benchmarks.md` has the full numbers.
+
+| date | model | tried for | why not |
+|---|---|---|---|
+| 2026-10-04 | `arkham00/Swift-Qwen3.8-Flash-Next-oQ3.5e-mtp` (89 GB) | heavy, moria | As correct as Swift-27B (3 of 3) and faster, but a hint every run (0 of 3 with none, Swift 2 of 3). Too big to sit beside the light model: each switch evicts one (~35 s reload). Too slow for light. |
+| 2026-10-02 | `sh0wie/Qwen3.8-Flash-Next-REAP-288-MLX-4bit` (69 GB) | heavy, moria | Not more reliable than Swift-27B (2 of 3) at 4× the memory. |
+| 2026-10-02 | base Qwen3.8-27B oQ4e | heavy, moria | Tied Swift on this task; Swift's published coding scores are higher at no extra cost. |
+| 2026-10-02 | Swift 1.5 oQ5e / oQ6e (`dicksondickson/…-bf16-mtp-MLX`) | heavy, moria | 26–36% slower decode than oQ4e, no more correct. |
+| 2026-10-02 | `lmstudio-community/Qwen3.6-35B-A3B-MLX-6bit` | light | 16% slower than the 4-bit, 1 of 2 correct. |
+| 2026-10-02 | ukisai's `Swift-1.5-{4,5}bit-MLX` | heavy | Need a patched mlx-lm and their own server; oMLX cannot load them. |
 
 ## Procedure
 
@@ -110,6 +122,25 @@ On dungeon, Hermes is the `hermes` and `hermes-ops` containers in home-lab;
 `docker stop`/`docker start` them. Never stop Frigate or the rest: dungeon's numbers
 must be taken with them up.
 
+**dungeon also calls moria's oMLX.** home-lab's LiteLLM sends `local-small` to moria
+whenever it is awake, and its health check asks for the light model every ~15 s. oMLX
+evicts the candidate to serve it, mid-run. Stopping moria's own clients does not stop
+this; bind oMLX to localhost for the test, and LiteLLM fails over to dungeon as designed:
+
+```bash
+cp ~/.omlx/settings.json /tmp/omlx-settings.backup.json
+python3 -c "import json,os; p=os.path.expanduser('~/.omlx/settings.json'); s=json.load(open(p)); s['server']['host']='127.0.0.1'; json.dump(s, open(p,'w'), indent=2)"
+launchctl kickstart -k gui/$(id -u)/org.nixos.omlx
+lsof -nP -iTCP:8000 -sTCP:LISTEN      # must show 127.0.0.1:8000
+```
+
+Restore with `cp /tmp/omlx-settings.backup.json ~/.omlx/settings.json` and another
+kickstart, then check it listens on `*:8000` again.
+
+After the runs, check nothing evicted the candidate: `grep Evicting
+~/.omlx/logs/server.log` must find no line inside the run's window. Any hit voids the
+arm; move it to `crud/results/_discarded/`.
+
 ### 4. Quality: the CRUD eval, three runs per arm
 
 The grader drives Chromium through `playwright-core`, kept in `~/.cache/crud-eval-grader`.
@@ -145,6 +176,10 @@ start a second run while one is going: a restart kills the other's request.
   matches. Then run the CRUD eval with MTP on: speed alone does not adopt it. Remove the
   twin and its entry afterwards. (The 2026-10-02 MTP arms are recorded under the old
   twin id `…-lmtp`, which was MTP-on; it no longer exists.)
+  **Over half of RAM, use `mtp_blocks.py` instead**, same arguments. oMLX treats the
+  twin as a second model, so `mtp_paired.py` evicts and reloads one on every sample
+  (it zeroed half the samples for an 89 GB model). `mtp_blocks.py` runs off/on blocks
+  with an oMLX restart before each, so only one copy is resident.
 - **Prefill**: `python3 ~/Git/toolbox/dot/omlx/bench/longctx.py <model>`. It matters
   most for agent turns over a large context.
 - **Swap**: every CRUD run records `swap_growth_mb` (peak minus start); `summarize.py`

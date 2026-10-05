@@ -13,6 +13,9 @@ Read it first and follow it**; this file only frames the job.
 
 ## The two jobs
 
+Either way, read the doc's **Rejected** table first. Skip a model listed there unless
+the doc's reason to re-test applies, and tell the user which ones you skipped.
+
 - **Named models** (`/compare-local-models org/Model-X org/Model-Y`): test those.
 - **`search`, or no arguments**: find candidates yourself. Check Hugging Face for
   releases newer than the incumbents (newest first, `mlx-community`, oMLX `oQ*` builds,
@@ -50,3 +53,8 @@ Report a table of the candidates against the incumbents: correct by the end, cor
 with no hints, time, decode, prefill, memory, swap. Give a recommendation per role.
 Adopt only with the user's go-ahead, through the doc's checklist, then record the new
 numbers in its incumbents table so nobody re-measures them.
+
+A rejection is recorded too, also on the user's go-ahead: a row in the doc's
+**Rejected** table (date, model, role tried for, why not), a dated section in
+`docs/local-llm-benchmarks.md` with the numbers, and the weights and their settings
+entry deleted.

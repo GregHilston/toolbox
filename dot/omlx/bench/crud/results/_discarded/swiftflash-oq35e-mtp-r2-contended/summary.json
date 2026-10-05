@@ -1,0 +1,140 @@
+{
+ "model": "Swift-Qwen3.8-Flash-Next-oQ3.5e-mtp",
+ "arm": "swiftflash-oq35e-mtp-r2",
+ "host": "moria",
+ "extra": {},
+ "settings": {
+  "temperature": 1.0,
+  "top_p": 0.95,
+  "top_k": 20,
+  "min_p": 0.0,
+  "repetition_penalty": 1.0,
+  "presence_penalty": 0.0,
+  "chat_template_kwargs": {
+   "reasoning_effort": "medium"
+  },
+  "thinking_budget_enabled": true,
+  "thinking_budget_tokens": 16384,
+  "mtp_enabled": true
+ },
+ "rounds": [
+  {
+   "round": 0,
+   "score": 5,
+   "of": 16,
+   "checks": {
+    "server_starts": true,
+    "list": true,
+    "create": false,
+    "get_one": false,
+    "update": false,
+    "validation_400": false,
+    "not_found_404": true,
+    "delete": false,
+    "persists_restart": false,
+    "db_file": true,
+    "client_build": true,
+    "ui_list": false,
+    "ui_create": false,
+    "ui_toggle": false,
+    "ui_edit": false,
+    "ui_delete": false
+   },
+   "files": [
+    "server/package.json",
+    "server/index.js",
+    "client/package.json",
+    "client/vite.config.js",
+    "client/index.html",
+    "client/src/main.jsx",
+    "client/src/App.jsx",
+    "client/src/App.css",
+    "README.md"
+   ],
+   "finish": "stop",
+   "completion_tokens": 5215,
+   "reasoning_tokens": null,
+   "prompt_tokens": 402,
+   "wall_s": 102.1,
+   "ttft_s": 35.3,
+   "decode_tps": 78.1,
+   "swap_start_mb": 1953.06,
+   "swap_peak_mb": 1953.06,
+   "swap_growth_mb": 0.0
+  },
+  {
+   "round": 1,
+   "score": 15,
+   "of": 16,
+   "checks": {
+    "server_starts": true,
+    "list": true,
+    "create": true,
+    "get_one": true,
+    "update": true,
+    "validation_400": true,
+    "not_found_404": true,
+    "delete": true,
+    "persists_restart": true,
+    "db_file": true,
+    "client_build": true,
+    "ui_list": true,
+    "ui_create": true,
+    "ui_toggle": true,
+    "ui_edit": true,
+    "ui_delete": false
+   },
+   "files": [
+    "server/index.js",
+    "client/src/App.jsx",
+    "client/src/App.css"
+   ],
+   "finish": "stop",
+   "completion_tokens": 5558,
+   "reasoning_tokens": null,
+   "prompt_tokens": 5142,
+   "wall_s": 121.3,
+   "ttft_s": 42.7,
+   "decode_tps": 70.7,
+   "swap_start_mb": 1953.06,
+   "swap_peak_mb": 1953.06,
+   "swap_growth_mb": 0.0
+  },
+  {
+   "round": 2,
+   "score": 16,
+   "of": 16,
+   "checks": {
+    "server_starts": true,
+    "list": true,
+    "create": true,
+    "get_one": true,
+    "update": true,
+    "validation_400": true,
+    "not_found_404": true,
+    "delete": true,
+    "persists_restart": true,
+    "db_file": true,
+    "client_build": true,
+    "ui_list": true,
+    "ui_create": true,
+    "ui_toggle": true,
+    "ui_edit": true,
+    "ui_delete": true
+   },
+   "files": [
+    "client/src/App.jsx"
+   ],
+   "finish": "stop",
+   "completion_tokens": 2404,
+   "reasoning_tokens": null,
+   "prompt_tokens": 8766,
+   "wall_s": 49.9,
+   "ttft_s": 10.6,
+   "decode_tps": 61.2,
+   "swap_start_mb": 1953.06,
+   "swap_peak_mb": 1953.06,
+   "swap_growth_mb": 0.0
+  }
+ ]
+}
