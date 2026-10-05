@@ -93,11 +93,14 @@
     ];
   };
 
-  # Deploy oMLX with citadel-specific settings (12GB hot cache for M5 Pro 48GB).
+  # Rare local use: on-demand load, idle unload.
+  # Balanced tier refused the 20 GB model (18 GB reclaimable).
   # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
     enable = true;
-    cacheSize = "12GB";
+    cacheSize = "2GB";
+    memoryCeilingGB = 28;
+    idleTimeoutSeconds = 1800;
   };
 
   # Yardstick (Grafana) IAP proxy on :3000.

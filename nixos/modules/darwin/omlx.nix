@@ -35,6 +35,9 @@
         memory_guard_tier = "custom";
         memory_guard_custom_ceiling_gb = cfg.memoryCeilingGB;
       };
+    }
+    // lib.optionalAttrs (cfg.idleTimeoutSeconds != null) {
+      idle_timeout.idle_timeout_seconds = cfg.idleTimeoutSeconds;
     }));
 
   modelsManifest = pkgs.writeText "omlx-models-${host}.manifest" (lib.concatStrings
@@ -85,7 +88,20 @@ in {
       description = ''
         Fixed ceiling for oMLX's memory guard, in GB. Null keeps oMLX's own
         tier. Set it where the tier's dynamic ceiling, which counts a VM's
-        memory as taken, refuses a model that fits (dungeon).
+        memory as taken, refuses a model that fits (dungeon). A fixed ceiling
+        never evicts for other apps' pressure; pair it with idleTimeoutSeconds
+        where that matters (citadel).
+      '';
+    };
+
+    idleTimeoutSeconds = lib.mkOption {
+      type = lib.types.nullOr lib.types.ints.positive;
+      default = null;
+      example = 1800;
+      description = ''
+        Unload a model after this long idle, for models without their own
+        ttl_seconds in model_settings.json (engine_pool.py check_ttl_expirations
+        falls back to it). Null keeps models resident until memory pressure.
       '';
     };
 
