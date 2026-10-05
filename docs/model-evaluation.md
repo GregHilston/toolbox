@@ -55,8 +55,20 @@ spare; home-lab `docs/local-llms.md` → "Memory" has the budget and the next le
 The thinking budgets differ: 8192 tokens for the A3B, 16384 for Swift. Equalise them
 (the `thinking_budget_tokens` entry) when a comparison hinges on it.
 
-Also measured, and what they lost on, in `docs/local-llm-benchmarks.md` → "2026-10-02":
-base Qwen3.8-27B oQ4e, Swift oQ5e/oQ6e, the A3B 6-bit, Qwen3.8-Flash-Next REAP-288.
+## Rejected (do not re-test without a reason)
+
+Measured and turned down; weights deleted. Re-test one only after an oMLX upgrade that
+plausibly changes the verdict, or a new build of it. Each row's dated section in
+`docs/local-llm-benchmarks.md` has the full numbers.
+
+| date | model | tried for | why not |
+|---|---|---|---|
+| 2026-10-04 | `arkham00/Swift-Qwen3.8-Flash-Next-oQ3.5e-mtp` (89 GB) | heavy, moria | As correct as Swift-27B (3 of 3) and faster, but a hint every run (0 of 3 with none, Swift 2 of 3). Too big to sit beside the light model: each switch evicts one (~35 s reload). Too slow for light. |
+| 2026-10-02 | `sh0wie/Qwen3.8-Flash-Next-REAP-288-MLX-4bit` (69 GB) | heavy, moria | Not more reliable than Swift-27B (2 of 3) at 4× the memory. |
+| 2026-10-02 | base Qwen3.8-27B oQ4e | heavy, moria | Tied Swift on this task; Swift's published coding scores are higher at no extra cost. |
+| 2026-10-02 | Swift 1.5 oQ5e / oQ6e (`dicksondickson/…-bf16-mtp-MLX`) | heavy, moria | 26–36% slower decode than oQ4e, no more correct. |
+| 2026-10-02 | `lmstudio-community/Qwen3.6-35B-A3B-MLX-6bit` | light | 16% slower than the 4-bit, 1 of 2 correct. |
+| 2026-10-02 | ukisai's `Swift-1.5-{4,5}bit-MLX` | heavy | Need a patched mlx-lm and their own server; oMLX cannot load them. |
 
 ## Procedure
 

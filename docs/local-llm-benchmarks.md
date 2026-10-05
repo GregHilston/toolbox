@@ -41,6 +41,50 @@ unchanged.
 
 ---
 
+## 2026-10-04: Swift 1.5 Qwen3.8-Flash-Next oQ3.5e — rejected
+
+oMLX 0.7.0, moria, the CRUD eval unchanged. Candidate:
+`arkham00/Swift-Qwen3.8-Flash-Next-oQ3.5e-mtp`, a Swift 1.5 fine-tune of
+Qwen3.8-Flash-Next (125B MoE, 6B active, vision tower) in oMLX's mixed 3/4-bit oQ3.5e with
+the MTP head. 89.8 GB on disk, ~89 GB wired. `model_type` `qwen4_exp`, which oMLX 0.7.0
+loads. Served with the Swift-27B entry's settings (temp 1.0, top_p 0.95, top_k 20,
+`reasoning_effort: medium`, 16384 thinking budget) and `mtp_enabled`. The same uploader's
+oQ4e is 106 GB, too big for moria; not tried.
+
+| arm | first try | final | hints | out tokens | wall | decode tok/s | swap growth |
+|---|---|---|---|---|---|---|---|
+| `swiftflash-oq35e-mtp` | 15/16 | 16/16 | 1 | 7,556 | 2.3 min | 74.2 | 0 MB |
+| `swiftflash-oq35e-mtp-r2` | 15/16 | 16/16 | 1 | 6,859 | 2.5 min | 60.3 | 1.1 MB |
+| `swiftflash-oq35e-mtp-r3` | 5/16 | 16/16 | 1 | 6,986 | 2.3 min | 65.7 | 0 MB |
+
+- **MTP: 1.36× decode** (65.5 → 88.8 tok/s, ABBA blocks via `bench/mtp_blocks.py`), and
+  **greedy output identical on 3 of 3 prompts**, which Swift-27B's MTP is not.
+- **Prefill** 510 tok/s at 2K, 401 at 16K, 466 at 32K, 317 at 64K (3.4 min to first
+  token): 2.5× Swift-27B, a third of the A3B.
+- **Tool calls**: 3 of 3 well-formed `bash` calls with valid JSON arguments. Vision not
+  tested.
+- Its first try avoided the `better-sqlite3` pin trap twice, unlike nearly every other
+  model; the misses were single UI checks.
+- **Memory**: loading it with moria's desktop apps open pushed ~1.9 GB of them to swap
+  (36 MB → 1.9 GB). Generation itself added at most 1.1 MB.
+
+**Why rejected.** Heavy role: as correct as Swift-27B by the end (3 of 3) and ~1.4× faster
+to a correct answer, but it needed a hint every run where Swift got 2 of 3 with none, and
+it does not fit beside the light model. 89 GB plus the A3B's 20 GB exceeds oMLX's
+~102 GB ceiling, so every switch between pi's light and heavy models evicts one and
+reloads the other (~35 s), and any `local-small` request from dungeon's LiteLLM evicts
+it. Light role: half the A3B's decode, a third of its prefill, four times its memory.
+Weights deleted.
+
+**The first attempt was discarded** (`crud/results/_discarded/swiftflash-*-contended`).
+dungeon's LiteLLM health check asked moria's oMLX for the A3B every ~15 s, and oMLX
+evicted the candidate to load it about twenty times during the runs, which crashed one
+round and zeroed half the MTP samples. Separately, the MTP-off twin is a second 89 GB
+model to oMLX, so `mtp_paired.py` swapped the two in and out on every sample. Both gaps
+are now in `docs/model-evaluation.md`.
+
+---
+
 ## 2026-10-02: Swift 1.5, Qwen3.8-Flash-Next, and the A3B 6-bit
 
 oMLX 0.7.0rc1. Question: which Qwen3.8-27B variant and quant is best on moria, is there a

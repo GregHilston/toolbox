@@ -1,0 +1,102 @@
+{
+ "model": "Swift-Qwen3.8-Flash-Next-oQ3.5e-mtp",
+ "arm": "swiftflash-oq35e-mtp",
+ "host": "moria",
+ "extra": {},
+ "settings": {
+  "temperature": 1.0,
+  "top_p": 0.95,
+  "top_k": 20,
+  "min_p": 0.0,
+  "repetition_penalty": 1.0,
+  "presence_penalty": 0.0,
+  "chat_template_kwargs": {
+   "reasoning_effort": "medium"
+  },
+  "thinking_budget_enabled": true,
+  "thinking_budget_tokens": 16384,
+  "mtp_enabled": true
+ },
+ "rounds": [
+  {
+   "round": 0,
+   "score": 15,
+   "of": 16,
+   "checks": {
+    "server_starts": true,
+    "list": true,
+    "create": true,
+    "get_one": true,
+    "update": true,
+    "validation_400": true,
+    "not_found_404": true,
+    "delete": true,
+    "persists_restart": true,
+    "db_file": true,
+    "client_build": true,
+    "ui_list": true,
+    "ui_create": false,
+    "ui_toggle": true,
+    "ui_edit": true,
+    "ui_delete": true
+   },
+   "files": [
+    "README.md",
+    "server/package.json",
+    "server/index.js",
+    "client/package.json",
+    "client/vite.config.js",
+    "client/index.html",
+    "client/src/main.jsx",
+    "client/src/App.css",
+    "client/src/App.jsx"
+   ],
+   "finish": "stop",
+   "completion_tokens": 4603,
+   "reasoning_tokens": null,
+   "prompt_tokens": 402,
+   "wall_s": 95.8,
+   "ttft_s": 35.6,
+   "decode_tps": 76.5,
+   "swap_start_mb": 1944.69,
+   "swap_peak_mb": 1953.06,
+   "swap_growth_mb": 8.4
+  },
+  {
+   "round": 1,
+   "score": 16,
+   "of": 16,
+   "checks": {
+    "server_starts": true,
+    "list": true,
+    "create": true,
+    "get_one": true,
+    "update": true,
+    "validation_400": true,
+    "not_found_404": true,
+    "delete": true,
+    "persists_restart": true,
+    "db_file": true,
+    "client_build": true,
+    "ui_list": true,
+    "ui_create": true,
+    "ui_toggle": true,
+    "ui_edit": true,
+    "ui_delete": true
+   },
+   "files": [
+    "client/src/App.jsx"
+   ],
+   "finish": "stop",
+   "completion_tokens": 1654,
+   "reasoning_tokens": null,
+   "prompt_tokens": 4446,
+   "wall_s": 63.8,
+   "ttft_s": 41.8,
+   "decode_tps": 75.2,
+   "swap_start_mb": 1953.06,
+   "swap_peak_mb": 1953.06,
+   "swap_growth_mb": 0.0
+  }
+ ]
+}
