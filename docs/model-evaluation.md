@@ -122,6 +122,25 @@ On dungeon, Hermes is the `hermes` and `hermes-ops` containers in home-lab;
 `docker stop`/`docker start` them. Never stop Frigate or the rest: dungeon's numbers
 must be taken with them up.
 
+**dungeon also calls moria's oMLX.** home-lab's LiteLLM sends `local-small` to moria
+whenever it is awake, and its health check asks for the light model every ~15 s. oMLX
+evicts the candidate to serve it, mid-run. Stopping moria's own clients does not stop
+this; bind oMLX to localhost for the test, and LiteLLM fails over to dungeon as designed:
+
+```bash
+cp ~/.omlx/settings.json /tmp/omlx-settings.backup.json
+python3 -c "import json,os; p=os.path.expanduser('~/.omlx/settings.json'); s=json.load(open(p)); s['server']['host']='127.0.0.1'; json.dump(s, open(p,'w'), indent=2)"
+launchctl kickstart -k gui/$(id -u)/org.nixos.omlx
+lsof -nP -iTCP:8000 -sTCP:LISTEN      # must show 127.0.0.1:8000
+```
+
+Restore with `cp /tmp/omlx-settings.backup.json ~/.omlx/settings.json` and another
+kickstart, then check it listens on `*:8000` again.
+
+After the runs, check nothing evicted the candidate: `grep Evicting
+~/.omlx/logs/server.log` must find no line inside the run's window. Any hit voids the
+arm; move it to `crud/results/_discarded/`.
+
 ### 4. Quality: the CRUD eval, three runs per arm
 
 The grader drives Chromium through `playwright-core`, kept in `~/.cache/crud-eval-grader`.
@@ -157,6 +176,10 @@ start a second run while one is going: a restart kills the other's request.
   matches. Then run the CRUD eval with MTP on: speed alone does not adopt it. Remove the
   twin and its entry afterwards. (The 2026-10-02 MTP arms are recorded under the old
   twin id `…-lmtp`, which was MTP-on; it no longer exists.)
+  **Over half of RAM, use `mtp_blocks.py` instead**, same arguments. oMLX treats the
+  twin as a second model, so `mtp_paired.py` evicts and reloads one on every sample
+  (it zeroed half the samples for an 89 GB model). `mtp_blocks.py` runs off/on blocks
+  with an oMLX restart before each, so only one copy is resident.
 - **Prefill**: `python3 ~/Git/toolbox/dot/omlx/bench/longctx.py <model>`. It matters
   most for agent turns over a large context.
 - **Swap**: every CRUD run records `swap_growth_mb` (peak minus start); `summarize.py`
