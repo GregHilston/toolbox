@@ -56,6 +56,12 @@ code as "no rewrite", so `git status`, `pytest`, `docker ps` and most other
 commands went through unfiltered while `rtk gain` still read 74% saved. `rtk`
 itself owns the hook now; `rtk gain` warns when it is outdated again.
 
+`settings.json` sets `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE=1`. Claude Code marks
+every shell it spawns with `CLAUDE_CODE_CHILD_SESSION=1` and saves no transcript for a
+`claude` started under that marker. The marker leaks: a terminal app relaunched from a
+Claude Bash call hands it to every tab, so ordinary sessions silently lost their
+transcripts. The cost is that `claude -p` runs spawned by an agent save one too.
+
 The symlinks are **writable** (they point into the repo, not `/nix/store`) so Claude's
 own runtime writes to `settings.json` still work — those just show up as git diffs to
 commit or discard.
