@@ -23,6 +23,18 @@
 
   networking.hostName = "citadel";
 
+  # Display never sleeps on the power adapter (System Settings → Lock Screen →
+  # "Turn display off on power adapter when inactive" = Never). Battery keeps
+  # common.nix's power.sleep.display.
+  #
+  # Not power.sleep.display: nix-darwin implements it with
+  # `systemsetup -setDisplaySleep`, which sets every power source at once. pmset
+  # -c targets AC only, and postActivation runs after nix-darwin's power script,
+  # so this wins on every `just dr citadel`.
+  system.activationScripts.postActivation.text = ''
+    pmset -c displaysleep 0 || echo "WARNING: citadel pmset displaysleep failed; continuing."
+  '';
+
   # Citadel-specific dock order. Overrides the shared persistent-apps list in
   # modules/darwin/common.nix.
   # NOTE: Finder is NOT listed here — macOS always pins it to the far left
