@@ -56,6 +56,12 @@ run_gate() {  # run_gate <workspace> <tool_name>
     timeout 300 bash "$GATE" 2>&1
 }
 
+run_gate_default() {  # no GATE_BUILD_CMD: the gate picks the commands
+  printf '{"tool_name":"kanban_complete"}' | \
+    GATE_WORKSPACE="$1" GATE_LOG="$ROOT/gate.log" HOME="$ROOT/fakehome" \
+    timeout 300 bash "$GATE" 2>&1
+}
+
 check() {  # check <label> <expect: BLOCK|PASS> <output>
   local got="PASS"
   printf '%s' "$3" | grep -qE "\"decision\": ?\"block\"" && got="BLOCK"
@@ -67,6 +73,24 @@ mkdir -p "$ROOT/fakehome"
 
 echo "== the gate must still allow a genuinely good tree =="
 W="$(mk_good good)"; check "a tree that really installs" PASS "$(run_gate "$W" kanban_complete)"
+
+echo "== the default build check is project-agnostic =="
+# It once defaulted to one benchmark's `uv run vt-smb --help`, so every other
+# correct project was refused.
+W="$(mk_good otherscript)"; sed -i '' 's/^demo-cli = /report-tool = /' "$W/pyproject.toml"
+check "a different script name passes" PASS "$(run_gate_default "$W")"
+
+W="$(mk_good noscripts)"
+python3 - "$W/pyproject.toml" <<'P'
+import sys
+p = sys.argv[1]; t = open(p).read()
+t = t.replace('[project.scripts]\ndemo-cli = "demo.cli:main"\n', '')
+open(p, "w").write(t)
+P
+check "no scripts, passing tests, passes" PASS "$(run_gate_default "$W")"
+
+W="$(mk_good brokenscript)"; printf 'from demo.missing import thing\ndef main():\n    pass\n' > "$W/src/demo/cli.py"
+check "a declared script that cannot import" BLOCK "$(run_gate_default "$W")"
 
 echo "== evasions that used to work =="
 W="$(mk_good nopyproject)"; rm "$W/pyproject.toml"
