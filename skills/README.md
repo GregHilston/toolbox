@@ -53,18 +53,16 @@ text out, and errors that say what broke.
 |---|---|---|
 | Claude Code | every skill here | `~/.claude/skills` → `skills/` (`nixos/modules/programs/tui/claude.nix`) |
 | pi | every skill here except claude.ai's `synced/` | `skills` setting in `nixos/modules/programs/tui/pi.nix`: the exclusion must be an absolute path, because pi's globs skip `.claude` |
-| Hermes on moria | per profile, by grant | `botSkills` and `defaultSkills` in `nixos/modules/programs/tui/hermes.nix` |
-| Hermes on dungeon | per mount | the `hermes` service in home-lab's `docker-compose.yaml` |
+| Hermes (dungeon only) | per profile, by mount | the `hermes` service in home-lab's `docker-compose.yaml` |
 
-**Hermes is opt-in, per profile.** A grant is written `lab-tools/<name>` and links
-`skills/<name>` under a `lab-tools/` category. Hermes lists an uncategorised
-skill as `reddit:` then `- reddit`, and Gemma called that `reddit:reddit`.
-Removing a grant revokes it: activation prunes our links that are no longer
-listed. A grant is advice, not a fence: every bot can still run anything on
-`PATH`.
+**Hermes is opt-in, per profile.** A grant is a read-only mount of
+`skills/<name>` at `lab-tools/<name>` in that profile's skills directory.
+Hermes lists an uncategorised skill as `reddit:` then `- reddit`, and Gemma
+called that `reddit:reddit`. A grant is advice, not a fence: every bot can
+still run anything on `PATH`.
 
 `hermes/skills/` holds the skills that only make sense in Hermes. Claude Code
 has no exclude list, so a Hermes-only skill would otherwise reach it.
 
-`tests/test_skills.py` checks each skill against these rules, checks that every
-command it names is in `bin/`, and checks that every Hermes grant names a skill.
+`tests/test_skills.py` checks each skill against these rules and checks that
+every command it names is in `bin/`.

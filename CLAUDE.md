@@ -285,17 +285,13 @@ private.
 that bind-mounts your real `~/.claude` and `~/Git`, so credentials and sessions are
 shared. See `claude-code/CLAUDE.md`.
 
-## Hermes — bots on moria
+## Hermes — runs on dungeon, Desktop clients here
 
-[Hermes](https://hermes-agent.nousresearch.com/docs) runs on moria against local inference,
-as **Bot Mode**. A Bot is a profile, so `hermes/profiles/<bot>/SOUL.md` and
-`hermes/config.yaml` in this repo *are* the bots the Desktop roster shows;
-`nixos/modules/programs/tui/hermes.nix` symlinks them into `~/.hermes` writably, because
-Hermes edits all of them at runtime.
-
-The app is the `hermes-desktop` cask in the moria host file, not the Tier 2 nix flake. The
-gateway service is installed once by hand — `hermes gateway install`, then
-`hermes gateway setup` for Telegram and the rest — the same division pi-web uses.
+[Hermes](https://hermes-agent.nousresearch.com/docs) runs only on dungeon, in Docker, from
+`~/Git/home-lab/hermes/` (config, bot profiles, Telegram). This repo holds what dungeon
+mounts — `hermes/hooks/`, `hermes/skills/`, `skills/`, `bin/` — plus the bench, and
+`modules/darwin/hermes-desktop.nix`, which points Hermes Desktop on moria and citadel at
+dungeon. See `hermes/CLAUDE.md`.
 
 Two things here are ours because Hermes has no equivalent:
 `hermes/hooks/require-green.sh` refuses a handoff whose tree would not install for anyone
