@@ -58,9 +58,9 @@
       echo "✓ Hermes Desktop: dungeon added as the primary gateway"
     fi
 
-    # Launch reads this, not the registry.
-    if [ ! -e "$dir/connection.json" ]; then
-      jq -n --arg url ${url} '{mode: "remote", remote: {url: $url, authMode: "oauth"}, profiles: {}}' \
+    # Launch reads this; follow the registry's primary.
+    if [ ! -e "$dir/connection.json" ] && jq -e --arg id ${id} '.primary == $id' "$reg" >/dev/null; then
+      jq -n --arg url "${url}" '{mode: "remote", remote: {url: $url, authMode: "oauth"}, profiles: {}}' \
         > "$dir/connection.json"
       echo "✓ Hermes Desktop: launches against dungeon"
     fi
