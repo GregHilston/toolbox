@@ -328,6 +328,12 @@ it in the appropriate `.tpl` file.
 `op` needs the 1Password desktop integration enabled per machine (Settings → Developer
 → "Integrate with 1Password CLI").
 
+**macOS 27 blocks it anyway.** `op` then says "No accounts configured", even with the
+integration on, because the terminal may not read 1Password's shared data. Fix: System
+Settings → Privacy & Security → Files & Folders → your terminal (Ghostty) → turn on
+"Data shared by 1Password", then ⌘Q and reopen the terminal. Never answer `Y` to
+`op`'s "add an account manually": that is a separate password login, not this fix.
+
 On **headless dungeon** that integration is GUI-gated, so `op inject` fails with
 `authorization timeout`. Put a 1Password **service account token** (Business/Teams
 plan) at `~/.config/op/service-account-token`, mode `600` — `just secrets` picks it up
