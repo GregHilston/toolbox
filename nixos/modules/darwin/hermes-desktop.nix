@@ -50,11 +50,19 @@
       exit 0
     fi
 
-    if cmp -s "$reg.tmp" "$reg"; then
+    # The app's own formatting differs from jq's.
+    if [ "$(jq -cS . "$reg.tmp")" = "$(jq -cS . "$reg")" ]; then
       rm -f "$reg.tmp"
     else
       mv -f "$reg.tmp" "$reg"
       echo "✓ Hermes Desktop: dungeon added as the primary gateway"
+    fi
+
+    # Launch reads this, not the registry.
+    if [ ! -e "$dir/connection.json" ]; then
+      jq -n --arg url ${url} '{mode: "remote", remote: {url: $url, authMode: "oauth"}, profiles: {}}' \
+        > "$dir/connection.json"
+      echo "✓ Hermes Desktop: launches against dungeon"
     fi
 
     # A second poller steals dungeon's Telegram updates.
