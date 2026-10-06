@@ -14,7 +14,7 @@
   url = "https://hermes.grehg2.xyz";
   id = "dungeon";
 
-  # Merges; keeps other entries, tokens, labels.
+  # Inserts once; later UI choices win.
   register = pkgs.writeShellScript "hermes-desktop-register" ''
     set -euo pipefail
     umask 077
@@ -38,12 +38,12 @@
       def key: ascii_downcase | sub("/+$"; "");
       (.connections // []) as $c
       | ($c | map(select((.kind == "remote" or .kind == "cloud") and ((.url // "") | key) == ($url | key))) | first) as $hit
-      | if $hit then .primary = $hit.id
+      | if $hit then .
         elif ($c | any(.id == $id)) then error("id \($id) belongs to another gateway")
         else .connections = $c + [{id: $id, kind: "remote", label: $id, url: $url, authMode: "oauth"}]
           | .primary = $id
+          | .launchMode = "primary"
         end
-      | .launchMode = "primary"
     ' "$reg" > "$reg.tmp"; then
       rm -f "$reg.tmp"
       echo "hermes-desktop: could not merge $reg; left untouched" >&2
@@ -54,7 +54,7 @@
       rm -f "$reg.tmp"
     else
       mv -f "$reg.tmp" "$reg"
-      echo "✓ Hermes Desktop: dungeon is the primary gateway"
+      echo "✓ Hermes Desktop: dungeon added as the primary gateway"
     fi
 
     # A second poller steals dungeon's Telegram updates.

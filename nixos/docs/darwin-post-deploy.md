@@ -231,7 +231,7 @@ See `modules/darwin/pi-web.nix`.
 
 Hermes runs only on dungeon (home-lab `hermes/`). These Macs are Desktop clients of it,
 over Tailscale at `https://hermes.grehg2.xyz`. `just dr` installs the cask and, through
-`modules/darwin/hermes-desktop.nix`, makes that URL the primary gateway in
+`modules/darwin/hermes-desktop.nix`, adds that URL once, as the primary gateway, to
 `~/Library/Application Support/Hermes/connections.json`.
 
 **The cask only stages an installer.** `Hermes.app` holds one `Hermes-Setup` binary, and

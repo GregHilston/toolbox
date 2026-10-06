@@ -18,7 +18,7 @@ mounted by dungeon; `skills/README.md` has the convention and who grants what.
 
 Both Macs run the `hermes-desktop` cask as a **client** of dungeon's dashboard at
 `https://hermes.grehg2.xyz`, over Tailscale. `nixos/modules/darwin/hermes-desktop.nix`
-makes it the primary gateway in Desktop's `connections.json`; sign-in is one manual
+adds it once, as primary, to Desktop's `connections.json`; sign-in is one manual
 step. Setup and the one-time cutover from moria's old server:
 `nixos/docs/darwin-post-deploy.md` → Hermes Desktop.
 
