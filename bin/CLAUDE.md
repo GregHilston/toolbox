@@ -56,18 +56,14 @@ a new terminal.
 
 ### Hermes can run these
 
-Scripts here are the tools both Hermes agents run, so write agent tools here rather
+Scripts here are the tools dungeon's Hermes runs, so write agent tools here rather
 than in `home-lab/hermes/scripts/`. A bot uses one only if a skill it has been
-granted names it: `hermes/CLAUDE.md` → Capability skills.
+granted names it: `skills/README.md` → Who gets which skill.
 
-- **moria** puts `bin/` on the tool `PATH` through `hermes/terminal-env.sh`
-  (`terminal.shell_init_files`). The gateway's own `PATH` is not enough. Top
-  level only, as on dungeon: subdirectories are not on an agent's `PATH`.
-- **dungeon** needs a `docker restart hermes`. It mounts `bin/` at `/toolbox/bin`,
-  and Hermes resets the tool `PATH` to `/usr/local/bin:/usr/bin:/bin`, so
-  `home-lab/hermes/cont-init/04-toolbox-path` links every top-level executable
-  here into `/usr/local/bin` on each start. Scripts in subdirectories are not
-  linked.
+A new script needs a `docker restart hermes` on dungeon. It mounts `bin/` at
+`/toolbox/bin`, and Hermes resets the tool `PATH` to `/usr/local/bin:/usr/bin:/bin`,
+so `home-lab/hermes/cont-init/04-toolbox-path` links every top-level executable
+here into `/usr/local/bin` on each start. Scripts in subdirectories are not linked.
 
 For an agent tool, prefer the standard library (a PEP 723 dependency makes `uv`
 download it inside dungeon's container), print plain text, and make each error

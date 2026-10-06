@@ -5,7 +5,7 @@
 # ///
 """Search Hacker News stories. Read one with fetch-thread.py.
 
-Uses HN's Algolia search API, which needs no key. Hermes bots on moria have no
+Uses HN's Algolia search API, which needs no key. Hermes bots have no
 web search tool, so this is how they find a thread to read.
 
 Usage:

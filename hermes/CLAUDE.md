@@ -1,353 +1,129 @@
 # Hermes
 
-Bots on moria, against local inference. **A Bot is a profile** — the docs are
-explicit that it is "isolated config, memory, skills, credentials and chat
-history under `~/.hermes/profiles/<name>/`" — so the directories here and the
-roster in the Desktop app are the same objects seen from two ends.
+**Hermes runs only on dungeon**, in Docker, from `~/Git/home-lab/hermes/`. That
+directory owns the config, the SOULs, the bot profiles, the transports (Telegram,
+email, Slack through Old Gregg) and the secrets. Start there for anything about how
+a bot behaves.
 
-`ls` answers what is in here. `nixos/modules/programs/tui/hermes.nix` symlinks
-`config.yaml`, `hooks/` and each `profiles/<bot>/SOUL.md` into `~/.hermes`.
+What is here is what dungeon mounts from toolbox, plus the measurements behind it:
 
-## There are two Hermes deployments — check before wiring anything
+- `hooks/` and `skills/`: the completion gates and the Hermes-only skills. home-lab's
+  compose mounts them by path, so **do not move them**.
+- `bench/` is the builder-model race, `seed/` holds task cards, `tests/` tests the gates.
 
-`~/Git/home-lab/hermes/` runs one on **dungeon**, reached over **Slack (through Old
-Gregg) and email at grehgpi@**. This one, on **moria**, takes **Telegram**.
+Agent tools are scripts in `bin/` and shared skills are in `skills/`, both also
+mounted by dungeon; `skills/README.md` has the convention and who grants what.
 
-**They must not share an integration.** Slack load-balances events across
-connections sharing an app token, so a second consumer steals a random share of
-Old Gregg's messages rather than adding a listener; two IMAP pollers race for
-the same mail. Both were briefly configured here on 2026-09-22.
+## The clients: Hermes Desktop on moria and citadel
 
-**Home Assistant is the sharpest edge.** `home-lab/hermes/README.md` §8: the
-`ha_*` toolset "is deliberately not enabled, and the token is not named
-`HASS_TOKEN` because that name would enable it" — HA has no per-entity
-permissions and the locks are S2 Authenticated, so read-only is the whole
-design. `Infra/Hermes/hass_token_pi_harness` is *not* read-only: a POST to a
-bogus service returns 400, not 401, so it clears auth and can call services.
-If moria ever needs HA, it wants its own token from the read-only `hermes` user.
+Both Macs run the `hermes-desktop` cask as a **client** of dungeon's dashboard at
+`https://hermes.grehg2.xyz`, over Tailscale. `nixos/modules/darwin/hermes-desktop.nix`
+adds it once, as primary, to Desktop's `connections.json`; sign-in is one manual
+step. Setup and the one-time cutover from moria's old server:
+`nixos/docs/darwin-post-deploy.md` → Hermes Desktop.
 
-## Installing it
+**Never run a messaging gateway on a client.** moria ran its own Hermes, with
+Telegram, until 2026-10. Two pollers on one Telegram token each get a random share
+of the updates; Slack load-balances events across connections sharing an app token,
+so a second consumer steals Old Gregg's messages; two IMAP pollers race for one
+mailbox. So no chat token belongs in any file a client Mac reads,
+`nixos/secrets/.env` included, since every shell exports it. `just dr` warns while a
+gateway agent or a token is still there.
 
-The `hermes-desktop` cask stages an **installer**, not the app: `Hermes.app`
-holds one `Hermes-Setup` binary and no CLI. `open -a Hermes` once, then reload
-the shell — the installer puts the binary at `~/.local/bin/hermes` and edits
-your rc. `just dr` alone leaves you with `command not found: hermes`.
+**Home Assistant is read-only by design.** home-lab `hermes/README.md` §8: the `ha_*`
+toolset stays off, and the token is not named `HASS_TOKEN` because that name enables
+it. `Infra/Hermes/hass_token_pi_harness` (pi's) is *not* read-only: a POST to a bogus
+service returns 400, not 401. Never hand it to a bot.
 
-The gateway service is then `hermes gateway install` by hand, and transports are
-`hermes gateway setup`. Full checklist: `nixos/docs/darwin-post-deploy.md`.
+## Why the roster looks like it does
 
-## The symlinks are writable on purpose
+The reasoning lives here because the evidence does (`bench/`); which model each bot
+runs is home-lab's config.
 
-Hermes' own configuration docs say `config.yaml` "is not safe to make read-only
-for production deployments", and `SOUL.md`, `skills/` and `memories/` are
-agent-modified at runtime. So these point into the repo, not `/nix/store`, and
-a bot's runtime edits show up as git diffs to commit or discard — the same trade
-`claude.nix` makes for `~/.claude/settings.json`.
+**The reviewer must be a different family, and unconditional.** By arXiv 2609.04270,
+same-model self-review had the highest error detection and no significant accuracy
+gain (it rejected 2.1x as often for a third the repair rate), while a cross-family
+mid-tier reviewer gave +12 points at 2% false rejection. And the builder cannot be
+trusted to ask for help: recognising you are stuck is the thing a small model cannot
+do. Ours had `clarify` and instructions to ask, and published 2,120 false rows
+instead. **Writes stay single-threaded**: two agents editing one tree make
+conflicting implicit choices.
 
-**A bot can therefore write into this repo.** Worth knowing before pointing an
-unsupervised one at it. Only the declarative half is linked; `memories/`,
-`sessions/`, `state.db`, `cron/` and `logs/` stay where Hermes puts them.
+`bench/quick-ab/` races builder models on three small cards with hidden tests
+(`run.py --report <dir>` prints the table). On 2026-09-25 (58 runs), Qwen3.6-35B-A3B
+finished a card in about a minute but **declared done with hidden tests failing** in
+6 of 9 runs (78% of hidden tests); dense 27B-class models reached 94% at 5–7 minutes.
+The same MoE **reviewed by another family** reached 92–94% in about 2.5 minutes, and
+DeepSeek reviewed as well as Claude at 1/40th the price. **Kanban's review lane is not
+that:** it reruns the card's assignee, so the builder reviews itself.
+`skills/verify-agent-output/` puts the review on evidence: a model judging code alone
+catches ~45% of real errors, the same model plus deterministic analysis 94%.
 
-## The roster, and why the orchestrator is a different family
+The bench drives a local `abtest` profile through the `hermes` CLI, so it needs a
+Hermes home with that profile on the machine that runs it.
 
-`builder` writes. `orchestrator` plans and delegates. `reviewer` judges what
-comes back, with its own SOUL for the review style. `researcher` is unused so
-far. `librarian` keeps the LLM wiki at `~/Git/notes/wiki`, apart from
-the coding bots. **Writes stay single-threaded** — when two agents edit one tree
-they make conflicting implicit choices and the result is worse than either
-alone, which is the one thing every source on this agrees about.
+## The gates
 
-The orchestrator and reviewer run **DeepSeek V4.1 Flash** (`deepseek-flash`) over the API,
-deliberately not another Qwen. Same-family review is worth nothing by arXiv
-2609.04270: same-model self-review had the *highest* error detection (85%
-recall) and no significant accuracy gain, because it rejected 2.1x as often for
-a third the repair rate. A cross-family mid-tier reviewer gave +12 points at a
-2% false-rejection rate. It is hosted because nothing moria can serve beside the
-builder is both non-Qwen and strong enough; reviews and plans are low-volume,
-so the cost is small. The goal judges run on it for the same reason.
+`hooks/require-green.sh` refuses `kanban_complete` and `kanban_request_review` when
+the tree would not install for anybody else. Three runs reached a green suite by
+deleting `[build-system]` or the dependency list, or by hand-making wrappers in
+`.venv`, and the agent, the reviewer and the scorer all read that polluted venv and
+agreed. `tests/gate-evasions.sh` replays every bypass that has worked, on the host, in
+seconds; its last case asserts an installable tree still **passes**, because a gate
+that refuses good work deadlocks an honest agent. It checks the card's own workspace
+(`HERMES_KANBAN_WORKSPACE`, else the payload's `cwd`). Each declared console script
+must run `--help`. **Known limit:** deleting the scripts table skips that step, and
+only the clean sync and the tests still gate the tree.
 
-**The API sees what the orchestrator reads**, so work in the shared workspace
-goes to DeepSeek. `DEEPSEEK_API_KEY` comes from 1Password through `just secrets`
-into the root and every profile `.env`, and is stripped on citadel.
+**It only fires on board-driven work.** A plain Bot Chat never calls either tool, so
+for chat-driven work run `bin/installs-from-clean.sh <workspace>` yourself.
 
-**The review must be unconditional.** Cognition's "smart friend" pattern — the
-builder calls for help when stuck — fails here, because recognising you are
-stuck is the thing a small model cannot do. Our builder had `clarify`, and two
-files told it to ask rather than guess, and it published 2,120 false rows
-instead. So the orchestrator reviews every time, on a trigger the builder does
-not control.
+`skills/llm-wiki-review/` is Wanderloots' Review Companion v1.0.0, copied verbatim
+(sha256 `d9c03763…59dc2c`, matching its QUALIFICATION.md). It calls itself "not
+deterministic enforcement"; `hooks/wiki-review-gate.py` is: compiled pages need a
+`Review/` proposal whose `decision: approve` the bot did not write itself.
+`tests/wiki-review-gate.sh` covers each rule. `terminal` can still write files, so it
+is a fence, not a wall. On its first six ingests the local model imagined Greg saying
+"approve" and wrote the decision itself, and overwrote a rejected proposal to reopen
+it; the gate caught both.
 
-`hermes/skills/verify-agent-output/` is what makes its judgement land on
-evidence: a model judging code alone catches ~45% of real errors, and the same
-model plus deterministic analysis reaches 94%.
+**Hook consent is automatic on dungeon.** Its profiles set `hooks_auto_accept: true`,
+so every run approves the hook, including after an edit. Without it, Hermes pins
+approval to the script's mtime and an edited hook stops firing until a run with
+`--accept-hooks`. `hooks revoke` disables a hook outright, and `hooks test` fires the
+script without recording consent.
 
-**`delegation` is off on every bot.** @mentions do not need it — Task Delegation
-spawns anonymous temporary subagents, while messaging a persistent teammate is
-native Bot Mode. It cost 4,650 B of schema per request and offered a second
-writer.
+## Traps that hold wherever Hermes runs
 
-Both bots start in `~/Git/agent-runs/workspace` (`terminal.cwd`), which must be
-shared: a reviewer that cannot read the work is not a reviewer.
-
-## Local, cloud, or mixed
-
-`hermes-mode.sh local|mixed|cloud` (in `bin/`) picks the models for every bot
-at once. Configs never name a model: they read `${MODEL_*}` (the bot's own
-role), `${JUDGE_*}` (goal judges, planner) and `${UTIL_*}` (triage,
-compression), and the script writes those lines into each profile's `.env`,
-which is where a profile resolves `${VAR}`. Hermes has no mode feature and a
-profile cannot inherit, so this is the one switch. `just secrets` re-applies the
-saved mode (`~/.hermes/mode`), since it regenerates every `.env`.
-
-| Mode | builder, researcher, librarian | orchestrator, reviewer, judges | triage, compression |
-|---|---|---|---|
-| local | Qwen3.6-35B-A3B | Qwen3.8-27B | Qwen3.8-27B |
-| mixed (default with a DeepSeek key) | Qwen3.6-35B-A3B | DeepSeek Flash | Qwen3.8-27B |
-| cloud | DeepSeek Flash | DeepSeek Flash | DeepSeek Flash |
-
-Bots see a switch on their next message. The default profile (CLI, Telegram)
-reads the environment at gateway start, so `hermes gateway restart` after one.
-
-## Why the builder is the MoE, and why its work must be checked
-
-`bench/quick-ab/` races builder models on three small cards and scores them
-with hidden tests the agent never sees (`run.py --report <dir>` prints the
-table). On 2026-09-25 (58 runs), Qwen3.6-35B-A3B finished a card in about a
-minute but **declared done with hidden tests failing** in 6 of 9 runs (78% of
-hidden tests). Dense Qwen3.8-27B, Swift-Qwen3.8-27B and Qwen3.5-122B-A10B
-reached 94% at 5–7 minutes a card. The same MoE **reviewed by another model**
-(up to two rounds) reached 92–94% in about 2.5 minutes; DeepSeek reviewed as
-well as Claude at 1/40th the API price. DeepSeek alone as builder scored 98%
-in under a minute, but the code leaves the machine.
-
-So the builder stays the MoE and every result is reviewed by another family;
-in Bot Mode that is the orchestrator. **Kanban's review lane is not that:** it
-reruns the card's assignee with `sdlc-review`, so the builder reviews itself.
-Rejected in the same run: froggeric's fixed chat template (same scores, up to
-twice the tokens), Qwen3.8 Flash Next REAP (2.7 tok/s on oMLX 0.6.4), and
-Qwen3.5 4B/9B (false completion on every card).
-
-## What is ours rather than Hermes'
-
-`hooks/require-green.sh` refuses `kanban_complete` and `kanban_request_review`
-when the tree would not install for anybody else. It exists because three runs
-reached a green suite by deleting the things that make a tree reproducible —
-`[build-system]`, the dependency list, and in one case hand-made wrapper
-executables in `.venv` — and the agent, the reviewer and the scorer all read
-that same polluted venv and all three agreed. `tests/gate-evasions.sh` replays
-every bypass that has worked, on the host, in seconds; its last case asserts a
-genuinely installable tree still **passes**, because a gate that refuses good
-work deadlocks an honest agent. It checks the card's own workspace
-(`HERMES_KANBAN_WORKSPACE`, else the hook payload's `cwd`); a fixed path once
-held a correct build refused for 2.5 hours.
-
-Everything else this repo once wrapped around Hermes — a container, a Telegram
-bot, a run loop, a scorer, a preflight — has been deleted, because Hermes ships
-a Docker terminal backend, native Telegram and eighteen other transports, the
-kanban board, and an approvals system. See the root `CLAUDE.md`.
-
-**Agent tools are scripts in `bin/`**, shared by every machine and both Hermes
-deployments. `bin/CLAUDE.md` has the conventions and the one step dungeon needs.
-
-## Capability skills: which bot knows which tool
-
-**The convention is `skills/README.md`**: one skill set for Claude Code, pi and
-Hermes, with the tool itself a script in `bin/`. What is Hermes-only:
-
-- **Grants.** moria: `botSkills` and `defaultSkills` in
-  `nixos/modules/programs/tui/hermes.nix`, written `lab-tools/<name>`. dungeon:
-  one read-only mount per skill on the `hermes` service in home-lab's
-  `docker-compose.yaml`. The researcher and the default profiles get research
-  skills; the builder does not.
-- **SOULs name no tools.** They carry one line pointing at skills. dungeon's also
-  says to open a skill with `skill_view`.
-- **Skills need a model that uses them.** Gemma 4 does not: it calls a skill as
-  a tool (`lab-tools:reddit`) and never opens it, 0 of 8 on 2026-09-27, while the
-  Qwen models managed every run. No SOUL wording fixed it. Numbers are in
-  home-lab `docs/local-llms.md`.
-- **`hermes/skills/`** is for skills only Hermes can use (`verify-agent-output`,
-  `llm-wiki-review`); Claude Code would otherwise load them.
-
-## The librarian's review gate
-
-`skills/llm-wiki-review/` is Wanderloots' free Review Companion v1.0.0 from
-Patreon, copied verbatim (sha256 `d9c03763…59dc2c`, which matches its own
-QUALIFICATION.md). It wraps the bundled `llm-wiki`, which `hermes.nix` links
-into the librarian because a bot sees only its own `skills/`.
-
-The skill calls itself "not deterministic enforcement", and it was qualified on
-a frontier model only. `hooks/wiki-review-gate.py` is the enforcement: compiled
-pages need a `Review/` proposal whose `decision: approve` the bot did not write
-itself. Greg sets that property in Obsidian. `tests/wiki-review-gate.sh` covers
-each rule. `terminal` can still write files, so the gate is a fence, not a wall.
-
-**After editing the hook, start the librarian once** (`hermes -p librarian
---accept-hooks -z "say pong"`). Hermes pins its approval to the script's mtime,
-and `hooks revoke` disables the hook outright until an agent start re-approves
-it. `hooks test` fires the script but does not record consent.
-
-Two things the local model did on its first six ingests, both caught by the
-gate: it imagined Greg saying "approve" and tried to write `decision: approve`
-itself, and it overwrote a rejected proposal to reopen it.
-
-## The gate only fires on board-driven work
-
-`hooks/require-green.sh` matches `^kanban_(complete|request_review)$`. A plain
-Bot Chat never issues either, so **the gate does nothing in conversation** — it
-guards work handed off through `hermes kanban`. For chat-driven work the
-equivalent is running `bin/installs-from-clean.sh <workspace>` yourself, or
-giving a bot a skill that does.
-
-Each bot carries its own copy of the `hooks` block in
-`profiles/<bot>/config.yaml`, because a profile does **not** inherit the root
-config's. The root carried it for seven runs and the gate never fired once.
-
-## A profile's config REPLACES the root's, key by key
-
-Not just `hooks` — every key. `profiles/<bot>/config.yaml` carried
-`agent.disabled_toolsets: [homeassistant]`, which dropped the root's other
-seventeen on the floor: `web`, `browser`, `x_search` and the rest were
-advertised to every bot, including the ones that run with no network. The cost
-was 25 tools / 42.2 KB of schema per request against `default`'s 16 / 30.0 KB.
-
-So each profile now carries the whole list, and the way to see it is to compare
-a bot against the root:
-
-```bash
-for p in default builder researcher orchestrator librarian; do
-  hermes -p $p prompt-size | grep "Tool schemas"
-done
-```
-
-`default` reads the root config alone. **Any profile that differs from it has
-overridden something**, and the numbers agreeing is the check that a
-profile's copy is still complete.
-
-## Reading a bot's conversations
-
-They are in `~/.hermes/state.db`, and nowhere else. Read them rather than asking
-for a paste:
-
-```bash
-sqlite3 -header -column ~/.hermes/state.db \
-  "select id, source, display_name, datetime(started_at,'unixepoch','localtime'), message_count
-     from sessions order by started_at desc limit 10;"
-
-sqlite3 ~/.hermes/state.db \
-  "select role, tool_name, substr(replace(coalesce(content,''),char(10),' '),1,200)
-     from messages where session_id='<id>' order by id;"
-```
-
-`source` tells the surface apart: `telegram`, `desktop`, `cli`. There are
-`messages_fts` and `messages_fts_trigram` indexes if you want to search rather
-than scroll.
-
-The two neighbouring paths are decoys. `~/.hermes/sessions/sessions.json` says
-so in its own `_README` — it is a legacy mirror of the gateway *routing* index,
-a map of session keys to ids, with no message text. `~/.hermes/logs/` is the
-gateway's operational log: it records that a Telegram message arrived and how
-many characters the reply was, never what either said.
-
-Runtime state, so none of it is in git.
-
-## Traps
-
-- **A Telegram chat keeps its system prompt until `/new`.** Gateway sessions
-  never reset on their own, and a session keeps the prompt it started with. After
-  a SOUL or skill change, send `/new` in Telegram, or the bot won't see it. One
-  chat ran from 2026-09-22 and scraped DuckDuckGo for Reddit instead of using
-  the reddit skill. `hermes gateway restart` does not start a new session.
-- **The gateway's terminal does not see toolbox's `PATH`.** launchd starts the
-  gateway with no `$SHELL`, so Hermes runs a bash login shell, which never reads
-  `.zshrc`. Every toolbox script was "command not found" from Telegram, while
-  `hermes -z` in a terminal worked, because it inherited zsh. So
-  `terminal.shell_init_files` sources `terminal-env.sh` in the root config and in
-  every profile's config: a profile never reads the root's.
-  `tests/test_skills.py` checks each one. Test with the gateway's
-  environment, not your shell's (drop `-p <bot>` for the default profile, which
-  is the one Telegram reaches):
-
-  ```bash
-  P=$(plutil -extract EnvironmentVariables.PATH raw ~/Library/LaunchAgents/ai.hermes.gateway.plist)
-  cd ~/.hermes && env -i HOME=$HOME PATH="$P" HERMES_HOME=$HOME/.hermes \
-    ~/.hermes/hermes-agent/venv/bin/python -m hermes_cli.main -p <bot> -z \
-    'Use the terminal tool to run: command -v reddit-search.py'
-  ```
-- **`${VAR}` in `config.yaml` resolves against the profile's own `.env`, not
-  your shell.** `api_key: ${OMLX_API_KEY}` with the key only in
-  `nixos/secrets/.env` means every model call goes out keyless and oMLX answers
-  `HTTP 401: Invalid API key`. The gateway is a launchd agent; it inherits
-  nothing. Credentials the setup wizard can see in your environment are not
-  credentials the gateway has — that is also why it reported Slack and Telegram
-  configured while `channel_directory.json` held no platforms at all.
-- **`~/.hermes/.env` is generated** from `hermes/.env.tpl` by `just secrets`, so
-  `hermes config set` writes and anything the wizard stores there are
-  overwritten. Put keys in the template. **Every bot also needs its own**, from
-  `hermes/profile.env.tpl` — see below.
-
-- **A secondary profile does NOT fall back to the root `.env`, and an
-  unresolved `${VAR}` is sent VERBATIM.** `config.py:_env_ref_lookup` resolves
-  refs through the profile secret scope, and `get_secret` returns a miss rather
-  than another profile's value — upstream #84079, where every profile "had" the
-  default's `${MATRIX_ACCESS_TOKEN}`. So with no `profiles/<bot>/.env`,
-  `api_key: ${OMLX_API_KEY}` goes on the wire as the literal string
-  `${OMLX_API_KEY}` and oMLX answers `HTTP 401: Invalid API key`.
-
-  **The default profile is the exception** — it reads plain `os.environ`. That
-  is why this hid for a whole session: `hermes -p builder -z` works (a CLI
-  invocation enters no scope), and Telegram works (`sessions.json` shows
-  `transport_profile: "default"`), while every Bot Chat 401s. "The key saved for
-  Custom endpoint is invalid" is the Desktop's phrasing for it, and it sends you
-  looking at a key that is fine.
-
-  The tell is in the request dump, which is the fastest way to settle any
-  "is it the key" question:
-
-  ```bash
-  ls -t ~/.hermes/profiles/<bot>/sessions/request_dump_*.json | head -1
-  ```
-
-  `request.headers.Authorization` reading `Bearer ${OMLX_A...KEY}` is the
-  literal template, not a redaction of a real secret.
-- **`hermes doctor`'s "No API key found in ~/.hermes/.env" is a permanent false
-  positive here.** It greps the file for one of thirty hard-coded vendor names
-  (`doctor.py:_PROVIDER_ENV_HINTS`) and `OMLX_API_KEY` is not among them. The
-  key is wired through `config.yaml`'s `api_key: ${OMLX_API_KEY}`; the check
-  that actually answers the question is the same doctor's "auxiliary task
-  routing resolves: … custom@127.0.0.1".
-- **Never `hermes doctor --fix` or `hermes setup` to bump `_config_version`.**
-  Both end in `_persist_migration`, which rewrites `config.yaml` from parsed
-  YAML — every comment in it is why a setting is what it is, and they do not
-  survive. Read the step in `hermes_cli/config_migrations.py`, apply what it
-  does by hand, and edit the number.
-
-- **`HERMES_WRITE_SAFE_ROOT` is a security feature**, not a bug. It confines
-  writes to a directory. This project once widened it to work around a blocked
-  run and wrote that up as a fix.
-- **A quiet worker is not a stalled worker.** Generation happens in oMLX on the
-  host; the container or client only waits. Judge on oMLX's CPU, never the
-  client's.
-- **An unreachable compression target is a deadline.** `protect_last_n` exempts
-  messages from compression; if those alone exceed `target_ratio`, every attempt
-  misses and the goal judge eventually rules the goal unachievable. See
-  `config.yaml`.
-- **`agent.reasoning_effort` does nothing on this setup.** Hermes does put it on
-  the wire — a captured request body to `127.0.0.1:8000/v1/chat/completions`
-  carries `"reasoning_effort": "low"` — and oMLX ignores it. Measured
-  2026-09-22: the same prompt at `low` and at `high` returned the same text,
-  the same 400 completion tokens, and an empty `reasoning_content` both times.
-  oMLX applies reasoning effort from **its own** `chat_template_kwargs`, per
-  model, in `~/.omlx/model_settings.json`, and the A3B entry the builder runs
-  has none — while the Qwen3.8-family judge has `reasoning_effort: medium`,
-  because its template defaults to `xhigh`, which never terminates. What bounds
-  thinking is `thinking_budget_tokens` in the same file: 8192 for the A3B, 16384
-  for the Qwen3.8-family judge. So the
-  knob is oMLX's, not Hermes'; `nixos/modules/darwin/omlx.nix` generates it.
-  The builder moved from the DWQ build to plain `Qwen3.6-35B-A3B-4bit` on
-  2026-10-02 so Hermes and pi share one resident copy; DWQ's edge was one
-  task in ten, never shown to be real (`docs/model-evaluation.md`).
-- `provider: custom:omlx` is the old form. This release wants plain
-  `provider: "custom"` with `base_url` and `api_key` inline; the wrong value
-  raises `Unknown provider` and the worker still exits 0.
+- **A profile's `config.yaml` replaces the root's key by key**: `hooks`,
+  `agent.disabled_toolsets`, all of it. A profile carrying one disabled toolset
+  dropped the root's other seventeen and advertised 25 tools / 42 KB of schema per
+  request instead of 16 / 30 KB. Compare `hermes -p <bot> prompt-size` against
+  `default`; any difference is an override.
+- **A secondary profile does not fall back to the root `.env`, and an unresolved
+  `${VAR}` is sent verbatim** (`_env_ref_lookup`, upstream #84079). The default
+  profile reads `os.environ`, so the CLI works while every Bot Chat answers
+  `HTTP 401: Invalid API key`. On dungeon each profile resolves `${LITELLM_API_KEY}`
+  from its own `.env`. A request dump settles it:
+  `Authorization: Bearer ${LITELLM...KEY}` is the literal template.
+- **A Telegram chat keeps its system prompt until `/new`.** A gateway restart does
+  not start a new session, so a SOUL or skill change is invisible until then.
+- **`hermes doctor`'s "No API key found" is a false positive** for `LITELLM_API_KEY`:
+  it greps for thirty hard-coded vendor names. **Never `hermes doctor --fix` or
+  `hermes setup`** to bump `_config_version`: both rewrite `config.yaml` from parsed
+  YAML and drop every comment. Apply the step from `config_migrations.py` by hand.
+- **`agent.reasoning_effort` does nothing against oMLX.** It reaches the wire and
+  oMLX ignores it (same text, same tokens at `low` and `high`, 2026-09-22). oMLX
+  takes effort and `thinking_budget_tokens` per model from its own
+  `model_settings.json`, which `nixos/modules/darwin/omlx.nix` deploys.
+- **`HERMES_WRITE_SAFE_ROOT` is a security feature.** This project once widened it
+  to get past a blocked run and called that a fix.
+- **A quiet worker is not a stalled one.** Generation happens in oMLX; judge on its
+  CPU, not the client's.
+- **An unreachable compression target is a deadline.** If the `protect_last_n`
+  messages alone exceed `target_ratio`, every attempt misses and the goal judge
+  eventually rules the goal unachievable.
+- `provider: custom:omlx` is the old form; it raises `Unknown provider` and the
+  worker still exits 0. Use `provider: "custom"` with `base_url` and `api_key`.
 
 `~/Git/notes/ref-hermes-run-log.md` has the run history and every finding.

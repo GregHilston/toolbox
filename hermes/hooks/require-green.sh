@@ -20,10 +20,7 @@ set -uo pipefail
 
 # The card's own workspace. A fixed path here gated every card against one
 # old tree: a correct build sat refused for 2.5 hours (builder-ab, 2026-09-24).
-# --help, not build: it exercises import and CLI wiring — the exact failure that
-# shipped last run (ImportError on a mis-cased class name) — without a network
-# fetch that would make every completion attempt cost minutes.
-BUILD_CMD="${GATE_BUILD_CMD:-uv run vt-smb --help}"
+# GATE_BUILD_CMD overrides the per-script `--help` checks below.
 LOG="${GATE_LOG:-${HOME}/.hermes/logs/require-green.log}"
 mkdir -p "$(dirname "${LOG}")" 2>/dev/null || LOG=/dev/null
 
@@ -100,39 +97,57 @@ if printf '%s' "${out}" | grep -qiE 'no tests ran|collected 0 items'; then
   block "${tool} refused: the test suite passes because it contains no tests. Removing tests is not a way to make them pass."
 fi
 
-if ! out="$(gate_run 60 "${BUILD_CMD}")"; then
-  block "${tool} refused: the suite passes but '${BUILD_CMD}' fails, so the entrypoint does not even import. Tests passing while the CLI cannot import is exactly the gap that shipped last run.
+# Parsed, not grepped: TOML spells tables several ways.
+# A function: bash 3.2 misparses heredocs in $().
+read_pyproject() {
+  python3 - <<'PY' 2>&1
+import sys
+try:
+    import tomllib
+    with open("pyproject.toml", "rb") as f:
+        data = tomllib.load(f)
+except Exception as e:
+    print(f"{type(e).__name__}: {e}")
+    sys.exit(3)
+project = data.get("project") or {}
+names = set(project.get("scripts") or {})
+names |= set((project.get("entry-points") or {}).get("console_scripts") or {})
+for name in sorted(names):
+    print("script " + name)
+if "build-system" in data:
+    print("build-system")
+PY
+}
+if ! parsed="$(read_pyproject)"; then
+  block "${tool} refused: pyproject.toml cannot be parsed, so nothing can install this project.
+
+$(printf '%s' "${parsed}" | tail -5)"
+fi
+scripts="$(printf '%s\n' "${parsed}" | sed -n 's/^script //p')"
+
+# --help: imports and wires the CLI, offline.
+build_cmds=()
+if [ -n "${GATE_BUILD_CMD:-}" ]; then
+  build_cmds=("${GATE_BUILD_CMD}")
+else
+  while IFS= read -r s; do
+    [ -n "${s}" ] && build_cmds+=("uv run ${s} --help")
+  done <<< "${scripts}"
+fi
+
+for cmd in ${build_cmds[@]+"${build_cmds[@]}"}; do
+  if ! out="$(gate_run 60 "${cmd}")"; then
+    block "${tool} refused: the suite passes but '${cmd}' fails, so the entrypoint does not even import. Tests passing while the CLI cannot import is exactly the gap that shipped in run 1.
 
 $(printf '%s' "${out}" | tail -40)"
-fi
+  fi
+done
 
 # Everything above this line runs against the venv that accumulated during the
 # run, which is why both runs that ever completed a card shipped a tree that
 # installs for nobody. long-a dropped pyarrow from the dependencies; long-b
 # deleted the whole [build-system] and every dependency and hand-made wrapper
 # executables in .venv. Green, both times, and uninstallable, both times.
-#
-# Conditioned on declaring a console script: a library with no entrypoint is a
-# legitimate virtual project and uv will not install it either way. Declaring
-# one is the promise that this installs, and long-b kept the promise while
-# deleting everything that could keep it. Both spellings count, and leading
-# whitespace does not excuse either — keying on the literal `^[project.scripts]`
-# meant one rename skipped the whole block.
-script_name="$(python3 - <<'PY' 2>/dev/null
-import re, sys
-try:
-    text = open("pyproject.toml").read()
-except OSError:
-    sys.exit(0)
-m = re.search(r'^\s*\[project\.(scripts|entry-points\.console_scripts)\]\s*$(.*?)(?=^\s*\[|\Z)',
-              text, re.M | re.S)
-if not m:
-    sys.exit(0)
-e = re.search(r'^\s*["\']?([A-Za-z0-9._-]+)["\']?\s*=', m.group(2), re.M)
-print(e.group(1) if e else "")
-PY
-)"
-
 #
 # There is deliberately NO "dependencies must be non-empty" check here. It was
 # one, and long-e proved it wrong: that agent shipped a pure-stdlib package —
@@ -147,7 +162,9 @@ PY
 # must both run out of that venv. Those catch long-a's dropped pyarrow and
 # long-b's hand-made wrappers without an opinion about how many dependencies a
 # package ought to have.
-if [ -n "${script_name}" ] && ! grep -qE '^\s*\[build-system\]' pyproject.toml; then
+# Declaring a console script promises it installs.
+script_name="$(printf '%s\n' "${scripts}" | head -1)"
+if [ -n "${script_name}" ] && ! printf '%s\n' "${parsed}" | grep -qx 'build-system'; then
   block "${tool} refused: pyproject.toml declares the console script '${script_name}' but has no [build-system] table, so nothing can install it. The suite and the entrypoint only pass here because .venv already holds what they need; a clean checkout gets nothing. Restore the packaging rather than working around it — deleting the build system is not a fix for a build error."
 fi
 
@@ -164,29 +181,32 @@ GATE_VENV="$(mktemp -d /tmp/gate-clean-venv.XXXXXX 2>/dev/null)" || GATE_VENV="/
 rm -rf "${GATE_VENV}"
 clean_fail() { rm -rf "${GATE_VENV}"; block "$1"; }
 
-# Sync explicitly rather than relying on BUILD_CMD to install the project as a
-# side effect. It does in production, where BUILD_CMD is `uv run vt-smb --help`;
-# it did not under the verifier's `true`, and a check that depends on another
-# command having happened first is the bug that already bit the suite check.
+# Sync explicitly rather than relying on a build command to install the
+# project as a side effect: with no scripts there is none, and a check that
+# depends on another command having happened first already bit the suite check.
 if ! out="$(gate_run 180 'uv sync --quiet' UV_PROJECT_ENVIRONMENT="${GATE_VENV}")"; then
   clean_fail "${tool} refused: the project cannot be installed from pyproject.toml alone into a clean environment.
 
 $(printf '%s' "${out}" | tail -40)"
 fi
 
-if ! out="$(gate_run 180 "${BUILD_CMD}" UV_PROJECT_ENVIRONMENT="${GATE_VENV}")"; then
-  clean_fail "${tool} refused: '${BUILD_CMD}' works against the .venv in the workspace and fails in a clean environment built from pyproject.toml alone. Whatever it needs is installed but not declared, so nobody else can build this.
+for cmd in ${build_cmds[@]+"${build_cmds[@]}"}; do
+  if ! out="$(gate_run 180 "${cmd}" UV_PROJECT_ENVIRONMENT="${GATE_VENV}")"; then
+    clean_fail "${tool} refused: '${cmd}' works against the .venv in the workspace and fails in a clean environment built from pyproject.toml alone. Whatever it needs is installed but not declared, so nobody else can build this.
 
 $(printf '%s' "${out}" | tail -40)"
-fi
+  fi
+done
 
 # `uv run <name>` falls back to $PATH when the project is not installed, so the
 # check above passed against a wrapper in the dirty .venv while the clean venv
 # never contained the command at all. One `[tool.uv] package = false` did it.
 # The console script has to be IN the environment that was just built.
-if [ -n "${script_name}" ] && [ ! -x "${GATE_VENV}/bin/${script_name}" ]; then
-  clean_fail "${tool} refused: a clean environment built from pyproject.toml alone does not contain the console script '${script_name}'. '${BUILD_CMD}' only appeared to work because uv fell back to a '${script_name}' found on PATH — most likely one hand-made in .venv during this run. A clean checkout installs no such command."
-fi
+while IFS= read -r s; do
+  if [ -n "${s}" ] && [ ! -x "${GATE_VENV}/bin/${s}" ]; then
+    clean_fail "${tool} refused: a clean environment built from pyproject.toml alone does not contain the console script '${s}'. 'uv run ${s}' only appeared to work because uv fell back to a '${s}' found on PATH — most likely one hand-made in .venv during this run. A clean checkout installs no such command."
+  fi
+done <<< "${scripts}"
 
 # The clean entrypoint check only runs --help, so a dependency that only the
 # tests or the real build import can still be dropped. Running the suite out of

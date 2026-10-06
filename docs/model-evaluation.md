@@ -105,20 +105,17 @@ default `xhigh` never terminates. oMLX reads the file on restart, which the harn
 Anything else calling oMLX skews speed and can trigger restarts mid-request.
 
 ```bash
-launchctl bootout gui/$(id -u)/ai.hermes.gateway
 launchctl bootout gui/$(id -u)/com.pi-web.sessiond
-pgrep -fl hermes_cli          # kill what survives the bootout
 ```
 
-Put them back when done, and check:
+Put it back when done, and check:
 
 ```bash
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.hermes.gateway.plist
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.pi-web.sessiond.plist
-launchctl list | grep -iE "hermes|pi-web"
+launchctl list | grep -i pi-web
 ```
 
-On dungeon, Hermes is the `hermes` and `hermes-ops` containers in home-lab;
+Hermes runs only on dungeon, as the `hermes` and `hermes-ops` containers in home-lab;
 `docker stop`/`docker start` them. Never stop Frigate or the rest: dungeon's numbers
 must be taken with them up.
 
@@ -201,9 +198,8 @@ dense 27B's 10 of 10 against the A3B's 2 of 5) as a result.
 2. `dot/omlx/.omlx/model_settings.json`: the entry's settings and why.
 3. `dot/pi/.pi/agent/models.json.tpl`, and `is_default` in `model_settings.json` for a
    new light model.
-4. `bin/hermes-mode.sh` (`worker_local` light, which also does compression; `judge_local`
-   heavy). On dungeon, home-lab's `hermes/config.yaml` names `<light>:lab`, a profile in
-   this repo's `dot/omlx/.omlx/model_profiles.json`.
+4. home-lab's `hermes/` config and profiles, which name `<light>:lab`, a profile in this
+   repo's `dot/omlx/.omlx/model_profiles.json`.
 5. This page's incumbents table, and a dated section in `docs/local-llm-benchmarks.md`.
 6. Verify pi and Hermes use it (below), then `just dr <host>` everywhere.
 

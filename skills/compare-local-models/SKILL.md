@@ -42,8 +42,8 @@ the doc's reason to re-test applies, and tell the user which ones you skipped.
 
 ## Permissions
 
-You may stop pi-web's session daemon and Hermes (on moria, and Hermes' containers on
-dungeon) for the duration of a measurement, and restart oMLX on moria. **Start them
+You may stop pi-web's session daemon on moria and Hermes' containers on dungeon
+for the duration of a measurement, and restart oMLX on moria. **Start them
 again when done** and check they are up; the commands are in the doc. Never stop
 Frigate or other dungeon services, and never restart dungeon's oMLX.
 

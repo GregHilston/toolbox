@@ -10,9 +10,4 @@ PUSHOVER_WORK_API_KEY={{ op://Infra/Pushover/work_api_key }}
 # The Hermes bot account's app password; mail-ip.py --from must match.
 FROM_EMAIL_ADDRESS_PASSWORD="{{ op://Infra/Hermes/gmail_app_password }}"
 
-# Slack and Telegram moved to hermes/.env.tpl, which generates ~/.hermes/.env.
-# Hermes' gateway is a launchd agent and reads that file itself; it inherits
-# nothing from the shell. Keeping them here only meant `set -a; source` in
-# .zshrc exported chat credentials into every process, and made
-# `hermes gateway setup` report both as configured while the gateway had
-# neither.
+# No chat tokens: every shell exports this.
