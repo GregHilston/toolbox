@@ -4,6 +4,12 @@
 {...}: {
   imports = [./homebrew-base.nix];
 
+  # Its own login toggle was off on moria.
+  launchd.user.agents.tailscale = {
+    command = "/usr/bin/open -g -j -a /Applications/Tailscale.app";
+    serviceConfig.RunAtLoad = true;
+  };
+
   homebrew = {
     brews = [
       # Runtime (needed by pi for npm: packages)
