@@ -85,9 +85,11 @@ is a fence, not a wall. On its first six ingests the local model imagined Greg s
 "approve" and wrote the decision itself, and overwrote a rejected proposal to reopen
 it; the gate caught both.
 
-**After editing a hook, start the bot once with `--accept-hooks`.** Hermes pins its
-approval to the script's mtime, `hooks revoke` disables the hook outright, and
-`hooks test` fires the script without recording consent.
+**Hook consent is automatic on dungeon.** Its profiles set `hooks_auto_accept: true`,
+so every run approves the hook, including after an edit. Without it, Hermes pins
+approval to the script's mtime and an edited hook stops firing until a run with
+`--accept-hooks`. `hooks revoke` disables a hook outright, and `hooks test` fires the
+script without recording consent.
 
 ## Traps that hold wherever Hermes runs
 
@@ -99,11 +101,12 @@ approval to the script's mtime, `hooks revoke` disables the hook outright, and
 - **A secondary profile does not fall back to the root `.env`, and an unresolved
   `${VAR}` is sent verbatim** (`_env_ref_lookup`, upstream #84079). The default
   profile reads `os.environ`, so the CLI works while every Bot Chat answers
-  `HTTP 401: Invalid API key`. A request dump settles it:
-  `Authorization: Bearer ${OMLX_A...KEY}` is the literal template.
+  `HTTP 401: Invalid API key`. On dungeon each profile resolves `${LITELLM_API_KEY}`
+  from its own `.env`. A request dump settles it:
+  `Authorization: Bearer ${LITELLM...KEY}` is the literal template.
 - **A Telegram chat keeps its system prompt until `/new`.** A gateway restart does
   not start a new session, so a SOUL or skill change is invisible until then.
-- **`hermes doctor`'s "No API key found" is a false positive** for `OMLX_API_KEY`:
+- **`hermes doctor`'s "No API key found" is a false positive** for `LITELLM_API_KEY`:
   it greps for thirty hard-coded vendor names. **Never `hermes doctor --fix` or
   `hermes setup`** to bump `_config_version`: both rewrite `config.yaml` from parsed
   YAML and drop every comment. Apply the step from `config_migrations.py` by hand.

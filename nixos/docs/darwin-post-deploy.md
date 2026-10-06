@@ -238,9 +238,13 @@ over Tailscale at `https://hermes.grehg2.xyz`. `just dr` installs the cask and, 
 there is no app data until it has run, so the registration waits for it:
 
 - [ ] `open -a Hermes` once, then `just dr <host>` again so the gateway entry lands
-- [ ] Desktop → Settings → Gateway → **Sign in** to `dungeon`: user `greg`, password
-      `Infra/Hermes` → `dashboard_password`. Nix writes no credential; the session is the app's
-- [ ] Tailscale is up (`tailscale status`); off the tailnet the name does not resolve
+- [ ] Desktop → Settings → Gateways → Remote gateway `dungeon` → **Sign in**: user `greg`,
+      password `Infra/Hermes` → `dashboard_password`. Nix writes no credential; the session
+      is the app's
+- [ ] Tailscale is up (`tailscale status`); off the tailnet the name does not resolve.
+      moria's starts at login from `modules/darwin/homebrew-server.nix`. **citadel's is a
+      hand install outside nix**: no cask, no login agent. Start it yourself, and keep it
+      running, or Desktop cannot reach dungeon
 
 **No messaging gateway may run on these Macs.** Two Telegram pollers on one bot token each
 get a random share of the updates. `just dr` warns while a gateway agent or a chat token is
@@ -254,10 +258,14 @@ Telegram.**
 - [ ] Stop and remove the gateway: `hermes gateway stop && hermes gateway uninstall`, then
       `launchctl list | grep -i hermes` and `pgrep -fl hermes_cli` print nothing
 - [ ] Archive the history (it is archived, not migrated). The runtime and node are left out
-      because the Desktop app still uses them:
+      because the Desktop app still uses them. The tarball holds the old `.env` files (the
+      Telegram token, the DeepSeek key), so it is created owner-only and kept in
+      `~/Archive/`, outside every repo:
       ```bash
-      tar -C ~ --exclude .hermes/hermes-agent --exclude .hermes/node \
-        -czf ~/hermes-moria-$(date +%F).tar.gz .hermes
+      mkdir -p -m 700 ~/Archive
+      (umask 077 && tar -C ~ --exclude .hermes/hermes-agent --exclude .hermes/node \
+        -czf ~/Archive/hermes-moria-$(date +%F).tar.gz .hermes)
+      ls -l ~/Archive/hermes-moria-*.tar.gz   # expect -rw-------
       ```
 - [ ] Remove what the old server used: `~/.hermes/profiles/`, `~/.hermes/.env*`, `~/.hermes/mode`,
       and the symlinks into toolbox (`config.yaml`, `SOUL.md`, `hooks`, and the `lab-tools`
