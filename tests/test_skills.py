@@ -3,7 +3,7 @@
 One skill set serves Claude Code, pi and Hermes, so a skill that one of them
 cannot load is broken for all three: Hermes drops a skill with invalid YAML
 without a word, and a renamed script leaves a skill advertising a command that
-answers "not found". A typo in a Hermes grant links nothing and says nothing.
+answers "not found".
 """
 
 from __future__ import annotations
@@ -18,7 +18,6 @@ REPO = Path(__file__).resolve().parent.parent
 SHARED = REPO / "skills"
 HERMES_ONLY = REPO / "hermes" / "skills"
 BIN = REPO / "bin"
-HERMES_NIX = REPO / "nixos" / "modules" / "programs" / "tui" / "hermes.nix"
 
 # agentskills.io plus Claude extensions pi tolerates.
 ALLOWED_KEYS = {
@@ -55,20 +54,6 @@ def commands(skill_md: str) -> set[str]:
             if re.fullmatch(r"[\w-]+\.(py|sh)", word):
                 found.add(word)
     return found
-
-
-def granted() -> list[str]:
-    """Every skill named in hermes.nix's botSkills entries and defaultSkills."""
-    # The only `name = [ ... ];` lists are those; one may span several lines.
-    lists = re.findall(r"^\s+[A-Za-z]+ = \[(.*?)\];$", HERMES_NIX.read_text(), re.M | re.S)
-    return re.findall(r'"([\w/-]+)"', " ".join(lists))
-
-
-def grant_source(grant: str) -> Path:
-    """Mirrors skillSource in hermes.nix."""
-    if grant.startswith("lab-tools/"):
-        return SHARED / grant.removeprefix("lab-tools/")
-    return HERMES_ONLY / grant
 
 
 class TestSkills(unittest.TestCase):
@@ -110,25 +95,6 @@ class TestSkills(unittest.TestCase):
 
     def test_the_reddit_skill_is_checked(self):
         self.assertEqual(commands((SHARED / "reddit" / "SKILL.md").read_text()), {"reddit-search.py", "fetch-thread.py"})
-
-    def test_every_grant_names_a_skill(self):
-        grants = granted()
-        self.assertIn("lab-tools/reddit", grants, "the grant parser found nothing")
-        for name in set(grants):
-            with self.subTest(skill=name):
-                self.assertTrue((grant_source(name) / "SKILL.md").exists(), f"hermes.nix grants {name}, which has no skill")
-
-    def test_grants_are_at_most_one_level_deep(self):
-        # prune_skills in hermes.nix looks one level down; deeper grants never revoke.
-        for name in granted():
-            self.assertLessEqual(name.count("/"), 1, name)
-
-    def test_every_config_puts_toolbox_on_the_terminal_path(self):
-        # The launchd gateway's bash never reads .zshrc, and a profile never reads
-        # the root config, so each one must source terminal-env.sh itself.
-        for config in [REPO / "hermes" / "config.yaml", *sorted((REPO / "hermes" / "profiles").glob("*/config.yaml"))]:
-            with self.subTest(config=str(config.relative_to(REPO))):
-                self.assertIn("~/Git/toolbox/hermes/terminal-env.sh", config.read_text())
 
 
 if __name__ == "__main__":

@@ -159,15 +159,6 @@ secrets:
     echo "    integration, which requires a GUI session on this host."
   fi
 
-  # citadel never gets the personal DeepSeek key; see the end of this recipe.
-  inject_hermes() {
-    if [ "$(hostname -s)" = "citadel" ]; then
-      sed '/^DEEPSEEK_API_KEY=/d' "$1" | op inject -f -o "$2"
-    else
-      op inject -f -i "$1" -o "$2"
-    fi
-  }
-
   op inject -f -i ../dot/omlx/.omlx/settings.json.tpl -o ../dot/omlx/.omlx/settings.json
   # citadel never holds the gateway key (pi.nix `gateway`).
   if [ "$(hostname -s)" = "citadel" ]; then
@@ -177,23 +168,6 @@ secrets:
     op inject -f -i ../dot/pi/.pi/agent/models.json.tpl -o ../dot/pi/.pi/agent/models.json
   fi
   op inject -f -i ../dot/pi/.pi/agent/homeassistant.json.tpl -o ../dot/pi/.pi/agent/homeassistant.json
-  # Hermes reads ~/.hermes/.env itself; its gateway is a launchd agent and
-  # inherits nothing from the shell, so platform credentials cannot live in
-  # secrets/.env. Generated, so `hermes config set` writes are overwritten --
-  # see the header of hermes/.env.tpl.
-  inject_hermes ../hermes/.env.tpl "$HOME/.hermes/.env"
-  # And one per bot. A secondary profile resolves `${VAR}` against its OWN .env
-  # and a miss stays verbatim, so without these every Bot Chat sends the literal
-  # string `${OMLX_API_KEY}` and oMLX answers 401 -- while the CLI and Telegram
-  # keep working, because both run as the `default` profile. See the header of
-  # hermes/profile.env.tpl.
-  for bot in builder researcher orchestrator reviewer librarian; do
-    install -d -m 700 "$HOME/.hermes/profiles/$bot"
-    inject_hermes ../hermes/profile.env.tpl "$HOME/.hermes/profiles/$bot/.env"
-    chmod 600 "$HOME/.hermes/profiles/$bot/.env"
-  done
-  # The injected .env files have no model lines; put the saved mode back.
-  ../bin/hermes-mode.sh
   # DeepSeek is a personal, metered API key and citadel is the Mozilla work
   # machine, so it never gets one — the line is stripped before injection rather
   # than merely hidden from pi's model picker, so the key is absent from that
