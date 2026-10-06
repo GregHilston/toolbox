@@ -232,7 +232,9 @@ See `modules/darwin/pi-web.nix`.
 Hermes runs only on dungeon (home-lab `hermes/`). These Macs are Desktop clients of it,
 over Tailscale at `https://hermes.grehg2.xyz`. `just dr` installs the cask and, through
 `modules/darwin/hermes-desktop.nix`, adds that URL once, as the primary gateway, to
-`~/Library/Application Support/Hermes/connections.json`.
+`~/Library/Application Support/Hermes/connections.json`, and writes `connection.json`
+(remote mode) if it is missing. Launch reads the latter: without it the app starts a local
+backend and shows "Hermes couldn't start"; Gateway settings → Remote gateway fixes it by hand.
 
 **The cask only stages an installer.** `Hermes.app` holds one `Hermes-Setup` binary, and
 there is no app data until it has run, so the registration waits for it:
