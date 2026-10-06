@@ -106,7 +106,7 @@ plugins=(git
   docker
   colored-man-pages
   colorize
-  github
+  gh
   virtualenv
   pip
   python
