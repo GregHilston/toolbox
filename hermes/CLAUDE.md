@@ -71,7 +71,9 @@ deleting `[build-system]` or the dependency list, or by hand-making wrappers in
 agreed. `tests/gate-evasions.sh` replays every bypass that has worked, on the host, in
 seconds; its last case asserts an installable tree still **passes**, because a gate
 that refuses good work deadlocks an honest agent. It checks the card's own workspace
-(`HERMES_KANBAN_WORKSPACE`, else the payload's `cwd`).
+(`HERMES_KANBAN_WORKSPACE`, else the payload's `cwd`). Each declared console script
+must run `--help`. **Known limit:** deleting the scripts table skips that step, and
+only the clean sync and the tests still gate the tree.
 
 **It only fires on board-driven work.** A plain Bot Chat never calls either tool, so
 for chat-driven work run `bin/installs-from-clean.sh <workspace>` yourself.

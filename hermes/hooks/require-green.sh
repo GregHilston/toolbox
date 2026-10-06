@@ -97,28 +97,35 @@ if printf '%s' "${out}" | grep -qiE 'no tests ran|collected 0 items'; then
   block "${tool} refused: the test suite passes because it contains no tests. Removing tests is not a way to make them pass."
 fi
 
-# Every declared console script, under either spelling, leading whitespace
-# allowed: keying on the literal `^[project.scripts]` let one rename skip it.
-# A function, not inline: bash 3.2 misparses this inside $().
-list_scripts() {
-  python3 - <<'PY' 2>/dev/null
-import re, sys
+# Parsed, not grepped: TOML spells tables several ways.
+# A function: bash 3.2 misparses heredocs in $().
+read_pyproject() {
+  python3 - <<'PY' 2>&1
+import sys
 try:
-    text = open("pyproject.toml").read()
-except OSError:
-    sys.exit(0)
-for m in re.finditer(r'^\s*\[project\.(scripts|entry-points\.console_scripts)\]\s*$(.*?)(?=^\s*\[|\Z)',
-                     text, re.M | re.S):
-    for e in re.finditer(r'^\s*["\']?([A-Za-z0-9._-]+)["\']?\s*=', m.group(2), re.M):
-        print(e.group(1))
+    import tomllib
+    with open("pyproject.toml", "rb") as f:
+        data = tomllib.load(f)
+except Exception as e:
+    print(f"{type(e).__name__}: {e}")
+    sys.exit(3)
+project = data.get("project") or {}
+names = set(project.get("scripts") or {})
+names |= set((project.get("entry-points") or {}).get("console_scripts") or {})
+for name in sorted(names):
+    print("script " + name)
+if "build-system" in data:
+    print("build-system")
 PY
 }
-scripts="$(list_scripts)"
+if ! parsed="$(read_pyproject)"; then
+  block "${tool} refused: pyproject.toml cannot be parsed, so nothing can install this project.
 
-# --help, not a build: it exercises import and CLI wiring — the failure that
-# shipped in run 1 (ImportError on a mis-cased class name) — with no network
-# fetch. A project with no scripts and no override has no entrypoint to run;
-# the clean sync and the suite below still gate it.
+$(printf '%s' "${parsed}" | tail -5)"
+fi
+scripts="$(printf '%s\n' "${parsed}" | sed -n 's/^script //p')"
+
+# --help: imports and wires the CLI, offline.
 build_cmds=()
 if [ -n "${GATE_BUILD_CMD:-}" ]; then
   build_cmds=("${GATE_BUILD_CMD}")
@@ -157,7 +164,7 @@ done
 # package ought to have.
 # Declaring a console script promises it installs.
 script_name="$(printf '%s\n' "${scripts}" | head -1)"
-if [ -n "${script_name}" ] && ! grep -qE '^\s*\[build-system\]' pyproject.toml; then
+if [ -n "${script_name}" ] && ! printf '%s\n' "${parsed}" | grep -qx 'build-system'; then
   block "${tool} refused: pyproject.toml declares the console script '${script_name}' but has no [build-system] table, so nothing can install it. The suite and the entrypoint only pass here because .venv already holds what they need; a clean checkout gets nothing. Restore the packaging rather than working around it — deleting the build system is not a fix for a build error."
 fi
 
