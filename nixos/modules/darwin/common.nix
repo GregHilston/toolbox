@@ -7,8 +7,11 @@
 }: let
   basePackages = import ../../config/base-packages.nix pkgs;
   # Vorssaint's command bar takes ⌘Space there.
-  spotlightOn = !(lib.attrByPath ["services" "vorssaint" "enable"] false config);
+  spotlightOn = !config.services.vorssaint.enable;
 in {
+  imports = [./vorssaint.nix];
+  services.vorssaint.enable = true;
+
   # Let Determinate manage the Nix daemon; disable nix-darwin's nix management
   nix.enable = false;
 

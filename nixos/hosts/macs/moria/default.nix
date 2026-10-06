@@ -16,11 +16,6 @@
     ../../../modules/darwin/gpu-wired-limit.nix
     # FluidVoice: Caps Lock dictates; Shift/Option pick Command/Write Mode.
     ../../../modules/darwin/fluidvoice.nix
-    # Vorssaint — the menu-bar utility suite. Per-host (citadel, moria) rather
-    # than from common.nix: headless dungeon has no one sitting at a menu bar,
-    # and almost every feature is an interactive one. The feature set it comes
-    # up with is the module's `features` default.
-    ../../../modules/darwin/vorssaint.nix
     # PI WEB — supervise pi sessions from a browser. moria only: it is the
     # 128GB box and already runs oMLX, so sessions and inference stay together.
     ../../../modules/darwin/pi-web.nix
@@ -69,12 +64,6 @@
     # The heavy specialist, beside lightModel; docs/model-evaluation.md.
     models."Swift-1.5-Qwen3.8-27b-oQ4e-mtp" = "yottle/Swift-1.5-Qwen3.8-27b-oQ4e-mtp";
   };
-
-  # Vorssaint — menu-bar utility suite (imported above). Seeds its Features hub
-  # once on a Mac that has never run it; after that the hub owns the choice.
-  # The feature list, and what it deliberately leaves out to stay clear of
-  # Karabiner and AeroSpace, is in modules/darwin/vorssaint.nix.
-  services.vorssaint.enable = true;
 
   services.fluidvoice.enable = true;
 

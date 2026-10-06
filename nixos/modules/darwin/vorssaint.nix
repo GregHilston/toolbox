@@ -12,8 +12,7 @@
 # purpose — pinning it by turning the in-app updater off would freeze the app
 # at whatever version first landed, since nothing else would move it.
 #
-# This module does three things, and each is enabled per host by importing it
-# and setting `services.vorssaint.enable`:
+# This module does three things, enabled on every Mac by ./common.nix:
 #   1. adds the cask (nix-darwin concatenates it onto the host's casks list),
 #   2. launches the app at login with the usual `open -a` agent,
 #   3. seeds the Features hub ONCE, so a fresh host comes up with the feature

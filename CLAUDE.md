@@ -152,8 +152,9 @@ Thaw, Ice's successor, only has it in an alpha.
 
 [Vorssaint](https://github.com/vorssaint/vorssaint-utils) is a PowerToys-shaped menu bar
 suite: per-app volume and output, keep-awake with the lid closed, a better screenshot and
-text-from-screen, ⌘X/⌘V in Finder, quit-on-close, system stats, a file shelf. **moria and
-citadel only** — dungeon is headless.
+text-from-screen, ⌘X/⌘V in Finder, quit-on-close, system stats, a file shelf. Every Mac
+gets it from `modules/darwin/common.nix`. dungeon stays awake through its own
+`caffeinate` and `pmset disablesleep`, not Vorssaint's Keep Awake.
 
 `nixos/modules/darwin/vorssaint.nix` owns it and explains itself at length. The two things
 worth knowing from here:

@@ -126,7 +126,7 @@ they aren't — no FluidVoice means Caps Lock still behaves and nothing dictates
 launchd user agent:
 
 - `modules/darwin/fluidvoice.nix` — per-host (citadel, moria); see "FluidVoice" below.
-- `modules/darwin/vorssaint.nix` — per-host (citadel, moria), for the same reason. Plain
+- `modules/darwin/vorssaint.nix` — every Mac, via `common.nix`, for the same reason. Plain
   `open -a`; its *other* job, seeding Vorssaint's Features hub (the app
   has no config file, only a UserDefaults domain), deliberately does **not** live in the
   agent. Activation order is agents → Homebrew → postActivation, so an agent-hosted seed
