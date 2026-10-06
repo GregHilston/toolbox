@@ -18,6 +18,7 @@
     # and almost every feature is an interactive one. The feature set it comes
     # up with is the module's `features` default.
     ../../../modules/darwin/vorssaint.nix
+    ../../../modules/darwin/hermes-desktop.nix
   ];
 
   networking.hostName = "citadel";
@@ -127,6 +128,8 @@
   services.vorssaint.enable = true;
 
   services.fluidvoice.enable = true;
+
+  services.hermesDesktop.enable = true;
 
   home-manager.users.${vars.user.name} = {
     # Personal metered spend, never from work.

@@ -24,6 +24,7 @@
     # PI WEB — supervise pi sessions from a browser. moria only: it is the
     # 128GB box and already runs oMLX, so sessions and inference stay together.
     ../../../modules/darwin/pi-web.nix
+    ../../../modules/darwin/hermes-desktop.nix
   ];
 
   networking.hostName = "moria";
@@ -39,11 +40,6 @@
   #   moonlight — stream games in (from the Steam Deck via Sunshine, or from
   #               the desktop over Tailscale). Native Apple-Silicon Metal client.
   #   telegram  — the native macOS client, not the Qt `telegram-desktop`.
-  #   hermes-desktop — the agent. The cask carries the CLI as well as the app,
-  #               which is why this is not the Tier 2 nix flake: that flake is
-  #               maintained "on a best-effort basis only" and "commits to main
-  #               may break these packages at any point", and its container mode
-  #               is NixOS-only anyway.
   #   anki      — flashcards; bin/anki/ scripts read its collection.
   # Note: the gaming apps' state (CrossOver bottles, Moonlight host pairing) is
   # runtime config, not declarative — same as oMLX model downloads.
@@ -51,7 +47,6 @@
     "crossover"
     "moonlight"
     "telegram"
-    "hermes-desktop"
     "anki"
   ];
 
@@ -82,6 +77,8 @@
   services.vorssaint.enable = true;
 
   services.fluidvoice.enable = true;
+
+  services.hermesDesktop.enable = true;
 
   # Keep pi's Reddit session cookie current by copying it out of Firefox.
   #
