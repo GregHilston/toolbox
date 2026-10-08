@@ -95,4 +95,13 @@
       "aerospace"
     ];
   };
+
+  # User-domain policy; reasons in fluidvoice.nix.
+  system.defaults.CustomUserPreferences."org.mozilla.firefox" = {
+    EnterprisePoliciesEnabled = true;
+    ExtensionSettings."clipper@obsidian.md" = {
+      installation_mode = "force_installed";
+      install_url = "https://addons.mozilla.org/firefox/downloads/latest/web-clipper-obsidian/latest.xpi";
+    };
+  };
 }
