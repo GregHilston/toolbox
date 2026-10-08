@@ -3,7 +3,7 @@
   "private": true,
   "dependencies": {
     "@ff-labs/pi-fff": "0.11.0",
-    "@gotgenes/pi-permission-system": "35.0.0",
+    "@gotgenes/pi-permission-system": "39.0.4",
     "@narumitw/pi-plan-mode": "0.58.4",
     "pi-agent-suite": "2.13.3",
     "pi-mcp-adapter": "5.0.0",
