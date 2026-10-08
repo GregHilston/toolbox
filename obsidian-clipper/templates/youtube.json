@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "0.1.0",
+  "name": "youtube",
+  "behavior": "create",
+  "noteNameFormat": "{{title|lower|replace:\"/[^a-z0-9]+/g\":\" \"|trim|split:\" \"|slice:0,12|join:\"-\"}}",
+  "path": "clippings",
+  "noteContentFormat": "\n\n## Content\n\n![]({{url}})\n{% if transcript %}\n{{transcript|callout:(\"quote\", \"Transcript\", true)}}\n{% endif %}",
+  "properties": [
+    {
+      "name": "type",
+      "value": "youtube",
+      "type": "text"
+    },
+    {
+      "name": "source",
+      "value": "{{url}}",
+      "type": "text"
+    },
+    {
+      "name": "duration",
+      "value": "{{schema:@VideoObject:duration|duration}}",
+      "type": "text"
+    },
+    {
+      "name": "author",
+      "value": "{{author}}",
+      "type": "text"
+    },
+    {
+      "name": "published",
+      "value": "{{published|date:\"YYYY-MM-DD\"}}",
+      "type": "date"
+    },
+    {
+      "name": "clipped",
+      "value": "{{date|date:\"YYYY-MM-DD\"}}",
+      "type": "date"
+    },
+    {
+      "name": "topics",
+      "value": "",
+      "type": "multitext"
+    },
+    {
+      "name": "status",
+      "value": "unread",
+      "type": "text"
+    }
+  ],
+  "triggers": [
+    "https://www.youtube.com/watch"
+  ]
+}

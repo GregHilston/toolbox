@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "0.1.0",
+  "name": "recipe",
+  "behavior": "create",
+  "noteNameFormat": "{{schema:@Recipe:name|lower|replace:\"/[^a-z0-9]+/g\":\" \"|trim|replace:\" \":\"-\"}}",
+  "path": "recipes",
+  "noteContentFormat": "## Ingredients\n\n{{schema:@Recipe:recipeIngredient|list}}\n\n## Instructions\n{% for step in schema:@Recipe:recipeInstructions %}{% if step.itemListElement %}\n**{{step.name}}**\n{% for sub in step.itemListElement %}1. {{sub.text}}\n{% endfor %}{% elseif step.text %}\n1. {{step.text}}{% else %}\n1. {{step}}{% endif %}{% endfor %}\n\n## Notes\n",
+  "properties": [
+    {
+      "name": "tags",
+      "value": "recipe",
+      "type": "multitext"
+    },
+    {
+      "name": "cuisine",
+      "value": "{{schema:@Recipe:recipeCuisine|first|lower}}",
+      "type": "text"
+    },
+    {
+      "name": "protein",
+      "value": "{{\"the main protein in this recipe, as one lowercase word such as chicken, beef, pork, fish, tofu or beans, or none\"|lower|trim}}",
+      "type": "text"
+    },
+    {
+      "name": "dinner",
+      "value": "{{\"true if this recipe is a dinner main course, otherwise false; answer only true or false\"|lower|trim}}",
+      "type": "checkbox"
+    },
+    {
+      "name": "leftovers",
+      "value": "{{\"true if this recipe keeps well as leftovers for a few days, otherwise false; answer only true or false\"|lower|trim}}",
+      "type": "checkbox"
+    },
+    {
+      "name": "source",
+      "value": "{{url}}",
+      "type": "text"
+    }
+  ],
+  "triggers": [
+    "schema:@Recipe"
+  ],
+  "context": "{{schema:@Recipe:name}}\n{{schema:@Recipe:description}}\nCategory: {{schema:@Recipe:recipeCategory}}\nYield: {{schema:@Recipe:recipeYield}}\nIngredients: {{schema:@Recipe:recipeIngredient|join:\"; \"}}"
+}
