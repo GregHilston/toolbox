@@ -40,7 +40,7 @@ whichever vault Obsidian opened last.
 ## Interpreter (the recipe template only)
 
 The recipe template asks a model for `protein`, `dinner` and `leftovers`. Under
-**Interpreter**, turn it on and add:
+**Interpreter**, turn it on, turn on **Automatically run**, and add:
 
 - a provider: custom, Base URL `https://llm.grehg2.xyz/v1/chat/completions`, API key the
   LiteLLM master key from 1Password (`Infra`). The key lives only in the browser's
@@ -49,8 +49,10 @@ The recipe template asks a model for `protein`, `dinner` and `leftovers`. Under
 
 The template's context is only the recipe's name, description, category, yield and
 ingredients, so the request stays small. The gateway is reachable only over Tailscale.
-Click **interpret** in the popup before **Add to Obsidian**; with Interpreter off the
-three properties come out empty.
+
+Wait for the run to finish before **Add to Obsidian**. A clip saved before it answers
+gets the prompt's own text as `protein`, and `dinner` and `leftovers` silently become
+`false`.
 
 ## What a live clip captures
 
@@ -61,8 +63,12 @@ three properties come out empty.
   it. The clip therefore has no parent chain, unlike the vault's bulk conversion. If the
   context matters, open the parent first ("context" on Reddit, "parent" on HN) and clip
   that.
-- **YouTube** transcripts and duration come from the page's metadata, which YouTube drops
+- **YouTube** transcripts and dates come from the page's metadata, which YouTube drops
   when you reach a video by clicking inside the site. Reload the video page before
   clipping if they come out empty.
 - **Recipes** need schema.org `Recipe` data on the page. A page without it gets the top
   template in the list instead.
+- **`topics:` is written empty (null), not `topics: []`.** The vault's Unfiled view
+  counts both as unfiled.
+- **Reddit's `published`** falls back to an attribute on new Reddit's post element when
+  the page has no published date. Check it on a real clip.
