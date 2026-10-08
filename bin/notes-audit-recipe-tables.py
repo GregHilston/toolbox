@@ -13,7 +13,7 @@ Checks the failure modes that are invisible until Obsidian renders the note:
   - raw Markdown (**bold**, `code`) inside cells, which Obsidian will not render
   - unclosed / mismatched table tags
 
-Usage: python3 audit-recipe-tables.py [vault_dir]
+Usage: notes-audit-recipe-tables.py [vault_dir]
 """
 import glob
 import os
