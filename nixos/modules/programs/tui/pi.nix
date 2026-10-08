@@ -48,6 +48,17 @@ in {
       '';
     };
 
+    # Set by modules/darwin/omlx.nix on every host that runs oMLX.
+    localModel = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        This host's own oMLX model id, kept in the Ctrl+P cycle beside the
+        gateway's aliases. It is the fallback when the gateway is unreachable,
+        e.g. dungeon offline or no DNS during an internet outage.
+      '';
+    };
+
     # DeepSeek needs NO models.json entry: pi ships it as a built-in provider
     # (docs/providers.md -> DEEPSEEK_API_KEY / `deepseek`), and
     # `pi --list-models deepseek` lists deepseek-v4-pro and deepseek-v4-flash
@@ -221,12 +232,13 @@ in {
         # Which models Ctrl+P cycles through. Provider globs, same format as
         # the --models flag. `defaultProvider`/`defaultModel` above still decide
         # what a bare `pi` starts on — this only widens what you can switch TO
-        # without restarting. The direct `omlx` provider stays out of the cycle
-        # but is still in /model, for when dungeon is down.
+        # without restarting. Of the direct `omlx` provider only `localModel`
+        # is cycled; the rest stay in /model.
         enabledModels =
           if cfg.gateway
           then
             map (m: "litellm/${m.id}") (builtins.filter (m: m.id != "cloud") modelsTemplate.providers.litellm.models)
+            ++ lib.optional (cfg.localModel != null) "omlx/${cfg.localModel}"
             ++ lib.optionals cfg.deepseek ["litellm/cloud" "deepseek/*"]
           else ["omlx/*"] ++ lib.optionals cfg.deepseek ["deepseek/*"];
 

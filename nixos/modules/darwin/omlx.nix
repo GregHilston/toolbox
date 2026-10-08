@@ -117,6 +117,9 @@ in {
   };
 
   config = {
+    home-manager.users.${user}.custom.programs.pi.localModel =
+      lib.mkIf cfg.enable "${cfg.lightModel.dir}:lab";
+
     # Activation scripts for oMLX on Darwin hosts.
     #
     # nix-darwin concatenates every postActivation.text fragment into ONE bash

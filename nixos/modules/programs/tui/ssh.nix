@@ -27,6 +27,10 @@ in {
         User = "git";
       };
       "unraid" = {
+        HostName = hosts.unraid.lan;
+        User = hosts.unraid.user;
+      };
+      "unraidts" = {
         HostName = hosts.unraid.tailscale;
         User = hosts.unraid.user;
       };
