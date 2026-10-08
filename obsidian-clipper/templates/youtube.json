@@ -48,6 +48,9 @@
     }
   ],
   "triggers": [
-    "https://www.youtube.com/watch"
+    "https://www.youtube.com/watch",
+    "https://m.youtube.com/watch",
+    "https://youtu.be/",
+    "/^https:\\/\\/(www|m)\\.youtube\\.com\\/shorts\\//"
   ]
 }
