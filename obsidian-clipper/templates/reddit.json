@@ -17,11 +17,6 @@
       "type": "text"
     },
     {
-      "name": "subreddit",
-      "value": "{{site|replace:\"r/\":\"\"}}",
-      "type": "text"
-    },
-    {
       "name": "author",
       "value": "{{author}}",
       "type": "text"
@@ -33,7 +28,7 @@
     },
     {
       "name": "clipped",
-      "value": "{{date|date:\"YYYY-MM-DD\"}}",
+      "value": "{{date}}",
       "type": "date"
     },
     {

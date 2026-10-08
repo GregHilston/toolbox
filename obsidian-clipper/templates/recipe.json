@@ -2,9 +2,9 @@
   "schemaVersion": "0.1.0",
   "name": "recipe",
   "behavior": "create",
-  "noteNameFormat": "{{schema:@Recipe:name|lower|replace:\"/[^a-z0-9]+/g\":\" \"|trim|replace:\" \":\"-\"}}",
+  "noteNameFormat": "{{schema:@Recipe:name|lower|replace:\"/[^a-z0-9]+/g\":\" \"|trim|split:\" \"|slice:0,12|join:\"-\"}}",
   "path": "recipes",
-  "noteContentFormat": "## Ingredients\n\n{{schema:@Recipe:recipeIngredient|list}}\n\n## Instructions\n{% for step in schema:@Recipe:recipeInstructions %}{% if step.itemListElement %}\n**{{step.name}}**\n{% for sub in step.itemListElement %}1. {{sub.text}}\n{% endfor %}{% elseif step.text %}\n1. {{step.text}}{% else %}\n1. {{step}}{% endif %}{% endfor %}\n\n## Notes\n",
+  "noteContentFormat": "{% if schema:@Recipe:recipeIngredient %}## Ingredients\n\n{{schema:@Recipe:recipeIngredient|list}}\n\n{% endif %}{% if schema:@Recipe:recipeInstructions %}## Instructions\n{% for step in schema:@Recipe:recipeInstructions %}{% if step.itemListElement %}\n**{{step.name}}**\n{% for sub in step.itemListElement %}1. {{sub.text}}\n{% endfor %}{% elseif step.text %}\n1. {{step.text}}{% else %}\n1. {{step}}{% endif %}{% endfor %}\n{% endif %}",
   "properties": [
     {
       "name": "tags",
