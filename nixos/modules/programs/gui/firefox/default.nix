@@ -80,6 +80,9 @@
           refined-github
           github-file-icons
           reddit-enhancement-suite
+
+          # templates: obsidian-clipper/ at the repo root
+          web-clipper-obsidian
         ];
       };
     };
