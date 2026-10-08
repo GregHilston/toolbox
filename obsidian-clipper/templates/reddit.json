@@ -48,6 +48,6 @@
     }
   ],
   "triggers": [
-    "/^https:\\/\\/(www|old)\\.reddit\\.com\\/r\\/[^\\/]+\\/comments\\//"
+    "/^https:\\/\\/((www|old)\\.)?reddit\\.com\\/r\\/[^\\/]+\\/comments\\//"
   ]
 }
