@@ -17,23 +17,18 @@
       "type": "text"
     },
     {
-      "name": "duration",
-      "value": "{{schema:@VideoObject:duration|duration}}",
-      "type": "text"
-    },
-    {
       "name": "author",
       "value": "{{author}}",
       "type": "text"
     },
     {
       "name": "published",
-      "value": "{{published|date:\"YYYY-MM-DD\"}}",
+      "value": "{{published}}",
       "type": "date"
     },
     {
       "name": "clipped",
-      "value": "{{date|date:\"YYYY-MM-DD\"}}",
+      "value": "{{date}}",
       "type": "date"
     },
     {

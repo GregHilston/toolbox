@@ -23,12 +23,12 @@
     },
     {
       "name": "published",
-      "value": "{{published|date:\"YYYY-MM-DD\"}}",
+      "value": "{{published}}",
       "type": "date"
     },
     {
       "name": "clipped",
-      "value": "{{date|date:\"YYYY-MM-DD\"}}",
+      "value": "{{date}}",
       "type": "date"
     },
     {
