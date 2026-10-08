@@ -96,7 +96,7 @@
     ];
   };
 
-  # User-domain policy; reasons in fluidvoice.nix.
+  # Why the user domain: nixos/CLAUDE.md, Firefox policy.
   system.defaults.CustomUserPreferences."org.mozilla.firefox" = {
     EnterprisePoliciesEnabled = true;
     ExtensionSettings."clipper@obsidian.md" = {

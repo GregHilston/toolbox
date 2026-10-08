@@ -389,10 +389,14 @@ Firefox's macOS policy reader (`xpcom/base/nsMacPreferencesReader.mm`) reads
   slower pages under heavy DOM churn.
 - The value must be a real integer. `defaults write … '{ Value = -1; }'` stores the string
   `"-1"`, which does not work; nix-darwin writes `<integer>`.
+- **The domain carries two policies.** This one, and `ExtensionSettings` from
+  `modules/darwin/homebrew-base.nix`, which force-installs Obsidian Web Clipper on every
+  Mac. nix-darwin merges them, so both share one `EnterprisePoliciesEnabled`.
 - Removing the nix lines does **not** remove the keys (`CustomUserPreferences` never
-  deletes). Undo with `defaults delete org.mozilla.firefox EnterprisePoliciesEnabled` and
-  `defaults delete org.mozilla.firefox Preferences`. Never delete the whole domain; Firefox
-  keeps window state there.
+  deletes). Undo only the policy you dropped: `defaults delete org.mozilla.firefox
+  Preferences` for this one, `… ExtensionSettings` for the clipper. Leave
+  `EnterprisePoliciesEnabled` while the other remains, or it stops applying too. Never
+  delete the whole domain; Firefox keeps window state there.
 - **Do not read `AXRole` on Firefox's app element** in anything we write: Gecko answers by
   setting `AXEnhancedUserInterface` on itself, policy or not. FluidVoice's own typing code
   can (its recursive search starts at the app element), but only on an Accessibility-insertion
