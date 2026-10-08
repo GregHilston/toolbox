@@ -148,13 +148,7 @@ def audit(path):
 
 
 def main():
-    folder = os.path.join(VAULT, "recipes")
-    # older vaults keep recipes at the root
-    if os.path.isdir(folder):
-        pattern = os.path.join(folder, "*.md")
-    else:
-        pattern = os.path.join(VAULT, "recipe-*.md")
-    files = sorted(glob.glob(pattern))
+    files = sorted(glob.glob(os.path.join(VAULT, "recipes", "*.md")))
     with_table = bad = 0
     for path in files:
         blocks, issues = audit(path)
