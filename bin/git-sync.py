@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run
+#!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.11"
 # dependencies = []
@@ -12,8 +12,8 @@ throwaway worktree off origin, re-authors them with its own identity (author
 date becomes now), and pushes. Its own checkout is only fast-forwarded, and
 only when on main and clean. Then this checkout resets main to what was pushed.
 
-    git-relay.py                 relay through dungeonts, after a confirmation
-    git-relay.py --host moriats -y
+    git sync                     via dungeon on the LAN, else dungeonts
+    git sync --host moriats -y   via one host, no confirmation
 
 Nothing local changes until the pushed commit is confirmed on origin.
 """
@@ -25,6 +25,7 @@ import ipaddress
 import json
 import os
 import shlex
+import socket
 import subprocess
 import sys
 import threading
@@ -49,7 +50,8 @@ if ! git am -q -3 "$patches"; then
   echo "patches conflict with origin/$branch; nothing was pushed" >&2
   exit 12
 fi
-git rebase -q --exec 'git commit -q --amend --no-edit --reset-author' "origin/$branch"
+# Re-authoring is not a new commit; skip commit hooks.
+git rebase -q --exec 'git commit -q --no-verify --amend --no-edit --reset-author' "origin/$branch"
 # Worktrees miss relative hooksPath; see nixos/CLAUDE.md.
 if ! git -c core.hooksPath="$hooks" push -q origin "HEAD:$branch"; then
   echo "push from $(hostname -s) failed; nothing was pushed" >&2
@@ -121,6 +123,26 @@ def ssh_hostname(host: str) -> str:
     return host
 
 
+def reachable(host: str, timeout: float = 2.0) -> bool:
+    """Whether sshd answers, without logging in."""
+    out = subprocess.run(["ssh", "-G", host], capture_output=True, text=True)
+    conf = dict(line.partition(" ")[::2] for line in out.stdout.splitlines())
+    try:
+        with socket.create_connection((conf.get("hostname", host), int(conf.get("port", 22))), timeout):
+            return True
+    except (OSError, ValueError):
+        return False
+
+
+def pick_host(hosts: list[str]) -> str:
+    """First reachable host; the last one otherwise."""
+    for host in hosts[:-1]:
+        if reachable(host):
+            return host
+        print(f"git-sync: {host} did not answer, trying the next host", file=sys.stderr)
+    return hosts[-1]
+
+
 def check_tailnet(host: str) -> None:
     """Fail early, and plainly, when the tailnet is the problem."""
     ip = ssh_hostname(host)
@@ -133,7 +155,7 @@ def check_tailnet(host: str) -> None:
     try:
         out = subprocess.run(cmd, capture_output=True, text=True)
     except FileNotFoundError:
-        print(f"git-relay: no tailscale CLI, so trying {host} unchecked", file=sys.stderr)
+        print(f"git-sync: no tailscale CLI, so trying {host} unchecked", file=sys.stderr)
         return
     try:
         status = json.loads(out.stdout)
@@ -217,7 +239,7 @@ def finish_here(branch: str, current: str, base: str, pushed: str) -> None:
         print(f"Deleted {current}; its commits are on {base} now.")
 
 
-def relay(host: str, repo: str | None, branch: str, assume_yes: bool) -> int:
+def relay(hosts: list[str], repo: str | None, branch: str, assume_yes: bool) -> int:
     root = Path(git("rev-parse", "--show-toplevel").strip())
     os.chdir(root)
     repo = repo or default_repo(root)
@@ -227,6 +249,7 @@ def relay(host: str, repo: str | None, branch: str, assume_yes: bool) -> int:
     if current == "HEAD":
         raise RelayError("detached HEAD; check out a branch first")
 
+    host = pick_host(hosts)
     check_tailnet(host)
     git("fetch", "-q", "origin")
     base = f"origin/{branch}"
@@ -268,15 +291,15 @@ def relay(host: str, repo: str | None, branch: str, assume_yes: bool) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--host", default="dungeonts", help="ssh host that pushes (default: dungeonts)")
+    parser.add_argument("--host", default="dungeon,dungeonts", help="ssh hosts to try in order (default: dungeon,dungeonts)")
     parser.add_argument("--repo", help="repo path under the far host's $HOME (default: same as here)")
     parser.add_argument("--branch", default="main", help="branch to land on (default: main)")
     parser.add_argument("-y", "--yes", action="store_true", help="skip the confirmation")
     args = parser.parse_args(argv)
     try:
-        return relay(args.host, args.repo, args.branch, args.yes)
+        return relay(args.host.split(","), args.repo, args.branch, args.yes)
     except RelayError as err:
-        print(f"git-relay: {err}", file=sys.stderr)
+        print(f"git-sync: {err}", file=sys.stderr)
         return 1
 
 

@@ -1,4 +1,4 @@
-"""git-relay lands commits under the far host's identity, or changes nothing.
+"""git-sync lands commits under the far host's identity, or changes nothing.
 
 Each test builds a bare origin, a "far" clone (the host that pushes) and a
 "near" clone (citadel), and swaps ssh for a local shell via RELAY_SSH. The
@@ -20,9 +20,9 @@ from pathlib import Path
 
 from _loader import load
 
-relay_mod = load("git-relay.py")
+relay_mod = load("git-sync.py")
 
-SCRIPT = Path(__file__).resolve().parent.parent / "bin" / "git-relay.py"
+SCRIPT = Path(__file__).resolve().parent.parent / "bin" / "git-sync.py"
 FAKE_SSH = shlex.join([sys.executable, "-c", "import subprocess, sys; sys.exit(subprocess.call(['sh', '-c', sys.argv[2]]))"])
 WORK = ("Work Account", "work@example.com")
 HOME_ID = ("Home Account", "home@example.com")
@@ -225,6 +225,15 @@ class GitRelayTest(unittest.TestCase):
         self.assertIn("wrong password", result.stderr)
         self.assertEqual(len(self.origin_log()), 1)
 
+    def test_far_commit_hooks_are_skipped(self):
+        hook = self.far / ".git" / "hooks" / "pre-commit"
+        hook.write_text("#!/bin/sh\nexit 1\n")
+        hook.chmod(0o755)
+        self.commit(self.near, "b.txt", "two\n", "add b")
+        result = self.relay()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.origin_log()[0], "add b|Home Account <home@example.com>")
+
     def test_nothing_to_relay(self):
         result = self.relay()
         self.assertEqual(result.returncode, 0)
@@ -305,6 +314,21 @@ class SshFailureTest(unittest.TestCase):
 
     def test_unknown_failure_is_passed_through(self):
         self.assertIn("weird", relay_mod.ssh_failure("dungeonts", "weird\n"))
+
+
+class PickHostTest(unittest.TestCase):
+    def pick(self, hosts: list[str], up: set[str]) -> str:
+        with mock.patch.object(relay_mod, "reachable", side_effect=lambda h: h in up):
+            return relay_mod.pick_host(hosts)
+
+    def test_lan_first_when_up(self):
+        self.assertEqual(self.pick(["dungeon", "dungeonts"], {"dungeon", "dungeonts"}), "dungeon")
+
+    def test_falls_back_to_tailnet(self):
+        self.assertEqual(self.pick(["dungeon", "dungeonts"], {"dungeonts"}), "dungeonts")
+
+    def test_last_host_is_never_probed(self):
+        self.assertEqual(self.pick(["dungeonts"], set()), "dungeonts")
 
 
 if __name__ == "__main__":
