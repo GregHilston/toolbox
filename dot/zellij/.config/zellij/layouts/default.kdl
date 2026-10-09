@@ -43,9 +43,13 @@ layout {
                 mode_rename_pane  "#[fg=#282828,bg=#d3869b,bold]  RENAME PANE  "
                 mode_default_to_mode "normal"
 
-                tab_normal            "#[fg=#928374,bg=#3c3836] {index} {name} "
+                // Inactive tabs show only their index: names
+                // are pane titles (Claude session, user@host:dir),
+                // and a full row overflows a portrait window,
+                // leaving only its clipped tail visible.
+                tab_normal            "#[fg=#928374,bg=#3c3836] {index} "
                 tab_active            "#[fg=#282828,bg=#fabd2f,bold] {index} {name} "
-                tab_normal_fullscreen "#[fg=#928374,bg=#3c3836] {index} {name} [] "
+                tab_normal_fullscreen "#[fg=#928374,bg=#3c3836] {index} [] "
                 tab_active_fullscreen "#[fg=#282828,bg=#fabd2f,bold] {index} {name} [] "
                 tab_separator         "#[fg=#3c3836,bg=#3c3836]"
 
