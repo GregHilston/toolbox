@@ -41,6 +41,7 @@ OVERRIDES_FILE = ".notes-index.toml"
 TAG_BATCH_SIZE = 25
 TAG_SAMPLE_SIZE = 6
 CONTENT_LIMIT = 3000
+SAVE_EVERY = 25
 
 FILE_SUMMARY_PROMPT = """
 You are a vault indexer. Your job is to write a single-sentence summary of a markdown note.
@@ -137,6 +138,14 @@ def load_cache(root: Path) -> dict:
         return json.loads((root / CACHE_FILE).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {}
+
+
+def save_cache(root: Path, summaries: dict, tag_cache: dict) -> None:
+    tmp = root / f"{CACHE_FILE}.tmp"
+    tmp.write_text(json.dumps(
+        {"version": 1, "file_summaries": summaries, "tag_descriptions": tag_cache}, indent=2
+    ), encoding="utf-8")
+    os.replace(tmp, root / CACHE_FILE)
 
 
 def stale_files(root: Path, paths: list[str], cache: dict) -> list[str]:
@@ -317,8 +326,14 @@ def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurre
                     summaries[rel] = entry
                     failed += entry["sha256"] == ""
                     print(f"[{done}/{len(todo)}] {rel}")
+                    if done % SAVE_EVERY == 0:
+                        save_cache(root, summaries, tag_cache)
             except AuthError:
                 pool.shutdown(wait=False, cancel_futures=True)
+                raise
+            except BaseException:
+                pool.shutdown(wait=False, cancel_futures=True)
+                save_cache(root, summaries, tag_cache)
                 raise
 
     tag_map: dict[str, list[str]] = {}
@@ -334,9 +349,7 @@ def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurre
                 tag_cache[tag] = {"count_at_index": len(tag_map.get(tag, [])), "description": desc}
 
     summaries = {p: summaries[p] for p in paths if p in summaries}
-    (root / CACHE_FILE).write_text(json.dumps(
-        {"version": 1, "file_summaries": summaries, "tag_descriptions": tag_cache}, indent=2
-    ), encoding="utf-8")
+    save_cache(root, summaries, tag_cache)
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     if run_files:

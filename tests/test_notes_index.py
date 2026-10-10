@@ -291,6 +291,43 @@ class Hardening(Vault):
                 self.assertEqual(ni.main([str(self.root)]), 1)
 
 
+class Interrupted(Vault):
+    def test_completed_summaries_survive_and_are_not_redone(self):
+        for n in range(5):
+            self.write(f"n{n}.md", f"note {n}")
+        calls = []
+
+        def dies_on_third(s, u):
+            calls.append(u)
+            if len(calls) == 3:
+                raise KeyboardInterrupt
+            return fake_llm(s, u)
+
+        with self.assertRaises(KeyboardInterrupt):
+            self.run_index(dies_on_third, concurrency=1)
+        self.assertEqual(len(self.cache()["file_summaries"]), 2)
+        self.assertFalse((self.root / "_vault-cache.json.tmp").exists())
+
+        redone = []
+        self.run_index(lambda s, u: redone.append(u) or fake_llm(s, u), run_tags=False)
+        self.assertEqual(len(redone), 3)
+        self.assertEqual(len(self.cache()["file_summaries"]), 5)
+
+    def test_cache_saved_periodically(self):
+        for n in range(5):
+            self.write(f"n{n}.md")
+        sizes = []
+        save = ni.save_cache
+
+        def spy(root, summaries, tag_cache):
+            sizes.append(len(summaries))
+            save(root, summaries, tag_cache)
+
+        with mock.patch.object(ni, "SAVE_EVERY", 2), mock.patch.object(ni, "save_cache", spy):
+            self.run_index(run_tags=False, concurrency=1)
+        self.assertEqual(sizes, [2, 4, 5])
+
+
 class TagParsing(unittest.TestCase):
     def test_code_fences(self):
         self.assertEqual(ni.parse_json_response('```json\n{"a": "b"}\n```'), {"a": "b"})
