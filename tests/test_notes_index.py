@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import io
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -373,6 +375,62 @@ class Interrupted(Vault):
                 contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(ni.run(self.root, fake_llm), 0)
         self.assertEqual(len(self.cache()["file_summaries"]), 3)
+
+
+class MigrateV1(Vault):
+    def write_v1_cache(self, *rels: str) -> None:
+        entries = {
+            rel: {"sha256": hashlib.sha256((self.root / rel).read_bytes()).hexdigest(),
+                  "summary": f"Old {rel}."}
+            for rel in rels
+        }
+        self.write("_vault-cache.json", json.dumps({"version": 1, "file_summaries": entries}))
+
+    def git(self, *args: str) -> None:
+        subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false",
+             "-c", "core.hooksPath=/dev/null", *args],
+            cwd=self.root, check=True, capture_output=True,
+        )
+
+    def setUp(self):
+        super().setUp()
+        self.write("same.md", "---\nstatus: unread\n---\nbody a")
+        self.write("fm.md", "---\nstatus: unread\n---\nbody b")
+        self.write("body.md", "---\nstatus: unread\n---\nbody c")
+        self.write_v1_cache("same.md", "fm.md", "body.md")
+
+    def edit(self) -> None:
+        self.write("fm.md", "---\nstatus: read\ntopics: [x]\n---\nbody b")
+        self.write("body.md", "---\nstatus: unread\n---\nbody c, edited")
+
+    def test_keeps_unchanged_and_frontmatter_only_edits(self):
+        self.git("init", "-q")
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "cache")
+        self.edit()
+        calls = []
+        self.run_index(lambda s, u: calls.append(u) or fake_llm(s, u), run_tags=False)
+        self.assertEqual(len(calls), 1)
+        self.assertIn("body c, edited", calls[0])
+        cache = self.cache()
+        self.assertEqual(cache["version"], 2)
+        summaries = cache["file_summaries"]
+        self.assertEqual(summaries["same.md"]["summary"], "Old same.md.")
+        self.assertEqual(summaries["fm.md"]["summary"], "Old fm.md.")
+        self.assertEqual(summaries["body.md"]["summary"], "A short summary.")
+        self.assertEqual(
+            summaries["fm.md"]["sha256"],
+            ni.body_hash((self.root / "fm.md").read_text()),
+        )
+
+    def test_without_git_keeps_only_unchanged(self):
+        self.edit()
+        with contextlib.redirect_stdout(io.StringIO()):
+            kept = ni.migrate_v1(self.root, json.loads(
+                (self.root / "_vault-cache.json").read_text())["file_summaries"])
+        self.assertEqual(list(kept), ["same.md"])
+        self.assertEqual(self.run_index(), 0)
 
 
 class TagParsing(unittest.TestCase):

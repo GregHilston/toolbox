@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import tomllib
 import urllib.error
@@ -161,6 +162,38 @@ def save_cache(root: Path, summaries: dict, tag_cache: dict) -> None:
         {"version": 2, "file_summaries": summaries, "tag_descriptions": tag_cache}, indent=2
     ), encoding="utf-8")
     os.replace(tmp, root / CACHE_FILE)
+
+
+def migrate_v1(root: Path, summaries: dict) -> dict:
+    """Rekey v1 whole-file hashes to body hashes.
+
+    An entry survives if the file is unchanged, or if its only change since the
+    cache was last committed is frontmatter. Delete once no v1 cache remains.
+    """
+    def git(*args: str) -> bytes:
+        return subprocess.run(["git", *args], cwd=root, capture_output=True, check=True).stdout
+
+    try:
+        commit = git("log", "-1", "--format=%H", "--", CACHE_FILE).decode().strip()
+    except (OSError, subprocess.CalledProcessError):
+        commit = ""
+    kept = {}
+    for rel, entry in summaries.items():
+        sha = entry.get("sha256")
+        try:
+            now = (root / rel).read_bytes()
+            text = now.decode("utf-8")
+            if hashlib.sha256(now).hexdigest() != sha:
+                if not commit:
+                    continue
+                then = git("show", f"{commit}:./{rel}")
+                if hashlib.sha256(then).hexdigest() != sha or body_of(then.decode("utf-8")) != body_of(text):
+                    continue
+        except (OSError, ValueError, subprocess.CalledProcessError):
+            continue
+        kept[rel] = {"sha256": body_hash(text), "summary": entry["summary"]}
+    say(f"cache v1: kept {len(kept)} of {len(summaries)} summaries")
+    return kept
 
 
 def stale_files(root: Path, paths: list[str], cache: dict) -> list[str]:
@@ -309,6 +342,8 @@ def render_tags(entries: list[tuple[str, int, str]], now: str) -> str:
 def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurrency=8) -> int:
     """Returns the failure count."""
     cache = load_cache(root)
+    if cache.get("version") == 1:
+        cache["file_summaries"] = migrate_v1(root, cache.get("file_summaries", {}))
     if force:
         # Keep the section this run won't regenerate.
         if run_files:
