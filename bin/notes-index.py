@@ -5,7 +5,8 @@
 # ///
 """Regenerate a vault's _vault-index.md, _vault-tags.md and _vault-cache.json.
 
-Summaries come from an OpenAI-compatible endpoint, cached by content hash.
+Summaries come from an OpenAI-compatible endpoint, cached by a hash of the
+note body, so frontmatter edits do not re-summarise.
 Tag overrides: `[tag-descriptions]` in `<vault>/.notes-index.toml`.
 Exit codes: 0 ok, 1 any summary or tag failed, 2 bad or missing key.
 """
@@ -88,10 +89,6 @@ def say(msg: str, file=None) -> None:
         os.dup2(os.open(os.devnull, os.O_WRONLY), file.fileno())
 
 
-def content_hash(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def is_indexable(rel: str) -> bool:
     parts = PurePosixPath(rel).parts
     return (
@@ -106,11 +103,21 @@ def indexable_paths(root: Path) -> list[str]:
     return sorted(r for r in rels if is_indexable(r))
 
 
-_FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
+_FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---(?:\n|\Z)", re.DOTALL)
 _FM_TAGS_INLINE_RE = re.compile(r"^tags:\s*\[([^\]]+)\]", re.MULTILINE | re.IGNORECASE)
 _FM_TAGS_BLOCK_RE = re.compile(r"^tags:\s*\n((?:[ \t]+-[ \t]+\S+\n?)+)", re.MULTILINE | re.IGNORECASE)
 _FM_TAG_ITEM_RE = re.compile(r"[ \t]+-[ \t]+(\S+)")
 _INLINE_TAG_RE = re.compile(r"(?<!\S)#([A-Za-z][A-Za-z0-9_/-]*)")
+
+
+def body_of(text: str) -> str:
+    m = _FRONTMATTER_RE.match(text)
+    # Adding frontmatter often adds a blank line.
+    return (text[m.end():] if m else text).strip()
+
+
+def body_hash(text: str) -> str:
+    return hashlib.sha256(body_of(text).encode("utf-8")).hexdigest()
 
 
 def extract_tags(content: str) -> list[str]:
@@ -125,8 +132,7 @@ def extract_tags(content: str) -> list[str]:
             block = _FM_TAGS_BLOCK_RE.search(fm)
             if block:
                 tags.extend(_FM_TAG_ITEM_RE.findall(block.group(1)))
-    body = content[fm_match.end():] if fm_match else content
-    tags.extend(_INLINE_TAG_RE.findall(body))
+    tags.extend(_INLINE_TAG_RE.findall(body_of(content)))
     return list(dict.fromkeys(tags))
 
 
@@ -152,7 +158,7 @@ def load_cache(root: Path) -> dict:
 def save_cache(root: Path, summaries: dict, tag_cache: dict) -> None:
     tmp = root / f"{CACHE_FILE}.tmp"
     tmp.write_text(json.dumps(
-        {"version": 1, "file_summaries": summaries, "tag_descriptions": tag_cache}, indent=2
+        {"version": 2, "file_summaries": summaries, "tag_descriptions": tag_cache}, indent=2
     ), encoding="utf-8")
     os.replace(tmp, root / CACHE_FILE)
 
@@ -162,8 +168,9 @@ def stale_files(root: Path, paths: list[str], cache: dict) -> list[str]:
     stale = []
     for rel in paths:
         try:
-            fresh = cached.get(rel, {}).get("sha256") == content_hash(root / rel)
-        except OSError:
+            fresh = cached.get(rel, {}).get("sha256") == body_hash(
+                (root / rel).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
             fresh = False
         if not fresh:
             stale.append(rel)
@@ -318,9 +325,9 @@ def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurre
 
         def one(rel: str) -> tuple[str, dict]:
             try:
-                digest = content_hash(root / rel)
-                content = (root / rel).read_text(encoding="utf-8")
-                return rel, {"sha256": digest, "summary": summarize(rel, content, llm)}
+                text = (root / rel).read_text(encoding="utf-8")
+                # Whole file: link clips live in frontmatter.
+                return rel, {"sha256": body_hash(text), "summary": summarize(rel, text, llm)}
             except AuthError:
                 raise
             except Exception as e:

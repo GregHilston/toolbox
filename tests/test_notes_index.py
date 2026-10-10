@@ -93,6 +93,24 @@ class Staleness(Vault):
         p.write_text("two")
         self.assertEqual(ni.stale_files(self.root, ["a.md"], self.cache()), ["a.md"])
 
+    def test_frontmatter_edit_is_not_stale(self):
+        p = self.write("a.md", "---\nstatus: unread\n---\nbody")
+        self.run_index()
+        p.write_text("---\nstatus: read\ntopics:\n  - \"[[x]]\"\n---\nbody")
+        self.assertEqual(ni.stale_files(self.root, ["a.md"], self.cache()), [])
+
+    def test_new_frontmatter_is_not_stale(self):
+        p = self.write("a.md", "body\n")
+        self.run_index()
+        p.write_text("---\ntopics: [x]\n---\n\nbody")
+        self.assertEqual(ni.stale_files(self.root, ["a.md"], self.cache()), [])
+
+    def test_body_edit_under_frontmatter_is_stale(self):
+        p = self.write("a.md", "---\nstatus: unread\n---\nbody")
+        self.run_index()
+        p.write_text("---\nstatus: unread\n---\nnew body")
+        self.assertEqual(ni.stale_files(self.root, ["a.md"], self.cache()), ["a.md"])
+
     def test_entry_without_sha_is_stale(self):
         self.write("a.md")
         cache = {"file_summaries": {"a.md": {"mtime": 1.0, "summary": "old"}}}
@@ -192,7 +210,7 @@ class Format(Vault):
         self.assertEqual(tags[4:6], ["| Tag | Count | Description |", "|-----|-------|-------------|"])
         self.assertEqual(tags[6], "| #x | 2 | About x. |")
         self.assertEqual(tags[7], "| #y | 1 | About y. |")
-        self.assertEqual(self.cache()["version"], 1)
+        self.assertEqual(self.cache()["version"], 2)
 
     def test_user_message_truncates_to_3000(self):
         seen = []
