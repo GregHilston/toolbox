@@ -159,7 +159,7 @@
           pandoc
           pi-coding-agent
           ripgrep
-          uv # runs `uv run` scripts from bin/
+          uv
           wordgrinder
         ];
       };
