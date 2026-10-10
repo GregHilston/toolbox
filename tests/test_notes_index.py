@@ -111,6 +111,25 @@ class Staleness(Vault):
         p.write_text("---\nstatus: unread\n---\nnew body")
         self.assertEqual(ni.stale_files(self.root, ["a.md"], self.cache()), ["a.md"])
 
+    def test_rename_reuses_summary(self):
+        self.write("old.md", "---\nstatus: unread\n---\nbody")
+        self.run_index(lambda s, u: "Kept" if s is ni.FILE_SUMMARY_PROMPT else fake_llm(s, u))
+        (self.root / "old.md").rename(self.root / "new.md")
+        calls = []
+        self.run_index(lambda s, u: calls.append(s) or fake_llm(s, u), run_tags=False)
+        self.assertEqual(calls, [])
+        self.assertEqual(list(self.cache()["file_summaries"]), ["new.md"])
+        self.assertEqual(self.cache()["file_summaries"]["new.md"]["summary"], "Kept.")
+
+    def test_blank_body_rename_is_summarised(self):
+        self.write("old.md", "---\nsource: a\n---\n")
+        self.run_index()
+        (self.root / "old.md").unlink()
+        self.write("new.md", "---\nsource: b\n---\n")
+        calls = []
+        self.run_index(lambda s, u: calls.append(s) or fake_llm(s, u), run_tags=False)
+        self.assertEqual(calls, [ni.FILE_SUMMARY_PROMPT])
+
     def test_entry_without_sha_is_stale(self):
         self.write("a.md")
         cache = {"file_summaries": {"a.md": {"mtime": 1.0, "summary": "old"}}}

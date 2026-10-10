@@ -322,12 +322,19 @@ def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurre
 
     if run_files:
         todo = stale_files(root, paths, {"file_summaries": summaries})
+        live = set(paths)
+        moved = {e["sha256"]: e["summary"] for p, e in summaries.items()
+                 if p not in live and e.get("sha256")}
 
         def one(rel: str) -> tuple[str, dict]:
             try:
                 text = (root / rel).read_text(encoding="utf-8")
+                digest = body_hash(text)
+                # Blank bodies all share one hash.
+                if digest in moved and body_of(text):
+                    return rel, {"sha256": digest, "summary": moved[digest]}
                 # Whole file: link clips live in frontmatter.
-                return rel, {"sha256": body_hash(text), "summary": summarize(rel, text, llm)}
+                return rel, {"sha256": digest, "summary": summarize(rel, text, llm)}
             except AuthError:
                 raise
             except Exception as e:
