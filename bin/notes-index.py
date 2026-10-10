@@ -339,7 +339,7 @@ def render_tags(entries: list[tuple[str, int, str]], now: str) -> str:
     return "\n".join(lines + [""])
 
 
-def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurrency=8) -> int:
+def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurrency=2) -> int:
     """Returns the failure count."""
     cache = load_cache(root)
     if cache.get("version") == 1:
@@ -433,7 +433,7 @@ def main(argv: list[str] | None = None) -> int:
     only = ap.add_mutually_exclusive_group()
     only.add_argument("--only-files", action="store_true", help="regenerate _vault-index.md only")
     only.add_argument("--only-tags", action="store_true", help="regenerate _vault-tags.md only")
-    ap.add_argument("--concurrency", type=int, default=8, help="summaries in flight (default: %(default)s)")
+    ap.add_argument("--concurrency", type=int, default=2, help="summaries in flight (default: %(default)s)")
     args = ap.parse_args(argv)
 
     api_key = os.environ.get("NOTES_INDEX_API_KEY") or os.environ.get("LITELLM_API_KEY")
