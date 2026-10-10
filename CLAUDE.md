@@ -20,23 +20,22 @@ Drop a `.md` in `claude-commands/`; it becomes `/<name>` everywhere.
 Hermes, and a tool is a script in `bin/` plus a thin skill that names it.
 `tests/test_skills.py` enforces the rules.
 
-### Matt Pocock's skills — wayfinder, tdd, diagnosing-bugs and more
+### Matt Pocock's skills
 
 `skills/wayfinder/` is the entry point (`/wayfinder` here, `/skill:wayfinder`
 in pi) for planning work too big for one session: a map of decision tickets on the
 repo's issue tracker, resolved one per session. Run `setup-matt-pocock-skills` once
-per target repo; it writes the tracker doc the others read. The rest of the set
-covers design, testing, debugging and writing for agents.
+per target repo; it writes the tracker doc the others read.
 
-Any skill whose frontmatter has `metadata.vendored` is copied verbatim from
-[mattpocock/skills](https://github.com/mattpocock/skills) (MIT) at that commit,
-minus the Codex-only `agents/openai.yaml`. The only local edit is a trailing
-**Tool mapping** table where a skill names a tool, so pi (no Skill tool, no
-`AskUserQuestion`, subagents only under `pi-subagents`) runs the same file. To
-update, copy the new upstream over, keep each table, and bump the commit.
+Any skill whose `metadata.upstream` points at
+[mattpocock/skills](https://github.com/mattpocock/skills) (MIT) is copied verbatim
+from the commit in `metadata.vendored`, minus the Codex-only `agents/openai.yaml`.
+The only local edit is a trailing **Tool mapping** table where a skill names a
+tool, so pi (no Skill tool, no `AskUserQuestion`, subagents only under
+`pi-subagents`) runs the same file. To update, copy the new upstream over, keep
+each table, and bump the commit in both metadata fields.
 
-They read a repo's glossary from `GLOSSARY.md`; upstream renamed it from
-`CONTEXT.md` in 2026-08.
+They read a repo's glossary from `GLOSSARY.md` (formerly `CONTEXT.md`).
 
 ### How they reach each host
 

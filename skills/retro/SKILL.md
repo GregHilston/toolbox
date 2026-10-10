@@ -56,3 +56,4 @@ The steps above name these moves generically. Use whichever concrete tool your c
 | --- | --- | --- |
 | Call the Skill tool with "X" | The `Skill` tool, skill `X`. | There is no Skill tool: read `~/.claude/skills/X/SKILL.md` and follow it. `/skill:X` is the user's form of the same move. |
 | Session logs on this machine | `~/.claude/projects/<cwd-slug>/*.jsonl` | `~/.pi/agent/sessions/` |
+| Reviewer agent and `CODING_STANDARDS.md` | The built-in `/code-review`. Without a `CODING_STANDARDS.md`, propose the rule for the repo's `CLAUDE.md`. | No reviewer agent: propose the rule for the repo's `AGENTS.md` or `CLAUDE.md`. |

@@ -49,3 +49,4 @@ The steps above name these moves generically. Use whichever concrete tool your c
 | Generic move | Claude Code | pi |
 | --- | --- | --- |
 | Call the Skill tool with "X" | The `Skill` tool, skill `X`. | There is no Skill tool: read `~/.claude/skills/X/SKILL.md` and follow it. `/skill:X` is the user's form of the same move. |
+| The `code-review` skill | The built-in `/code-review`. | No such skill: refactor in a separate pass after the loop. |
