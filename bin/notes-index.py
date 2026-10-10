@@ -1,21 +1,13 @@
-#!/usr/bin/env -S uv run --script
+#!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Regenerate an Obsidian vault's _vault-index.md, _vault-tags.md and _vault-cache.json.
+"""Regenerate a vault's _vault-index.md, _vault-tags.md and _vault-cache.json.
 
-Summaries come from an OpenAI-compatible chat endpoint and are cached by file
-content hash, so only changed notes cost a request. Tag descriptions are cached
-by file count. Hand-written tag descriptions live in `<vault>/.notes-index.toml`:
-
-    [tag-descriptions]
-    some-tag = "What notes with this tag are."
-
-Environment: NOTES_INDEX_BASE_URL, NOTES_INDEX_MODEL, and the key in
-NOTES_INDEX_API_KEY or LITELLM_API_KEY.
-
-Exit codes: 0 ok, 1 a summary failed (written as unavailable; rerun retries), 2 no key.
+Summaries come from an OpenAI-compatible endpoint, cached by content hash.
+Tag overrides: `[tag-descriptions]` in `<vault>/.notes-index.toml`.
+Exit codes: 0 ok, 1 any summary or tag failed, 2 bad or missing key.
 """
 from __future__ import annotations
 
@@ -26,6 +18,7 @@ import os
 import re
 import sys
 import tomllib
+import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -44,7 +37,7 @@ MANAGED_FILES = {INDEX_FILE, TAGS_FILE, CACHE_FILE}
 UNINDEXED_DIRS = ("wiki/raw/", "wiki/Review/")
 OVERRIDES_FILE = ".notes-index.toml"
 
-# Local models emit unreliable JSON when a batch is large.
+# Large batches break local models' JSON.
 TAG_BATCH_SIZE = 25
 TAG_SAMPLE_SIZE = 6
 CONTENT_LIMIT = 3000
@@ -85,14 +78,11 @@ Output ONLY the JSON object — no other text.
 """
 
 
-# --- vault scanning ---------------------------------------------------------
-
 def content_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def is_indexable(rel: str) -> bool:
-    """True for a vault-relative path that is a trusted note."""
     parts = PurePosixPath(rel).parts
     return (
         PurePosixPath(rel).name not in MANAGED_FILES
@@ -102,7 +92,7 @@ def is_indexable(rel: str) -> bool:
 
 
 def indexable_paths(root: Path) -> list[str]:
-    rels = (p.relative_to(root).as_posix() for p in root.rglob("*.md"))
+    rels = (p.relative_to(root).as_posix() for p in root.rglob("*.md") if p.is_file())
     return sorted(r for r in rels if is_indexable(r))
 
 
@@ -114,7 +104,6 @@ _INLINE_TAG_RE = re.compile(r"(?<!\S)#([A-Za-z][A-Za-z0-9_/-]*)")
 
 
 def extract_tags(content: str) -> list[str]:
-    """Frontmatter and inline #tags, deduplicated, in order of appearance."""
     tags: list[str] = []
     fm_match = _FRONTMATTER_RE.match(content)
     if fm_match:
@@ -143,8 +132,6 @@ def count_tags(root: Path, paths: list[str]) -> dict[str, list[str]]:
     return tag_map
 
 
-# --- cache ------------------------------------------------------------------
-
 def load_cache(root: Path) -> dict:
     try:
         return json.loads((root / CACHE_FILE).read_text(encoding="utf-8"))
@@ -154,10 +141,15 @@ def load_cache(root: Path) -> dict:
 
 def stale_files(root: Path, paths: list[str], cache: dict) -> list[str]:
     cached = cache.get("file_summaries", {})
-    return [
-        rel for rel in paths
-        if cached.get(rel, {}).get("sha256") != content_hash(root / rel)
-    ]
+    stale = []
+    for rel in paths:
+        try:
+            fresh = cached.get(rel, {}).get("sha256") == content_hash(root / rel)
+        except OSError:
+            fresh = False
+        if not fresh:
+            stale.append(rel)
+    return stale
 
 
 def stale_tags(tag_map: dict[str, list[str]], cache: dict) -> dict[str, list[str]]:
@@ -181,7 +173,9 @@ def load_overrides(root: Path) -> dict[str, str]:
     return {k: v for k, v in table.items() if isinstance(v, str)}
 
 
-# --- LLM --------------------------------------------------------------------
+class AuthError(Exception):
+    pass
+
 
 def chat(system: str, user: str, *, base_url: str, model: str, api_key: str) -> str:
     body = json.dumps({
@@ -201,17 +195,25 @@ def chat(system: str, user: str, *, base_url: str, model: str, api_key: str) -> 
             "x-litellm-end-user-id": END_USER,
         },
     )
-    with urllib.request.urlopen(req, timeout=300) as resp:
-        return json.load(resp)["choices"][0]["message"]["content"]
+    try:
+        with urllib.request.urlopen(req, timeout=300) as resp:
+            return json.load(resp)["choices"][0]["message"]["content"]
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            raise AuthError(f"endpoint rejected the key (HTTP {e.code})") from e
+        raise
 
 
 def summarize(rel: str, content: str, llm) -> str:
     out = llm(FILE_SUMMARY_PROMPT, f"File: {rel}\n\n{content[:CONTENT_LIMIT]}")
-    return out.strip().rstrip(".") + "."
+    text = out.strip().rstrip(".")
+    if not text:
+        raise ValueError("empty reply")
+    return text + "."
 
 
 def sample_files(files: list[str], k: int = TAG_SAMPLE_SIZE) -> list[str]:
-    """Evenly spaced, so a broad tag isn't sampled only from the alphabet's start."""
+    """Even spacing avoids alphabetical bias."""
     if len(files) <= k:
         return list(files)
     step = len(files) / k
@@ -232,9 +234,12 @@ def parse_json_response(raw: str) -> dict:
     return json.loads(text)
 
 
-def describe_tags(pending: dict[str, list[str]], summaries: dict[str, dict], llm) -> dict[str, str]:
-    """Describe tags in batches; a failed batch is skipped and retried next run."""
+def describe_tags(
+    pending: dict[str, list[str]], summaries: dict[str, dict], llm
+) -> tuple[dict[str, str], int]:
+    """Returns descriptions and failed-tag count."""
     results: dict[str, str] = {}
+    failed = 0
     items = sorted(pending.items())
     batches = [items[i:i + TAG_BATCH_SIZE] for i in range(0, len(items), TAG_BATCH_SIZE)]
     for n, batch in enumerate(batches, 1):
@@ -244,16 +249,21 @@ def describe_tags(pending: dict[str, list[str]], summaries: dict[str, dict], llm
             parsed = parse_json_response(
                 llm(TAG_DESCRIPTION_PROMPT, f"Generate descriptions for these vault tags:\n\n{block}")
             )
-            results.update({k: v for k, v in parsed.items() if isinstance(v, str)})
+            wanted = {t for t, _ in batch}
+            for key, val in parsed.items():
+                key = key.removeprefix("#")
+                if key in wanted and isinstance(val, str):
+                    results[key] = val
+        except AuthError:
+            raise
         except Exception as e:
+            failed += len(batch)
             print(f"warning: tag batch {n}/{len(batches)} failed: {e}", file=sys.stderr)
-    return results
+    return results, failed
 
-
-# --- output -----------------------------------------------------------------
 
 def _escape(text: str) -> str:
-    return text.replace("|", "\\|")
+    return " ".join(text.split()).replace("|", "\\|")
 
 
 def render_index(entries: list[tuple[str, str]], now: str) -> str:
@@ -271,11 +281,15 @@ def render_tags(entries: list[tuple[str, int, str]], now: str) -> str:
     return "\n".join(lines + [""])
 
 
-# --- pipeline ---------------------------------------------------------------
-
 def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurrency=8) -> int:
-    """Index the vault; returns the number of failed summaries."""
-    cache = {} if force else load_cache(root)
+    """Returns the failure count."""
+    cache = load_cache(root)
+    if force:
+        # Keep the section this run won't regenerate.
+        if run_files:
+            cache.pop("file_summaries", None)
+        if run_tags:
+            cache.pop("tag_descriptions", None)
     summaries: dict = cache.get("file_summaries", {})
     tag_cache: dict = cache.get("tag_descriptions", {})
     paths = indexable_paths(root)
@@ -285,21 +299,27 @@ def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurre
         todo = stale_files(root, paths, {"file_summaries": summaries})
 
         def one(rel: str) -> tuple[str, dict]:
-            digest = content_hash(root / rel)
             try:
+                digest = content_hash(root / rel)
                 content = (root / rel).read_text(encoding="utf-8")
                 return rel, {"sha256": digest, "summary": summarize(rel, content, llm)}
+            except AuthError:
+                raise
             except Exception as e:
                 print(f"warning: {rel}: {e}", file=sys.stderr)
                 return rel, {"sha256": "", "summary": UNAVAILABLE}
 
         with ThreadPoolExecutor(max_workers=max(1, concurrency)) as pool:
             futures = [pool.submit(one, rel) for rel in todo]
-            for done, fut in enumerate(as_completed(futures), 1):
-                rel, entry = fut.result()
-                summaries[rel] = entry
-                failed += entry["sha256"] == ""
-                print(f"[{done}/{len(todo)}] {rel}")
+            try:
+                for done, fut in enumerate(as_completed(futures), 1):
+                    rel, entry = fut.result()
+                    summaries[rel] = entry
+                    failed += entry["sha256"] == ""
+                    print(f"[{done}/{len(todo)}] {rel}")
+            except AuthError:
+                pool.shutdown(wait=False, cancel_futures=True)
+                raise
 
     tag_map: dict[str, list[str]] = {}
     overrides = load_overrides(root)
@@ -308,11 +328,14 @@ def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurre
         pending = {t: f for t, f in stale_tags(tag_map, {"tag_descriptions": tag_cache}).items()
                    if t not in overrides}
         if pending:
-            for tag, desc in describe_tags(pending, summaries, llm).items():
+            described, tag_failures = describe_tags(pending, summaries, llm)
+            failed += tag_failures
+            for tag, desc in described.items():
                 tag_cache[tag] = {"count_at_index": len(tag_map.get(tag, [])), "description": desc}
 
+    summaries = {p: summaries[p] for p in paths if p in summaries}
     (root / CACHE_FILE).write_text(json.dumps(
-        {"version": 2, "file_summaries": summaries, "tag_descriptions": tag_cache}, indent=2
+        {"version": 1, "file_summaries": summaries, "tag_descriptions": tag_cache}, indent=2
     ), encoding="utf-8")
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -328,7 +351,7 @@ def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurre
         (root / TAGS_FILE).write_text(render_tags(tag_entries, now), encoding="utf-8")
         print(f"{len(tag_entries)} tags -> {TAGS_FILE}")
     if failed:
-        print(f"{failed} summaries failed; rerun to retry", file=sys.stderr)
+        print(f"{failed} summaries or tags failed; rerun to retry", file=sys.stderr)
     return failed
 
 
@@ -357,8 +380,12 @@ def main(argv: list[str] | None = None) -> int:
     if not root.is_dir():
         print(f"error: not a directory: {root}", file=sys.stderr)
         return 2
-    failed = run(root, llm, force=args.force, run_files=not args.only_tags,
-                 run_tags=not args.only_files, concurrency=args.concurrency)
+    try:
+        failed = run(root, llm, force=args.force, run_files=not args.only_tags,
+                     run_tags=not args.only_files, concurrency=args.concurrency)
+    except AuthError as e:
+        print(f"error: {e}; nothing written", file=sys.stderr)
+        return 2
     return 1 if failed else 0
 
 
