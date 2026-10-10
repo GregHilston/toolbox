@@ -177,12 +177,16 @@ secrets:
   # back the Bonjour name), this silently starts injecting the key there. A
   # marker file would be sturdier; hostname is enough while it holds.
   #
-  # LITELLM_API_KEY is the gateway's master key, exported into every shell for
-  # scripts like notes-index and rohan's pi. citadel is a work machine: never.
+  # LITELLM_API_KEY is the gateway's master key. Allowlist, not a citadel
+  # denylist: a renamed work host must fail closed, not receive the key.
   strip=""
+  case "$(hostname -s)" in
+    moria|dungeon|isengard|foundation|home-lab|mines|rohan) ;;
+    *) strip="/^LITELLM_API_KEY=/d;" ;;
+  esac
   if [ "$(hostname -s)" = "citadel" ]; then
-    echo "==> citadel: withholding LITELLM_API_KEY and DEEPSEEK_API_KEY"
-    strip="/^LITELLM_API_KEY=/d;/^DEEPSEEK_API_KEY=/d;"
+    echo "==> citadel: withholding DEEPSEEK_API_KEY"
+    strip="$strip/^DEEPSEEK_API_KEY=/d;"
   fi
   sed "$strip" secrets/.env.tpl | op inject -f -o secrets/.env
   echo "Secrets generated. Run 'just dr <host>' to deploy."
