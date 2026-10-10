@@ -327,6 +327,16 @@ class Interrupted(Vault):
             self.run_index(run_tags=False, concurrency=1)
         self.assertEqual(sizes, [2, 4, 5])
 
+    def test_closed_stdout_does_not_stop_the_run(self):
+        for n in range(3):
+            self.write(f"n{n}.md")
+        r, w = os.pipe()
+        os.close(r)
+        with open(w, "w") as gone, contextlib.redirect_stdout(gone), \
+                contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(ni.run(self.root, fake_llm), 0)
+        self.assertEqual(len(self.cache()["file_summaries"]), 3)
+
 
 class TagParsing(unittest.TestCase):
     def test_code_fences(self):

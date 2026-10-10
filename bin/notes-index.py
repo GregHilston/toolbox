@@ -79,6 +79,15 @@ Output ONLY the JSON object — no other text.
 """
 
 
+def say(msg: str, file=None) -> None:
+    file = file or sys.stdout
+    try:
+        print(msg, file=file, flush=True)
+    except OSError:
+        # Losing the terminal must not stop summarising.
+        os.dup2(os.open(os.devnull, os.O_WRONLY), file.fileno())
+
+
 def content_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -176,7 +185,7 @@ def load_overrides(root: Path) -> dict[str, str]:
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except (tomllib.TOMLDecodeError, OSError) as e:
-        print(f"warning: ignoring unreadable {path}: {e}", file=sys.stderr)
+        say(f"warning: ignoring unreadable {path}: {e}", file=sys.stderr)
         return {}
     table = data.get("tag-descriptions", {})
     return {k: v for k, v in table.items() if isinstance(v, str)}
@@ -252,7 +261,7 @@ def describe_tags(
     items = sorted(pending.items())
     batches = [items[i:i + TAG_BATCH_SIZE] for i in range(0, len(items), TAG_BATCH_SIZE)]
     for n, batch in enumerate(batches, 1):
-        print(f"tags: batch {n}/{len(batches)}")
+        say(f"tags: batch {n}/{len(batches)}")
         block = "\n\n".join(tag_context(t, f, summaries) for t, f in batch)
         try:
             parsed = parse_json_response(
@@ -267,7 +276,7 @@ def describe_tags(
             raise
         except Exception as e:
             failed += len(batch)
-            print(f"warning: tag batch {n}/{len(batches)} failed: {e}", file=sys.stderr)
+            say(f"warning: tag batch {n}/{len(batches)} failed: {e}", file=sys.stderr)
     return results, failed
 
 
@@ -315,7 +324,7 @@ def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurre
             except AuthError:
                 raise
             except Exception as e:
-                print(f"warning: {rel}: {e}", file=sys.stderr)
+                say(f"warning: {rel}: {e}", file=sys.stderr)
                 return rel, {"sha256": "", "summary": UNAVAILABLE}
 
         with ThreadPoolExecutor(max_workers=max(1, concurrency)) as pool:
@@ -325,7 +334,7 @@ def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurre
                     rel, entry = fut.result()
                     summaries[rel] = entry
                     failed += entry["sha256"] == ""
-                    print(f"[{done}/{len(todo)}] {rel}")
+                    say(f"[{done}/{len(todo)}] {rel}")
                     if done % SAVE_EVERY == 0:
                         save_cache(root, summaries, tag_cache)
             except AuthError:
@@ -355,16 +364,16 @@ def run(root: Path, llm, *, force=False, run_files=True, run_tags=True, concurre
     if run_files:
         entries = [(p, summaries[p]["summary"]) for p in paths if p in summaries]
         (root / INDEX_FILE).write_text(render_index(entries, now), encoding="utf-8")
-        print(f"{len(entries)} files -> {INDEX_FILE}")
+        say(f"{len(entries)} files -> {INDEX_FILE}")
     if run_tags:
         tag_entries = [
             (t, len(f), overrides.get(t, tag_cache.get(t, {}).get("description", "")))
             for t, f in tag_map.items()
         ]
         (root / TAGS_FILE).write_text(render_tags(tag_entries, now), encoding="utf-8")
-        print(f"{len(tag_entries)} tags -> {TAGS_FILE}")
+        say(f"{len(tag_entries)} tags -> {TAGS_FILE}")
     if failed:
-        print(f"{failed} summaries or tags failed; rerun to retry", file=sys.stderr)
+        say(f"{failed} summaries or tags failed; rerun to retry", file=sys.stderr)
     return failed
 
 
@@ -380,7 +389,7 @@ def main(argv: list[str] | None = None) -> int:
 
     api_key = os.environ.get("NOTES_INDEX_API_KEY") or os.environ.get("LITELLM_API_KEY")
     if not api_key:
-        print("error: set NOTES_INDEX_API_KEY or LITELLM_API_KEY", file=sys.stderr)
+        say("error: set NOTES_INDEX_API_KEY or LITELLM_API_KEY", file=sys.stderr)
         return 2
 
     base_url = os.environ.get("NOTES_INDEX_BASE_URL", DEFAULT_BASE_URL)
@@ -391,13 +400,13 @@ def main(argv: list[str] | None = None) -> int:
 
     root = Path(args.vault).expanduser()
     if not root.is_dir():
-        print(f"error: not a directory: {root}", file=sys.stderr)
+        say(f"error: not a directory: {root}", file=sys.stderr)
         return 2
     try:
         failed = run(root, llm, force=args.force, run_files=not args.only_tags,
                      run_tags=not args.only_files, concurrency=args.concurrency)
     except AuthError as e:
-        print(f"error: {e}; nothing written", file=sys.stderr)
+        say(f"error: {e}; nothing written", file=sys.stderr)
         return 2
     return 1 if failed else 0
 
