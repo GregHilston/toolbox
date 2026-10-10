@@ -28,7 +28,7 @@ DEFAULT_BASE_URL = "https://llm.grehg2.xyz/v1"
 DEFAULT_MODEL = "local-small"
 END_USER = "notes-index"
 UNAVAILABLE = "(summary unavailable)"
-MARKER = "<!-- managed by notes-index: do not edit manually — regenerate with `notes-index` -->"
+MARKER = "<!-- managed by notes-index: do not edit manually — regenerate with `notes-index.py` -->"
 
 INDEX_FILE = "_vault-index.md"
 TAGS_FILE = "_vault-tags.md"

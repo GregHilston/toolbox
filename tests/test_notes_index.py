@@ -182,7 +182,7 @@ class Format(Vault):
         self.run_index(lambda s, u: "Pipes | here" if s is ni.FILE_SUMMARY_PROMPT else fake_llm(s, u))
         index = (self.root / "_vault-index.md").read_text().splitlines()
         self.assertEqual(index[0], "# Vault Index")
-        self.assertEqual(index[1], "<!-- managed by notes-index: do not edit manually — regenerate with `notes-index` -->")
+        self.assertEqual(index[1], "<!-- managed by notes-index: do not edit manually — regenerate with `notes-index.py` -->")
         self.assertTrue(index[2].startswith("_Last updated: "))
         self.assertEqual(index[4:6], ["| File | Summary |", "|------|---------|"])
         self.assertEqual(index[6], "| a.md | Pipes \\| here. |")
