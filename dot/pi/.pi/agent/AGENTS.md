@@ -24,5 +24,5 @@ history stays clean, and shared by every worktree of the clone.
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. Follow
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. Follow
 `~/.claude/skills/setup-matt-pocock-skills/domain.md`.

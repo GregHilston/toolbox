@@ -2,8 +2,8 @@
 name: research
 description: Investigate a question against high-trust primary sources and capture the findings as a Markdown file in the repo. Use when the user wants a topic researched, docs or API facts gathered, or reading legwork delegated to a background agent.
 metadata:
-  upstream: https://github.com/mattpocock/skills/tree/3cca18b368ae95cdbdebbff572ccafa662551015/skills/engineering/research
-  vendored: 3cca18b368ae95cdbdebbff572ccafa662551015
+  upstream: https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/research
+  vendored: 49dd158d1076134a641b33efb035946536778336
 ---
 
 <!-- Vendored from https://github.com/mattpocock/skills (MIT), license copy in skills/wayfinder/. Local edits: Tool mapping section -->

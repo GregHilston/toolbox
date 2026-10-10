@@ -2,7 +2,7 @@
 name: grill-with-docs
 description: |
   Relentless interview to sharpen a plan or design that ALSO leaves a paper trail:
-  writes ADRs for hard/surprising/trade-off decisions and maintains a CONTEXT.md
+  writes ADRs for hard/surprising/trade-off decisions and maintains a GLOSSARY.md
   glossary of canonical domain terms, inline as you go. Run before building, when
   the plan is undefined and domain vocabulary is unsettled.
 model: inherit
@@ -27,9 +27,9 @@ If a *fact* can be found in the codebase, look it up (Grep/Glob/Read); the
 
 ## Leave a paper trail (inline, as you go)
 
-**Glossary — `CONTEXT.md`:** when fuzzy language gets sharpened into a canonical
-term, write it to `CONTEXT.md` at the repo root immediately. Keep it a pure
-glossary (no implementation details, no spec). Follow `CONTEXT-FORMAT.md` in this
+**Glossary — `GLOSSARY.md`:** when fuzzy language gets sharpened into a canonical
+term, write it to `GLOSSARY.md` at the repo root immediately. Keep it a pure
+glossary (no implementation details, no spec). Follow `GLOSSARY-FORMAT.md` in this
 skill directory. Flag mismatches between the user's words and the documented terms.
 
 **Decisions — ADRs:** record an ADR in `docs/adr/NNNN-slug.md` **only** when all
