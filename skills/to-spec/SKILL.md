@@ -3,8 +3,8 @@ name: to-spec
 description: "Turn the current conversation into a spec and publish it to the project issue tracker: no interview, just synthesis of what you've already discussed."
 disable-model-invocation: true
 metadata:
-  upstream: https://github.com/mattpocock/skills/tree/3cca18b368ae95cdbdebbff572ccafa662551015/skills/engineering/to-spec
-  vendored: 3cca18b368ae95cdbdebbff572ccafa662551015
+  upstream: https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/to-spec
+  vendored: 49dd158d1076134a641b33efb035946536778336
 ---
 
 <!-- Vendored from https://github.com/mattpocock/skills (MIT), license copy in skills/wayfinder/. Local edits: none -->
