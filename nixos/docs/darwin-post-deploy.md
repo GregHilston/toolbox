@@ -227,6 +227,18 @@ See `modules/darwin/pi-web.nix`.
 - [ ] **Add a project** - point it at `~/Git`, start a session, close the tab and reopen it
       to confirm the session survived
 
+## ComfyUI (moria only)
+
+`custom.services.comfyui.enable` declares the agent; the install is by hand because it
+needs the network. See `nixos/CLAUDE.md` → "ComfyUI on moria".
+
+- [ ] **Install** - `cd ~/Git/toolbox/nixos && just comfyui-setup`, after `just dr moria`
+      so the agent exists to restart. About 24 GB of models; re-running skips finished ones.
+- [ ] **Verify** - `tail ~/Library/Logs/comfyui.log` shows "To see the GUI go to", and
+      https://comfy.grehg2.xyz opens over Tailscale
+- [ ] **Generate** - Templates → "Flux.2 [Klein] 4B: Text to Image", Run. The template
+      opens on the base model; enable the distilled subgraph for the 4-step one.
+
 ## Hermes Desktop (moria, citadel)
 
 Hermes runs only on dungeon (home-lab `hermes/`). These Macs are Desktop clients of it,
