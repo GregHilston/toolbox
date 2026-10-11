@@ -287,6 +287,13 @@ agents, and `nixos/CLAUDE.md` explains why.
 PI WEB has **no authentication**. The tailnet is the only thing keeping it
 private.
 
+## ComfyUI — image generation on moria
+
+ComfyUI with FLUX.2 klein 4B runs on moria's GPU at `https://comfy.grehg2.xyz`,
+about 15 s per 1024² image. `just comfyui-setup` installs it; `nixos/CLAUDE.md` →
+"ComfyUI on moria" runs it, and `docs/image-models.md` says why this model and why
+moria (it throttles hard under sustained load). No authentication; tailnet only.
+
 ## Claude Code in Docker
 
 `claude-docker` (a zsh function in `dot/zsh/.zshrc`) runs Claude Code in a container

@@ -482,6 +482,35 @@ next `pi-web install` would regenerate it away. Note also that `~/.zshrc.local`
 from `process.env` under PI WEB has to come from a file it reads itself, not
 from a shell rc.
 
+## ComfyUI on moria
+
+`modules/darwin/comfyui.nix` (`custom.services.comfyui`, moria only) declares the
+`org.nixos.comfyui` agent; `just comfyui-setup` runs `bin/comfyui-setup.sh`, which
+clones ComfyUI to `~/ComfyUI`, builds its venv and fetches FLUX.2 klein 4B. home-lab's
+Caddy serves it as `comfy.grehg2.xyz`. Why this model and this layout, with the
+measurements: `docs/image-models.md`.
+
+- **Setup is not activation**, the usual reason: it needs the network. Until it has
+  run, the agent fails every 30 s (`ThrottleInterval`) with a missing `.venv` in
+  `~/Library/Logs/comfyui.log`. That is expected on a fresh host.
+- **Upgrading** is bumping `REF` (a ComfyUI release tag) or `TORCH` in the script and
+  re-running `just comfyui-setup`; it restarts the agent. torch is pinned to a stable
+  release because nightlies are deleted upstream. torchvision must match it.
+- **It binds moria's tailnet address**, not `0.0.0.0`: ComfyUI has no authentication.
+  At boot the bind fails until Tailscale is up, and `KeepAlive` retries. Do not add
+  `--enable-cors-header`; it replaces ComfyUI's origin check with `*`.
+- **ComfyUI-Manager** (`--enable-manager`) installs custom nodes. Its
+  `~/ComfyUI/user/__manager/config.ini` is seeded once with `use_uv = True` (the uv venv
+  has no pip) and `network_mode = personal_cloud`: it treats a non-loopback bind as
+  "remote" and refuses installs otherwise. The agent's `PATH` is there so it finds `uv`.
+- **Model downloads resume until each file matches its Content-Length.** moria is on
+  Wi-Fi, and Hugging Face's CDN stalls mid-file; `hf download` and a bare `curl` both
+  hung for good. Over ssh, `git clone` hung too, on a credential helper, hence
+  `credential.helper=` in the script.
+- **Big models are not worth adding here.** moria throttles to about a third of its GPU
+  after two minutes, so a 20+ step model takes minutes per image. Prefer few-step
+  distilled models; see `docs/image-models.md` → "Re-evaluating".
+
 ## Common Mistakes to Avoid
 
 1. **Module imports**: Always use relative paths in module imports (e.g., `../../modules/home` not absolute paths)
