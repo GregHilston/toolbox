@@ -232,6 +232,13 @@ pi-web-setup:
   pi-web doctor
   pi-web status
 
+# Install or upgrade ComfyUI for the agent in modules/darwin/comfyui.nix.
+# Not activation, for the same reason as pi-web-setup: it needs the network.
+# Re-running is the upgrade path; bump the pins in bin/comfyui-setup.sh first.
+# Usage: `just comfyui-setup`
+comfyui-setup:
+  {{justfile_directory()}}/../bin/comfyui-setup.sh
+
 # Show post-deploy checklist for Darwin/macOS setup
 # Usage: `just checklist`
 checklist:
