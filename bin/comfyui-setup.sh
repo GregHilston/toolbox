@@ -11,21 +11,21 @@ set -euo pipefail
 IFS=$'\n\t'
 
 DIR="${COMFYUI_DIR:-$HOME/ComfyUI}"
-REF="${COMFYUI_REF:-v0.39.2}"
-# Pinned because nightlies are deleted upstream; torchvision must match torch.
-# torchaudio lags torch (2.11 is current) but loads with it. The Manager wants
-# all three, or it skips restoring torch after a custom node install changes it.
+REF="${COMFYUI_REF:-v0.39.2}" # a release tag
+# Stable: nightlies are deleted. Manager needs all three.
 TORCH=(torch==2.14.1 torchvision==0.29.1 torchaudio==2.11.0)
 TRIES="${COMFYUI_FETCH_TRIES:-20}"
 AGENT="gui/$(id -u)/org.nixos.comfyui"
 
-# Folder under models/, then URL. Base and distilled both: the bundled
-# "Flux.2 [Klein] 4B" template opens on base, and distilled is the 4-step one.
+# Folder under models/, then URL, pinned to a commit so a resume never splices
+# two versions. Base too: the bundled klein template opens on it.
+KLEIN=https://huggingface.co/Comfy-Org/vae-text-encorder-for-flux-klein-4b/resolve/5f526678002e43af5551dadb73ce2e8c91b43afe/split_files
+FLUX2=https://huggingface.co/Comfy-Org/flux2-dev/resolve/ed33133cd56476eac818c0943b6f9419b3e4a3a1/split_files
 MODELS=(
-  "diffusion_models https://huggingface.co/Comfy-Org/flux2-klein/resolve/main/split_files/diffusion_models/flux-2-klein-4b.safetensors"
-  "diffusion_models https://huggingface.co/Comfy-Org/flux2-klein/resolve/main/split_files/diffusion_models/flux-2-klein-base-4b.safetensors"
-  "text_encoders https://huggingface.co/Comfy-Org/flux2-klein/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors"
-  "vae https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/vae/flux2-vae.safetensors"
+  "diffusion_models $KLEIN/diffusion_models/flux-2-klein-4b.safetensors"
+  "diffusion_models $KLEIN/diffusion_models/flux-2-klein-base-4b.safetensors"
+  "text_encoders $KLEIN/text_encoders/qwen_3_4b.safetensors"
+  "vae $FLUX2/vae/flux2-vae.safetensors"
 )
 if [ -n "${COMFYUI_MODELS:-}" ]; then
   read -r -d '' -a MODELS <<<"$COMFYUI_MODELS" || true
@@ -50,9 +50,7 @@ UV_HTTP_TIMEOUT=600 uv pip install --quiet --python "$DIR/.venv/bin/python" "${T
   -r "$DIR/requirements.txt" -r "$DIR/manager_requirements.txt"
 printf "✓ venv:"; printf " %s" "${TORCH[@]}"; echo
 
-# Written once: the Manager edits this file itself. The server listens on a
-# tailnet address, which the Manager calls non-local and refuses installs from
-# unless network_mode is personal_cloud. use_uv because a uv venv has no pip.
+# Written once; the Manager edits it after. Why: nixos/CLAUDE.md.
 manager_ini="$DIR/user/__manager/config.ini"
 if [ ! -f "$manager_ini" ]; then
   mkdir -p "$(dirname "$manager_ini")"
@@ -65,8 +63,9 @@ local_size() {  # <file>
   if [ -f "$1" ]; then wc -c <"$1" | tr -d ' '; else echo 0; fi
 }
 
-remote_size() {  # <url>  prints the Content-Length after redirects
-  curl -sfIL "$1" | tr -d '\r' | awk 'tolower($1) == "content-length:" { n = $2 } END { print n }'
+remote_size() {  # <url>  the final response's Content-Length, or nothing
+  { curl -sfIL "$1" || true; } | tr -d '\r' |
+    awk '/^HTTP\// { n = "" } tolower($1) == "content-length:" { n = $2 } END { print n }'
 }
 
 failed=0
@@ -78,9 +77,10 @@ for entry in "${MODELS[@]}"; do
   if [ -z "$size" ]; then
     echo "✗ cannot size $url" >&2; failed=1; continue
   fi
+  # Resuming past the end never shrinks a file.
+  [ "$(local_size "$out")" -le "$size" ] || rm -f "$out"
   tries=0
-  # Resume until the size matches: Hugging Face's CDN stalls mid-file on a weak
-  # link, and --speed-limit turns a stall into an exit we can retry.
+  # Hugging Face stalls mid-file; resume until complete.
   while [ "$(local_size "$out")" != "$size" ]; do
     if [ "$tries" -ge "$TRIES" ]; then
       echo "✗ gave up on ${out##*/} after $TRIES tries" >&2; failed=1; continue 2

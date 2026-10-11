@@ -36,7 +36,10 @@ if [ "$1" = venv ]; then dir="${@: -1}"; mkdir -p "$dir/bin"; printf '#!/bin/sh\
     "curl": r'''
 out=""; head=0; url="${@: -1}"
 while [ $# -gt 0 ]; do case "$1" in -o) out="$2"; shift ;; -sfIL) head=1 ;; esac; shift; done
-if [ "$head" = 1 ]; then printf 'HTTP/2 200\r\ncontent-length: %s\r\n' "$FAKE_SIZE"; exit 0; fi
+if [ "$head" = 1 ]; then
+  case "$url" in *"${FAKE_HEAD_FAIL:-none}"*) exit 6 ;; esac
+  printf 'HTTP/2 302\r\ncontent-length: 99\r\n\r\nHTTP/2 200\r\ncontent-length: %s\r\n' "$FAKE_SIZE"; exit 0
+fi
 echo "download $url" >> "$CALLS"
 [ -n "${FAKE_FAIL:-}" ] && exit 22
 have=$( [ -f "$out" ] && wc -c < "$out" || echo 0 )
@@ -129,6 +132,22 @@ class TestComfyuiSetup(unittest.TestCase):
         self.assertIn("gave up on klein.safetensors after 5 tries", r.stderr)
         self.assertIn("gave up on vae.safetensors", r.stderr)  # one dead file does not stop the rest
         self.assertEqual(len(self.calls_matching("download")), 10)
+
+    def test_a_failed_size_check_skips_that_model_only(self):
+        r = self.run_setup(FAKE_HEAD_FAIL="klein", FAKE_LOADED="1")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("cannot size", r.stderr)
+        self.assertEqual(self.model("vae/vae.safetensors").stat().st_size, 1000)
+        self.assertTrue(any("kickstart -k" in c for c in self.calls_matching("launchctl")))
+
+    def test_a_file_larger_than_upstream_is_fetched_again(self):
+        self.run_setup()
+        with open(self.model("vae/vae.safetensors"), "ab") as f:
+            f.write(b"junk")
+        r = self.run_setup()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.model("vae/vae.safetensors").stat().st_size, 1000)
+        self.assertEqual(len(self.calls_matching("download")), 1)
 
 
 if __name__ == "__main__":
