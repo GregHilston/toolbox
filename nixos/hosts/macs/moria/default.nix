@@ -98,8 +98,7 @@
   # its launchd agents.
   custom.programs.piWeb.enable = true;
 
-  # Installed once with `just comfyui-setup`; why moria and why FLUX.2 klein
-  # are in nixos/CLAUDE.md, "ComfyUI on moria".
+  # Installed once with `just comfyui-setup`. Why: docs/image-models.md.
   custom.services.comfyui.enable = true;
 
   # 128 GB box serving two models at once. macOS would cap the GPU at 96 GB

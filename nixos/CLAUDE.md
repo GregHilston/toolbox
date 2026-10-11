@@ -495,7 +495,9 @@ measurements: `docs/image-models.md`.
   `~/Library/Logs/comfyui.log`. That is expected on a fresh host.
 - **Upgrading** is bumping `REF` (a ComfyUI release tag) or `TORCH` in the script and
   re-running `just comfyui-setup`; it restarts the agent. torch is pinned to a stable
-  release because nightlies are deleted upstream. torchvision must match it.
+  release because nightlies are deleted upstream. torchvision must match it, and
+  torchaudio stays installed: the Manager's guard that restores torch after a custom
+  node install skips itself without all three.
 - **It binds moria's tailnet address**, not `0.0.0.0`: ComfyUI has no authentication.
   At boot the bind fails until Tailscale is up, and `KeepAlive` retries. Do not add
   `--enable-cors-header`; it replaces ComfyUI's origin check with `*`.

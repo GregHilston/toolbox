@@ -16,6 +16,7 @@ in {
     listen = lib.mkOption {
       type = lib.types.str;
       default = vars.networking.hosts.${config.networking.hostName}.tailscale;
+      defaultText = lib.literalExpression "vars.networking.hosts.\${config.networking.hostName}.tailscale";
       description = ''
         Address to bind. The tailnet address by default: ComfyUI has no
         authentication, and home-lab's Caddy reaches it over the tailnet.
