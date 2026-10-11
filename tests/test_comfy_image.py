@@ -22,7 +22,7 @@ PNG = b"\x89PNG\r\n\x1a\nfake"
 
 
 class FakeComfy(BaseHTTPRequestHandler):
-    mode = "ok"  # ok | error | asleep
+    mode = "ok"  # ok | error | asleep | asleep_later | not_json | no_image | slow
     submitted: ClassVar[list[dict]] = []
 
     def log_message(self, *args):
@@ -40,11 +40,19 @@ class FakeComfy(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         if self.mode == "asleep":
             return self.reply(503, b"This runs on moria, which is asleep", "text/plain")
+        if self.mode == "not_json":
+            return self.reply(200, b"<html>captive portal</html>", "text/html")
         FakeComfy.submitted.append(body["prompt"])
         self.reply(200, {"prompt_id": "p1"})
 
     def do_GET(self):
         if self.path.startswith("/api/history/"):
+            if self.mode == "asleep_later":
+                return self.reply(503, b"asleep", "text/plain")
+            if self.mode == "slow":
+                return self.reply(200, {})
+            if self.mode == "no_image":
+                return self.reply(200, {"p1": {"status": {"status_str": "success"}, "outputs": {}}})
             if self.mode == "error":
                 status = {"status_str": "error", "messages": [["execution_error", {"exception_message": "out of memory"}]]}
                 return self.reply(200, {"p1": {"status": status, "outputs": {}}})
@@ -71,10 +79,10 @@ class TestComfyImage(unittest.TestCase):
         FakeComfy.submitted.clear()
         self.out = Path(tempfile.mkdtemp())
 
-    def run_tool(self, *args, url=None):
-        env = {"COMFY_URL": url or self.url, "HOME": str(self.out), "PATH": "/usr/bin:/bin"}
-        return subprocess.run([sys.executable, str(SCRIPT), "--out", str(self.out), *args],
-                              env=env, capture_output=True, text=True, timeout=30, check=False)
+    def run_tool(self, *args, url=None, out=True, **env_extra):
+        env = {"COMFY_URL": url or self.url, "HOME": str(self.out), "PATH": "/usr/bin:/bin", **env_extra}
+        cmd = [sys.executable, str(SCRIPT), *(["--out", str(self.out)] if out else []), *args]
+        return subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=30, check=False)
 
     def test_saves_the_image_and_prints_what_a_follow_up_needs(self):
         r = self.run_tool("--seed", "42", "two zebras playing basketball")
@@ -115,6 +123,34 @@ class TestComfyImage(unittest.TestCase):
         r = self.run_tool("x")
         self.assertEqual(r.returncode, 1)
         self.assertIn("out of memory", r.stderr)
+
+    def assert_plain_error(self, r, *needles):
+        self.assertEqual(r.returncode, 1)
+        for n in needles:
+            self.assertIn(n, r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
+
+    def test_moria_falling_asleep_mid_render_says_so(self):
+        FakeComfy.mode = "asleep_later"
+        self.assert_plain_error(self.run_tool("x"), "asleep")
+
+    def test_a_non_json_page_says_so(self):
+        FakeComfy.mode = "not_json"
+        self.assert_plain_error(self.run_tool("x"), "other than JSON", "captive portal")
+
+    def test_a_render_with_no_image_says_so(self):
+        FakeComfy.mode = "no_image"
+        self.assert_plain_error(self.run_tool("x"), "returned no image")
+
+    def test_a_render_that_never_finishes_times_out(self):
+        FakeComfy.mode = "slow"
+        self.assert_plain_error(self.run_tool("x", COMFY_TIMEOUT="1"), "no image after 1s")
+
+    def test_comfy_image_dir_is_where_it_saves_without_out(self):
+        target = self.out / "cache"
+        r = self.run_tool("x", out=False, COMFY_IMAGE_DIR=str(target))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(r.stdout.splitlines()[-1].startswith(f"MEDIA:{target}/comfy-"))
 
 
 if __name__ == "__main__":

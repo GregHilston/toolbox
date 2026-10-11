@@ -27,12 +27,13 @@ import time
 import urllib.request
 import uuid
 from pathlib import Path
+from typing import NoReturn
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 
 SERVER = os.environ.get("COMFY_URL", "https://comfy.grehg2.xyz").rstrip("/")
 HERMES_CACHE = Path("/opt/data/cache/images")
-TIMEOUT = 300  # a cold load plus a queue ahead of us
+TIMEOUT = int(os.environ.get("COMFY_TIMEOUT", "300"))  # a cold load plus a queue
 
 
 def workflow(prompt: str, seed: int, width: int, height: int, steps: int) -> dict:
@@ -54,10 +55,26 @@ def workflow(prompt: str, seed: int, width: int, height: int, steps: int) -> dic
 
 
 def call(path: str, body: dict | None = None) -> bytes:
+    """One request, with every failure turned into a plain error line."""
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(SERVER + path, data=data, headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return r.read()
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return r.read()
+    except HTTPError as e:
+        if e.code in (502, 503, 504):
+            fail(f"ComfyUI at {SERVER} is down ({e.code}); it runs on moria, which is probably asleep. Wake moria and retry.")
+        fail(f"ComfyUI refused {path.split('?')[0]} ({e.code}): {e.read().decode(errors='replace')[:500]}")
+    except (URLError, OSError) as e:
+        fail(f"cannot reach ComfyUI at {SERVER}: {e}. It runs on moria; check moria is awake and on the tailnet.")
+
+
+def call_json(path: str, body: dict | None = None) -> dict:
+    raw = call(path, body)
+    try:
+        return json.loads(raw)
+    except ValueError:
+        fail(f"ComfyUI at {SERVER} returned something other than JSON: {raw[:200].decode(errors='replace')}")
 
 
 def default_dir() -> Path:
@@ -68,35 +85,29 @@ def default_dir() -> Path:
     return Path.home() / "Pictures" / "comfy"
 
 
-def fail(msg: str) -> None:
+def fail(msg: str) -> NoReturn:
     print(f"error: {msg}", file=sys.stderr)
     sys.exit(1)
 
 
 def generate(prompt: str, seed: int, width: int, height: int, steps: int) -> bytes:
-    try:
-        pid = json.loads(call("/api/prompt", {"prompt": workflow(prompt, seed, width, height, steps), "client_id": "comfy-image"}))["prompt_id"]
-    except HTTPError as e:
-        body = e.read().decode(errors="replace")
-        if e.code in (502, 503, 504):
-            fail(f"ComfyUI at {SERVER} is down ({e.code}); it runs on moria, which is probably asleep. Wake moria and retry.")
-        fail(f"ComfyUI rejected the request ({e.code}): {body[:500]}")
-    except (URLError, OSError) as e:
-        fail(f"cannot reach ComfyUI at {SERVER}: {e}. It runs on moria; check moria is awake and on the tailnet.")
+    pid = call_json("/api/prompt", {"prompt": workflow(prompt, seed, width, height, steps), "client_id": "comfy-image"})["prompt_id"]
     deadline = time.time() + TIMEOUT
     while time.time() < deadline:
-        hist = json.loads(call(f"/api/history/{pid}"))
+        hist = call_json(f"/api/history/{pid}")
         if pid in hist:
             entry = hist[pid]
-            if entry.get("status", {}).get("status_str") != "success":
-                errs = [m[1].get("exception_message", "") for m in entry["status"].get("messages", []) if m[0] == "execution_error"]
-                fail(f"generation failed: {' '.join(errs).strip() or entry['status']}")
-            img = next(i for o in entry["outputs"].values() for i in o.get("images", []))
+            status = entry.get("status", {})
+            if status.get("status_str") != "success":
+                errs = [m[1].get("exception_message", "") for m in status.get("messages", []) if m[0] == "execution_error"]
+                fail(f"generation failed: {' '.join(errs).strip() or status}")
+            img = next((i for o in entry.get("outputs", {}).values() for i in o.get("images", [])), None)
+            if img is None:
+                fail("ComfyUI finished but returned no image; run again with a new seed.")
             q = urlencode({"filename": img["filename"], "subfolder": img["subfolder"], "type": img["type"]})
             return call(f"/api/view?{q}")
         time.sleep(0.5)
     fail(f"no image after {TIMEOUT}s; ComfyUI may be busy. Its queue is at {SERVER}.")
-    return b""
 
 
 def main() -> None:
