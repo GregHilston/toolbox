@@ -33,7 +33,7 @@ from urllib.parse import urlencode
 
 SERVER = os.environ.get("COMFY_URL", "https://comfy.grehg2.xyz").rstrip("/")
 HERMES_CACHE = Path("/opt/data/cache/images")
-TIMEOUT = int(os.environ.get("COMFY_TIMEOUT", "300"))  # a cold load plus a queue
+TIMEOUT = int(os.environ.get("COMFY_TIMEOUT", "240"))  # under Hermes' 300 s terminal limit
 
 
 def workflow(prompt: str, seed: int, width: int, height: int, steps: int) -> dict:
