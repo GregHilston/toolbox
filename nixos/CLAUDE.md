@@ -493,8 +493,9 @@ measurements: `docs/image-models.md`.
 - **Setup is not activation**, the usual reason: it needs the network. Until it has
   run, the agent fails every 30 s (`ThrottleInterval`) with a missing `.venv` in
   `~/Library/Logs/comfyui.log`. That is expected on a fresh host.
-- **Upgrading** is bumping `REF` (a ComfyUI release tag) or `TORCH` in the script and
-  re-running `just comfyui-setup`; it restarts the agent. torch is pinned to a stable
+- **Upgrading** is bumping `REF` (a ComfyUI release tag), `TORCH`, or the Hugging Face
+  commits in the model URLs, then re-running `just comfyui-setup`; it restarts the agent.
+  The URLs are pinned so a resumed download can never splice two versions of a file. torch is pinned to a stable
   release because nightlies are deleted upstream. torchvision must match it, and
   torchaudio stays installed: the Manager's guard that restores torch after a custom
   node install skips itself without all three.
