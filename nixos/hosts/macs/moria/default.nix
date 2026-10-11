@@ -20,6 +20,8 @@
     # 128GB box and already runs oMLX, so sessions and inference stay together.
     ../../../modules/darwin/pi-web.nix
     ../../../modules/darwin/hermes-desktop.nix
+    # ComfyUI — image generation on this GPU, behind comfy.grehg2.xyz.
+    ../../../modules/darwin/comfyui.nix
   ];
 
   networking.hostName = "moria";
@@ -95,6 +97,10 @@
   # `just pi-web-setup`. See modules/darwin/pi-web.nix for why nix does not own
   # its launchd agents.
   custom.programs.piWeb.enable = true;
+
+  # Installed once with `just comfyui-setup`; why moria and why FLUX.2 klein
+  # are in nixos/CLAUDE.md, "ComfyUI on moria".
+  custom.services.comfyui.enable = true;
 
   # 128 GB box serving two models at once. macOS would cap the GPU at 96 GB
   # (its 75% default) while oMLX budgets against ~107 GB, so the kernel wall is
