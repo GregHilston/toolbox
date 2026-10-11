@@ -294,6 +294,10 @@ about 15 s per 1024² image. `just comfyui-setup` installs it; `nixos/CLAUDE.md`
 "ComfyUI on moria" runs it, and `docs/image-models.md` says why this model and why
 moria (it throttles hard under sustained load). No authentication; tailnet only.
 
+Agents draw with it through `skills/image-generate` (`bin/comfy-image.py`): Claude Code
+and pi everywhere, and Hermes' default profile on Telegram and, via Old Gregg, Slack.
+The agent writes the prompt; a follow-up edits it and keeps the seed.
+
 ## Claude Code in Docker
 
 `claude-docker` (a zsh function in `dot/zsh/.zshrc`) runs Claude Code in a container
