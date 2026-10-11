@@ -95,6 +95,7 @@ class TestComfyuiSetup(unittest.TestCase):
         install = next(c for c in self.calls_matching("uv pip install"))
         self.assertIn("torch==2.14.1", install)
         self.assertIn("torchvision==0.29.1", install)
+        self.assertIn("torchaudio==2.11.0", install)  # the Manager's torch guard needs it
         self.assertIn("manager_requirements.txt", install)
         for f in ("diffusion_models/klein.safetensors", "vae/vae.safetensors"):
             self.assertEqual(self.model(f).stat().st_size, 1000)

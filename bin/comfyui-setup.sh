@@ -13,7 +13,9 @@ IFS=$'\n\t'
 DIR="${COMFYUI_DIR:-$HOME/ComfyUI}"
 REF="${COMFYUI_REF:-v0.39.2}"
 # Pinned because nightlies are deleted upstream; torchvision must match torch.
-TORCH=(torch==2.14.1 torchvision==0.29.1)
+# torchaudio lags torch (2.11 is current) but loads with it. The Manager wants
+# all three, or it skips restoring torch after a custom node install changes it.
+TORCH=(torch==2.14.1 torchvision==0.29.1 torchaudio==2.11.0)
 TRIES="${COMFYUI_FETCH_TRIES:-20}"
 AGENT="gui/$(id -u)/org.nixos.comfyui"
 
@@ -46,7 +48,7 @@ echo "✓ ComfyUI $REF in $DIR"
 [ -x "$DIR/.venv/bin/python" ] || uv venv --quiet --python 3.12 "$DIR/.venv"
 UV_HTTP_TIMEOUT=600 uv pip install --quiet --python "$DIR/.venv/bin/python" "${TORCH[@]}" \
   -r "$DIR/requirements.txt" -r "$DIR/manager_requirements.txt"
-printf "✓ venv (%s %s)\n" "${TORCH[@]}"
+printf "✓ venv:"; printf " %s" "${TORCH[@]}"; echo
 
 # Written once: the Manager edits this file itself. The server listens on a
 # tailnet address, which the Manager calls non-local and refuses installs from
