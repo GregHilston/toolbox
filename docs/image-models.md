@@ -17,7 +17,7 @@ distilled models do; 20 to 50 step models do not.
 
 | Model | Runtime | Single image | Six back to back | Verdict |
 |---|---|---|---|---|
-| **FLUX.2 klein 4B**, 4 steps | ComfyUI (MPS) | 16 s | 14 → 19 s | **chosen**: fast, strong photos and scenes, Apache-2.0 |
+| **FLUX.2 klein 4B**, 4 steps | ComfyUI (MPS), torch 2.14.1 | 17 s | 14 → 16 s | **chosen**: fast, strong photos and scenes, Apache-2.0 |
 | FLUX.2 klein 4B | mflux (MLX) | 13 s | 14 → 15 s | as fast, but a CLI with no server or UI |
 | FLUX.2 klein 4B | Draw Things gRPC | 16 s | 14 → 16 s | fastest per step (2.3 s); ComfyUI node only, no ecosystem |
 | Z-Image-Turbo (4-bit), 9 steps | mflux | 50 s | 53 → 74 s | better text, weaker scenes, 4× slower |
