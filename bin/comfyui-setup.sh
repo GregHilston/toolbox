@@ -46,7 +46,7 @@ echo "✓ ComfyUI $REF in $DIR"
 [ -x "$DIR/.venv/bin/python" ] || uv venv --quiet --python 3.12 "$DIR/.venv"
 UV_HTTP_TIMEOUT=600 uv pip install --quiet --python "$DIR/.venv/bin/python" "${TORCH[@]}" \
   -r "$DIR/requirements.txt" -r "$DIR/manager_requirements.txt"
-echo "✓ venv (${TORCH[*]})"
+printf "✓ venv (%s %s)\n" "${TORCH[@]}"
 
 # Written once: the Manager edits this file itself. The server listens on a
 # tailnet address, which the Manager calls non-local and refuses installs from
