@@ -25,3 +25,9 @@
 if [[ -d /opt/homebrew/bin && ":$PATH:" != *":/opt/homebrew/bin:"* ]]; then
   export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 fi
+
+# Toolbox scripts and ffsclient, for ssh and agents too.
+# -U: nested shells re-run this file.
+typeset -U path
+export TOOLBOX_HOME=~/Git/toolbox
+path+=($TOOLBOX_HOME/bin $TOOLBOX_HOME/bin/**/*(/N) $HOME/.local/bin(/N))

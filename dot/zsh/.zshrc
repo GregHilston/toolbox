@@ -136,12 +136,6 @@ fi
 
 HOSTNAME=$(hostname)
 
-# Toolbox
-TOOLBOX_HOME=~/Git/toolbox
-export TOOLBOX_HOME=$TOOLBOX_HOME
-# Add bin/ and all subdirectories recursively to PATH
-path+=($TOOLBOX_HOME/bin $TOOLBOX_HOME/bin/**/*(/N))
-
 # npm global prefix used by nix activation (ccstatusline lives here)
 path+=($HOME/.npm-global/bin(/N))
 
@@ -162,7 +156,6 @@ export VIRTUAL_ENV_DISABLE_PROMPT=
 
 # ── PATH additions ──────────────────────────────────────────────────
 
-export PATH="$PATH:$HOME/.local/bin"
 export PATH="$HOME/Apps:$PATH"
 
 # NVM
