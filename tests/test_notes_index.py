@@ -53,6 +53,7 @@ class IsIndexable(unittest.TestCase):
             "_vault-index.md": False,
             "sub/_vault-tags.md": False,
             "docs/adr/0001-x.md": False,
+            "project/docs/x.md": True,
             "llm/page.md": True,
             ".obsidian/x.md": False,
             "dir/.hidden/x.md": False,

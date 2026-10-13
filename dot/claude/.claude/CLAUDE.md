@@ -75,10 +75,10 @@ Prefer the `Read`, `Grep`, and `Glob` tools over shelling out to `cat`/`head`/`t
 
 `~/Git/toolbox` holds my dotfiles, scripts, and host configs. Its `bin/**` is on `$PATH` (recursive zsh glob), so helpers like `fetch-thread.py` work from any repo. See `~/Git/toolbox/CLAUDE.md` for details.
 
-## Research for the notes vault
+## LLM writing for the notes vault
 
 Notes an LLM writes for `~/Git/notes` go in its `llm/` folder, filed with
-`topics:`.
+`topics:`, never at the root. The vault's `CLAUDE.md` has the details.
 
 ## Researching Reddit
 

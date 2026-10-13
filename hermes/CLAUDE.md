@@ -78,8 +78,6 @@ only the clean sync and the tests still gate the tree.
 **It only fires on board-driven work.** A plain Bot Chat never calls either tool, so
 for chat-driven work run `bin/installs-from-clean.sh <workspace>` yourself.
 
-The LLM wiki's review gate went with the wiki: `~/Git/notes/docs/adr/0002-llm-notes-folder-replaces-the-wiki.md`.
-
 **Hook consent is automatic on dungeon.** Its profiles set `hooks_auto_accept: true`,
 so every run approves the hook, including after an edit. Without it, Hermes pins
 approval to the script's mtime and an edited hook stops firing until a run with
