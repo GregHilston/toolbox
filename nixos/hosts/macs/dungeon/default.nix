@@ -108,6 +108,10 @@ in {
 
   networking.hostName = "dungeon";
 
+  # Upgrades under running services break them.
+  homebrew.onActivation.upgrade = lib.mkForce false;
+  system.defaults.CustomUserPreferences."dev.kdrag0n.MacVirt".SUAutomaticallyUpdate = false;
+
   # Enable SSH (Remote Login) for remote access
   services.openssh.enable = true;
 
