@@ -108,12 +108,9 @@ in {
 
   networking.hostName = "dungeon";
 
-  # A rebuild must not upgrade what dungeon is running. `brew bundle` replaced
-  # OrbStack under the live app on 2026-10-12, which wiped its USB helper and took
-  # Zigbee and Z-Wave down; on 2026-08-16 it did the same to oMLX. It upgrades
-  # OrbStack even though the cask is auto_updates. Upgrade by hand instead:
-  # `brew upgrade <name>`, then restart what uses it (home-lab CLAUDE.md).
+  # Upgrades under running services break them.
   homebrew.onActivation.upgrade = lib.mkForce false;
+  system.defaults.CustomUserPreferences."dev.kdrag0n.MacVirt".SUAutomaticallyUpdate = false;
 
   # Enable SSH (Remote Login) for remote access
   services.openssh.enable = true;
