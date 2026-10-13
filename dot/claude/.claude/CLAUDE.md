@@ -77,10 +77,8 @@ Prefer the `Read`, `Grep`, and `Glob` tools over shelling out to `cat`/`head`/`t
 
 ## Research for the notes vault
 
-Research written for `~/Git/notes` goes to `wiki/raw/articles/` with
-`secondhand: true` in its frontmatter, not to a new root `ref-` note. The
-librarian bot turns it into wiki proposals for me to approve. See the vault's
-`CLAUDE.md`.
+Notes an LLM writes for `~/Git/notes` go in its `llm/` folder, filed with
+`topics:`.
 
 ## Researching Reddit
 
