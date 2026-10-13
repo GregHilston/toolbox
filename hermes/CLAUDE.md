@@ -7,9 +7,9 @@ a bot behaves.
 
 What is here is what dungeon mounts from toolbox, plus the measurements behind it:
 
-- `hooks/` and `skills/`: the completion gates and the Hermes-only skills. home-lab's
+- `hooks/` and `skills/`: the completion gate and the Hermes-only skills. home-lab's
   compose mounts them by path, so **do not move them**.
-- `bench/` is the builder-model race, `seed/` holds task cards, `tests/` tests the gates.
+- `bench/` is the builder-model race, `seed/` holds task cards, `tests/` tests the gate.
 
 Agent tools are scripts in `bin/` and shared skills are in `skills/`, both also
 mounted by dungeon; `skills/README.md` has the convention and who grants what.
@@ -62,7 +62,7 @@ catches ~45% of real errors, the same model plus deterministic analysis 94%.
 The bench drives a local `abtest` profile through the `hermes` CLI, so it needs a
 Hermes home with that profile on the machine that runs it.
 
-## The gates
+## The gate
 
 `hooks/require-green.sh` refuses `kanban_complete` and `kanban_request_review` when
 the tree would not install for anybody else. Three runs reached a green suite by
@@ -78,14 +78,7 @@ only the clean sync and the tests still gate the tree.
 **It only fires on board-driven work.** A plain Bot Chat never calls either tool, so
 for chat-driven work run `bin/installs-from-clean.sh <workspace>` yourself.
 
-`skills/llm-wiki-review/` is Wanderloots' Review Companion v1.0.0, copied verbatim
-(sha256 `d9c03763…59dc2c`, matching its QUALIFICATION.md). It calls itself "not
-deterministic enforcement"; `hooks/wiki-review-gate.py` is: compiled pages need a
-`Review/` proposal whose `decision: approve` the bot did not write itself.
-`tests/wiki-review-gate.sh` covers each rule. `terminal` can still write files, so it
-is a fence, not a wall. On its first six ingests the local model imagined Greg saying
-"approve" and wrote the decision itself, and overwrote a rejected proposal to reopen
-it; the gate caught both.
+The LLM wiki's review gate went with the wiki: `~/Git/notes/docs/adr/0002-llm-notes-folder-replaces-the-wiki.md`.
 
 **Hook consent is automatic on dungeon.** Its profiles set `hooks_auto_accept: true`,
 so every run approves the hook, including after an edit. Without it, Hermes pins
