@@ -36,7 +36,7 @@ INDEX_FILE = "_vault-index.md"
 TAGS_FILE = "_vault-tags.md"
 CACHE_FILE = "_vault-cache.json"
 MANAGED_FILES = {INDEX_FILE, TAGS_FILE, CACHE_FILE}
-UNINDEXED_DIRS = ("wiki/raw/", "wiki/Review/")
+UNINDEXED_DIRS = ("docs/",)
 OVERRIDES_FILE = ".notes-index.toml"
 
 # Large batches break local models' JSON.

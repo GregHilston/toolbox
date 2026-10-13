@@ -52,9 +52,9 @@ class IsIndexable(unittest.TestCase):
             "recipes/b.md": True,
             "_vault-index.md": False,
             "sub/_vault-tags.md": False,
-            "wiki/raw/x.md": False,
-            "wiki/Review/x.md": False,
-            "wiki/page.md": True,
+            "docs/adr/0001-x.md": False,
+            "project/docs/x.md": True,
+            "llm/page.md": True,
             ".obsidian/x.md": False,
             "dir/.hidden/x.md": False,
         }.items():
