@@ -74,6 +74,7 @@ class TestPiAsk(unittest.TestCase):
         self.pids = root / "pids"
         self.env = dict(os.environ, HOME=self.tmp.name, FAKE_PI_PIDS=str(self.pids),
                         PATH=f"{root / 'bin'}:{os.environ['PATH']}")
+        self.env.pop("PI_SUBAGENT_DEPTH", None)
 
     def tearDown(self) -> None:
         if self.pids.exists():
@@ -249,6 +250,13 @@ class TestPiAsk(unittest.TestCase):
         self.assertEqual(out.returncode, 2, out.stdout)
         self.assertIn("runs in", out.stdout)
         self.assertNotIn("given second", out.stdout)
+
+    def test_a_worker_cannot_start_another_worker(self):
+        argv = Path(self.tmp.name) / "argv.json"
+        out = self.ask("--session", "t10", "--dir", self.tmp.name, "hi", FAKE_PI_ARGV=str(argv), PI_SUBAGENT_DEPTH="1")
+        self.assertEqual(out.returncode, 2, out.stdout)
+        self.assertIn("from inside one", out.stdout)
+        self.assertFalse(argv.exists())
 
     def test_kills_a_child_that_ignores_sigterm_after_pi_exits(self):
         out = self.ask("--session", "t7", "--dir", self.tmp.name, "hi", FAKE_PI_ORPHAN="1")
