@@ -48,6 +48,7 @@ FAKE_PI = textwrap.dedent('''\
             f.write(f"{os.getpid()} {child.pid}")
         time.sleep(float(env("FAKE_PI_SLEEP", "0")))
     say({"type": "turn_start"})
+    say({"type": "tool_execution_start", "toolName": "read", "toolCallId": "1", "args": {"path": "notes.md"}})
     say(message("" if env("FAKE_PI_EMPTY") else "the answer, given " + sys.argv[-1], env("FAKE_PI_STOP", "stop")))
     if env("FAKE_PI_TAIL"):
         sys.stdout.write(env("FAKE_PI_TAIL"))
@@ -273,6 +274,26 @@ class TestPiAsk(unittest.TestCase):
     def test_reports_the_gateways_figure_too(self):
         out = self.ask("--session", "t13", "--dir", self.tmp.name, "hi")
         self.assertIn("daily cap counts $0.3000", out.stdout)
+
+    def test_narration_goes_to_a_file_and_stdout_gets_only_alerts_and_the_answer(self):
+        out = self.ask("--session", "t14", "--dir", self.tmp.name, "hi", FAKE_PI_STDERR="pi said something odd")
+        narration = (Path(self.tmp.name) / ".cache" / "pi-ask" / "t14.log").read_text()
+        self.assertIn("read notes.md", narration)
+        self.assertNotIn("read notes.md", out.stdout)
+        self.assertIn("pi said something odd", out.stdout)
+        self.assertNotIn("■ done", out.stdout)
+        self.assertIn("given hi", out.stdout)
+
+    def test_drops_the_known_harmless_warnings(self):
+        models = 'Warning: No models match pattern "deepseek/*"'
+        out = self.ask("--session", "t15", "--dir", self.tmp.name, "hi", FAKE_PI_STDERR=models)
+        self.assertNotIn("deepseek/*", out.stdout)
+        missing = "Warning: No project session found with id 't15'; creating a new session with that id."
+        first = self.ask("--session", "t16", "--dir", self.tmp.name, "hi", FAKE_PI_STDERR=missing)
+        self.assertNotIn("No project session", first.stdout)
+        # On a follow-up it means pi lost the conversation.
+        again = self.ask("--session", "t16", "hi", FAKE_PI_STDERR=missing)
+        self.assertIn("No project session", again.stdout)
 
     def test_kills_a_child_that_ignores_sigterm_after_pi_exits(self):
         out = self.ask("--session", "t7", "--dir", self.tmp.name, "hi", FAKE_PI_ORPHAN="1")
