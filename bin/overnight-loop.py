@@ -434,7 +434,15 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float
     return ("done" if ok else "parked"), cost, broke
 
 
+def interrupt(signum, frame) -> None:
+    raise KeyboardInterrupt
+
+
 def main() -> None:
+    # Workers run in sessions of their own, so a terminal's signal reaches only
+    # this process; run_group then takes the worker down with it.
+    signal.signal(signal.SIGTERM, interrupt)
+    signal.signal(signal.SIGHUP, interrupt)
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--harness", choices=["claude", "pi"], required=True, help="runs the workers")
     p.add_argument("--model", help="the workers' model, passed to the harness as --model "
@@ -512,6 +520,7 @@ def main() -> None:
     parked: dict[int, str] = {}
     tried: set[int] = set()
     cost, fails, why = 0.0, 0, "an error"
+    current: tuple[int, str] | None = None  # the issue in hand, and its base
     try:
         waiting = False
         while not (why := stop_reason(args, tried, fails, cost, deadline)):
@@ -529,9 +538,11 @@ def main() -> None:
             n, title = issue["number"], issue["title"]
             tried.add(n)
             print(f"#{n} {title}", flush=True)
+            current = n, sh("git", "rev-parse", "HEAD")
             sh("gh", "issue", "edit", str(n), "--add-label", WORKING)
             board(args)
             outcome, spent, broke = work_issue(args, n, title, branch)
+            current = None
             cost += spent
             if outcome is None:
                 sh("gh", "issue", "edit", str(n), "--remove-label", WORKING)
@@ -543,12 +554,20 @@ def main() -> None:
                 why = "out of money"
                 break
             board(args)
+    except KeyboardInterrupt:
+        why = "interrupted"
+        if current:
+            tidy(current[1])  # its work was never judged
     except SystemExit as e:
         why = str(e.code)
         raise
     finally:
+        if current:
+            sh("gh", "issue", "edit", str(current[0]), "--remove-label", WORKING, check=False)
         board(args)
         summary(args, why, branch, cost, done, parked)
+    if why == "interrupted":
+        sys.exit(130)
 
 
 def summary(args, why: str, branch: str, cost: float, done: dict[int, str], parked: dict[int, str]) -> None:
