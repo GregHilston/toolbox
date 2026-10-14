@@ -31,5 +31,11 @@ did; `pi-ask.py` handles both.
 - **Exit 3 means it stalled.** The log path printed at the end holds everything it
   did; ask again with the same name to carry on.
 - **It runs on the gateway's `cloud` model** (DeepSeek Flash), capped at $4 a day.
-- **The worker reads and runs commands but can't commit, push or delete
-  recursively.** Toolbox scripts such as `reddit-search.py` are on its `PATH`.
+  Report the cost in the answer header; the narrator's "done" line uses pi's
+  stale prices.
+- **The worker can't commit, push or delete recursively, but it can still edit
+  and discard files** (`git checkout -- .`, `sed -i`). Point `--dir` at a clean
+  checkout or worktree, never at work in progress. Toolbox scripts such as
+  `reddit-search.py` are on its `PATH`.
+- **Two warnings are normal:** "No project session found with id …" on a first
+  turn, and "No models match pattern deepseek/*" on every turn.
