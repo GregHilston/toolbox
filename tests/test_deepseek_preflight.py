@@ -127,5 +127,22 @@ class TestPrices(unittest.TestCase):
             self.assertGreaterEqual(p / f, 3.0, msg="the gap is the whole Flash argument")
 
 
+
+class TestTurnCost(unittest.TestCase):
+    USAGE = {"cacheRead": 1_000_000, "input": 1_000_000, "output": 1_000_000}
+
+    def test_off_peak_flash_sums_the_three_rates(self):
+        saturday = dt.datetime(2026, 10, 17, 12, tzinfo=dt.timezone.utc)
+        self.assertAlmostEqual(pf.turn_cost("deepseek-flash", self.USAGE, saturday), 0.003 + 0.15 + 0.60)
+
+    def test_peak_costs_double(self):
+        tuesday_peak = dt.datetime(2026, 10, 13, 2, tzinfo=dt.timezone.utc)
+        self.assertAlmostEqual(pf.turn_cost("deepseek-flash", self.USAGE, tuesday_peak), 2 * (0.003 + 0.15 + 0.60))
+
+    def test_the_gateway_alias_is_priced_as_flash(self):
+        saturday = dt.datetime(2026, 10, 17, 12, tzinfo=dt.timezone.utc)
+        self.assertEqual(pf.turn_cost("cloud", self.USAGE, saturday),
+                         pf.turn_cost("deepseek-flash", self.USAGE, saturday))
+
 if __name__ == "__main__":
     unittest.main()

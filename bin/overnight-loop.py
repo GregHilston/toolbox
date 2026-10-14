@@ -163,12 +163,8 @@ def pi_result(out: str) -> tuple[str, float]:
         if event.get("type") != "message_end" or msg.get("role") != "assistant":
             continue
         text = "".join(b.get("text", "") for b in msg.get("content", []) if b.get("type") == "text") or text
-        usage = msg.get("usage") or {}
         when = datetime.fromtimestamp(msg.get("timestamp", time.time() * 1000) / 1000, timezone.utc)
-        rates = preflight.PRICES.get(msg.get("model"), preflight.PRICES["deepseek-flash"])
-        hit, miss, output = rates["peak" if preflight.is_peak(when) else "off"]
-        cost += (usage.get("cacheRead", 0) * hit + usage.get("input", 0) * miss
-                 + usage.get("output", 0) * output) / 1e6
+        cost += preflight.turn_cost(msg.get("model"), msg.get("usage") or {}, when)
     return text, cost
 
 
