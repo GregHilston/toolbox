@@ -283,9 +283,14 @@ class LoopTest(unittest.TestCase):
     def comments(self, n: int) -> list[str]:
         return json.loads(self.state.read_text())["issues"][str(n)].get("comments", [])
 
-    def run_loop(self, *args: str, timeout: float = 60, **env: str) -> subprocess.CompletedProcess:
-        return subprocess.run([sys.executable, str(SCRIPT), *args], cwd=self.repo, env=self.env | env,
-                              capture_output=True, text=True, timeout=timeout)
+    def run_loop(self, *args: str, timeout: float = 60, no_sleep: bool = False,
+                 **env: str) -> subprocess.CompletedProcess:
+        cmd = [sys.executable, str(SCRIPT), *args]
+        if no_sleep:  # gh retries back off for most of a minute
+            cmd = [sys.executable, "-c", "import runpy, sys, time; time.sleep = lambda s: None; "
+                   f"sys.argv = sys.argv[1:]; runpy.run_path(sys.argv[0], run_name='__main__')", *cmd[1:]]
+        return subprocess.run(cmd, cwd=self.repo, env=self.env | env, capture_output=True, text=True,
+                              timeout=timeout)
 
     def roles(self) -> list[str]:
         return [" ".join(line.split()[:2]) for line in self.agent_log.read_text().splitlines()]
@@ -511,6 +516,28 @@ class TestCaps(unittest.TestCase):
         args = argparse.Namespace(off_peak=False, max_issues=20, max_fails=3, max_cost=5, budget=3,
                                   spend=mock.Mock(read=mock.Mock(return_value=0.5)))
         self.assertEqual(loop.stop_reason(args, set(), 0, 6.0, time.time() + 3600), "cost limit ($6.00)")
+
+
+class TestGhRetry(LoopTest):
+    def test_sh_retries_a_failing_gh(self):
+        self.env |= {"FAKE_GH_FAIL": "issue edit", "FAKE_GH_FAIL_TIMES": "2"}
+        with mock.patch.dict(os.environ, self.env), mock.patch.object(loop.time, "sleep") as sleep:
+            loop.sh("gh", "issue", "edit", "1", "--add-label", "x")
+        self.assertEqual(sleep.call_count, 2)
+        self.assertIn("x", self.labels(1))
+
+    def test_a_gh_hiccup_does_not_end_the_night(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "none",
+                            FAKE_GH_FAIL="issue comment 1", FAKE_GH_FAIL_TIMES="1")
+        self.assertIn("Stopped: queue empty", out.stdout, out.stderr)
+        self.assertTrue(self.comments(1))
+
+    def test_a_gh_that_stays_down_still_gets_a_summary(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", no_sleep=True,
+                            FAKE_GH_FAIL="issue comment 2")
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn("Stopped: gh issue comment failed", out.stdout, out.stderr)
+        self.assertIn("#1 First", out.stdout)
 
 
 class TestPiEvents(unittest.TestCase):
