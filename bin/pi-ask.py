@@ -171,9 +171,9 @@ def pump(proc: subprocess.Popen, log: Path, narrator, tally: Tally, args) -> str
 
 
 def prune_logs() -> None:
-    """Delete logs untouched for KEEP_LOGS_DAYS. Keep .dir: pi keeps the session."""
+    """Delete logs and locks untouched for KEEP_LOGS_DAYS. Keep .dir: pi keeps the session."""
     cutoff = time.time() - KEEP_LOGS_DAYS * 86400
-    for path in [*LOG_DIR.glob("*.jsonl"), *LOG_DIR.glob("*.log")]:
+    for path in [*LOG_DIR.glob("*.jsonl"), *LOG_DIR.glob("*.log"), *LOG_DIR.glob("*.lock")]:
         try:
             if path.stat().st_mtime < cutoff:
                 path.unlink()
@@ -273,9 +273,10 @@ def main() -> int:
         if workdir and chosen != workdir:
             p.error(f"session {args.session} runs in {workdir}; leave --dir off, or start a new --session")
         workdir = chosen
+    if workdir and not workdir.is_dir():
+        p.error(f"--dir {workdir} is not a directory" if args.dir is not None else
+                f"session {args.session}'s dir {workdir} is gone; start a new --session")
     workdir = workdir or Path.cwd()
-    if not workdir.is_dir():
-        p.error(f"--dir {workdir} is not a directory")
     saved.write_text(f"{workdir}\n")
     log = LOG_DIR / f"{args.session}.jsonl"
 
@@ -294,11 +295,14 @@ def main() -> int:
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                 start_new_session=True)
     except FileNotFoundError:
-        sys.exit("pi-ask.py: pi is not on PATH")
+        print("pi-ask.py: pi is not on PATH", file=sys.stderr)
+        return 2
     except OSError as e:
         if e.errno != errno.E2BIG:
             raise
-        sys.exit(f"pi-ask.py: the prompt ({len(prompt.encode())} bytes) is over the OS argument limit; shorten it")
+        print(f"pi-ask.py: the prompt ({len(prompt.encode())} bytes) is over the OS argument limit; shorten it",
+              file=sys.stderr)
+        return 2
     narration_path = LOG_DIR / f"{args.session}.log"
     narration = narration_path.open("a", encoding="utf-8")
     narrator = narrate.Narrator(label=args.session, out=narration, alerts=Alerts(first_turn))

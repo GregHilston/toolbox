@@ -140,6 +140,21 @@ class TestPiAsk(unittest.TestCase):
         self.assertEqual(out.returncode, 2, out.stdout)
         self.assertIn("not a directory", out.stdout)
 
+    def test_a_session_whose_dir_is_gone_says_so(self):
+        work = Path(self.tmp.name) / "work"
+        work.mkdir()
+        self.ask("--session", "t1", "--dir", str(work), "hi")
+        work.rmdir()
+        out = self.ask("--session", "t1", "hi")
+        self.assertEqual(out.returncode, 2, out.stdout)
+        self.assertIn("t1's dir", out.stdout)
+        self.assertNotIn("--dir", out.stdout.splitlines()[-1])
+
+    def test_a_missing_pi_is_a_usage_error(self):
+        out = self.ask("--session", "t1", "--dir", self.tmp.name, "hi", PATH="/usr/bin:/bin")
+        self.assertEqual(out.returncode, 2, out.stdout)
+        self.assertIn("pi is not on PATH", out.stdout)
+
     def test_a_missing_prompt_file_is_a_clear_error(self):
         out = self.ask("--session", "t1", "--dir", self.tmp.name, "@/nonexistent-pi-ask.md")
         self.assertEqual(out.returncode, 2, out.stdout)
@@ -150,7 +165,7 @@ class TestPiAsk(unittest.TestCase):
         big = Path(self.tmp.name) / "big.md"
         big.write_text("x" * 3_000_000)
         out = self.ask("--session", "t1", "--dir", self.tmp.name, f"@{big}")
-        self.assertEqual(out.returncode, 1, out.stdout)
+        self.assertEqual(out.returncode, 2, out.stdout)
         self.assertIn("argument limit", out.stdout)
         self.assertNotIn("Traceback", out.stdout)
 
@@ -307,7 +322,7 @@ class TestPiAsk(unittest.TestCase):
         logs = Path(self.tmp.name) / ".cache" / "pi-ask"
         logs.mkdir(parents=True)
         old = time.time() - 31 * 86400
-        for name in ("old.jsonl", "old.log", "old.dir", "fresh.jsonl"):
+        for name in ("old.jsonl", "old.log", "old.lock", "old.dir", "fresh.jsonl"):
             (logs / name).write_text("x\n")
             if name.startswith("old"):
                 os.utime(logs / name, (old, old))
