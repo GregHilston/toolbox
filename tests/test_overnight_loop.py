@@ -18,6 +18,7 @@ import tempfile
 import textwrap
 import time
 import unittest
+import urllib.error
 from datetime import datetime, timezone
 from unittest import mock
 from pathlib import Path
@@ -641,6 +642,15 @@ class TestBoardSync(unittest.TestCase):
         with mock.patch.object(board, "gh", return_value=reply) as gh:
             self.assertEqual(board.status_field("some-org", 3), field)
         self.assertIn("repositoryOwner(login: $o)", gh.call_args.args[-1])
+
+
+class TestGateway(unittest.TestCase):
+    def test_an_outage_keeps_the_last_count(self):
+        readings = [1.0, 1.5, urllib.error.URLError("down")]
+        with mock.patch.object(loop, "cloud_spend", side_effect=readings), mock.patch("builtins.print"):
+            spend = loop.RunSpend()
+            self.assertEqual(spend.read(), 0.5)
+            self.assertEqual(spend.read(), 0.5)
 
 
 class TestPiEvents(unittest.TestCase):
