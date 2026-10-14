@@ -89,6 +89,7 @@ The diff:
 """
 GH_RETRY = (2, 10, 30)  # seconds before each retry
 STREAMED = re.compile(r'^\{"type":\s*"message_update".*\n?', re.M)
+CONVENTIONAL = re.compile(r"^\w+(\([^)]+\))?!?: .+ \(#\d+\)$|^chore\(overnight\): ")
 PING = "Reply with the word ok and nothing else."
 FIX = """\
 A reviewer asked for changes to the work already committed on this branch:
@@ -635,12 +636,13 @@ def main() -> None:
         if current:
             sh("gh", "issue", "edit", str(current[0]), "--remove-label", WORKING, check=False)
         board(args)
-        summary(args, why, branch, cost, done, parked)
+        summary(args, why, f"{start}..{branch}", cost, done, parked)
     if why == "interrupted":
         sys.exit(130)
 
 
-def summary(args, why: str, branch: str, cost: float, done: dict[int, str], parked: dict[int, str]) -> None:
+def summary(args, why: str, commits: str, cost: float, done: dict[int, str], parked: dict[int, str]) -> None:
+    branch = commits.split("..")[1]
     gateway = f" (the gateway counted ${args.spend.read():.2f})" if args.spend else ""
     print(f"\nStopped: {why}. Branch {branch}, ${cost:.2f} spent{gateway}.")
     for heading, items in (("Done", done), ("Parked", parked)):
@@ -648,6 +650,9 @@ def summary(args, why: str, branch: str, cost: float, done: dict[int, str], park
             print(f"{heading}:\n" + "\n".join(f"  #{k} {v}" for k, v in items.items()))
     if args.unreviewed_from:
         print(f"The reviewer stopped at #{args.unreviewed_from}: it and later issues went unreviewed.")
+    subjects = sh("git", "log", "--format=%s", commits, check=False).splitlines()
+    if odd := [x for x in subjects if not CONVENTIONAL.match(x)]:
+        print("Not conventional commits, to reword before merging:\n" + "\n".join(f"  {x}" for x in odd))
     if done:
         closes = " ".join(f"Closes #{k}." for k in done)
         night = branch.removeprefix("overnight/")
