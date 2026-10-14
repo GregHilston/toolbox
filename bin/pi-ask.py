@@ -124,21 +124,56 @@ def pump(proc: subprocess.Popen, log: Path, narrator, idle: int) -> bool:
     return False
 
 
-def kill_group(proc: subprocess.Popen) -> None:
+def group_alive(proc: subprocess.Popen) -> bool:
+    proc.poll()  # reap pi, or its zombie keeps the group
+    try:
+        os.killpg(proc.pid, 0)
+    except (ProcessLookupError, PermissionError):  # macOS: group already gone
+        return False
+    return True
+
+
+def kill_group(proc: subprocess.Popen, grace: float = 10) -> None:
     """End pi and anything it started, such as a server."""
-    for sig in (signal.SIGTERM, signal.SIGKILL):
-        try:
-            os.killpg(proc.pid, sig)
-        except (ProcessLookupError, PermissionError):  # macOS: group already gone
+    if not group_alive(proc):
+        return
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except (ProcessLookupError, PermissionError):
+        return
+    # Wait for the group, not just pi: a child may ignore SIGTERM.
+    deadline = time.monotonic() + grace
+    while time.monotonic() < deadline:
+        if not group_alive(proc):
             return
-        try:
-            proc.wait(10)
-            return
-        except subprocess.TimeoutExpired:
-            continue
+        time.sleep(0.1)
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
+
+
+class Interrupted(BaseException):
+    def __init__(self, signum: int) -> None:
+        self.signum = signum
+
+
+SIGNALS = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+_caught: int | None = None
+_armed = False
+
+
+def on_signal(signum: int, _frame) -> None:
+    """Unwind out of the pump once; outside it, just remember."""
+    global _caught, _armed
+    _caught = _caught or signum
+    if _armed:
+        _armed = False
+        raise Interrupted(signum)
 
 
 def main() -> int:
+    global _armed
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--session", required=True, help="name; reuse it to follow up")
     p.add_argument("--dir", default=".", help="worker cwd (sessions are keyed by it)")
@@ -166,6 +201,9 @@ def main() -> int:
     # "--": a prompt may start with - or ---.
     cmd = ["pi", "--mode", "json", "--approve", "--provider", "litellm", "--model", args.model,
            "--session-id", args.session, "--", prompt]
+    # Before Popen, so no signal leaves pi orphaned.
+    for sig in SIGNALS:
+        signal.signal(sig, on_signal)
     try:
         # DEVNULL: pi reads piped stdin to EOF first.
         proc = subprocess.Popen(cmd, cwd=args.dir, env=env, stdin=subprocess.DEVNULL,
@@ -177,12 +215,18 @@ def main() -> int:
         if e.errno != errno.E2BIG:
             raise
         sys.exit(f"pi-ask.py: the prompt ({len(prompt.encode())} bytes) is over the OS argument limit; shorten it")
-    # pi has its own group, so pass our death on.
-    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     narrator = narrate.Narrator(label=args.session, out=sys.stdout)
+    stalled = False
     try:
+        _armed = True
+        if _caught:
+            raise Interrupted(_caught)
         stalled = pump(proc, log, narrator, args.idle)
+    except Interrupted as e:
+        narrator.emit("!", f"{signal.Signals(e.signum).name}; stopping pi")
     finally:
+        _armed = False
+        # pi has its own group, so pass our death on.
         kill_group(proc)
     code = proc.wait()
     narrator.finish()
@@ -193,6 +237,9 @@ def main() -> int:
     if error:
         print(f"=== the last turn failed: {error} ===")
     print(f"=== follow up: pi-ask.py --session {args.session} --dir {shlex.quote(str(Path(args.dir).resolve()))} \"...\" ===")
+    if _caught:
+        print(f"=== stopped by {signal.Signals(_caught).name} ===")
+        return 128 + _caught
     if stalled:
         return 3
     if error:
