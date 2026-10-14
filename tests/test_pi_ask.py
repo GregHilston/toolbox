@@ -315,6 +315,13 @@ class TestPiAsk(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in logs.glob("old.*")), ["old.dir"])
         self.assertTrue((logs / "fresh.jsonl").exists())
 
+    def test_tells_the_worker_its_role_and_drops_tools_that_need_a_human(self):
+        argv_file = Path(self.tmp.name) / "argv.json"
+        self.ask("--session", "t19", "--dir", self.tmp.name, "hi", FAKE_PI_ARGV=str(argv_file))
+        argv = json.loads(argv_file.read_text())["argv"]
+        self.assertIn("headless worker", argv[argv.index("--append-system-prompt") + 1])
+        self.assertEqual(argv[argv.index("--exclude-tools") + 1], "ask_user_question,plan_mode_*")
+
     def test_kills_a_child_that_ignores_sigterm_after_pi_exits(self):
         out = self.ask("--session", "t7", "--dir", self.tmp.name, "hi", FAKE_PI_ORPHAN="1")
         self.assertEqual(out.returncode, 0, out.stdout)
