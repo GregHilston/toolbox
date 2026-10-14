@@ -8,9 +8,11 @@
     pi-ask.py --session review-42 "Review the diff on this branch"
     pi-ask.py --session review-42 "Why do you call finding 3 a bug?"
 
-The same --session resumes the same pi conversation, cache warm. Progress
-streams one line per event; the answer, its cost and the log path print
-at the end. A worker silent for --idle seconds is killed, not waited on.
+The same --session resumes the same pi conversation, cache warm, in the
+first turn's --dir. The narration goes to ~/.cache/pi-ask/NAME.log; stdout
+gets only alerts, then the answer, its cost and the follow-up command. A
+worker silent for --idle seconds, or past --max-cost or --max-turns, is
+killed, not waited on.
 """
 
 from __future__ import annotations
@@ -58,6 +60,22 @@ def failure(message: dict) -> str | None:
     if reason in ("error", "aborted"):
         return message.get("errorMessage") or reason
     return None
+
+
+class Alerts:
+    """Stdout's share of the narration: alerts, less the known-harmless ones."""
+
+    def __init__(self, first_turn: bool) -> None:
+        self.harmless = ['No models match pattern "deepseek/*"', " ■ done — "]
+        if first_turn:
+            self.harmless.append("No project session found with id")
+
+    def write(self, line: str) -> None:
+        if not any(h in line for h in self.harmless):
+            sys.stdout.write(line)
+
+    def flush(self) -> None:
+        sys.stdout.flush()
 
 
 class Tally:
@@ -255,7 +273,10 @@ def main() -> int:
         if e.errno != errno.E2BIG:
             raise
         sys.exit(f"pi-ask.py: the prompt ({len(prompt.encode())} bytes) is over the OS argument limit; shorten it")
-    narrator = narrate.Narrator(label=args.session, out=sys.stdout)
+    narration_path = LOG_DIR / f"{args.session}.log"
+    narration = narration_path.open("a", encoding="utf-8")
+    narrator = narrate.Narrator(label=args.session, out=narration, alerts=Alerts(first_turn))
+    print(f"pi-ask: {args.session} running in {workdir}; narration in {narration_path}", flush=True)
     tally = Tally()
     cut_short = None
     try:
@@ -274,13 +295,14 @@ def main() -> int:
 
     text, error = tally.text, tally.error
     print(f"\n=== answer ({args.session}: ${tally.cost:.4f} at DeepSeek's prices; "
-          f"the gateway's daily cap counts ${tally.gateway_cost:.4f}; log {log}) ===")
+          f"the gateway's daily cap counts ${tally.gateway_cost:.4f}) ===")
     print(text or "(no answer)")
     if error:
         print(f"=== the last turn failed: {error} ===")
     if cut_short and cut_short != "stalled":
         print(f"=== stopped: {cut_short} ===")
     print(f"=== follow up: pi-ask.py --session {args.session} \"...\" (it runs in {workdir}) ===")
+    print(f"=== logs: {narration_path} (narration), {log} (pi's events) ===")
     if _caught:
         print(f"=== stopped by {signal.Signals(_caught).name} ===")
         return 128 + _caught
