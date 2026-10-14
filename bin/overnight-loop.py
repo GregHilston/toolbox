@@ -87,6 +87,7 @@ The diff:
 
 {diff}
 """
+GH_RETRY = (2, 10, 30)  # seconds before each retry
 PING = "Reply with the word ok and nothing else."
 FIX = """\
 A reviewer asked for changes to the work already committed on this branch:
@@ -98,6 +99,12 @@ Make them, run ./verify.sh until it passes, and commit.
 
 
 def sh(*cmd: str, check: bool = True) -> str:
+    # One 502 from GitHub used to end the night.
+    for wait in GH_RETRY if cmd[0] == "gh" else ():
+        out = subprocess.run(cmd, capture_output=True, text=True)
+        if not out.returncode:
+            return out.stdout.strip()
+        time.sleep(wait)
     out = subprocess.run(cmd, capture_output=True, text=True)
     if check and out.returncode:
         sys.exit(f"{' '.join(cmd[:3])} failed: {out.stderr.strip() or out.stdout.strip()}")
@@ -504,7 +511,7 @@ def main() -> None:
     done: dict[int, str] = {}
     parked: dict[int, str] = {}
     tried: set[int] = set()
-    cost, fails = 0.0, 0
+    cost, fails, why = 0.0, 0, "an error"
     try:
         waiting = False
         while not (why := stop_reason(args, tried, fails, cost, deadline)):
@@ -536,9 +543,15 @@ def main() -> None:
                 why = "out of money"
                 break
             board(args)
+    except SystemExit as e:
+        why = str(e.code)
+        raise
     finally:
         board(args)
+        summary(args, why, branch, cost, done, parked)
 
+
+def summary(args, why: str, branch: str, cost: float, done: dict[int, str], parked: dict[int, str]) -> None:
     gateway = f" (the gateway counted ${args.spend.read():.2f})" if args.spend else ""
     print(f"\nStopped: {why}. Branch {branch}, ${cost:.2f} spent{gateway}.")
     for heading, items in (("Done", done), ("Parked", parked)):
