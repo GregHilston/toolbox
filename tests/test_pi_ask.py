@@ -17,18 +17,40 @@ SCRIPT = Path(__file__).resolve().parent.parent / "bin" / "pi-ask.py"
 FAKE_PI = textwrap.dedent('''\
     #!/usr/bin/env python3
     import json, os, subprocess, sys, time
+    env = os.environ.get
     sys.stdin.read()  # pi does this before anything else; it hangs on an open pipe
     assert sys.argv[-2] == "--", sys.argv
-    if os.environ.get("FAKE_PI_SLEEP"):
-        child = subprocess.Popen(["sleep", "120"])
-        with open(os.environ["FAKE_PI_PIDS"], "w") as f:
+    if env("FAKE_PI_ARGV"):
+        with open(env("FAKE_PI_ARGV"), "w") as f:
+            json.dump({"argv": sys.argv[1:], "cwd": os.getcwd()}, f)
+
+    def say(event):
+        print(json.dumps(event), flush=True)
+
+    def message(text, stop="stop"):
+        # 1M cache-miss tokens: $0.15 at DeepSeek's off-peak Flash price, $0.30 at the gateway's.
+        usage = {"input": 1000000, "cacheRead": 0, "output": 0, "cost": {"total": 0.3}}
+        return {"type": "message_end", "message": {
+            "role": "assistant", "model": "cloud", "timestamp": 1792238400000, "usage": usage,
+            "content": [{"type": "text", "text": text}] if text else [],
+            "stopReason": stop, "errorMessage": "provider said no"}}
+
+    if env("FAKE_PI_STDERR"):
+        print(env("FAKE_PI_STDERR"), file=sys.stderr, flush=True)
+    for i in range(int(env("FAKE_PI_TURNS", "0"))):
+        say({"type": "turn_start"})
+        say(message(f"filler {i}"))
+    if env("FAKE_PI_SLEEP") or env("FAKE_PI_ORPHAN"):
+        sleeper = ["sh", "-c", "trap '' TERM; exec sleep 120"] if env("FAKE_PI_ORPHAN") else ["sleep", "120"]
+        child = subprocess.Popen(sleeper, stdout=subprocess.DEVNULL)
+        with open(env("FAKE_PI_PIDS"), "w") as f:
             f.write(f"{os.getpid()} {child.pid}")
-        time.sleep(float(os.environ["FAKE_PI_SLEEP"]))
-    usage = {"input": 1000000, "cacheRead": 0, "output": 0}
-    message = {"role": "assistant", "model": "cloud", "timestamp": 1792238400000, "usage": usage,
-               "content": [{"type": "text", "text": "the answer, given " + sys.argv[-1]}],
-               "stopReason": os.environ.get("FAKE_PI_STOP", "stop"), "errorMessage": "provider said no"}
-    print(json.dumps({"type": "message_end", "message": message}), flush=True)
+        time.sleep(float(env("FAKE_PI_SLEEP", "0")))
+    say({"type": "turn_start"})
+    say(message("" if env("FAKE_PI_EMPTY") else "the answer, given " + sys.argv[-1], env("FAKE_PI_STOP", "stop")))
+    if env("FAKE_PI_TAIL"):
+        sys.stdout.write(env("FAKE_PI_TAIL"))
+        sys.stdout.flush()
 ''')
 
 
@@ -104,6 +126,53 @@ class TestPiAsk(unittest.TestCase):
     def test_rejects_a_session_name_pi_would_refuse(self):
         out = self.ask("--session", "a/b", "--dir", self.tmp.name, "hi")
         self.assertEqual(out.returncode, 2, out.stdout)
+
+    def test_rejects_a_session_name_with_a_trailing_newline(self):
+        out = self.ask("--session", "t1\n", "--dir", self.tmp.name, "hi")
+        self.assertEqual(out.returncode, 2, out.stdout)
+
+    def test_a_missing_dir_is_not_reported_as_a_missing_pi(self):
+        out = self.ask("--session", "t1", "--dir", "/nonexistent-pi-ask", "hi")
+        self.assertEqual(out.returncode, 2, out.stdout)
+        self.assertIn("not a directory", out.stdout)
+
+    def test_a_missing_prompt_file_is_a_clear_error(self):
+        out = self.ask("--session", "t1", "--dir", self.tmp.name, "@/nonexistent-pi-ask.md")
+        self.assertEqual(out.returncode, 2, out.stdout)
+        self.assertIn("cannot read the prompt file", out.stdout)
+        self.assertNotIn("Traceback", out.stdout)
+
+    def test_a_prompt_over_the_argument_limit_is_a_clear_error(self):
+        big = Path(self.tmp.name) / "big.md"
+        big.write_text("x" * 3_000_000)
+        out = self.ask("--session", "t1", "--dir", self.tmp.name, f"@{big}")
+        self.assertEqual(out.returncode, 1, out.stdout)
+        self.assertIn("argument limit", out.stdout)
+        self.assertNotIn("Traceback", out.stdout)
+
+    def test_a_cut_off_reply_is_a_failure(self):
+        out = self.ask("--session", "t1", "--dir", self.tmp.name, "hi", FAKE_PI_STOP="length")
+        self.assertEqual(out.returncode, 1, out.stdout)
+        self.assertIn("cut off", out.stdout)
+
+    def test_a_failed_last_turn_does_not_pass_off_earlier_filler_as_the_answer(self):
+        out = self.ask("--session", "t1", "--dir", self.tmp.name, "hi",
+                       FAKE_PI_TURNS="1", FAKE_PI_EMPTY="1", FAKE_PI_STOP="error")
+        self.assertEqual(out.returncode, 1, out.stdout)
+        self.assertNotIn("filler 0", out.stdout)
+        self.assertIn("(no answer)", out.stdout)
+
+    def test_narrates_a_last_line_with_no_newline(self):
+        out = self.ask("--session", "t1", "--dir", self.tmp.name, "hi", FAKE_PI_TAIL="pi died mid-line")
+        self.assertIn("pi died mid-line", out.stdout)
+
+    def test_starts_on_a_new_line_after_a_killed_run_left_half_of_one(self):
+        log = Path(self.tmp.name) / ".cache" / "pi-ask" / "t1.jsonl"
+        log.parent.mkdir(parents=True)
+        log.write_bytes(b'{"type":"half')
+        out = self.ask("--session", "t1", "--dir", self.tmp.name, "hi")
+        self.assertEqual(out.returncode, 0, out.stdout)
+        self.assertEqual(log.read_text().splitlines()[0], '{"type":"half')
 
     def test_kills_a_silent_worker_and_its_children_then_exits_3(self):
         started = time.monotonic()
