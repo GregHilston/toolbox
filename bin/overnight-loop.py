@@ -314,8 +314,8 @@ def pi_result(out: str) -> Run:
         if event.get("type") != "message_end" or msg.get("role") != "assistant":
             continue
         run.text = "".join(b.get("text", "") for b in msg.get("content", []) if b.get("type") == "text") or run.text
-        if msg.get("stopReason") == "error":
-            run.error = str(msg.get("errorMessage", "error"))
+        # A later answer means pi's retry worked.
+        run.error = str(msg.get("errorMessage", "error")) if msg.get("stopReason") == "error" else ""
         when = datetime.fromtimestamp(msg.get("timestamp", time.time() * 1000) / 1000, timezone.utc)
         run.cost += preflight.turn_cost(msg.get("model"), msg.get("usage") or {}, when)
     return run

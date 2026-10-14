@@ -748,6 +748,14 @@ class TestPiEvents(unittest.TestCase):
         self.assertTrue(loop.pi_result(failed).broke)
         self.assertTrue(loop.pi_result(retry).broke)
 
+    def test_an_answer_after_a_failed_turn_clears_the_error(self):
+        failed = json.dumps({"type": "message_end", "message": {
+            "role": "assistant", "stopReason": "error", "errorMessage": "429 Too Many Requests"}})
+        answered = json.dumps({"type": "message_end", "message": {
+            "role": "assistant", "stopReason": "stop", "content": [{"type": "text", "text": "ok"}]}})
+        run = loop.pi_result(failed + "\n" + answered)
+        self.assertEqual((run.error, run.text), ("", "ok"))
+
 
 if __name__ == "__main__":
     unittest.main()
