@@ -62,6 +62,8 @@ AGENT = textwrap.dedent('''\
         else:
             role = "ping"
         log(f"{name} {role} " + json.dumps(sys.argv[1:]))
+        with open(os.environ["FAKE_LOG"] + ".prompts", "a") as f:
+            f.write(prompt + "\\n")
         return role, work(role, prompt)
 
     def failing(name, role):
@@ -660,6 +662,15 @@ class TestLongPrompt(LoopTest):
         out = self.run_loop("--harness", "pi", "--reviewer", "claude")
         self.assertIn("overnight:done", self.labels(1), out.stderr[-2000:])
         self.assertIn("claude review", self.roles())
+
+
+class TestIssueComments(LoopTest):
+    def test_the_planner_sees_why_an_earlier_run_parked(self):
+        state = json.loads(self.state.read_text())
+        state["issues"]["1"]["comments"] = ["Parked by the overnight run: the jump test timed out."]
+        self.state.write_text(json.dumps(state))
+        self.run_loop("--harness", "pi", "--reviewer", "claude")
+        self.assertIn("the jump test timed out", Path(str(self.agent_log) + ".prompts").read_text())
 
 
 class TestPiEvents(unittest.TestCase):
