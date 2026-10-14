@@ -88,6 +88,7 @@ The diff:
 {diff}
 """
 GH_RETRY = (2, 10, 30)  # seconds before each retry
+STREAMED = re.compile(r'^\{"type":\s*"message_update".*\n?', re.M)
 PING = "Reply with the word ok and nothing else."
 FIX = """\
 A reviewer asked for changes to the work already committed on this branch:
@@ -342,7 +343,8 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
     kill_leftovers(started)
     out = stdout.read_text(errors="replace")
     with log.open("a") as f:
-        f.write(out + (f"\n(timed out after {args.issue_minutes:g} min)\n" if code is None else ""))
+        # pi streams every token as a message_update: tens of MB a night.
+        f.write(STREAMED.sub("", out) + (f"\n(timed out after {args.issue_minutes:g} min)\n" if code is None else ""))
     if harness == "pi":
         run = pi_result(out)
         run.text = run.text[-1500:]
