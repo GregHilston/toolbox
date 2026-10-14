@@ -27,7 +27,14 @@ and the scope are settled. Record them with `domain-modeling`:
 
 Claude Code and pi both load `CLAUDE.md`, so one file serves either harness.
 Keep it short: how to run and test the project, the conventions, and pointers to
-the three files above. Point at files; do not paste their contents.
+the three files above. Point at files; do not paste their contents. Say that a
+worker must stop every process it starts, such as a headless Godot host, before
+it finishes: the loop kills leftovers, but a worker waiting on its own server
+wastes the turn.
+
+Commit no `.pi/` permission config unless the repo needs its own. The overnight
+loop writes a git-excluded one that lets pi workers use the write tool, which
+headless pi otherwise refuses; a committed one replaces it.
 
 ## 3. Build the gate before any feature
 
@@ -36,16 +43,19 @@ the three files above. Point at files; do not paste their contents.
 - exit 0 on green and nonzero otherwise;
 - print a few summary lines, with details in a log and each failure on one line
   as `ERROR <reason>`;
-- finish in minutes, and time out rather than hang.
+- finish in minutes, and time out rather than hang (the loop also kills it
+  after `--verify-minutes`, default 15);
+- leave no process running once it exits.
 
 For a Godot game, run each step under `timeout`:
 
 1. `godot --headless --import`, failing on `Error importing`.
 2. gdUnit4 under `--headless`. It suits agents better than GUT, but both test
    runners exit 0 when no tests run, and both hang on a stuck `await`. Fail when
-   the JUnit test count drops below a committed baseline.
+   the JUnit test count drops below the number in `tests/baseline_count`. The
+   loop parks an issue whose worker changes that file or `verify.sh`.
 3. A smoke test that starts a headless host and client on localhost ENet and
-   asserts they connect and sync. It takes about six seconds.
+   asserts they connect and sync, then kills both. It takes about six seconds.
 4. A grep of every log for `SCRIPT ERROR` and `Parse Error`.
 
 Use GDScript, fully typed: in `project.godot` set the `untyped_declaration` and
