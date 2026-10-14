@@ -181,6 +181,11 @@ def main() -> int:
     p.add_argument("--idle", type=int, default=300, help="kill after N silent seconds")
     p.add_argument("prompt", help="the question, or @file to read it from")
     args = p.parse_args()
+    # A worker sees this skill and PATH too.
+    if os.environ.get("PI_SUBAGENT_DEPTH", "0") not in ("", "0"):
+        print("pi-ask.py: refusing to start a pi worker from inside one (PI_SUBAGENT_DEPTH is set); "
+              "do the task yourself", file=sys.stderr)
+        return 2
     if not SESSION_NAME.fullmatch(args.session):
         p.error("--session takes letters, digits, '.', '_' and '-', starting and ending alphanumeric")
 
