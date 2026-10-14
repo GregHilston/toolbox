@@ -28,17 +28,18 @@ which pi-subagents injects into every spawned process.
 Spawned subagents have no UI (stdin is `/dev/null`), so prompting is impossible. Instead,
 a focused set of catastrophic/unrecoverable operations is hard-blocked with no user interaction.
 
-`hard-block.ts` matches the **command word** of each simple command (after `;`, `&&`, `|`,
-newlines, `(`, and wrappers such as `env`, `timeout`, `xargs` or `FOO=1`), never its arguments,
-so `grep shutdown` or `rg 'git push'` runs. It also checks what runs inside `sh -c`, `eval`,
-`find -exec`, `$(...)` and backticks. A heredoc body is read as commands, so a line in one that
-starts with `reboot` is refused.
+`hard-block.ts` matches each pattern anywhere in the command line, so wrappers, `sh -c`,
+aliases, `$(...)` and interpreters (`perl -e`) cannot hide a catastrophe. The one exemption:
+a segment between `;`, `&&`, `|`, newlines and parentheses whose command is a read-only tool
+(`grep`, `rg`, `cat`, `head`, `git log`/`show`/`diff`/`grep`/`blame`, `echo`, ...) is dropped
+before matching, so `grep shutdown` or `rg 'git push'` runs. The body of a heredoc with a quoted
+delimiter (`<<'EOF'`) is data and is not checked; an unquoted one is.
 
 | Pattern | Reason |
 |---|---|
 | `rm -r` / `-rf` / `-Rf` | Recursive deletion |
 | `sudo` | Elevated privileges |
-| `curl … \| sh`, `wget … \| bash` | Pipe to shell (remote code execution) |
+| `… \| sh`, `bash <<<`, `bash <<EOF`, `bash <(…)` | Pipe to shell (runs whatever feeds it) |
 | `mkfs*`, `newfs_*` | Filesystem formatting |
 | `wipefs` | Disk signature wipe |
 | `diskutil erase/zeroDisk/secureErase/reformat` | Destructive disk operation |
@@ -46,14 +47,14 @@ starts with `reboot` is refused.
 | `parted`, `fdisk`, `gdisk`, `sgdisk` | Partition table management |
 | `cryptsetup` | Disk encryption management |
 | `zpool` | ZFS pool management |
-| `shutdown`, `reboot`, `halt`, `poweroff` | System power operation |
+| `shutdown`, `reboot`, `halt`, `poweroff`, `systemctl suspend` | System power operation |
 | `terraform destroy` | Infrastructure teardown |
 | `kubectl delete` | Kubernetes resource deletion |
 | `aws s3 rm --recursive` | Bulk S3 deletion |
 | `git commit` | Main-session operation |
 | `git pull` | Main-session operation |
 | `git push` | Main-session operation |
-| `git push --force` / `-f` | Rewrites remote history |
+| `git push --force` / `-f` / `+ref` / `--mirror` / `--delete` / `:ref` | Rewrites or deletes remote branches |
 | `git reset --hard` | Discard all uncommitted changes |
 | `git clean -f` | Delete untracked files |
 | `git reflog expire` | Remove recovery history |
@@ -67,8 +68,7 @@ and a plain `git push`.
 ## Install
 
 Auto-discovered from `~/.pi/agent/extensions/bash-guard/`. Run `/reload` in pi. Its one
-dependency, `shell-quote`, is installed by `npm ci` here (nix activation does it); the tests in
-`dot/pi/tests/` need it too.
+dependency, `shell-quote`, is installed by `npm ci` here (nix activation does it).
 
 ## Notes
 
