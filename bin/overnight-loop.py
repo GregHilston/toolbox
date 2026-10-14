@@ -185,13 +185,17 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         if args.budget:
             cmd += ["--provider", "litellm"]
             model = "cloud"
+        # Last: pi reads the word after an extension flag as its value. Without it
+        # bash-guard blocks every pipe and git command in a session with no UI.
+        cmd += ["--bash-guard-auto-allow"]
     if model:
         cmd[1:1] = ["--model", model]
     # 1M-context models otherwise compact only near 967K tokens.
     env = os.environ | {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000"}
     # Own process group, so a Godot server the worker left running dies with it.
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-                            env=env, start_new_session=True)
+    # stdin=DEVNULL: pi reads a piped stdin to EOF before anything else.
+    proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            text=True, env=env, start_new_session=True)
     try:
         out, _ = proc.communicate(timeout=args.issue_minutes * 60)
     except subprocess.TimeoutExpired:
