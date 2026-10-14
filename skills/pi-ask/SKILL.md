@@ -28,6 +28,7 @@ did; `pi-ask.py` handles both.
   notified when it exits; read the output then. Don't poll, and don't wrap it in
   `timeout`: it kills a worker silent for `--idle` seconds (default 300) and exits 3.
 - **Write a long prompt to a file in one call,** then pass `@file` in the next.
+  Put `--` before a prompt that starts with `-`.
 - **Exit 3 means it stalled.** The log path printed at the end holds everything it
   did; ask again with the same name to carry on.
 - **It runs on the gateway's `cloud` model** (DeepSeek Flash), capped at $4 a day.
