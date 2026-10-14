@@ -84,7 +84,16 @@ AGENT = textwrap.dedent('''\
         mode = os.environ.get("FAKE_WORK_" + n, os.environ.get("FAKE_WORK", "good"))
         if role == "fix":
             mode = os.environ.get("FAKE_FIX", "good")
-        if mode == "hang":
+        if mode in ("leftover", "leftoverhang"):
+            detached_sleep()
+        if mode == "ide":
+            # Stands in for a language server: its editor parent outlives the worker.
+            subprocess.Popen([sys.executable, "-c", "import os, subprocess, sys, time; "
+                              "p = subprocess.Popen(['sleep', '300']); "
+                              "open(sys.argv[1], 'w').write(str(p.pid)); time.sleep(300)",
+                              os.environ["FAKE_PIDS"] + ".spare"], start_new_session=True)
+            time.sleep(0.5)
+        if mode in ("hang", "leftoverhang"):
             with open(os.environ["FAKE_PIDS"], "a") as f:
                 f.write(f"{os.getpid()}\\n")
             time.sleep(600)
@@ -102,8 +111,6 @@ AGENT = textwrap.dedent('''\
         if mode in ("verifyhang", "verifyleak"):
             open(mode, "w").write("1")
             git("add", mode)
-        if mode == "leftover":
-            detached_sleep()
         if mode == "terminal":
             # Stands in for a shell Greg opens in the repo mid-run.
             import pty
@@ -571,22 +578,23 @@ class TestGhRetry(LoopTest):
 
 
 class TestInterrupt(LoopTest):
-    def interrupt(self, sig: int) -> tuple[str, int]:
-        env = self.env | {"FAKE_WORK_1": "hang"}
+    def interrupt(self, sig: int, mode: str = "hang") -> tuple[str, int]:
+        env = self.env | {"FAKE_WORK_1": mode}
+        started = 2 if mode == "leftoverhang" else 1
         proc = subprocess.Popen([sys.executable, str(SCRIPT), "--harness", "pi", "--reviewer", "none"],
                                 cwd=self.repo, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         try:
-            deadline = time.monotonic() + 30
-            while not self.pids.read_text() and time.monotonic() < deadline:
+            deadline = time.monotonic() + 120
+            while len(self.pids.read_text().split()) < started and time.monotonic() < deadline:
                 time.sleep(0.1)
             self.assertIn("overnight:working", self.labels(1))
             proc.send_signal(sig)
-            out, _ = proc.communicate(timeout=30)
+            out, _ = proc.communicate(timeout=120)
         finally:
             proc.kill()
-        worker = int(self.pids.read_text().split()[0])
         time.sleep(0.3)
-        self.assertFalse(alive(worker), "the worker outlived the loop")
+        for pid in map(int, self.pids.read_text().split()):
+            self.assertFalse(alive(pid), f"{pid} outlived the loop")
         self.assertNotIn("overnight:working", self.labels(1))
         self.assertIn("Stopped: interrupted", out)
         return out, proc.returncode
@@ -599,6 +607,9 @@ class TestInterrupt(LoopTest):
 
     def test_a_closed_terminal(self):
         self.interrupt(signal.SIGHUP)
+
+    def test_a_server_the_worker_detached_dies_too(self):
+        self.interrupt(signal.SIGINT, "leftoverhang")
 
 
 class TestLeftovers(LoopTest):
@@ -614,7 +625,9 @@ class TestLeftovers(LoopTest):
         self.assert_all_dead()
 
     def test_a_detached_server_left_by_verify_dies(self):
-        out = self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="verifyleak", FAKE_WORK_2="nocommit")
+        # One issue, so no later agent's cleanup hides a missing one after verify.
+        self.issues({1: "First"})
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="verifyleak")
         self.assertIn("overnight:done", self.labels(1), out.stderr)
         self.assert_all_dead()
 
@@ -625,6 +638,12 @@ class TestLeftovers(LoopTest):
             self.assertTrue(alive(spare))
         finally:
             os.kill(spare, signal.SIGKILL)
+
+    def test_a_process_with_a_live_parent_is_spared(self):
+        self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="ide")
+        spare = int(Path(str(self.pids) + ".spare").read_text())
+        self.addCleanup(lambda: alive(spare) and os.kill(spare, signal.SIGKILL))
+        self.assertTrue(alive(spare), "a language server's child was killed")
 
     def test_the_shell_that_started_the_loop_is_spared(self):
         # Started a second before the first agent, from the repo, with no terminal.

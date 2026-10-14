@@ -38,8 +38,9 @@ unreviewed; the summary says from which issue.
 The gate is `./verify.sh` as the issue's base had it: a worker that changes
 `verify.sh` or `tests/baseline_count`, or leaves the run's branch, has its
 issue parked. A `./verify.sh` slower than `--verify-minutes` (default 15)
-counts as a fail. After each worker and each gate run, the loop kills
-processes started meanwhile that have no terminal and run in the repo.
+counts as a fail. After each worker and each gate run, and on Ctrl-C, the loop
+stops (SIGTERM, then SIGKILL) processes started meanwhile that run in the repo
+with no terminal and no parent left, such as a server a worker backgrounded.
 
 pi workers use the LiteLLM gateway's `cloud` model unless `--model` names
 another. When Greg names a spend ("at most $3"), pass it as `--budget`: the
@@ -74,6 +75,9 @@ Check these with Greg, then start it, and stop there:
    either inside a container or VM that mounts only this repo.
 5. **Detach it.** Run it in `tmux new -d -s overnight '…'`, not as a harness
    background task, which dies with the session.
+6. **Hands off the repo.** Nobody works in it while the run goes: the loop
+   resets and cleans the tree between issues, and stops orphaned processes
+   started there.
 
 `touch .overnight/STOP` ends the run after the current issue; the next run
 clears it. Ctrl-C, or closing the tmux session, stops the worker, resets its

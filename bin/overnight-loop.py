@@ -200,31 +200,36 @@ def cwds(pids: list[int]) -> dict[int, str]:
 
 
 def kill_leftovers(since: float) -> None:
-    """Kill terminal-less processes started since `since` that run in this repo.
+    """Stop orphans started since `since` that run in this repo.
 
     pi's bash tool starts each command in a session of its own, so a server a
     worker backgrounded escapes its group, and macOS hides other processes'
-    environments, so an environment tag cannot find it either. Processes Greg
-    starts have a terminal.
+    environments, so an environment tag cannot find it either. Once the worker
+    exits, such a server's parent is init. An editor, a language server or a
+    Claude Code command has a live parent, so it is spared; a process started
+    in the repo by hand and then orphaned is not.
     """
     window = time.time() - since + 1  # etime is whole seconds
     rows = [row.split() for row in sh("ps", "-ax", "-o", "pid=,ppid=,etime=,tty=").splitlines()]
     parent = {int(pid): int(ppid) for pid, ppid, _, _ in rows}
-    # With that slack, the shell that started this loop can look as young as
-    # the agent.
+    # A loop started with nohup is itself an orphan.
     mine, pid = set(), os.getpid()
     while pid > 1:
         mine.add(pid)
         pid = parent.get(pid, 0)
-    young = [int(pid) for pid, _, etime, tty in rows
-             if seconds(etime) <= window and tty in ("?", "??") and int(pid) not in mine]
+    young = [int(pid) for pid, ppid, etime, tty in rows
+             if ppid == "1" and seconds(etime) <= window and tty in ("?", "??") and int(pid) not in mine]
     root = str(Path.cwd().resolve())
-    for pid, cwd in cwds(young).items() if young else ():
-        if cwd == root or cwd.startswith(root + os.sep):
+    doomed = [pid for pid, cwd in (cwds(young).items() if young else ())
+              if cwd == root or cwd.startswith(root + os.sep)]
+    for sig in (signal.SIGTERM, signal.SIGKILL) if doomed else ():
+        for pid in doomed:
             try:
-                os.kill(pid, signal.SIGKILL)
+                os.kill(pid, sig)
             except ProcessLookupError:
                 pass
+        if sig == signal.SIGTERM:
+            time.sleep(2)  # a server gets to close its files
 
 
 def verify(args, log: Path) -> tuple[bool, str]:
@@ -561,6 +566,7 @@ def main() -> None:
                    help="claude workers: bypassPermissions instead of auto; only inside a container or VM")
     args = p.parse_args()
     args.spend, args.unreviewed_from = None, None
+    begun = time.time()
 
     if not os.access("verify.sh", os.X_OK):
         sys.exit("no executable ./verify.sh here: run this from the repo root, after setting one up")
@@ -646,6 +652,7 @@ def main() -> None:
             board(args)
     except KeyboardInterrupt:
         why = "interrupted"
+        kill_leftovers(begun)  # the worker's group is dead, not what it detached
         if current:
             tidy(current[1])  # its work was never judged
     except SystemExit as e:
