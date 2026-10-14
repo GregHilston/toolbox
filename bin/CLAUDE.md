@@ -1,6 +1,8 @@
 # bin/
 
-Standalone utility scripts. All scripts are on `$PATH` via `$TOOLBOX_HOME/bin` in `.zshrc`.
+Standalone utility scripts. All scripts are on `$PATH`: `.zshenv` adds `$TOOLBOX_HOME/bin`
+for every zsh, and Claude Code's Bash tool, whose snapshot resets `PATH`, gets it from the
+`SessionStart` hook `dot/claude/.claude/hooks/session-env.sh`.
 
 ## Conventions
 
@@ -72,7 +74,7 @@ say what broke.
 ### Tests
 
 Tests for these scripts live in `tests/` **at the repo root**, not here — the
-recursive `$PATH` glob in `.zshrc` would otherwise put a test directory on
+recursive `$PATH` glob in `.zshenv` would otherwise put a test directory on
 `$PATH`. Run them with `just test` (which also runs the pi extension suite), or
 `cd tests && python3 -m unittest discover`.
 
@@ -95,4 +97,4 @@ Two things there are worth copying if you write a script with moving parts:
 
 ## Subdirectories
 
-Subdirectories group related scripts and are added to `$PATH` automatically via the recursive glob in `.zshrc` — no manual PATH update needed when adding a new subdirectory. Explore `bin/` to see what's available.
+Subdirectories group related scripts and are added to `$PATH` automatically via the recursive glob in `.zshenv` — no manual PATH update needed when adding a new subdirectory. Explore `bin/` to see what's available.
