@@ -176,8 +176,11 @@ def verdict(review: str) -> str | None:
     return found[-1].lower() if found else None
 
 
-def check(args, base: str, log: Path) -> tuple[bool, str]:
-    """Judge what was committed since base."""
+def check(args, base: str, branch: str, log: Path) -> tuple[bool, str]:
+    """Judge what was committed on branch since base."""
+    if (left := sh("git", "branch", "--show-current")) != branch:
+        sh("git", "checkout", "-qf", branch)
+        return False, f"the worker moved off {branch} to {left or 'a detached HEAD'}"
     if sh("git", "rev-parse", "HEAD") == base:
         return False, "no commits"
     if changed := sh("git", "diff", "--name-only", base, "HEAD", "--", *GATE).split():
@@ -382,7 +385,7 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float
         tidy(base)
         return None, cost, True
     tidy()  # keep only what the worker committed
-    ok, tail = check(args, base, log)
+    ok, tail = check(args, base, branch, log)
     broke = False
     if ok and args.reviewer != "none":
         diff = sh("git", "diff", f"{base}..HEAD")[:60000]
@@ -404,7 +407,7 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float
             cost += run.cost
             broke = run.broke
             tidy()
-            fixed, why = (False, "it ran out of money") if broke else check(args, green, log)
+            fixed, why = (False, "it ran out of money") if broke else check(args, green, branch, log)
             if fixed:
                 message = run.text + "\n\nAfter review:\n" + review[-800:]
             else:
@@ -432,6 +435,7 @@ def main() -> None:
     p.add_argument("--reviewer", choices=["claude", "pi", "none"], default="claude",
                    help="plans each issue and reviews green work (default claude)")
     p.add_argument("--reviewer-model", help="as --model, for the reviewer")
+    p.add_argument("--base", help="the branch to start from (default: the repo's default branch)")
     p.add_argument("--label", default="ready-for-agent", help="issues to work (default ready-for-agent)")
     p.add_argument("--hours", type=float, default=8, help="stop starting issues after this (default 8)")
     p.add_argument("--max-issues", type=int, default=20)
@@ -461,6 +465,10 @@ def main() -> None:
     if args.budget and (args.harness != "pi" or args.model not in (None, "cloud")):
         sys.exit("--budget counts the gateway's `cloud` model, so it needs --harness pi and no other --model")
     sh("gh", "auth", "status")
+    start = args.base or sh("gh", "repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name")
+    if (on := sh("git", "branch", "--show-current")) != start:
+        sys.exit(f"on {on or 'a detached HEAD'}, not {start}: the run branches from {start}, "
+                 "so check it out or pass --base")
     Path(".overnight/logs").mkdir(parents=True, exist_ok=True)
     Path(".overnight/STOP").unlink(missing_ok=True)  # it ended an earlier run
     exclude = Path(sh("git", "rev-parse", "--git-path", "info/exclude"))
