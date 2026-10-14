@@ -130,7 +130,11 @@ class RunSpend:
         self.total = 0.0
 
     def read(self) -> float:
-        now = cloud_spend()
+        try:
+            now = cloud_spend()
+        except (OSError, ValueError, KeyError) as e:  # URLError is an OSError
+            print(f"  could not read the gateway's spend ({e}); keeping ${self.total:.2f}", flush=True)
+            return self.total
         self.total += now - self.last if now >= self.last else now
         self.last = now
         return self.total
