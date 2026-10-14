@@ -350,6 +350,12 @@ def stop_reason(args, tried: set[int], fails: int, cost: float, deadline: float)
     return None
 
 
+def drop_reviewer(args, n: int, error: str) -> None:
+    """A reviewer out of money should not end a night the workers can still fund."""
+    print(f"  the {args.reviewer} reviewer stopped ({error[:200]}); the rest of the run goes unreviewed", flush=True)
+    args.reviewer, args.unreviewed_from = "none", n
+
+
 def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float, bool]:
     """Plan, build, verify, review and maybe fix one issue.
 
@@ -366,7 +372,8 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float
         cost += run.cost
         tidy()
         if run.broke:
-            return None, cost, True
+            drop_reviewer(args, n, run.error)
+            plan = ""
     prompt = WORKER.format(n=n) + (f"\nA planner suggests:\n\n{plan}\n" if plan else "")
     run = run_agent(args, args.harness, args.model, prompt, log)
     message = run.text
@@ -385,9 +392,9 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float
         cost += run.cost
         tidy()
         if run.broke:
-            tidy(base)
-            return None, cost, True
-        if verdict(review) is None:
+            drop_reviewer(args, n, run.error)
+            message += "\n\nUnreviewed: the reviewer ran out of money or hit its usage limit."
+        elif verdict(review) is None:
             # A crashed or truncated review is no review: the work does not stay.
             ok, tail = False, "the review gave no verdict"
             message += "\n\nReview:\n" + review[-800:]
@@ -445,7 +452,7 @@ def main() -> None:
     p.add_argument("--yolo", action="store_true",
                    help="claude workers: bypassPermissions instead of auto; only inside a container or VM")
     args = p.parse_args()
-    args.spend = None
+    args.spend, args.unreviewed_from = None, None
 
     if not os.access("verify.sh", os.X_OK):
         sys.exit("no executable ./verify.sh here: run this from the repo root, after setting one up")
@@ -530,6 +537,8 @@ def main() -> None:
     for heading, items in (("Done", done), ("Parked", parked)):
         if items:
             print(f"{heading}:\n" + "\n".join(f"  #{k} {v}" for k, v in items.items()))
+    if args.unreviewed_from:
+        print(f"The reviewer stopped at #{args.unreviewed_from}: it and later issues went unreviewed.")
     if done:
         closes = " ".join(f"Closes #{k}." for k in done)
         print(f"\nTo review: git push -u origin {branch} && gh pr create --draft --body '{closes}'")
