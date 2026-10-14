@@ -330,6 +330,25 @@ class TestModel(LoopTest):
         self.assertEqual(self.roles(), ["pi ping", "claude ping"])
 
 
+class TestPiWrites(LoopTest):
+    override = Path(".pi/extensions/pi-permission-system/config.json")
+
+    def test_pi_workers_may_write_and_git_never_sees_it(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "none")
+        config = json.loads((self.repo / self.override).read_text())
+        self.assertEqual(config["permission"]["write"], {"*": "allow"}, out.stderr)
+        self.assertEqual(self.git("status", "--porcelain"), "")
+
+    def test_a_repo_that_commits_its_own_config_keeps_it(self):
+        (self.repo / self.override).parent.mkdir(parents=True)
+        (self.repo / self.override).write_text('{"permission": {"write": {"*": "deny"}}}')
+        self.git("add", "-A")
+        self.git("commit", "-qm", "pi config")
+        out = self.run_loop("--harness", "pi", "--reviewer", "none")
+        self.assertIn("deny", (self.repo / self.override).read_text())
+        self.assertIn("repo's own", out.stdout)
+
+
 class TestOutOfMoney(LoopTest):
     def test_an_issue_that_mentions_insufficient_balance_is_worked(self):
         out = self.run_loop("--harness", "pi", "--reviewer", "none",

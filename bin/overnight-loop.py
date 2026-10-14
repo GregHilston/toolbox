@@ -40,6 +40,9 @@ _spec.loader.exec_module(preflight)
 
 DONE, PARKED, WORKING = "overnight:done", "overnight:parked", "overnight:working"
 GATEWAY = os.environ.get("LITELLM_URL", "https://llm.grehg2.xyz")
+# Headless, Greg's pi config turns `write: ask` into a refusal, so each repo
+# gets a git-excluded override that pi loads under --approve.
+PI_OVERRIDE = Path(".pi/extensions/pi-permission-system/config.json")
 # A worker that loosens the gate would pass it, so changing one parks the issue.
 GATE = ("verify.sh", "tests/baseline_count")
 OUT_OF_MONEY = re.compile(r"Budget has been exceeded|budget_exceeded|Exceeded budget|Insufficient Balance"
@@ -289,6 +292,14 @@ def smoke_test(args, harness: str, model: str | None) -> None:
         sys.exit(f"{name} could not answer a one-line prompt: {run.error or 'no reply'}. See {log}.")
 
 
+def allow_pi_writes() -> None:
+    if not subprocess.run(["git", "ls-files", "--error-unmatch", str(PI_OVERRIDE)], capture_output=True).returncode:
+        print(f"Using the repo's own {PI_OVERRIDE}: pi workers can write only where it allows.", flush=True)
+    elif not PI_OVERRIDE.exists():
+        PI_OVERRIDE.parent.mkdir(parents=True, exist_ok=True)
+        PI_OVERRIDE.write_text(json.dumps({"permission": {"write": {"*": "allow"}}}) + "\n")
+
+
 def tidy(to: str = "HEAD") -> None:
     sh("git", "reset", "-q", "--hard", to)
     sh("git", "clean", "-qfd")
@@ -427,9 +438,12 @@ def main() -> None:
     exclude = Path(sh("git", "rev-parse", "--git-path", "info/exclude"))
     exclude.parent.mkdir(parents=True, exist_ok=True)
     exclude.touch()
-    if ".overnight/" not in exclude.read_text():
+    missing = [x for x in (".overnight/", f"/{PI_OVERRIDE}") if x not in exclude.read_text().splitlines()]
+    if missing:
         with exclude.open("a") as f:
-            f.write("\n.overnight/\n")
+            f.write("\n" + "\n".join(missing) + "\n")
+    if args.harness == "pi":
+        allow_pi_writes()
     ok, tail = verify(args, Path(".overnight/logs/baseline.log"))
     if not ok:
         sys.exit(f"./verify.sh fails before any work, so nothing can be judged:\n{tail}")
