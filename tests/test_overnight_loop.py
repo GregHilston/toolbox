@@ -316,6 +316,7 @@ class TestHappyPath(LoopTest):
         self.assertIn("overnight:done", self.labels(1))
         self.assertIn("overnight:done", self.labels(2))
         self.assertIn("feat: issue 2 (work) (#2)", self.git("log", "--format=%s"))
+        self.assertRegex(out.stdout, r"gh pr create --draft --title 'Overnight run [\d-]+' --body 'Closes #1. Closes #2.'")
 
 
     def test_a_stop_file_left_by_an_earlier_run_is_ignored(self):

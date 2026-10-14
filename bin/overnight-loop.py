@@ -645,7 +645,9 @@ def summary(args, why: str, branch: str, cost: float, done: dict[int, str], park
         print(f"The reviewer stopped at #{args.unreviewed_from}: it and later issues went unreviewed.")
     if done:
         closes = " ".join(f"Closes #{k}." for k in done)
-        print(f"\nTo review: git push -u origin {branch} && gh pr create --draft --body '{closes}'")
+        night = branch.removeprefix("overnight/")
+        print(f"\nTo review: git push -u origin {branch} && gh pr create --draft "
+              f"--title 'Overnight run {night}' --body '{closes}'")
 
 
 if __name__ == "__main__":
