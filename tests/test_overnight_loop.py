@@ -596,10 +596,16 @@ class TestGhRetry(LoopTest):
 
     def test_a_gh_that_stays_down_still_gets_a_summary(self):
         out = self.run_loop("--harness", "pi", "--reviewer", "none", no_sleep=True,
-                            FAKE_GH_FAIL="issue comment 2")
+                            FAKE_GH_FAIL="issue edit 2")
         self.assertNotEqual(out.returncode, 0)
-        self.assertIn("Stopped: gh issue comment failed", out.stdout, out.stderr)
+        self.assertIn("Stopped: gh issue edit failed", out.stdout, out.stderr)
         self.assertIn("#1 First", out.stdout)
+
+    def test_a_failed_comment_only_warns(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_GH_FAIL="issue comment 1")
+        self.assertIn("could not comment on #1", out.stdout, out.stderr)
+        self.assertIn("Stopped: queue empty", out.stdout, out.stderr)
+        self.assertIn("overnight:done", self.labels(1))
 
 
 class TestInterrupt(LoopTest):
