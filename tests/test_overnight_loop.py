@@ -367,6 +367,11 @@ class TestModel(LoopTest):
         self.assertEqual(self.roles(), ["pi ping", "claude ping"])
 
 
+    def test_claude_runs_answer_no_permission_prompts(self):
+        self.run_loop("--harness", "claude", "--reviewer", "none")
+        self.assertIn('"--permission-prompts", "none"', self.agent_log.read_text())
+
+
 class TestPiWrites(LoopTest):
     override = Path(".pi/extensions/pi-permission-system/config.json")
 
