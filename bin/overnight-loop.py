@@ -300,15 +300,16 @@ def board(args) -> None:
             print(f"  board sync failed: {out.stderr.strip()}", flush=True)
 
 
+def peak_soon(now: datetime, margin: int) -> bool:
+    """Peak now, or too close to it to start an issue that would run into it."""
+    return preflight.is_peak(now) or preflight.minutes_until_peak(now) < margin
+
+
 def stop_reason(args, tried: set[int], fails: int, cost: float, deadline: float) -> str | None:
-    now = datetime.now(timezone.utc)
     if Path(".overnight/STOP").exists():
         return "STOP file"
     if time.time() > deadline:
         return "out of time"
-    if args.off_peak and preflight.minutes_until_peak(now) is not None \
-            and preflight.minutes_until_peak(now) < args.off_peak_margin:
-        return "off-peak window ending"
     if len(tried) >= args.max_issues:
         return "issue limit"
     if fails >= args.max_fails:
@@ -394,7 +395,7 @@ def main() -> None:
     p.add_argument("--budget", type=float,
                    help="pi only: dollars this run may spend on the gateway's `cloud` model")
     p.add_argument("--off-peak", action="store_true",
-                   help="wait for DeepSeek's off-peak hours and stop before peak; weekends are all off-peak")
+                   help="work only in DeepSeek's off-peak hours, waiting through peak; weekends are all off-peak")
     p.add_argument("--off-peak-margin", type=int, default=20,
                    help="minutes before peak to stop starting issues (default 20)")
     p.add_argument("--board", type=int, help="GitHub project number to keep in sync with board-sync.py")
@@ -425,10 +426,6 @@ def main() -> None:
     for stale in json.loads(sh("gh", "issue", "list", "--label", WORKING, "--json", "number")):
         sh("gh", "issue", "edit", str(stale["number"]), "--remove-label", WORKING)
 
-    if args.off_peak:
-        while preflight.is_peak(datetime.now(timezone.utc)):
-            print("Peak hours: waiting for the off-peak window.", flush=True)
-            time.sleep(300)
     deadline = time.time() + args.hours * 3600
     branch = "overnight/" + datetime.now().strftime("%Y-%m-%d-%H%M")
     sh("git", "checkout", "-q", "-b", branch)
@@ -444,7 +441,15 @@ def main() -> None:
     tried: set[int] = set()
     cost, fails = 0.0, 0
     try:
+        waiting = False
         while not (why := stop_reason(args, tried, fails, cost, deadline)):
+            if args.off_peak and peak_soon(datetime.now(timezone.utc), args.off_peak_margin):
+                if not waiting:
+                    print("Peak hours: waiting for the off-peak window.", flush=True)
+                waiting = True
+                time.sleep(300)
+                continue
+            waiting = False
             issue = next_issue(args.label, tried, set(done))
             if not issue:
                 why = "queue empty"
