@@ -356,6 +356,11 @@ class TestModel(LoopTest):
         self.assertIn(["--model", "cloud"], [w[i:i + 2] for w in work for i in range(len(w))])
         self.assertTrue(all("litellm" in w for w in work))
 
+    def test_a_budget_takes_the_cloud_model_by_its_full_name(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", "--model", "litellm/cloud", "--budget", "1")
+        self.assertNotIn("--budget counts", out.stderr)
+        self.assertIn('"--model", "cloud"', self.agent_log.read_text())
+
     def test_a_named_model_goes_through_unchanged(self):
         self.run_loop("--harness", "pi", "--reviewer", "none", "--model", "deepseek/deepseek-flash")
         work = self.agent_log.read_text()

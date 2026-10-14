@@ -54,6 +54,7 @@ GH_RETRIED = {("issue", "list"), ("issue", "view"), ("issue", "edit"), ("repo", 
 STREAMED = re.compile(r'^\{"type":\s*"message_update".*\n?', re.M)
 CONVENTIONAL = re.compile(r"^\w+(\([^)]+\))?!?: .+ \(#\d+\)$|^chore\(overnight\): ")
 MIN_BALANCE = 2.0  # deepseek-preflight's floor
+CLOUD = (None, "cloud", "litellm/cloud")  # the gateway's DeepSeek
 
 WORKER = """\
 You are one worker in an unattended overnight run. Nobody will answer questions.
@@ -339,7 +340,7 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         cmd = ["pi", "-p", "--approve", "--no-session", "--mode", "json", "--bash-guard-disabled"]
         if read_only:
             cmd += ["--tools", "read,grep,find,ls"]
-        if model in (None, "cloud"):
+        if model in CLOUD:
             cmd += ["--provider", "litellm"]
             model = "cloud"
     if model:
@@ -588,7 +589,7 @@ def main() -> None:
         sys.exit("no executable ./verify.sh here: run this from the repo root, after setting one up")
     if sh("git", "status", "--porcelain"):
         sys.exit("the working tree is not clean: commit or stash first")
-    if args.budget and (args.harness != "pi" or args.model not in (None, "cloud")):
+    if args.budget and (args.harness != "pi" or args.model not in CLOUD):
         sys.exit("--budget counts the gateway's `cloud` model, so it needs --harness pi and no other --model")
     sh("gh", "auth", "status")
     start = args.base or sh("gh", "repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name")
