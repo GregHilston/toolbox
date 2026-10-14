@@ -29,6 +29,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -39,7 +40,8 @@ _spec.loader.exec_module(preflight)
 
 DONE, PARKED, WORKING = "overnight:done", "overnight:parked", "overnight:working"
 GATEWAY = os.environ.get("LITELLM_URL", "https://llm.grehg2.xyz")
-OUT_OF_MONEY = re.compile(r"Budget has been exceeded|budget_exceeded|Exceeded budget|Insufficient Balance")
+OUT_OF_MONEY = re.compile(r"Budget has been exceeded|budget_exceeded|Exceeded budget|Insufficient Balance"
+                          r"|usage limit|hit your limit|Credit balance is too low", re.I)
 
 WORKER = """\
 You are one worker in an unattended overnight run. Nobody will answer questions.
@@ -148,29 +150,43 @@ def next_issue(label: str, tried: set[int], finished: set[int]) -> dict | None:
     return None
 
 
-def pi_result(out: str) -> tuple[str, float]:
-    """The last assistant text, and the cost priced from DeepSeek's table.
+@dataclass
+class Run:
+    """One agent run: its last message, its cost, and the error it ended on."""
 
-    pi's own cost object uses a stale catalog and under-reports about 3x.
-    """
-    text, cost = "", 0.0
+    text: str = ""
+    cost: float = 0.0
+    error: str = ""
+
+    @property
+    def broke(self) -> bool:
+        # Only the error, never the whole stream: tool output quotes issues.
+        return bool(OUT_OF_MONEY.search(self.error))
+
+
+def pi_result(out: str) -> Run:
+    """Priced from DeepSeek's table: pi's own cost object under-reports about 3x."""
+    run = Run()
     for line in out.splitlines():
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
+        if event.get("type") == "auto_retry_end" and event.get("finalError"):
+            run.error = str(event["finalError"])
         msg = event.get("message") or {}
         if event.get("type") != "message_end" or msg.get("role") != "assistant":
             continue
-        text = "".join(b.get("text", "") for b in msg.get("content", []) if b.get("type") == "text") or text
+        run.text = "".join(b.get("text", "") for b in msg.get("content", []) if b.get("type") == "text") or run.text
+        if msg.get("stopReason") == "error":
+            run.error = str(msg.get("errorMessage", "error"))
         when = datetime.fromtimestamp(msg.get("timestamp", time.time() * 1000) / 1000, timezone.utc)
-        cost += preflight.turn_cost(msg.get("model"), msg.get("usage") or {}, when)
-    return text, cost
+        run.cost += preflight.turn_cost(msg.get("model"), msg.get("usage") or {}, when)
+    return run
 
 
 def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
-              read_only: bool = False) -> tuple[str, float, bool]:
-    """Returns the agent's last message, its cost, and whether money ran out."""
+              read_only: bool = False) -> Run:
     if harness == "claude":
         cmd = ["claude", "-p", prompt, "--output-format", "json", "--max-turns", "200",
                "--max-budget-usd", str(args.issue_usd)]
@@ -207,17 +223,16 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         out += f"\n(timed out after {args.issue_minutes} min)"
     with log.open("a") as f:
         f.write(out)
-    broke = bool(OUT_OF_MONEY.search(out))
     if harness == "pi":
-        text, cost = pi_result(out)
-        return text[-1500:], cost, broke
+        run = pi_result(out)
+        run.text = run.text[-1500:]
+        return run
     try:
         result = json.loads(out.strip().splitlines()[-1])
     except (json.JSONDecodeError, IndexError):
-        return out.strip()[-1500:], 0.0, broke
+        return Run(out.strip()[-1500:])
     text = str(result.get("result", ""))
-    limited = bool(result.get("is_error")) and "limit" in text.lower()
-    return text[-1500:], float(result.get("total_cost_usd") or 0), broke or limited
+    return Run(text[-1500:], float(result.get("total_cost_usd") or 0), text if result.get("is_error") else "")
 
 
 def tidy(to: str = "HEAD") -> None:
@@ -270,30 +285,32 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[bool, float, bool
     base = sh("git", "rev-parse", "HEAD")
     cost, plan = 0.0, ""
     if args.reviewer != "none":
-        plan, spent, broke = run_agent(args, args.reviewer, args.reviewer_model, PLAN.format(issue=issue),
-                                       log, read_only=True)
-        cost += spent
+        run = run_agent(args, args.reviewer, args.reviewer_model, PLAN.format(issue=issue), log, read_only=True)
+        plan = run.text
+        cost += run.cost
         tidy()
-        if broke:
+        if run.broke:
             return False, cost, True
     prompt = WORKER.format(n=n) + (f"\nA planner suggests:\n\n{plan}\n" if plan else "")
-    message, spent, broke = run_agent(args, args.harness, args.model, prompt, log)
-    cost += spent
-    if broke:
+    run = run_agent(args, args.harness, args.model, prompt, log)
+    message = run.text
+    cost += run.cost
+    if run.broke:
         tidy(base)
         return False, cost, True
     tidy()  # keep only what the worker committed
     ok, tail = verify(log) if sh("git", "rev-parse", "HEAD") != base else (False, "no commits")
     if ok and args.reviewer != "none":
         diff = sh("git", "diff", f"{base}..HEAD")[:60000]
-        review, spent, broke = run_agent(args, args.reviewer, args.reviewer_model,
-                                         REVIEW.format(n=n, issue=issue, diff=diff), log, read_only=True)
-        cost += spent
+        run = run_agent(args, args.reviewer, args.reviewer_model,
+                        REVIEW.format(n=n, issue=issue, diff=diff), log, read_only=True)
+        review, broke = run.text, run.broke
+        cost += run.cost
         tidy()
         if not broke and review.strip().endswith("VERDICT: changes"):
-            message, spent, broke = run_agent(args, args.harness, args.model,
-                                              WORKER.format(n=n) + "\n" + FIX.format(findings=review), log)
-            cost += spent
+            run = run_agent(args, args.harness, args.model, WORKER.format(n=n) + "\n" + FIX.format(findings=review), log)
+            message, broke = run.text, run.broke
+            cost += run.cost
             tidy()
             ok, tail = verify(log)
             message += "\n\nAfter review:\n" + review[-800:]
