@@ -36,7 +36,8 @@ did; `pi-ask.py` handles both.
   stale prices.
 - **The worker can't commit, push or delete recursively, but it can still edit
   and discard files** (`git checkout -- .`, `sed -i`). Point `--dir` at a clean
-  checkout or worktree, never at work in progress. Toolbox scripts such as
-  `reddit-search.py` are on its `PATH`.
+  checkout or worktree, never at work in progress. It can read anything under
+  `~/Git` but nothing else outside `--dir`: copy other files in first. Toolbox
+  scripts such as `reddit-search.py` are on its `PATH`.
 - **Two warnings are normal:** "No project session found with id …" on a first
   turn, and "No models match pattern deepseek/*" on every turn.

@@ -8,6 +8,9 @@
       "~/.pi/agent/*": "allow",
       "/opt/homebrew/Cellar/pi-coding-agent/*": "allow"
     },
+    "external_directory_read": {
+      "~/Git/*": "allow"
+    },
     "path": {
       "*": "allow",
       "*.env": "deny",
