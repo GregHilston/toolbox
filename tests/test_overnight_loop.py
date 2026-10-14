@@ -465,6 +465,25 @@ class TestFixPass(LoopTest):
         self.assertEqual(self.labels(2), ["ready-for-agent"])
 
 
+class TestReviewerLimit(LoopTest):
+    def test_a_reviewer_out_of_money_leaves_the_rest_unreviewed(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "claude",
+                            FAKE_ERROR="Claude AI usage limit reached", FAKE_ERROR_ROLES="claude:review")
+        self.assertIn("Stopped: queue empty", out.stdout, out.stderr)
+        self.assertIn("overnight:done", self.labels(1))
+        self.assertIn("overnight:done", self.labels(2))
+        self.assertIn("Unreviewed", self.comments(1)[-1])
+        self.assertIn("feat: issue 1 (work) (#1)", self.git("log", "--format=%s"))
+        self.assertNotIn("claude plan", self.roles()[3:], "no reviewer after it stopped")
+        self.assertIn("went unreviewed", out.stdout)
+
+    def test_a_planner_out_of_money_does_not_end_the_run(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "claude",
+                            FAKE_ERROR="Claude AI usage limit reached", FAKE_ERROR_ROLES="claude:plan")
+        self.assertIn("Stopped: queue empty", out.stdout, out.stderr)
+        self.assertIn("overnight:done", self.labels(1))
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})
