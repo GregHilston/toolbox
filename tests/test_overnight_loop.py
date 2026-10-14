@@ -445,6 +445,26 @@ class TestVerdict(LoopTest):
         self.assertNotIn("feat: issue 1", self.git("log", "--format=%s"))
 
 
+class TestFixPass(LoopTest):
+    def test_a_fix_that_breaks_verify_keeps_the_green_work(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "claude", FAKE_FIX="bad",
+                            FAKE_REVIEW="Add a test.\nVERDICT: changes")
+        self.assertIn("overnight:done", self.labels(1), out.stdout + out.stderr)
+        self.assertIn("not addressed", self.comments(1)[-1])
+        log = self.git("log", "--format=%s")
+        self.assertIn("feat: issue 1 (work) (#1)", log)
+        self.assertNotIn("(fix)", log)
+        self.assertFalse((self.repo / "BROKEN").exists())
+
+    def test_a_fix_that_runs_out_of_money_keeps_the_work_and_stops(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "claude", FAKE_ERROR="402 Insufficient Balance",
+                            FAKE_ERROR_ROLES="pi:fix", FAKE_REVIEW="VERDICT: changes")
+        self.assertIn("Stopped: out of money", out.stdout, out.stderr)
+        self.assertIn("overnight:done", self.labels(1))
+        self.assertIn("feat: issue 1 (work) (#1)", self.git("log", "--format=%s"))
+        self.assertEqual(self.labels(2), ["ready-for-agent"])
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})

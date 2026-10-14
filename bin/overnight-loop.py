@@ -350,8 +350,12 @@ def stop_reason(args, tried: set[int], fails: int, cost: float, deadline: float)
     return None
 
 
-def work_issue(args, n: int, title: str, branch: str) -> tuple[bool, float, bool]:
-    """Plan, build, verify, review and maybe fix one issue. Returns kept, cost, out of money."""
+def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float, bool]:
+    """Plan, build, verify, review and maybe fix one issue.
+
+    Returns "done", "parked" or None (left as it was), the cost, and whether
+    money ran out.
+    """
     log = Path(f".overnight/logs/{n}.log")
     issue = sh("gh", "issue", "view", str(n))
     base = sh("git", "rev-parse", "HEAD")
@@ -362,37 +366,44 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[bool, float, bool
         cost += run.cost
         tidy()
         if run.broke:
-            return False, cost, True
+            return None, cost, True
     prompt = WORKER.format(n=n) + (f"\nA planner suggests:\n\n{plan}\n" if plan else "")
     run = run_agent(args, args.harness, args.model, prompt, log)
     message = run.text
     cost += run.cost
     if run.broke:
         tidy(base)
-        return False, cost, True
+        return None, cost, True
     tidy()  # keep only what the worker committed
     ok, tail = check(args, base, log)
+    broke = False
     if ok and args.reviewer != "none":
         diff = sh("git", "diff", f"{base}..HEAD")[:60000]
         run = run_agent(args, args.reviewer, args.reviewer_model,
                         REVIEW.format(n=n, issue=issue, diff=diff), log, read_only=True)
-        review, broke = run.text, run.broke
+        review = run.text
         cost += run.cost
         tidy()
-        if not broke and verdict(review) is None:
+        if run.broke:
+            tidy(base)
+            return None, cost, True
+        if verdict(review) is None:
             # A crashed or truncated review is no review: the work does not stay.
             ok, tail = False, "the review gave no verdict"
             message += "\n\nReview:\n" + review[-800:]
-        elif not broke and verdict(review) == "changes":
+        elif verdict(review) == "changes":
+            green = sh("git", "rev-parse", "HEAD")
             run = run_agent(args, args.harness, args.model, WORKER.format(n=n) + "\n" + FIX.format(findings=review), log)
-            message, broke = run.text, run.broke
             cost += run.cost
+            broke = run.broke
             tidy()
-            ok, tail = check(args, base, log)
-            message += "\n\nAfter review:\n" + review[-800:]
-        if broke:
-            tidy(base)
-            return False, cost, True
+            fixed, why = (False, "it ran out of money") if broke else check(args, green, log)
+            if fixed:
+                message = run.text + "\n\nAfter review:\n" + review[-800:]
+            else:
+                tidy(green)  # keep the green work from before the fix
+                message += f"\n\nThe review's findings are not addressed: the fix pass failed ({why[-300:]}).\n\n" \
+                           + review[-800:]
     if ok:
         sh("gh", "issue", "edit", str(n), "--add-label", DONE, "--remove-label", WORKING)
         sh("gh", "issue", "comment", str(n), "--body", f"Done on `{branch}`.\n\n{message}")
@@ -403,7 +414,7 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[bool, float, bool
         sh("gh", "issue", "comment", str(n), "--body",
            f"Parked by the overnight run.\n\n{message}\n\n```\n{tail}\n```")
         note(n, title, "parked", f"{message}\n\n```\n{tail}\n```")
-    return ok, cost, False
+    return ("done" if ok else "parked"), cost, broke
 
 
 def main() -> None:
@@ -498,15 +509,17 @@ def main() -> None:
             print(f"#{n} {title}", flush=True)
             sh("gh", "issue", "edit", str(n), "--add-label", WORKING)
             board(args)
-            kept, spent, broke = work_issue(args, n, title, branch)
+            outcome, spent, broke = work_issue(args, n, title, branch)
             cost += spent
-            if broke:
+            if outcome is None:
                 sh("gh", "issue", "edit", str(n), "--remove-label", WORKING)
+            else:
+                (done if outcome == "done" else parked)[n] = title
+                fails = 0 if outcome == "done" else fails + 1
+                print(f"  {outcome}, ${spent:.2f}", flush=True)
+            if broke:
                 why = "out of money"
                 break
-            (done if kept else parked)[n] = title
-            fails = 0 if kept else fails + 1
-            print(f"  {'done' if kept else 'parked'}, ${spent:.2f}", flush=True)
             board(args)
     finally:
         if args.spend:
