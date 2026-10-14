@@ -315,8 +315,9 @@ def pi_result(out: str) -> Run:
 def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
               read_only: bool = False) -> Run:
     if harness == "claude":
+        # A prompt nobody answers is denied at once, so claude stops retrying it.
         cmd = ["claude", "-p", "--output-format", "json", "--max-turns", "200",
-               "--max-budget-usd", str(args.issue_usd)]
+               "--max-budget-usd", str(args.issue_usd), "--permission-prompts", "none"]
         if read_only:
             cmd += ["--permission-mode", "dontAsk", "--allowedTools", "Read", "Grep", "Glob"]
         else:
