@@ -61,6 +61,16 @@ AGENT = textwrap.dedent('''\
         else:
             role = "ping"
         log(f"{name} {role} " + json.dumps(sys.argv[1:]))
+        return role, work(role, prompt)
+
+    def failing(name, role):
+        """The error to end on, if FAKE_ERROR_ROLES names this role, or name:role."""
+        roles = os.environ.get("FAKE_ERROR_ROLES", "work,fix").split(",")
+        if role in roles or f"{name}:{role}" in roles:
+            return os.environ.get("FAKE_ERROR")
+        return None
+
+    def work(role, prompt):
         if role == "ping":
             return os.environ.get("FAKE_PING", "ok")
         if role == "plan":
@@ -103,20 +113,21 @@ FAKE_PI = textwrap.dedent('''\
     #!/usr/bin/env python3
     import json, os, sys, time
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from agent import act, prompt_of
+    from agent import act, failing, prompt_of
     prompt = prompt_of(sys.argv[1:])
     if os.environ.get("FAKE_ISSUE_TEXT"):
         # A tool result quoting the issue, as when the worker runs gh issue view.
         print(json.dumps({"type": "tool_execution_end", "toolName": "bash",
                           "result": {"content": [{"type": "text", "text": os.environ["FAKE_ISSUE_TEXT"]}]}}))
-    text = act("pi", prompt)
+    NAME = "pi"
+    role, text = act(NAME, prompt)
     for i in range(3):
         print(json.dumps({"type": "message_update", "delta": "x" * 50}))
     message = {"role": "assistant", "model": "cloud", "timestamp": time.time() * 1000,
                "usage": {"input": 100000, "output": 20000, "cacheRead": 500000},
                "content": [{"type": "text", "text": text}], "stopReason": "stop"}
-    if os.environ.get("FAKE_PI_ERROR"):
-        message |= {"stopReason": "error", "errorMessage": os.environ["FAKE_PI_ERROR"], "content": []}
+    if failing(NAME, role):
+        message |= {"stopReason": "error", "errorMessage": failing(NAME, role), "content": []}
     print(json.dumps({"type": "message_end", "message": message}))
     print(json.dumps({"type": "agent_settled"}))
 ''')
@@ -125,11 +136,12 @@ FAKE_CLAUDE = textwrap.dedent('''\
     #!/usr/bin/env python3
     import json, os, sys
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from agent import act, prompt_of
-    text = act("claude", prompt_of(sys.argv[1:]))
+    from agent import act, failing, prompt_of
+    NAME = "claude"
+    role, text = act(NAME, prompt_of(sys.argv[1:]))
     result = {"type": "result", "subtype": "success", "is_error": False, "result": text, "total_cost_usd": 0.25}
-    if os.environ.get("FAKE_CLAUDE_ERROR"):
-        result |= {"is_error": True, "result": os.environ["FAKE_CLAUDE_ERROR"], "total_cost_usd": 0}
+    if failing(NAME, role):
+        result |= {"is_error": True, "result": failing(NAME, role), "total_cost_usd": 0}
     print(json.dumps(result), flush=True)
     if os.environ.get("FAKE_CLAUDE_STDERR"):
         print("SessionEnd hook: done", file=sys.stderr)
@@ -289,6 +301,35 @@ class TestHappyPath(LoopTest):
         self.assertIn("overnight:done", self.labels(1), out.stdout + out.stderr)
 
 
+class TestModel(LoopTest):
+    def test_pi_defaults_to_the_gateway_cloud_model(self):
+        self.run_loop("--harness", "pi", "--reviewer", "none")
+        work = [json.loads(line.split(" ", 2)[2]) for line in self.agent_log.read_text().splitlines()
+                if line.startswith("pi work")]
+        self.assertIn(["--model", "cloud"], [w[i:i + 2] for w in work for i in range(len(w))])
+        self.assertTrue(all("litellm" in w for w in work))
+
+    def test_a_named_model_goes_through_unchanged(self):
+        self.run_loop("--harness", "pi", "--reviewer", "none", "--model", "deepseek/deepseek-flash")
+        work = self.agent_log.read_text()
+        self.assertIn('"--model", "deepseek/deepseek-flash"', work)
+        self.assertNotIn("litellm", work)
+
+    def test_a_model_that_cannot_answer_stops_before_any_issue(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "none",
+                            FAKE_ERROR="No API key found for deepseek.", FAKE_ERROR_ROLES="ping")
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn("No API key found for deepseek", out.stderr)
+        self.assertEqual(self.roles(), ["pi ping"])
+        self.assertEqual(self.labels(1), ["ready-for-agent"])
+
+    def test_the_reviewer_is_tried_too(self):
+        out = self.run_loop("--harness", "pi", FAKE_ERROR="Not logged in", FAKE_ERROR_ROLES="claude:ping")
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn("Not logged in", out.stderr)
+        self.assertEqual(self.roles(), ["pi ping", "claude ping"])
+
+
 class TestOutOfMoney(LoopTest):
     def test_an_issue_that_mentions_insufficient_balance_is_worked(self):
         out = self.run_loop("--harness", "pi", "--reviewer", "none",
@@ -298,14 +339,14 @@ class TestOutOfMoney(LoopTest):
 
     def test_a_pi_turn_that_fails_on_balance_stops_the_run(self):
         out = self.run_loop("--harness", "pi", "--reviewer", "none",
-                            FAKE_PI_ERROR="402 Insufficient Balance")
+                            FAKE_ERROR="402 Insufficient Balance")
         self.assertIn("Stopped: out of money", out.stdout, out.stderr)
         self.assertNotIn("overnight:parked", self.labels(1))
         self.assertNotIn("overnight:working", self.labels(1))
 
     def test_a_claude_usage_limit_stops_the_run(self):
         out = self.run_loop("--harness", "claude", "--reviewer", "none",
-                            FAKE_CLAUDE_ERROR="Claude AI usage limit reached")
+                            FAKE_ERROR="Claude AI usage limit reached")
         self.assertIn("Stopped: out of money", out.stdout, out.stderr)
 
 

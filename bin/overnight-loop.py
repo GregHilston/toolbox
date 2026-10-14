@@ -12,8 +12,8 @@ one fix pass when it asks for changes. Kept work stays on an overnight/<time>
 branch labelled overnight:done; the rest is reset away and labelled
 overnight:parked. Each issue appends to progress.md, which the next worker reads.
 
---budget sends pi workers through the LiteLLM gateway's `cloud` model and stops
-starting issues once this run has spent that much there. The gateway's own daily
+pi workers use the LiteLLM gateway's `cloud` model unless --model names another.
+--budget stops starting issues once this run has spent that much there. The gateway's own daily
 cap on `cloud` is the hard limit underneath: past it, every request gets a 429.
 """
 
@@ -84,6 +84,7 @@ The diff:
 
 {diff}
 """
+PING = "Reply with the word ok and nothing else."
 FIX = """\
 A reviewer asked for changes to the work already committed on this branch:
 
@@ -243,7 +244,7 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         cmd = ["pi", "-p", "--approve", "--no-session", "--mode", "json", "--bash-guard-disabled"]
         if read_only:
             cmd += ["--tools", "read,grep,find,ls"]
-        if args.budget:
+        if model in (None, "cloud"):
             cmd += ["--provider", "litellm"]
             model = "cloud"
         cmd += ["--", prompt]
@@ -274,9 +275,18 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
     try:
         result = json.loads(out.strip().splitlines()[-1])
     except (json.JSONDecodeError, IndexError):
-        return Run(out.strip()[-1500:])
+        return Run(out.strip()[-1500:], error="claude printed no result")
     text = str(result.get("result", ""))
     return Run(text[-1500:], float(result.get("total_cost_usd") or 0), text if result.get("is_error") else "")
+
+
+def smoke_test(args, harness: str, model: str | None) -> None:
+    """One turn before touching anything, so a bad model or key fails here, not as a park per issue."""
+    log = Path(".overnight/logs/startup.log")
+    run = run_agent(args, harness, model, PING, log, read_only=True)
+    if run.error or not run.text.strip():
+        name = f"{harness} --model {model}" if model else harness
+        sys.exit(f"{name} could not answer a one-line prompt: {run.error or 'no reply'}. See {log}.")
 
 
 def tidy(to: str = "HEAD") -> None:
@@ -378,10 +388,11 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[bool, float, bool
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--harness", choices=["claude", "pi"], required=True, help="runs the workers")
-    p.add_argument("--model", help="the workers' model, passed to the harness as --model")
+    p.add_argument("--model", help="the workers' model, passed to the harness as --model "
+                                   "(pi default: the gateway's `cloud`)")
     p.add_argument("--reviewer", choices=["claude", "pi", "none"], default="claude",
                    help="plans each issue and reviews green work (default claude)")
-    p.add_argument("--reviewer-model")
+    p.add_argument("--reviewer-model", help="as --model, for the reviewer")
     p.add_argument("--label", default="ready-for-agent", help="issues to work (default ready-for-agent)")
     p.add_argument("--hours", type=float, default=8, help="stop starting issues after this (default 8)")
     p.add_argument("--max-issues", type=int, default=20)
@@ -408,8 +419,8 @@ def main() -> None:
         sys.exit("no executable ./verify.sh here: run this from the repo root, after setting one up")
     if sh("git", "status", "--porcelain"):
         sys.exit("the working tree is not clean: commit or stash first")
-    if args.budget and args.harness != "pi":
-        sys.exit("--budget routes pi workers through LiteLLM; it does not cover claude workers")
+    if args.budget and (args.harness != "pi" or args.model not in (None, "cloud")):
+        sys.exit("--budget counts the gateway's `cloud` model, so it needs --harness pi and no other --model")
     sh("gh", "auth", "status")
     Path(".overnight/logs").mkdir(parents=True, exist_ok=True)
     Path(".overnight/STOP").unlink(missing_ok=True)  # it ended an earlier run
@@ -422,6 +433,9 @@ def main() -> None:
     ok, tail = verify(args, Path(".overnight/logs/baseline.log"))
     if not ok:
         sys.exit(f"./verify.sh fails before any work, so nothing can be judged:\n{tail}")
+    smoke_test(args, args.harness, args.model)
+    if args.reviewer != "none":
+        smoke_test(args, args.reviewer, args.reviewer_model)
     for label, colour in ((DONE, "0e8a16"), (PARKED, "d93f0b"), (WORKING, "5319e7")):
         sh("gh", "label", "create", label, "--color", colour, "--force")
     for stale in json.loads(sh("gh", "issue", "list", "--label", WORKING, "--json", "number")):
