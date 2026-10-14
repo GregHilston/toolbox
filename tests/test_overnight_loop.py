@@ -540,6 +540,37 @@ class TestGhRetry(LoopTest):
         self.assertIn("#1 First", out.stdout)
 
 
+class TestInterrupt(LoopTest):
+    def interrupt(self, sig: int) -> tuple[str, int]:
+        env = self.env | {"FAKE_WORK_1": "hang"}
+        proc = subprocess.Popen([sys.executable, str(SCRIPT), "--harness", "pi", "--reviewer", "none"],
+                                cwd=self.repo, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        try:
+            deadline = time.monotonic() + 30
+            while not self.pids.read_text() and time.monotonic() < deadline:
+                time.sleep(0.1)
+            self.assertIn("overnight:working", self.labels(1))
+            proc.send_signal(sig)
+            out, _ = proc.communicate(timeout=30)
+        finally:
+            proc.kill()
+        worker = int(self.pids.read_text().split()[0])
+        time.sleep(0.3)
+        self.assertFalse(alive(worker), "the worker outlived the loop")
+        self.assertNotIn("overnight:working", self.labels(1))
+        self.assertIn("Stopped: interrupted", out)
+        return out, proc.returncode
+
+    def test_ctrl_c(self):
+        self.interrupt(signal.SIGINT)
+
+    def test_sigterm(self):
+        self.interrupt(signal.SIGTERM)
+
+    def test_a_closed_terminal(self):
+        self.interrupt(signal.SIGHUP)
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})
