@@ -16,6 +16,7 @@ at the end. A worker silent for --idle seconds is killed, not waited on.
 from __future__ import annotations
 
 import argparse
+import errno
 import importlib.util
 import json
 import os
@@ -46,7 +47,17 @@ LOG_DIR = Path.home() / ".cache" / "pi-ask"
 
 
 # pi's own rule for session ids.
-SESSION_NAME = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$")
+SESSION_NAME = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?")
+
+
+def failure(message: dict) -> str | None:
+    """Why an assistant message failed, or None."""
+    reason = message.get("stopReason")
+    if reason == "length":
+        return "the reply hit the output token limit and was cut off"
+    if reason in ("error", "aborted"):
+        return message.get("errorMessage") or reason
+    return None
 
 
 def answer_and_cost(log: Path, since: int) -> tuple[str, float, str | None]:
@@ -70,8 +81,9 @@ def answer_and_cost(log: Path, since: int) -> tuple[str, float, str | None]:
             parts = [b.get("text", "") for b in message.get("content", []) if b.get("type") == "text"]
             if any(parts):
                 text = "".join(parts)
-            failed = message.get("stopReason") in ("error", "aborted")
-            error = (message.get("errorMessage") or message.get("stopReason")) if failed else None
+            error = failure(message)
+            if error and not any(parts):
+                text = ""  # earlier filler is not the answer
     return text, cost, error
 
 
@@ -81,18 +93,20 @@ def pump(proc: subprocess.Popen, log: Path, narrator, idle: int) -> bool:
     pending: list[bytes] = []
     last = time.monotonic()
     with log.open("ab") as raw:
+        if raw.tell() and not log.read_bytes().endswith(b"\n"):  # a killed run's partial line
+            raw.write(b"\n")
         while True:
             ready, _, _ = select.select([fd], [], [], 5)
             if not ready:
                 if proc.poll() is not None:  # done; a child holds stdout
-                    return False
+                    break
                 if time.monotonic() - last > idle:
                     narrator.emit("!", f"no event for {idle}s; killing pi")
                     return True
                 continue
             chunk = os.read(fd, 65536)
             if not chunk:
-                return False
+                break
             last = time.monotonic()
             raw.write(chunk)
             raw.flush()
@@ -104,6 +118,10 @@ def pump(proc: subprocess.Popen, log: Path, narrator, idle: int) -> bool:
             for line in lines:
                 if line.strip():
                     narrator.feed(line.decode("utf-8", errors="replace"))
+    rest = b"".join(pending)
+    if rest.strip():
+        narrator.feed(rest.decode("utf-8", errors="replace"))
+    return False
 
 
 def kill_group(proc: subprocess.Popen) -> None:
@@ -128,12 +146,17 @@ def main() -> int:
     p.add_argument("--idle", type=int, default=300, help="kill after N silent seconds")
     p.add_argument("prompt", help="the question, or @file to read it from")
     args = p.parse_args()
-    if not SESSION_NAME.match(args.session):
+    if not SESSION_NAME.fullmatch(args.session):
         p.error("--session takes letters, digits, '.', '_' and '-', starting and ending alphanumeric")
 
+    if not Path(args.dir).is_dir():
+        p.error(f"--dir {args.dir} is not a directory")
     prompt = args.prompt
     if prompt.startswith("@"):
-        prompt = Path(prompt[1:]).expanduser().read_text(encoding="utf-8")
+        try:
+            prompt = Path(prompt[1:]).expanduser().read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as e:
+            p.error(f"cannot read the prompt file {prompt[1:]}: {e}")
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     log = LOG_DIR / f"{args.session}.jsonl"
     since = log.stat().st_size if log.exists() else 0
@@ -150,6 +173,10 @@ def main() -> int:
                                 start_new_session=True)
     except FileNotFoundError:
         sys.exit("pi-ask.py: pi is not on PATH")
+    except OSError as e:
+        if e.errno != errno.E2BIG:
+            raise
+        sys.exit(f"pi-ask.py: the prompt ({len(prompt.encode())} bytes) is over the OS argument limit; shorten it")
     # pi has its own group, so pass our death on.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     narrator = narrate.Narrator(label=args.session, out=sys.stdout)
