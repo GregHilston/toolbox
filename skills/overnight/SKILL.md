@@ -13,15 +13,28 @@ Hermes, Bash in Claude Code, `bash` in pi) from the repo root, exactly as shown:
 no `python3` in front and no directory.
 
 ```bash
-overnight-loop.py --harness claude                  # Claude workers, auto permission mode
-overnight-loop.py --harness claude --yolo           # only inside a container or VM
-overnight-loop.py --harness pi --model deepseek/deepseek-v4-flash
-overnight-loop.py --help                            # caps: --hours, --max-issues, --max-fails, --max-cost
+overnight-loop.py --harness pi --model deepseek/deepseek-flash   # DeepSeek workers, Claude plans and reviews
+overnight-loop.py --harness pi --budget 3 --off-peak             # hard $3 cap via LiteLLM, cheap hours only
+overnight-loop.py --harness pi --board 1                         # also keep GitHub project 1 in sync
+overnight-loop.py --harness claude --yolo                        # Claude workers; only inside a container or VM
+overnight-loop.py --help                                         # every cap and default
+board-sync.py --create "<repo name>"                             # once per repo: make the kanban board
 ```
 
 Why a script and not you: an orchestrator that is itself a model session fills
 its context over a night and compacts. The script holds no context, starts every
 worker clean, and trusts `./verify.sh`, never a worker saying it is done.
+
+For each issue a reviewer, Claude by default and from another model family than
+DeepSeek on purpose, writes a plan, and reviews the work once it passes the gate.
+When it asks for changes, one fresh worker makes them and the gate runs again.
+
+When Greg names a spend ("at most $3"), pass it as `--budget`. LiteLLM then
+refuses requests past that amount, which DeepSeek's own keys can't do. It needs
+the gateway's database; without one the script stops at the start and says so.
+`--off-peak` waits for DeepSeek's half-price hours and stops starting issues 20
+minutes before peak. Weekends are off-peak all day; on a weeknight the off-peak
+windows are short.
 
 ## Before starting
 
@@ -32,7 +45,7 @@ Check these with Greg, then start it, and stop there:
 2. **The queue.** Open issues with the label (default `ready-for-agent`; pass
    `--label prep:ready` after `/prep`). Each needs a checkable `Done when`.
 3. **The caps.** Defaults: 8 hours, 20 issues, 3 parks in a row, 90 minutes per
-   issue, and for Claude $10 per issue and $60 a night.
+   agent run, and $60 a night (pi priced from DeepSeek's table, Claude by its own report).
 4. **The sandbox.** pi asks no permission for anything, and `--yolo` turns
    Claude's off. Run either inside a container or VM that mounts only this repo.
 5. **Detach it.** Run it in `tmux new -d -s overnight '…'`, not as a harness

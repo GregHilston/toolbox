@@ -41,12 +41,13 @@ BALANCE_URL = "https://api.deepseek.com/user/balance"
 PEAK_WINDOWS_UTC = ((1, 4), (6, 10))
 
 # Per 1M tokens, from api-docs.deepseek.com/quick_start/pricing/ as of
-# 2026-08-27. pi 0.84.3's built-in catalog predates the 2026-08-16 repricing and
+# 2026-10-14. deepseek-v4-flash is a legacy name now served by V4.1-Flash. pi 0.84.3's built-in catalog predates the 2026-08-16 repricing and
 # under-reports by about 3x, so anything that wants a real number prices it here
 # rather than reading pi's `cost` object. Keyed cache-hit / input-miss / output.
 PRICES = {
     "deepseek-v4-pro": {"off": (0.022, 0.66, 1.98), "peak": (0.044, 1.32, 3.96)},
-    "deepseek-v4-flash": {"off": (0.007, 0.22, 0.66), "peak": (0.014, 0.44, 1.32)},
+    "deepseek-flash": {"off": (0.003, 0.15, 0.60), "peak": (0.006, 0.30, 1.20)},
+    "deepseek-v4-flash": {"off": (0.003, 0.15, 0.60), "peak": (0.006, 0.30, 1.20)},
 }
 
 

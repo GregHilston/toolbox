@@ -7,25 +7,40 @@
 
 No model runs the loop: this script picks the issue, starts a worker with a clean
 context, and lets ./verify.sh, not the worker, decide whether the work stays. A
-green issue keeps its commits on an overnight/<time> branch and gets the
-overnight:done label; a red one is reset away and gets overnight:parked. Each
-issue appends to progress.md, which the next worker reads.
+reviewer from another model family plans each issue and reviews green work, with
+one fix pass when it asks for changes. Kept work stays on an overnight/<time>
+branch labelled overnight:done; the rest is reset away and labelled
+overnight:parked. Each issue appends to progress.md, which the next worker reads.
+
+--budget mints a LiteLLM key capped at that many dollars, so the proxy, not this
+script, enforces the spend. It needs the gateway's database.
 """
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
 import time
-from datetime import datetime
+import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
-DONE, PARKED = "overnight:done", "overnight:parked"
-PROMPT = """\
+HERE = Path(__file__).resolve().parent
+_spec = importlib.util.spec_from_file_location("preflight", HERE / "deepseek-preflight.py")
+preflight = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(preflight)
+
+DONE, PARKED, WORKING = "overnight:done", "overnight:parked", "overnight:working"
+GATEWAY = os.environ.get("LITELLM_URL", "https://llm.grehg2.xyz")
+OUT_OF_MONEY = re.compile(r"Budget has been exceeded|budget_exceeded|Insufficient Balance|Expired Key")
+
+WORKER = """\
 You are one worker in an unattended overnight run. Nobody will answer questions.
 Implement GitHub issue #{n} in this repository, then stop.
 
@@ -36,11 +51,40 @@ Implement GitHub issue #{n} in this repository, then stop.
    test that ./verify.sh runs.
 4. Run ./verify.sh until it passes. Never edit verify.sh or the issue, and never
    delete or weaken a test to make it pass.
-5. Commit with a message ending in "(#{n})". Do not push and do not write to GitHub.
+5. Commit with a conventional commit message ending in "(#{n})", such as
+   "feat(car): add handbrake (#{n})". Do not push and do not write to GitHub.
 
 If the issue contradicts an accepted ADR, or you cannot finish, commit nothing
 and say why. End with at most three lines: what you did, what is left, and what
 the next worker should know.
+"""
+PLAN = """\
+Plan the implementation of this GitHub issue for another agent, who will do the
+work. Read CLAUDE.md and the code the issue touches; do not edit anything.
+Reply with a short plan: the files to change, the test for each "Done when"
+line, and the risks.
+
+{issue}
+"""
+REVIEW = """\
+Review this change for GitHub issue #{n}. Read CLAUDE.md and any file you need;
+do not edit anything. Check that every checkable "Done when" line has a test
+that would fail without the change, that the code follows CLAUDE.md, and that
+no test was weakened or deleted. List each required change. End with exactly
+one line, either "VERDICT: approve" or "VERDICT: changes".
+
+{issue}
+
+The diff:
+
+{diff}
+"""
+FIX = """\
+A reviewer asked for changes to the work already committed on this branch:
+
+{findings}
+
+Make them, run ./verify.sh until it passes, and commit.
 """
 
 
@@ -49,6 +93,15 @@ def sh(*cmd: str, check: bool = True) -> str:
     if check and out.returncode:
         sys.exit(f"{' '.join(cmd[:3])} failed: {out.stderr.strip() or out.stdout.strip()}")
     return out.stdout.strip()
+
+
+def gateway(method: str, path: str, body: dict | None = None) -> dict:
+    key = os.environ.get("LITELLM_MASTER_KEY") or os.environ.get("LITELLM_API_KEY", "")
+    req = urllib.request.Request(GATEWAY + path, method=method,
+                                 data=None if body is None else json.dumps(body).encode(),
+                                 headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.load(r)
 
 
 def verify(log: Path) -> tuple[bool, str]:
@@ -78,17 +131,49 @@ def next_issue(label: str, tried: set[int], finished: set[int]) -> dict | None:
     return None
 
 
-def run_worker(args, n: int, log: Path) -> tuple[str, float, bool]:
-    """Returns the worker's last message, its cost, and whether it hit a usage limit."""
-    prompt = PROMPT.format(n=n)
-    if args.harness == "claude":
+def pi_result(out: str) -> tuple[str, float]:
+    """The last assistant text, and the cost priced from DeepSeek's table.
+
+    pi's own cost object uses a stale catalog and under-reports about 3x.
+    """
+    text, cost = "", 0.0
+    for line in out.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        msg = event.get("message") or {}
+        if event.get("type") != "message_end" or msg.get("role") != "assistant":
+            continue
+        text = "".join(b.get("text", "") for b in msg.get("content", []) if b.get("type") == "text") or text
+        usage = msg.get("usage") or {}
+        when = datetime.fromtimestamp(msg.get("timestamp", time.time() * 1000) / 1000, timezone.utc)
+        rates = preflight.PRICES.get(msg.get("model"), preflight.PRICES["deepseek-flash"])
+        hit, miss, output = rates["peak" if preflight.is_peak(when) else "off"]
+        cost += (usage.get("cacheRead", 0) * hit + usage.get("input", 0) * miss
+                 + usage.get("output", 0) * output) / 1e6
+    return text, cost
+
+
+def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
+              read_only: bool = False) -> tuple[str, float, bool]:
+    """Returns the agent's last message, its cost, and whether money ran out."""
+    if harness == "claude":
         cmd = ["claude", "-p", prompt, "--output-format", "json", "--max-turns", "200",
-               "--max-budget-usd", str(args.issue_usd),
-               "--permission-mode", "bypassPermissions" if args.yolo else "auto"]
+               "--max-budget-usd", str(args.issue_usd)]
+        if read_only:
+            cmd += ["--permission-mode", "dontAsk", "--allowedTools", "Read", "Grep", "Glob"]
+        else:
+            cmd += ["--permission-mode", "bypassPermissions" if args.yolo else "auto"]
     else:
-        cmd = ["pi", "-p", "--approve", "--no-session", prompt]
-    if args.model:
-        cmd[1:1] = ["--model", args.model]
+        cmd = ["pi", "-p", "--approve", "--no-session", "--mode", "json", prompt]
+        if read_only:
+            cmd += ["--tools", "read,grep,find,ls"]
+        if args.key:
+            cmd += ["--provider", "litellm", "--api-key", args.key]
+            model = "cloud"
+    if model:
+        cmd[1:1] = ["--model", model]
     # 1M-context models otherwise compact only near 967K tokens.
     env = os.environ | {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000"}
     # Own process group, so a Godot server the worker left running dies with it.
@@ -104,16 +189,24 @@ def run_worker(args, n: int, log: Path) -> tuple[str, float, bool]:
             os.killpg(proc.pid, signal.SIGKILL)
             out, _ = proc.communicate()
         out += f"\n(timed out after {args.issue_minutes} min)"
-    log.write_text(out)
-    if args.harness == "pi":
-        return out.strip()[-1500:], 0.0, False
+    with log.open("a") as f:
+        f.write(out)
+    broke = bool(OUT_OF_MONEY.search(out))
+    if harness == "pi":
+        text, cost = pi_result(out)
+        return text[-1500:], cost, broke
     try:
         result = json.loads(out.strip().splitlines()[-1])
     except (json.JSONDecodeError, IndexError):
-        return out.strip()[-1500:], 0.0, False
+        return out.strip()[-1500:], 0.0, broke
     text = str(result.get("result", ""))
     limited = bool(result.get("is_error")) and "limit" in text.lower()
-    return text[-1500:], float(result.get("total_cost_usd") or 0), limited
+    return text[-1500:], float(result.get("total_cost_usd") or 0), broke or limited
+
+
+def tidy(to: str = "HEAD") -> None:
+    sh("git", "reset", "-q", "--hard", to)
+    sh("git", "clean", "-qfd")
 
 
 def note(n: int, title: str, outcome: str, detail: str) -> None:
@@ -124,25 +217,119 @@ def note(n: int, title: str, outcome: str, detail: str) -> None:
     sh("git", "commit", "-q", "-m", f"chore(overnight): progress for #{n}")
 
 
+def board(args) -> None:
+    if args.board:
+        out = subprocess.run([str(HERE / "board-sync.py"), "--project", str(args.board)],
+                             capture_output=True, text=True)
+        if out.returncode:
+            print(f"  board sync failed: {out.stderr.strip()}", flush=True)
+
+
+def stop_reason(args, tried: set[int], fails: int, cost: float, deadline: float) -> str | None:
+    now = datetime.now(timezone.utc)
+    if Path(".overnight/STOP").exists():
+        return "STOP file"
+    if time.time() > deadline:
+        return "out of time"
+    if args.off_peak and preflight.minutes_until_peak(now) is not None \
+            and preflight.minutes_until_peak(now) < args.off_peak_margin:
+        return "off-peak window ending"
+    if len(tried) >= args.max_issues:
+        return "issue limit"
+    if fails >= args.max_fails:
+        return f"{fails} parks in a row"
+    if args.key:
+        spent = gateway("GET", f"/key/info?key={args.key}")["info"]["spend"]
+        if spent >= args.budget - 0.05:
+            return f"budget (${spent:.2f} of ${args.budget:.2f})"
+    elif cost >= args.max_cost:
+        return f"cost limit (${cost:.2f})"
+    return None
+
+
+def work_issue(args, n: int, title: str, branch: str) -> tuple[bool, float, bool]:
+    """Plan, build, verify, review and maybe fix one issue. Returns kept, cost, out of money."""
+    log = Path(f".overnight/logs/{n}.log")
+    issue = sh("gh", "issue", "view", str(n))
+    base = sh("git", "rev-parse", "HEAD")
+    cost, plan = 0.0, ""
+    if args.reviewer != "none":
+        plan, spent, broke = run_agent(args, args.reviewer, args.reviewer_model, PLAN.format(issue=issue),
+                                       log, read_only=True)
+        cost += spent
+        tidy()
+        if broke:
+            return False, cost, True
+    prompt = WORKER.format(n=n) + (f"\nA planner suggests:\n\n{plan}\n" if plan else "")
+    message, spent, broke = run_agent(args, args.harness, args.model, prompt, log)
+    cost += spent
+    if broke:
+        tidy(base)
+        return False, cost, True
+    tidy()  # keep only what the worker committed
+    ok, tail = verify(log) if sh("git", "rev-parse", "HEAD") != base else (False, "no commits")
+    if ok and args.reviewer != "none":
+        diff = sh("git", "diff", f"{base}..HEAD")[:60000]
+        review, spent, broke = run_agent(args, args.reviewer, args.reviewer_model,
+                                         REVIEW.format(n=n, issue=issue, diff=diff), log, read_only=True)
+        cost += spent
+        tidy()
+        if not broke and review.strip().endswith("VERDICT: changes"):
+            message, spent, broke = run_agent(args, args.harness, args.model,
+                                              WORKER.format(n=n) + "\n" + FIX.format(findings=review), log)
+            cost += spent
+            tidy()
+            ok, tail = verify(log)
+            message += "\n\nAfter review:\n" + review[-800:]
+        if broke:
+            tidy(base)
+            return False, cost, True
+    if ok:
+        sh("gh", "issue", "edit", str(n), "--add-label", DONE, "--remove-label", WORKING)
+        sh("gh", "issue", "comment", str(n), "--body", f"Done on `{branch}`.\n\n{message}")
+        note(n, title, "done", message)
+    else:
+        tidy(base)
+        sh("gh", "issue", "edit", str(n), "--add-label", PARKED, "--remove-label", WORKING)
+        sh("gh", "issue", "comment", str(n), "--body",
+           f"Parked by the overnight run: ./verify.sh did not pass.\n\n{message}\n\n```\n{tail}\n```")
+        note(n, title, "parked", f"{message}\n\nverify.sh:\n\n```\n{tail}\n```")
+    return ok, cost, False
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument("--harness", choices=["claude", "pi"], required=True)
-    p.add_argument("--model", help="passed to the harness as --model")
+    p.add_argument("--harness", choices=["claude", "pi"], required=True, help="runs the workers")
+    p.add_argument("--model", help="the workers' model, passed to the harness as --model")
+    p.add_argument("--reviewer", choices=["claude", "pi", "none"], default="claude",
+                   help="plans each issue and reviews green work (default claude)")
+    p.add_argument("--reviewer-model")
     p.add_argument("--label", default="ready-for-agent", help="issues to work (default ready-for-agent)")
     p.add_argument("--hours", type=float, default=8, help="stop starting issues after this (default 8)")
     p.add_argument("--max-issues", type=int, default=20)
     p.add_argument("--max-fails", type=int, default=3, help="stop after this many parks in a row (default 3)")
-    p.add_argument("--issue-minutes", type=int, default=90, help="per-issue time limit (default 90)")
-    p.add_argument("--issue-usd", type=float, default=10, help="claude only: per-issue budget (default 10)")
-    p.add_argument("--max-cost", type=float, default=60, help="claude only: stop past this total (default 60)")
+    p.add_argument("--issue-minutes", type=int, default=90, help="time limit per agent run (default 90)")
+    p.add_argument("--issue-usd", type=float, default=10, help="claude only: budget per agent run (default 10)")
+    p.add_argument("--max-cost", type=float, default=60,
+                   help="stop past this total (default 60); pi is priced from DeepSeek's table")
+    p.add_argument("--budget", type=float,
+                   help="pi only: hard dollar cap, enforced by a LiteLLM key that only allows `cloud`")
+    p.add_argument("--off-peak", action="store_true",
+                   help="wait for DeepSeek's off-peak hours and stop before peak; weekends are all off-peak")
+    p.add_argument("--off-peak-margin", type=int, default=20,
+                   help="minutes before peak to stop starting issues (default 20)")
+    p.add_argument("--board", type=int, help="GitHub project number to keep in sync with board-sync.py")
     p.add_argument("--yolo", action="store_true",
-                   help="claude only: bypassPermissions instead of auto; only inside a container or VM")
+                   help="claude workers: bypassPermissions instead of auto; only inside a container or VM")
     args = p.parse_args()
+    args.key = None
 
     if not os.access("verify.sh", os.X_OK):
         sys.exit("no executable ./verify.sh here: run this from the repo root, after setting one up")
     if sh("git", "status", "--porcelain"):
         sys.exit("the working tree is not clean: commit or stash first")
+    if args.budget and args.harness != "pi":
+        sys.exit("--budget routes pi workers through LiteLLM; it does not cover claude workers")
     sh("gh", "auth", "status")
     Path(".overnight/logs").mkdir(parents=True, exist_ok=True)
     exclude = Path(sh("git", "rev-parse", "--git-path", "info/exclude"))
@@ -154,68 +341,59 @@ def main() -> None:
     ok, tail = verify(Path(".overnight/logs/baseline.log"))
     if not ok:
         sys.exit(f"./verify.sh fails before any work, so nothing can be judged:\n{tail}")
-    for label, colour in ((DONE, "0e8a16"), (PARKED, "d93f0b")):
+    for label, colour in ((DONE, "0e8a16"), (PARKED, "d93f0b"), (WORKING, "5319e7")):
         sh("gh", "label", "create", label, "--color", colour, "--force")
+    for stale in json.loads(sh("gh", "issue", "list", "--label", WORKING, "--json", "number")):
+        sh("gh", "issue", "edit", str(stale["number"]), "--remove-label", WORKING)
+
+    if args.off_peak:
+        while preflight.is_peak(datetime.now(timezone.utc)):
+            print("Peak hours: waiting for the off-peak window.", flush=True)
+            time.sleep(300)
+    deadline = time.time() + args.hours * 3600
     branch = "overnight/" + datetime.now().strftime("%Y-%m-%d-%H%M")
     sh("git", "checkout", "-q", "-b", branch)
+    if args.budget:
+        try:
+            args.key = gateway("POST", "/key/generate", {
+                "models": ["cloud"], "max_budget": args.budget, "key_alias": f"overnight-{branch}",
+                "duration": f"{int(args.hours * 60 + args.issue_minutes + 30)}m"})["key"]
+        except OSError as e:
+            sys.exit(f"LiteLLM would not mint a budget key at {GATEWAY} ({e}); it needs its database")
+    board(args)
 
-    deadline = time.time() + args.hours * 3600
     done: dict[int, str] = {}
     parked: dict[int, str] = {}
     tried: set[int] = set()
-    cost, fails, why = 0.0, 0, "queue empty"
-    while True:
-        if Path(".overnight/STOP").exists():
-            why = "STOP file"
-            break
-        if time.time() > deadline:
-            why = "out of time"
-            break
-        if len(tried) >= args.max_issues:
-            why = "issue limit"
-            break
-        if fails >= args.max_fails:
-            why = f"{fails} parks in a row"
-            break
-        if cost >= args.max_cost:
-            why = f"cost limit (${cost:.2f})"
-            break
-        issue = next_issue(args.label, tried, set(done))
-        if not issue:
-            break
-        n, title = issue["number"], issue["title"]
-        tried.add(n)
-        print(f"#{n} {title}", flush=True)
-        base = sh("git", "rev-parse", "HEAD")
-        log = Path(f".overnight/logs/{n}.log")
-        message, spent, limited = run_worker(args, n, log)
-        cost += spent
-        if limited:
-            sh("git", "reset", "-q", "--hard", base)
-            sh("git", "clean", "-qfd")
-            why = "usage limit"
-            break
-        sh("git", "reset", "-q", "--hard", "HEAD")  # keep only what the worker committed
-        sh("git", "clean", "-qfd")
-        ok, tail = verify(log) if sh("git", "rev-parse", "HEAD") != base else (False, "no commits")
-        if ok:
-            fails = 0
-            done[n] = title
-            sh("gh", "issue", "edit", str(n), "--add-label", DONE)
-            sh("gh", "issue", "comment", str(n), "--body", f"Done on `{branch}`.\n\n{message}")
-            note(n, title, "done", message)
-        else:
-            fails += 1
-            parked[n] = title
-            sh("git", "reset", "-q", "--hard", base)
-            sh("git", "clean", "-qfd")
-            sh("gh", "issue", "edit", str(n), "--add-label", PARKED)
-            sh("gh", "issue", "comment", str(n), "--body",
-               f"Parked by the overnight run: ./verify.sh did not pass.\n\n{message}\n\n```\n{tail}\n```")
-            note(n, title, "parked", f"{message}\n\nverify.sh:\n\n```\n{tail}\n```")
-        print(f"  {'done' if ok else 'parked'}" + (f", ${spent:.2f}" if spent else ""), flush=True)
+    cost, fails = 0.0, 0
+    try:
+        while not (why := stop_reason(args, tried, fails, cost, deadline)):
+            issue = next_issue(args.label, tried, set(done))
+            if not issue:
+                why = "queue empty"
+                break
+            n, title = issue["number"], issue["title"]
+            tried.add(n)
+            print(f"#{n} {title}", flush=True)
+            sh("gh", "issue", "edit", str(n), "--add-label", WORKING)
+            board(args)
+            kept, spent, broke = work_issue(args, n, title, branch)
+            cost += spent
+            if broke:
+                sh("gh", "issue", "edit", str(n), "--remove-label", WORKING)
+                why = "out of money"
+                break
+            (done if kept else parked)[n] = title
+            fails = 0 if kept else fails + 1
+            print(f"  {'done' if kept else 'parked'}, ${spent:.2f}", flush=True)
+            board(args)
+    finally:
+        if args.key:
+            cost = gateway("GET", f"/key/info?key={args.key}")["info"]["spend"]
+            gateway("POST", "/key/delete", {"keys": [args.key]})
+        board(args)
 
-    print(f"\nStopped: {why}. Branch {branch}" + (f", ${cost:.2f} spent." if cost else "."))
+    print(f"\nStopped: {why}. Branch {branch}, ${cost:.2f} spent.")
     for heading, items in (("Done", done), ("Parked", parked)):
         if items:
             print(f"{heading}:\n" + "\n".join(f"  #{k} {v}" for k, v in items.items()))

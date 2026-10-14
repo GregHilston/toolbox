@@ -157,8 +157,11 @@ Official rates, per 1M tokens
 | --- | ---: | ---: | ---: |
 | **V4 Pro** off-peak | $0.022 | $0.66 | $1.98 |
 | **V4 Pro** peak | $0.044 | $1.32 | $3.96 |
-| **V4 Flash** off-peak | $0.007 | $0.22 | $0.66 |
-| **V4 Flash** peak | $0.014 | $0.44 | $1.32 |
+| **Flash** off-peak | $0.003 | $0.15 | $0.60 |
+| **Flash** peak | $0.006 | $0.30 | $1.20 |
+
+Checked 2026-10-14. `deepseek-v4-flash` is a legacy name: DeepSeek now serves it
+with V4.1-Flash (`deepseek-flash`) at the Flash price.
 
 What pi still believes: Pro `$0.435 / $0.87 / $0.003625`, Flash
 `$0.14 / $0.28 / $0.0028`. The worst error is the **cache hit, 6x cheaper in

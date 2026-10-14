@@ -160,11 +160,12 @@ const EMPTY_USAGE: StatusUsage = {
  * entirely, making contextWindow and maxTokens ours to maintain by hand for a
  * model whose numbers move. Prices move more slowly than model metadata does.
  *
- * Source: api-docs.deepseek.com/quick_start/pricing/, read 2026-08-27.
+ * Source: api-docs.deepseek.com/quick_start/pricing/, read 2026-10-14.
  */
 export const PRICES: Record<string, { off: [number, number, number]; peak: [number, number, number] }> = {
 	"deepseek-v4-pro": { off: [0.022, 0.66, 1.98], peak: [0.044, 1.32, 3.96] },
-	"deepseek-v4-flash": { off: [0.007, 0.22, 0.66], peak: [0.014, 0.44, 1.32] },
+	"deepseek-flash": { off: [0.003, 0.15, 0.6], peak: [0.006, 0.3, 1.2] },
+	"deepseek-v4-flash": { off: [0.003, 0.15, 0.6], peak: [0.006, 0.3, 1.2] },
 };
 
 /**

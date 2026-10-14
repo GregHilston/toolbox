@@ -120,12 +120,11 @@ class TestPrices(unittest.TestCase):
             for off, peak in zip(rates["off"], rates["peak"]):
                 self.assertAlmostEqual(peak, off * 2, places=6, msg=model)
 
-    def test_pro_is_three_times_flash(self):
+    def test_pro_costs_at_least_three_times_flash(self):
         pro = pf.PRICES["deepseek-v4-pro"]["off"]
-        flash = pf.PRICES["deepseek-v4-flash"]["off"]
+        flash = pf.PRICES["deepseek-flash"]["off"]
         for p, f in zip(pro, flash):
-            self.assertAlmostEqual(p / f, 3.0, delta=0.15,
-                                   msg="the 3x gap is the whole Flash argument")
+            self.assertGreaterEqual(p / f, 3.0, msg="the gap is the whole Flash argument")
 
 
 if __name__ == "__main__":
