@@ -8,6 +8,7 @@ exists, with stand-ins that each do one thing a real worker has done.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import signal
@@ -17,6 +18,8 @@ import tempfile
 import textwrap
 import time
 import unittest
+from datetime import datetime, timezone
+from unittest import mock
 from pathlib import Path
 
 from _loader import load
@@ -315,6 +318,25 @@ class TestGate(LoopTest):
         self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
         self.assertIn("verify.sh", self.comments(1)[-1])
         self.assertNotIn("exit 0", (self.repo / "verify.sh").read_text())
+
+
+def utc(day: int, hour: int, minute: int = 0) -> datetime:
+    return datetime(2026, 10, day, hour, minute, tzinfo=timezone.utc)
+
+
+class TestOffPeak(unittest.TestCase):
+    # 2026-10-13 is a Tuesday: peak 01:00-04:00 and 06:00-10:00 UTC.
+    def test_waits_when_peak_opens_inside_the_margin(self):
+        self.assertTrue(loop.peak_soon(utc(13, 0, 45), 20), "20:45 EDT, a normal start time")
+        self.assertTrue(loop.peak_soon(utc(13, 2), 20))
+        self.assertFalse(loop.peak_soon(utc(13, 4), 20))
+        self.assertFalse(loop.peak_soon(utc(17, 2), 20), "Saturday")
+
+    def test_peak_pauses_the_run_rather_than_ending_it(self):
+        args = argparse.Namespace(off_peak=True, off_peak_margin=20, max_issues=20, max_fails=3,
+                                  spend=None, max_cost=60)
+        with mock.patch.object(loop.preflight, "minutes_until_peak", return_value=5):
+            self.assertIsNone(loop.stop_reason(args, set(), 0, 0.0, time.time() + 3600))
 
 
 class TestPiEvents(unittest.TestCase):
