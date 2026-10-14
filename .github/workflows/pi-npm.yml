@@ -1,0 +1,45 @@
+name: pi npm Locks
+
+# Dependabot resolves peer deps more loosely than `npm ci`, so it can
+# merge a lock that only fails at `just dr`, where activation just warns.
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "dot/pi/npm/**"
+      - "dot/pi/.pi/agent/extensions/*/package*.json"
+      - "dot/pi/extensions-available/*/package*.json"
+      - ".github/workflows/pi-npm.yml"
+  pull_request:
+    paths:
+      - "dot/pi/npm/**"
+      - "dot/pi/.pi/agent/extensions/*/package*.json"
+      - "dot/pi/extensions-available/*/package*.json"
+      - ".github/workflows/pi-npm.yml"
+
+jobs:
+  npm-ci:
+    name: npm ci (${{ matrix.dir }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Same list as .github/dependabot.yml.
+        dir:
+          - dot/pi/npm
+          - dot/pi/.pi/agent/extensions/web-fetch
+          - dot/pi/.pi/agent/extensions/bash-guard
+          - dot/pi/extensions-available/sandbox
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+
+      - name: npm ci
+        working-directory: ${{ matrix.dir }}
+        run: npm ci --no-audit --no-fund
