@@ -348,7 +348,7 @@ def stop_reason(args, tried: set[int], fails: int, cost: float, deadline: float)
         spent = args.spend.read()
         if spent >= args.budget - 0.05:
             return f"budget (${spent:.2f} of ${args.budget:.2f})"
-    elif cost >= args.max_cost:
+    if cost >= args.max_cost:
         return f"cost limit (${cost:.2f})"
     return None
 
@@ -537,11 +537,10 @@ def main() -> None:
                 break
             board(args)
     finally:
-        if args.spend:
-            cost = args.spend.read()
         board(args)
 
-    print(f"\nStopped: {why}. Branch {branch}, ${cost:.2f} spent.")
+    gateway = f" (the gateway counted ${args.spend.read():.2f})" if args.spend else ""
+    print(f"\nStopped: {why}. Branch {branch}, ${cost:.2f} spent{gateway}.")
     for heading, items in (("Done", done), ("Parked", parked)):
         if items:
             print(f"{heading}:\n" + "\n".join(f"  #{k} {v}" for k, v in items.items()))
