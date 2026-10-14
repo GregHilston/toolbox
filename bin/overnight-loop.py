@@ -40,6 +40,8 @@ _spec.loader.exec_module(preflight)
 
 DONE, PARKED, WORKING = "overnight:done", "overnight:parked", "overnight:working"
 GATEWAY = os.environ.get("LITELLM_URL", "https://llm.grehg2.xyz")
+# A worker that loosens the gate would pass it, so changing one parks the issue.
+GATE = ("verify.sh", "tests/baseline_count")
 OUT_OF_MONEY = re.compile(r"Budget has been exceeded|budget_exceeded|Exceeded budget|Insufficient Balance"
                           r"|usage limit|hit your limit|Credit balance is too low", re.I)
 
@@ -162,6 +164,15 @@ def verify(args, log: Path) -> tuple[bool, str]:
     with log.open("a") as f:
         f.write(f"\n--- verify.sh exit {code} ---\n{text}")
     return code == 0, "\n".join(text.strip().splitlines()[-20:])
+
+
+def check(args, base: str, log: Path) -> tuple[bool, str]:
+    """Judge what was committed since base."""
+    if sh("git", "rev-parse", "HEAD") == base:
+        return False, "no commits"
+    if changed := sh("git", "diff", "--name-only", base, "HEAD", "--", *GATE).split():
+        return False, f"the worker changed {', '.join(changed)}, which only a human may change"
+    return verify(args, log)
 
 
 def unblocked(n: int, finished: set[int]) -> bool:
@@ -332,7 +343,7 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[bool, float, bool
         tidy(base)
         return False, cost, True
     tidy()  # keep only what the worker committed
-    ok, tail = verify(args, log) if sh("git", "rev-parse", "HEAD") != base else (False, "no commits")
+    ok, tail = check(args, base, log)
     if ok and args.reviewer != "none":
         diff = sh("git", "diff", f"{base}..HEAD")[:60000]
         run = run_agent(args, args.reviewer, args.reviewer_model,
@@ -345,7 +356,7 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[bool, float, bool
             message, broke = run.text, run.broke
             cost += run.cost
             tidy()
-            ok, tail = verify(args, log)
+            ok, tail = check(args, base, log)
             message += "\n\nAfter review:\n" + review[-800:]
         if broke:
             tidy(base)
@@ -358,8 +369,8 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[bool, float, bool
         tidy(base)
         sh("gh", "issue", "edit", str(n), "--add-label", PARKED, "--remove-label", WORKING)
         sh("gh", "issue", "comment", str(n), "--body",
-           f"Parked by the overnight run: ./verify.sh did not pass.\n\n{message}\n\n```\n{tail}\n```")
-        note(n, title, "parked", f"{message}\n\nverify.sh:\n\n```\n{tail}\n```")
+           f"Parked by the overnight run.\n\n{message}\n\n```\n{tail}\n```")
+        note(n, title, "parked", f"{message}\n\n```\n{tail}\n```")
     return ok, cost, False
 
 

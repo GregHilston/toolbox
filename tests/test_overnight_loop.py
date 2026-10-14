@@ -309,6 +309,14 @@ class TestVerify(LoopTest):
         self.assertIn("overnight:done", self.labels(2))
 
 
+class TestGate(LoopTest):
+    def test_a_worker_that_edits_verify_sh_is_parked(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="gate")
+        self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
+        self.assertIn("verify.sh", self.comments(1)[-1])
+        self.assertNotIn("exit 0", (self.repo / "verify.sh").read_text())
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})
