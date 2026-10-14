@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import signal
 import subprocess
@@ -232,6 +233,22 @@ class TestPiAsk(unittest.TestCase):
             first.wait(timeout=30)
             first.stdin.close()
             first.stdout.close()
+
+    def test_a_follow_up_without_dir_runs_where_the_first_turn_did(self):
+        work = Path(self.tmp.name) / "work"
+        work.mkdir()
+        argv = Path(self.tmp.name) / "argv.json"
+        self.ask("--session", "t9", "--dir", str(work), "first")
+        out = self.ask("--session", "t9", "second", FAKE_PI_ARGV=str(argv))
+        self.assertEqual(out.returncode, 0, out.stdout)
+        self.assertEqual(Path(json.loads(argv.read_text())["cwd"]).resolve(), work.resolve())
+
+    def test_a_follow_up_from_another_dir_is_refused(self):
+        self.ask("--session", "t9", "--dir", self.tmp.name, "first")
+        out = self.ask("--session", "t9", "--dir", "/", "second")
+        self.assertEqual(out.returncode, 2, out.stdout)
+        self.assertIn("runs in", out.stdout)
+        self.assertNotIn("given second", out.stdout)
 
     def test_kills_a_child_that_ignores_sigterm_after_pi_exits(self):
         out = self.ask("--session", "t7", "--dir", self.tmp.name, "hi", FAKE_PI_ORPHAN="1")

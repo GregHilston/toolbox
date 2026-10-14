@@ -23,7 +23,6 @@ import json
 import os
 import re
 import select
-import shlex
 import signal
 import subprocess
 import sys
@@ -177,7 +176,7 @@ def main() -> int:
     global _armed
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--session", required=True, help="name; reuse it to follow up")
-    p.add_argument("--dir", default=".", help="worker cwd (sessions are keyed by it)")
+    p.add_argument("--dir", help="worker cwd; a follow-up reuses the first turn's (default .)")
     p.add_argument("--model", default="cloud", help="LiteLLM alias (default cloud)")
     p.add_argument("--idle", type=int, default=300, help="kill after N silent seconds")
     p.add_argument("prompt", help="the question, or @file to read it from")
@@ -185,8 +184,6 @@ def main() -> int:
     if not SESSION_NAME.fullmatch(args.session):
         p.error("--session takes letters, digits, '.', '_' and '-', starting and ending alphanumeric")
 
-    if not Path(args.dir).is_dir():
-        p.error(f"--dir {args.dir} is not a directory")
     prompt = args.prompt
     if prompt.startswith("@"):
         try:
@@ -202,6 +199,19 @@ def main() -> int:
         print(f"pi-ask.py: session {args.session} is already running; wait for it, or use another --session",
               file=sys.stderr)
         return 5
+    # pi keys sessions by cwd: another dir silently starts afresh.
+    saved = LOG_DIR / f"{args.session}.dir"
+    first_turn = not saved.exists()
+    workdir = None if first_turn else Path(saved.read_text().strip())
+    if args.dir is not None:
+        chosen = Path(args.dir).expanduser().resolve()
+        if workdir and chosen != workdir:
+            p.error(f"session {args.session} runs in {workdir}; leave --dir off, or start a new --session")
+        workdir = chosen
+    workdir = workdir or Path.cwd()
+    if not workdir.is_dir():
+        p.error(f"--dir {workdir} is not a directory")
+    saved.write_text(f"{workdir}\n")
     log = LOG_DIR / f"{args.session}.jsonl"
     since = log.stat().st_size if log.exists() else 0
 
@@ -215,7 +225,7 @@ def main() -> int:
         signal.signal(sig, on_signal)
     try:
         # DEVNULL: pi reads piped stdin to EOF first.
-        proc = subprocess.Popen(cmd, cwd=args.dir, env=env, stdin=subprocess.DEVNULL,
+        proc = subprocess.Popen(cmd, cwd=workdir, env=env, stdin=subprocess.DEVNULL,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                 start_new_session=True)
     except FileNotFoundError:
@@ -245,7 +255,7 @@ def main() -> int:
     print(text or "(no answer)")
     if error:
         print(f"=== the last turn failed: {error} ===")
-    print(f"=== follow up: pi-ask.py --session {args.session} --dir {shlex.quote(str(Path(args.dir).resolve()))} \"...\" ===")
+    print(f"=== follow up: pi-ask.py --session {args.session} \"...\" (it runs in {workdir}) ===")
     if _caught:
         print(f"=== stopped by {signal.Signals(_caught).name} ===")
         return 128 + _caught
