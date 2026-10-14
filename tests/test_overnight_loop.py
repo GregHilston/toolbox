@@ -140,6 +140,9 @@ FAKE_PI = textwrap.dedent('''\
         print(json.dumps({"type": "tool_execution_end", "toolName": "bash",
                           "result": {"content": [{"type": "text", "text": os.environ["FAKE_ISSUE_TEXT"]}]}}))
     NAME = "pi"
+    config = ".pi/extensions/pi-permission-system/config.json"
+    with open(os.environ["FAKE_LOG"] + ".pi-config", "a") as f:
+        f.write((open(config).read() if os.path.exists(config) else "missing\\n"))
     role, text = act(NAME, prompt)
     for i in range(3):
         print(json.dumps({"type": "message_update", "delta": "x" * 50}))
@@ -384,9 +387,13 @@ class TestPiWrites(LoopTest):
 
     def test_pi_workers_may_write_and_git_never_sees_it(self):
         out = self.run_loop("--harness", "pi", "--reviewer", "none")
-        config = json.loads((self.repo / self.override).read_text())
-        self.assertEqual(config["permission"]["write"], {"*": "allow"}, out.stderr)
+        seen = Path(str(self.agent_log) + ".pi-config").read_text().splitlines()
+        self.assertEqual(json.loads(seen[-1])["permission"]["write"], {"*": "allow"}, out.stderr)
         self.assertEqual(self.git("status", "--porcelain"), "")
+
+    def test_the_override_goes_when_the_run_ends(self):
+        self.run_loop("--harness", "pi", "--reviewer", "none")
+        self.assertFalse((self.repo / ".pi").exists(), "interactive pi here would write without asking")
 
     def test_a_repo_that_commits_its_own_config_keeps_it(self):
         (self.repo / self.override).parent.mkdir(parents=True)
