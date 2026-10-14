@@ -484,6 +484,28 @@ class TestReviewerLimit(LoopTest):
         self.assertIn("overnight:done", self.labels(1))
 
 
+class TestBranch(LoopTest):
+    def test_refuses_to_start_off_the_default_branch(self):
+        self.git("checkout", "-q", "-b", "overnight/last-night")
+        out = self.run_loop("--harness", "pi", "--reviewer", "none")
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn("not main", out.stderr)
+        self.assertEqual(self.agent_log.read_text(), "")
+
+    def test_base_names_another_start(self):
+        self.git("checkout", "-q", "-b", "dev")
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", "--base", "dev")
+        self.assertIn("overnight:done", self.labels(1), out.stderr)
+
+    def test_a_worker_that_switches_branch_is_parked(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="branch")
+        self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
+        self.assertIn("feat/x", self.comments(1)[-1])
+        self.assertTrue(self.git("branch", "--show-current").startswith("overnight/"))
+        self.assertIn("overnight:done", self.labels(2))
+        self.assertIn("feat: issue 2", self.git("log", "--format=%s"))
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})
