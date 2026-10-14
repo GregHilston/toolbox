@@ -164,11 +164,68 @@ def run_group(cmd: list[str], minutes: float, stop: int = signal.SIGINT, **popen
         proc.wait()
 
 
+def seconds(etime: str) -> int:
+    """ps's [[dd-]hh:]mm:ss elapsed time."""
+    days, _, clock = etime.rpartition("-")
+    h, m, s = ([0, 0] + [int(x) for x in clock.split(":")])[-3:]
+    return int(days or 0) * 86400 + h * 3600 + m * 60 + s
+
+
+def cwds(pids: list[int]) -> dict[int, str]:
+    if Path("/proc/self/cwd").exists():
+        found = {}
+        for pid in pids:
+            try:
+                found[pid] = os.readlink(f"/proc/{pid}/cwd")
+            except OSError:
+                pass
+        return found
+    out = subprocess.run(["lsof", "-a", "-d", "cwd", "-Fn", "-p", ",".join(map(str, pids))],
+                         capture_output=True, text=True).stdout
+    found, pid = {}, 0
+    for line in out.splitlines():
+        if line.startswith("p"):
+            pid = int(line[1:])
+        elif line.startswith("n"):
+            found[pid] = line[1:]
+    return found
+
+
+def kill_leftovers(since: float) -> None:
+    """Kill terminal-less processes started since `since` that run in this repo.
+
+    pi's bash tool starts each command in a session of its own, so a server a
+    worker backgrounded escapes its group, and macOS hides other processes'
+    environments, so an environment tag cannot find it either. Processes Greg
+    starts have a terminal.
+    """
+    window = time.time() - since + 1  # etime is whole seconds
+    rows = [row.split() for row in sh("ps", "-ax", "-o", "pid=,ppid=,etime=,tty=").splitlines()]
+    parent = {int(pid): int(ppid) for pid, ppid, _, _ in rows}
+    # With that slack, the shell that started this loop can look as young as
+    # the agent.
+    mine, pid = set(), os.getpid()
+    while pid > 1:
+        mine.add(pid)
+        pid = parent.get(pid, 0)
+    young = [int(pid) for pid, _, etime, tty in rows
+             if seconds(etime) <= window and tty in ("?", "??") and int(pid) not in mine]
+    root = str(Path.cwd().resolve())
+    for pid, cwd in cwds(young).items() if young else ():
+        if cwd == root or cwd.startswith(root + os.sep):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+
 def verify(args, log: Path) -> tuple[bool, str]:
     out = Path(".overnight/verify.out")
+    started = time.time()
     with out.open("w") as f:
         code = run_group(["./verify.sh"], args.verify_minutes, signal.SIGKILL,
                          stdin=subprocess.DEVNULL, stdout=f, stderr=subprocess.STDOUT)
+    kill_leftovers(started)
     text = out.read_text(errors="replace")
     if code is None:
         text += f"\n./verify.sh timed out after {args.verify_minutes:g} min"
@@ -269,14 +326,17 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         cmd += ["--", prompt]
     if model:
         cmd[1:1] = ["--model", model]
-    # 1M-context models otherwise compact only near 967K tokens.
-    env = os.environ | {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000"}
+    # 1M-context models otherwise compact only near 967K tokens. claude -p
+    # waits for background tasks, so a backgrounded server held it open.
+    env = os.environ | {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000", "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1"}
     stdout = Path(".overnight/agent.out")
     # stdin=DEVNULL: pi reads a piped stdin to EOF before anything else.
     # SIGINT on timeout lets claude end the turn and print its result.
+    started = time.time()
     with stdout.open("w") as out, log.open("a") as err:
         code = run_group(cmd, args.issue_minutes, signal.SIGINT, stdin=subprocess.DEVNULL,
                          stdout=out, stderr=err, env=env)
+    kill_leftovers(started)
     out = stdout.read_text(errors="replace")
     with log.open("a") as f:
         f.write(out + (f"\n(timed out after {args.issue_minutes:g} min)\n" if code is None else ""))
