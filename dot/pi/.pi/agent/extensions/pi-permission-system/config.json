@@ -2,14 +2,12 @@
   "permission": {
     "*": "allow",
     "external_directory": {
-      "*": "ask",
-      "~/Git/toolbox/*": "allow",
-      "~/Git/home-lab/*": "allow",
-      "~/.pi/agent/*": "allow",
-      "/opt/homebrew/Cellar/pi-coding-agent/*": "allow"
+      "*": "ask"
     },
     "external_directory_read": {
-      "~/Git/*": "allow"
+      "~/Git/*": "allow",
+      "~/.pi/agent/*": "allow",
+      "/opt/homebrew/Cellar/pi-coding-agent/*": "allow"
     },
     "path": {
       "*": "allow",

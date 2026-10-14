@@ -7,13 +7,15 @@ rather than damage.
 `config.json` is committed and carries no secrets. The extension itself is
 declared in `nixos/modules/programs/tui/pi.nix`.
 
-- `external_directory` — the two repos that are two halves of one system stay
-  allowed, matching the cross-repo access added earlier. Everything else asks.
-- `external_directory_read` allows reading anything under `~/Git` without a
-  prompt. A headless worker, such as `pi-ask.py`'s, has nobody to answer a
-  prompt, so every read outside its `--dir` was refused and it answered blind.
-  Writes outside the working tree still ask, which a headless worker can't, so
-  they stay blocked.
+- `external_directory` asks before any access outside the session's working
+  tree. Writes there always ask, so a headless worker, such as `pi-ask.py`'s,
+  which has nobody to answer, cannot `edit` another repo, the live dotfiles in
+  `~/Git/toolbox`, or `~/.pi/agent` (where this config and the extensions
+  live). An interactive session asks before editing them from another repo.
+  This extension does not check what `bash` writes.
+- `external_directory_read` allows reading anything under `~/Git`, plus
+  `~/.pi/agent` and pi's own install, without a prompt. A headless worker
+  refused every read outside its `--dir` and answered blind.
 - `path` denies `*.env`, `~/.ssh/*`, and the Reddit cookie — protection moonpi
   never offered.
 - `write: ask` is the one real gap left by dropping moonpi: pi's `write` can
