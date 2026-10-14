@@ -36,11 +36,15 @@ did; `pi-ask.py` handles both.
 - **Write a long prompt to a file in one call,** then pass `@file` in the next.
   Put `--` before a prompt that starts with `-`.
 - **Exit codes:** 0 answered; 1 the turn failed (the error prints after the
-  answer); 2 bad arguments, or started from inside a pi worker; 3 silent for
+  answer); 2 it could not start: bad arguments, a prompt over the OS argument
+  limit, the session's dir gone, pi not on `PATH`, or started from inside a pi
+  worker; 3 silent for
   `--idle` seconds (default 300) and killed; 4 stopped past `--max-cost`
   (default $0.50) or `--max-turns` (default 100); 5 that session is already
   running, so wait for it. 129, 130 and 143 mean it was interrupted. After 3
-  or 4, ask again with the same name to carry on.
+  or 4, ask again with the same name to carry on. Stop it with Ctrl-C or a
+  plain `kill`, never `kill -9`: that leaves pi running on its own with no
+  cost cap.
 - **It runs on the gateway's `cloud` model** (DeepSeek Flash), capped at $4 a
   day. The answer header gives two figures: the cost at DeepSeek's prices, which
   `--max-cost` uses, and the larger one the gateway counts against that cap,
