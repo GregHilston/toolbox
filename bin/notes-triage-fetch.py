@@ -13,6 +13,7 @@ Sources, combined if several are given:
 
 Each URL is classified and fetched in parallel:
   youtube        transcript via the youtube-transcript skill (yt-dlp)
+  instagram      speech-to-text on moria via instagram-transcript.py
   reddit-comment the comment plus its parents and replies, via fetch_reddit.py
   reddit / hn    the thread via fetch-thread.py
   article        Defuddle (same extractor as Obsidian Web Clipper)
@@ -44,9 +45,10 @@ from fetch_hn import fetch_item  # noqa: E402
 from fetch_reddit import Comment, fetch_thread as fetch_reddit_thread, format_thread  # noqa: E402
 
 YT_SCRIPT = Path(__file__).resolve().parent / "youtube-transcript.py"
+IG_SCRIPT = Path(__file__).resolve().parent / "instagram-transcript.py"
 OUT_ROOT = Path.home() / ".cache/notes-triage"
 
-CAP = {"youtube": 7000, "reddit-comment": 3000, "reddit": 4500, "hn": 4500, "article": 3500}
+CAP = {"youtube": 7000, "instagram": 7000, "reddit-comment": 3000, "reddit": 4500, "hn": 4500, "article": 3500}
 SKIP_PREFIXES = ("about:", "moz-extension:", "chrome:", "file:")
 SEARCH_PAGE = re.compile(r"https?://(www\.)?(google\.[a-z.]+/search|duckduckgo\.com/\?|bing\.com/search)")
 
@@ -110,6 +112,8 @@ def classify(url: str) -> str:
     host = u.netloc.lower().removeprefix("www.").removeprefix("old.").removeprefix("m.")
     if host in ("youtube.com", "youtu.be") and (u.path.startswith("/watch") or host == "youtu.be"):
         return "youtube"
+    if host == "instagram.com" and u.path.startswith(("/reel/", "/reels/", "/p/")):
+        return "instagram"
     if host == "news.ycombinator.com" and u.path == "/item":
         return "hn"
     if host == "reddit.com" and "/comments/" in u.path:
@@ -133,6 +137,12 @@ def fetch_youtube(it: Item) -> None:
     data = json.loads(_run(["python3", str(YT_SCRIPT), it.url], timeout=180))
     it.title = data.get("title") or it.title
     it.body = data.get("transcript", "")
+
+
+def fetch_instagram(it: Item) -> None:
+    data = json.loads(_run([str(IG_SCRIPT), it.url], timeout=660))
+    it.meta = {k: data[k] for k in ("author", "published", "caption") if data.get(k)}
+    it.body = data["transcript"]
 
 
 def fetch_thread(it: Item) -> None:
@@ -194,6 +204,7 @@ def fetch_article(it: Item) -> None:
 
 FETCHERS = {
     "youtube": fetch_youtube,
+    "instagram": fetch_instagram,
     "hn": fetch_hn,
     "reddit": fetch_thread,
     "reddit-comment": fetch_reddit_comment,
