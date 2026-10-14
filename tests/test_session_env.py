@@ -1,4 +1,4 @@
-"""The SessionStart hook that gives Claude Code's Bash tool the toolbox PATH."""
+"""The SessionStart hook that gives Claude Code's Bash tool the toolbox PATH and gateway keys."""
 
 from __future__ import annotations
 
@@ -37,11 +37,20 @@ class TestSessionEnv(unittest.TestCase):
         self.run_hook()
         self.assertEqual(self.env_file.read_text().count("export PATH"), 1)
 
-    def test_names_the_secrets_file_without_copying_it(self):
+    def test_exports_the_gateway_keys_and_no_other_secret(self):
+        toolbox = Path(self.tmp.name) / "toolbox"
+        (toolbox / "bin").mkdir(parents=True)
+        (toolbox / "nixos" / "secrets").mkdir(parents=True)
+        (toolbox / "nixos" / "secrets" / ".env").write_text(
+            "LITELLM_API_KEY=lite\nexport DEEPSEEK_API_KEY='deep seek'\nFROM_EMAIL_ADDRESS_PASSWORD=mail\n")
+        self.env["TOOLBOX_HOME"] = str(toolbox)
         self.run_hook()
-        text = self.env_file.read_text()
-        self.assertIn("nixos/secrets/.env", text)
-        self.assertNotIn("API_KEY", text)
+        out = subprocess.run(["/bin/sh", "-c", f". {self.env_file}; env"],
+                             env={"PATH": "/usr/bin:/bin"}, capture_output=True, text=True).stdout
+        self.assertIn("LITELLM_API_KEY=lite\n", out)
+        self.assertIn("DEEPSEEK_API_KEY=deep seek\n", out)
+        self.assertNotIn("mail", out)
+        self.assertNotIn("lite", self.env_file.read_text(), "the value stays in its gitignored file")
 
     def test_does_nothing_outside_a_session_start(self):
         env = dict(self.env)
