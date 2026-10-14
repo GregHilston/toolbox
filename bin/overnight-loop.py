@@ -179,15 +179,14 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         else:
             cmd += ["--permission-mode", "bypassPermissions" if args.yolo else "auto"]
     else:
-        cmd = ["pi", "-p", "--approve", "--no-session", "--mode", "json", prompt]
+        # Disabled mode still blocks catastrophes but lets workers commit.
+        cmd = ["pi", "-p", "--approve", "--no-session", "--mode", "json", "--bash-guard-disabled"]
         if read_only:
             cmd += ["--tools", "read,grep,find,ls"]
         if args.budget:
             cmd += ["--provider", "litellm"]
             model = "cloud"
-        # Last: pi reads the word after an extension flag as its value. Without it
-        # bash-guard blocks every pipe and git command in a session with no UI.
-        cmd += ["--bash-guard-auto-allow"]
+        cmd += ["--", prompt]
     if model:
         cmd[1:1] = ["--model", model]
     # 1M-context models otherwise compact only near 967K tokens.

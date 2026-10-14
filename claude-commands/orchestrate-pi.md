@@ -403,18 +403,20 @@ cd /abs/path/to/worktrees/issue-16 && \
   --approve \
   --session-id issue-16 \
   --mode json \
-  -p "$(cat /abs/path/to/.claude/pi-prompts/issue-16.md)" \
-  --bash-guard-auto-allow < /dev/null 2>&1 \
+  --bash-guard-disabled \
+  -p -- "$(cat /abs/path/to/.claude/pi-prompts/issue-16.md)" < /dev/null 2>&1 \
   | pi-narrate.py --label issue-16 \
       --raw /abs/path/to/.claude/pi-logs/issue-16.jsonl \
       --alerts /abs/path/to/.claude/pi-logs/alerts.log
 ```
 
-Keep the last two pieces. `< /dev/null`, because pi reads a piped stdin to EOF
-before its first API call, so an inherited open one hangs the worker silently.
-`--bash-guard-auto-allow`, because a worker has no UI, and without it bash-guard
-blocks every pipe, redirect and git command. It goes after the prompt, since pi
-reads the word after an extension flag as the flag's value.
+Keep three pieces. `< /dev/null`, because pi reads a piped stdin to EOF before
+its first API call, so an inherited open one hangs the worker silently.
+`--bash-guard-disabled`, because a worker has no UI: without it bash-guard blocks
+every pipe, redirect and git command, while disabled mode still blocks the
+catastrophic ones. (`--bash-guard-auto-allow` instead lifts every block.) And
+`--` before the prompt, because a prompt starting with `-` or `---` frontmatter is
+otherwise parsed as an option.
 
 Workers inherit the lean tool set from `dot/pi/CLAUDE.md` → "Lazy tools":
 no `reddit_*` and no `subagent_*` tools, which is ~4,300 tokens less on every
@@ -803,8 +805,8 @@ that changed direction mid-run has the reason recorded beside it.
 To push back on a worker after it has settled, without re-sending its context:
 
 ```bash
-cd <worktree> && pi --approve --continue \
-  -p 'The GUT suite fails on <file>. Fix it and re-run; do not disable the test.'
+cd <worktree> && pi --approve --continue --bash-guard-disabled \
+  -p -- 'The GUT suite fails on <file>. Fix it and re-run; do not disable the test.' < /dev/null
 ```
 
 **A resumed worker cannot be steered.** `pi-rpc.py run` opens a control socket;
