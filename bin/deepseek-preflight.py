@@ -63,6 +63,18 @@ def is_peak(when: dt.datetime) -> bool:
     return any(start <= u.hour < end for start, end in PEAK_WINDOWS_UTC)
 
 
+def turn_cost(model: str | None, usage: dict, when: dt.datetime) -> float:
+    """What one pi turn cost, at the rate in force when it ran.
+
+    `usage` is pi's per-message usage. A model missing from PRICES, such as the
+    LiteLLM gateway's `cloud` alias, is priced as Flash, which is what it serves.
+    """
+    rates = PRICES.get(model or "", PRICES["deepseek-flash"])
+    hit, miss, output = rates["peak" if is_peak(when) else "off"]
+    return (usage.get("cacheRead", 0) * hit + usage.get("input", 0) * miss
+            + usage.get("output", 0) * output) / 1e6
+
+
 def minutes_until_peak(when: dt.datetime) -> int | None:
     """Minutes until the next peak window opens, or None if none within a week.
 
