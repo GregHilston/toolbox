@@ -249,8 +249,10 @@ def verify(args, log: Path) -> tuple[bool, str]:
 
 def verdict(review: str) -> str | None:
     """The review's last verdict, read through markdown emphasis and punctuation."""
-    found = re.findall(r"VERDICT\W*(approve|changes)\b", review, re.I)
-    return found[-1].lower() if found else None
+    found = re.findall(r"VERDICT\W*(approved?|changes?)\b", review, re.I)
+    if not found:
+        return None
+    return "approve" if found[-1].lower().startswith("approve") else "changes"
 
 
 def check(args, base: str, branch: str, log: Path) -> tuple[bool, str]:

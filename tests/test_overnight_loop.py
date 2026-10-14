@@ -476,6 +476,10 @@ class TestVerdict(LoopTest):
         self.assertEqual(loop.verdict("VERDICT: changes\nOn reflection, VERDICT: approve"), "approve")
         self.assertIsNone(loop.verdict("Reached maximum turns"))
 
+    def test_reads_approved_and_change_as_verdicts(self):
+        self.assertEqual(loop.verdict("VERDICT: Approved"), "approve")
+        self.assertEqual(loop.verdict("VERDICT: change requested"), "changes")
+
     def test_a_verdict_in_bold_gets_its_fix_pass(self):
         self.run_loop("--harness", "pi", "--reviewer", "claude", FAKE_REVIEW="1. add a test\n**VERDICT: changes**")
         self.assertIn("pi fix", self.roles())
