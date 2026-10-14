@@ -438,6 +438,10 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float
     """
     log = Path(f".overnight/logs/{n}.log")
     issue = sh("gh", "issue", "view", str(n))
+    # Without a terminal, --comments prints the comments alone. They say why
+    # an earlier run parked the issue.
+    if comments := sh("gh", "issue", "view", str(n), "--comments"):
+        issue += "\n\nComments:\n\n" + comments
     base = sh("git", "rev-parse", "HEAD")
     cost, plan = 0.0, ""
     if args.reviewer != "none":
