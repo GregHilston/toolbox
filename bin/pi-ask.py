@@ -46,6 +46,9 @@ narrate = _load("_pi_narrate", "pi-narrate.py")
 preflight = _load("_preflight", "deepseek-preflight.py")
 
 LOG_DIR = Path.home() / ".cache" / "pi-ask"
+KEEP_LOGS_DAYS = 30
+# Streaming deltas: most of the log, needed by nothing.
+UNLOGGED = {"message_update", "tool_execution_update"}
 
 
 # pi's own rule for session ids.
@@ -118,12 +121,13 @@ def pump(proc: subprocess.Popen, log: Path, narrator, tally: Tally, args) -> str
                     raw.write(b"\n")
 
         def handle(line: bytes) -> str | None:
-            raw.write(line + b"\n")
-            raw.flush()
             try:
                 event = json.loads(line)
             except ValueError:
                 event = None
+            if not isinstance(event, dict) or event.get("type") not in UNLOGGED:
+                raw.write(line + b"\n")
+                raw.flush()
             if isinstance(event, dict):
                 tally.feed(event)
             narrator.feed(line.decode("utf-8", errors="replace"))
@@ -155,6 +159,17 @@ def pump(proc: subprocess.Popen, log: Path, narrator, tally: Tally, args) -> str
         if pending.strip():
             handle(pending)
     return None
+
+
+def prune_logs() -> None:
+    """Delete logs untouched for KEEP_LOGS_DAYS. Keep .dir: pi keeps the session."""
+    cutoff = time.time() - KEEP_LOGS_DAYS * 86400
+    for path in [*LOG_DIR.glob("*.jsonl"), *LOG_DIR.glob("*.log")]:
+        try:
+            if path.stat().st_mtime < cutoff:
+                path.unlink()
+        except OSError:
+            pass
 
 
 def group_alive(proc: subprocess.Popen) -> bool:
@@ -231,6 +246,7 @@ def main() -> int:
         except (OSError, UnicodeDecodeError) as e:
             p.error(f"cannot read the prompt file {prompt[1:]}: {e}")
     LOG_DIR.mkdir(parents=True, exist_ok=True)
+    prune_logs()
     # Two runs at once fork pi's session and mix their logs.
     lock = (LOG_DIR / f"{args.session}.lock").open("w")
     try:

@@ -48,6 +48,7 @@ FAKE_PI = textwrap.dedent('''\
             f.write(f"{os.getpid()} {child.pid}")
         time.sleep(float(env("FAKE_PI_SLEEP", "0")))
     say({"type": "turn_start"})
+    say({"type": "message_update", "assistantMessageEvent": {"type": "text_end", "content": "thinking aloud"}})
     say({"type": "tool_execution_start", "toolName": "read", "toolCallId": "1", "args": {"path": "notes.md"}})
     say(message("" if env("FAKE_PI_EMPTY") else "the answer, given " + sys.argv[-1], env("FAKE_PI_STOP", "stop")))
     if env("FAKE_PI_TAIL"):
@@ -294,6 +295,25 @@ class TestPiAsk(unittest.TestCase):
         # On a follow-up it means pi lost the conversation.
         again = self.ask("--session", "t16", "hi", FAKE_PI_STDERR=missing)
         self.assertIn("No project session", again.stdout)
+
+    def test_leaves_streaming_deltas_out_of_the_event_log(self):
+        self.ask("--session", "t17", "--dir", self.tmp.name, "hi")
+        logs = Path(self.tmp.name) / ".cache" / "pi-ask"
+        self.assertNotIn("message_update", (logs / "t17.jsonl").read_text())
+        self.assertIn("message_end", (logs / "t17.jsonl").read_text())
+        self.assertIn("thinking aloud", (logs / "t17.log").read_text())
+
+    def test_prunes_logs_untouched_for_a_month(self):
+        logs = Path(self.tmp.name) / ".cache" / "pi-ask"
+        logs.mkdir(parents=True)
+        old = time.time() - 31 * 86400
+        for name in ("old.jsonl", "old.log", "old.dir", "fresh.jsonl"):
+            (logs / name).write_text("x\n")
+            if name.startswith("old"):
+                os.utime(logs / name, (old, old))
+        self.ask("--session", "t18", "--dir", self.tmp.name, "hi")
+        self.assertEqual(sorted(p.name for p in logs.glob("old.*")), ["old.dir"])
+        self.assertTrue((logs / "fresh.jsonl").exists())
 
     def test_kills_a_child_that_ignores_sigterm_after_pi_exits(self):
         out = self.ask("--session", "t7", "--dir", self.tmp.name, "hi", FAKE_PI_ORPHAN="1")
