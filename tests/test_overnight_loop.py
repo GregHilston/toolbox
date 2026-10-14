@@ -426,6 +426,25 @@ class TestClaudeCost(LoopTest):
         self.assertIn("overnight:parked", self.labels(1))
 
 
+class TestVerdict(LoopTest):
+    def test_reads_the_last_verdict_through_emphasis(self):
+        self.assertEqual(loop.verdict("Fine.\n**VERDICT: changes**"), "changes")
+        self.assertEqual(loop.verdict("VERDICT: changes.\n\n1. add a test"), "changes")
+        self.assertEqual(loop.verdict("**Verdict:** approve"), "approve")
+        self.assertEqual(loop.verdict("VERDICT: changes\nOn reflection, VERDICT: approve"), "approve")
+        self.assertIsNone(loop.verdict("Reached maximum turns"))
+
+    def test_a_verdict_in_bold_gets_its_fix_pass(self):
+        self.run_loop("--harness", "pi", "--reviewer", "claude", FAKE_REVIEW="1. add a test\n**VERDICT: changes**")
+        self.assertIn("pi fix", self.roles())
+
+    def test_a_review_without_a_verdict_parks_the_issue(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "claude", FAKE_REVIEW="I ran out of turns.")
+        self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
+        self.assertIn("no verdict", self.comments(1)[-1])
+        self.assertNotIn("feat: issue 1", self.git("log", "--format=%s"))
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})

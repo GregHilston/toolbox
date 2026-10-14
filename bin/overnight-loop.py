@@ -170,6 +170,12 @@ def verify(args, log: Path) -> tuple[bool, str]:
     return code == 0, "\n".join(text.strip().splitlines()[-20:])
 
 
+def verdict(review: str) -> str | None:
+    """The review's last verdict, read through markdown emphasis and punctuation."""
+    found = re.findall(r"VERDICT\W*(approve|changes)\b", review, re.I)
+    return found[-1].lower() if found else None
+
+
 def check(args, base: str, log: Path) -> tuple[bool, str]:
     """Judge what was committed since base."""
     if sh("git", "rev-parse", "HEAD") == base:
@@ -373,7 +379,11 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[bool, float, bool
         review, broke = run.text, run.broke
         cost += run.cost
         tidy()
-        if not broke and review.strip().endswith("VERDICT: changes"):
+        if not broke and verdict(review) is None:
+            # A crashed or truncated review is no review: the work does not stay.
+            ok, tail = False, "the review gave no verdict"
+            message += "\n\nReview:\n" + review[-800:]
+        elif not broke and verdict(review) == "changes":
             run = run_agent(args, args.harness, args.model, WORKER.format(n=n) + "\n" + FIX.format(findings=review), log)
             message, broke = run.text, run.broke
             cost += run.cost
