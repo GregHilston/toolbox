@@ -51,6 +51,15 @@ KEEP_LOGS_DAYS = 30
 UNLOGGED = {"message_update", "tool_execution_update"}
 
 
+WORKER_ROLE = (
+    "You are a headless worker another agent started with pi-ask.py. Nobody can answer a question, "
+    "so never ask one: make a reasonable assumption and say so. Do what the task asks and no more, "
+    "and stay in the working directory unless the task names other paths. Your last message is the "
+    "whole answer the caller reads: complete and concise, with no preamble."
+)
+# Both fail at once with no UI.
+HEADLESS_EXCLUDED_TOOLS = "ask_user_question,plan_mode_*"
+
 # pi's own rule for session ids.
 SESSION_NAME = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?")
 
@@ -274,7 +283,8 @@ def main() -> int:
     env = dict(os.environ, PATH=f"{TOOLBOX_BIN}:{os.environ.get('PATH', '')}", PI_SUBAGENT_DEPTH="1")
     # "--": a prompt may start with - or ---.
     cmd = ["pi", "--mode", "json", "--approve", "--provider", "litellm", "--model", args.model,
-           "--session-id", args.session, "--", prompt]
+           "--session-id", args.session, "--append-system-prompt", WORKER_ROLE,
+           "--exclude-tools", HEADLESS_EXCLUDED_TOOLS, "--", prompt]
     # Before Popen, so no signal leaves pi orphaned.
     for sig in SIGNALS:
         signal.signal(sig, on_signal)
