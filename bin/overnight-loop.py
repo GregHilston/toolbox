@@ -49,6 +49,7 @@ GATE = ("verify.sh", "tests/baseline_count")
 OUT_OF_MONEY = re.compile(r"Budget has been exceeded|budget_exceeded|Exceeded budget|Insufficient Balance"
                           r"|usage limit|hit your limit|Credit balance is too low", re.I)
 GH_RETRY = (2, 10, 30)  # seconds before each retry
+GH_RETRIED = {("issue", "list"), ("issue", "view"), ("issue", "edit"), ("repo", "view"), ("label", "create")}
 STREAMED = re.compile(r'^\{"type":\s*"message_update".*\n?', re.M)
 CONVENTIONAL = re.compile(r"^\w+(\([^)]+\))?!?: .+ \(#\d+\)$|^chore\(overnight\): ")
 MIN_BALANCE = 2.0  # deepseek-preflight's floor
@@ -103,8 +104,9 @@ PING = "Reply with the word ok and nothing else."
 
 
 def sh(*cmd: str, check: bool = True) -> str:
-    # One 502 from GitHub used to end the night.
-    for wait in GH_RETRY if cmd[0] == "gh" else ():
+    # One 502 from GitHub used to end the night. A comment that landed
+    # before its 502 would post twice, and a logged-out gh stays so.
+    for wait in GH_RETRY if cmd[0] == "gh" and cmd[1:3] in GH_RETRIED else ():
         out = subprocess.run(cmd, capture_output=True, text=True)
         if not out.returncode:
             return out.stdout.strip()
