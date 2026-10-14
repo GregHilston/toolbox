@@ -506,6 +506,13 @@ class TestBranch(LoopTest):
         self.assertIn("feat: issue 2", self.git("log", "--format=%s"))
 
 
+class TestCaps(unittest.TestCase):
+    def test_a_budget_does_not_lift_the_cost_cap(self):
+        args = argparse.Namespace(off_peak=False, max_issues=20, max_fails=3, max_cost=5, budget=3,
+                                  spend=mock.Mock(read=mock.Mock(return_value=0.5)))
+        self.assertEqual(loop.stop_reason(args, set(), 0, 6.0, time.time() + 3600), "cost limit ($6.00)")
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})
