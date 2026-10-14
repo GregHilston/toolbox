@@ -29,9 +29,10 @@ For each issue a reviewer, Claude by default and from another model family than
 DeepSeek on purpose, writes a plan, and reviews the work once it passes the gate.
 When it asks for changes, one fresh worker makes them and the gate runs again.
 
-When Greg names a spend ("at most $3"), pass it as `--budget`. LiteLLM then
-refuses requests past that amount, which DeepSeek's own keys can't do. It needs
-the gateway's database; without one the script stops at the start and says so.
+When Greg names a spend ("at most $3"), pass it as `--budget`. The pi workers
+then go through the LiteLLM gateway's `cloud` model, and the loop stops starting
+issues once this run has spent that much there. The gateway's daily cap on
+`cloud` is the hard limit underneath: past it, every request is refused.
 `--off-peak` waits for DeepSeek's half-price hours and stops starting issues 20
 minutes before peak. Weekends are off-peak all day; on a weeknight the off-peak
 windows are short.

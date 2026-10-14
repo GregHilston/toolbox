@@ -12,8 +12,9 @@ one fix pass when it asks for changes. Kept work stays on an overnight/<time>
 branch labelled overnight:done; the rest is reset away and labelled
 overnight:parked. Each issue appends to progress.md, which the next worker reads.
 
---budget mints a LiteLLM key capped at that many dollars, so the proxy, not this
-script, enforces the spend. It needs the gateway's database.
+--budget sends pi workers through the LiteLLM gateway's `cloud` model and stops
+starting issues once this run has spent that much there. The gateway's own daily
+cap on `cloud` is the hard limit underneath: past it, every request gets a 429.
 """
 
 from __future__ import annotations
@@ -38,7 +39,7 @@ _spec.loader.exec_module(preflight)
 
 DONE, PARKED, WORKING = "overnight:done", "overnight:parked", "overnight:working"
 GATEWAY = os.environ.get("LITELLM_URL", "https://llm.grehg2.xyz")
-OUT_OF_MONEY = re.compile(r"Budget has been exceeded|budget_exceeded|Insufficient Balance|Expired Key")
+OUT_OF_MONEY = re.compile(r"Budget has been exceeded|budget_exceeded|Exceeded budget|Insufficient Balance")
 
 WORKER = """\
 You are one worker in an unattended overnight run. Nobody will answer questions.
@@ -95,13 +96,29 @@ def sh(*cmd: str, check: bool = True) -> str:
     return out.stdout.strip()
 
 
-def gateway(method: str, path: str, body: dict | None = None) -> dict:
-    key = os.environ.get("LITELLM_MASTER_KEY") or os.environ.get("LITELLM_API_KEY", "")
-    req = urllib.request.Request(GATEWAY + path, method=method,
-                                 data=None if body is None else json.dumps(body).encode(),
-                                 headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+def cloud_spend() -> float:
+    """What the gateway has counted against DeepSeek in its current daily window."""
+    key = os.environ.get("LITELLM_API_KEY")
+    if not key:  # pi's config already holds the gateway key
+        models = json.loads((Path.home() / ".pi/agent/models.json").read_text())
+        key = models["providers"]["litellm"]["apiKey"]
+    req = urllib.request.Request(GATEWAY + "/provider/budgets", headers={"Authorization": f"Bearer {key}"})
     with urllib.request.urlopen(req, timeout=30) as r:
-        return json.load(r)
+        return float(json.load(r)["providers"]["deepseek"]["spend"])
+
+
+class RunSpend:
+    """This run's share of the gateway's counter, which resets once a day."""
+
+    def __init__(self) -> None:
+        self.last = cloud_spend()
+        self.total = 0.0
+
+    def read(self) -> float:
+        now = cloud_spend()
+        self.total += now - self.last if now >= self.last else now
+        self.last = now
+        return self.total
 
 
 def verify(log: Path) -> tuple[bool, str]:
@@ -169,8 +186,8 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         cmd = ["pi", "-p", "--approve", "--no-session", "--mode", "json", prompt]
         if read_only:
             cmd += ["--tools", "read,grep,find,ls"]
-        if args.key:
-            cmd += ["--provider", "litellm", "--api-key", args.key]
+        if args.budget:
+            cmd += ["--provider", "litellm"]
             model = "cloud"
     if model:
         cmd[1:1] = ["--model", model]
@@ -238,8 +255,8 @@ def stop_reason(args, tried: set[int], fails: int, cost: float, deadline: float)
         return "issue limit"
     if fails >= args.max_fails:
         return f"{fails} parks in a row"
-    if args.key:
-        spent = gateway("GET", f"/key/info?key={args.key}")["info"]["spend"]
+    if args.spend:
+        spent = args.spend.read()
         if spent >= args.budget - 0.05:
             return f"budget (${spent:.2f} of ${args.budget:.2f})"
     elif cost >= args.max_cost:
@@ -313,7 +330,7 @@ def main() -> None:
     p.add_argument("--max-cost", type=float, default=60,
                    help="stop past this total (default 60); pi is priced from DeepSeek's table")
     p.add_argument("--budget", type=float,
-                   help="pi only: hard dollar cap, enforced by a LiteLLM key that only allows `cloud`")
+                   help="pi only: dollars this run may spend on the gateway's `cloud` model")
     p.add_argument("--off-peak", action="store_true",
                    help="wait for DeepSeek's off-peak hours and stop before peak; weekends are all off-peak")
     p.add_argument("--off-peak-margin", type=int, default=20,
@@ -322,7 +339,7 @@ def main() -> None:
     p.add_argument("--yolo", action="store_true",
                    help="claude workers: bypassPermissions instead of auto; only inside a container or VM")
     args = p.parse_args()
-    args.key = None
+    args.spend = None
 
     if not os.access("verify.sh", os.X_OK):
         sys.exit("no executable ./verify.sh here: run this from the repo root, after setting one up")
@@ -355,11 +372,9 @@ def main() -> None:
     sh("git", "checkout", "-q", "-b", branch)
     if args.budget:
         try:
-            args.key = gateway("POST", "/key/generate", {
-                "models": ["cloud"], "max_budget": args.budget, "key_alias": f"overnight-{branch}",
-                "duration": f"{int(args.hours * 60 + args.issue_minutes + 30)}m"})["key"]
-        except OSError as e:
-            sys.exit(f"LiteLLM would not mint a budget key at {GATEWAY} ({e}); it needs its database")
+            args.spend = RunSpend()
+        except (OSError, KeyError) as e:
+            sys.exit(f"could not read the gateway's spend at {GATEWAY}/provider/budgets: {e}")
     board(args)
 
     done: dict[int, str] = {}
@@ -388,9 +403,8 @@ def main() -> None:
             print(f"  {'done' if kept else 'parked'}, ${spent:.2f}", flush=True)
             board(args)
     finally:
-        if args.key:
-            cost = gateway("GET", f"/key/info?key={args.key}")["info"]["spend"]
-            gateway("POST", "/key/delete", {"keys": [args.key]})
+        if args.spend:
+            cost = args.spend.read()
         board(args)
 
     print(f"\nStopped: {why}. Branch {branch}, ${cost:.2f} spent.")
