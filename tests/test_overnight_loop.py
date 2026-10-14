@@ -281,6 +281,14 @@ class TestHappyPath(LoopTest):
         self.assertIn("feat: issue 2 (work) (#2)", self.git("log", "--format=%s"))
 
 
+    def test_a_stop_file_left_by_an_earlier_run_is_ignored(self):
+        (self.repo / ".overnight").mkdir()
+        (self.repo / ".overnight" / "STOP").touch()
+        (self.repo / ".git" / "info" / "exclude").write_text(".overnight/\n")
+        out = self.run_loop("--harness", "pi", "--reviewer", "none")
+        self.assertIn("overnight:done", self.labels(1), out.stdout + out.stderr)
+
+
 class TestOutOfMoney(LoopTest):
     def test_an_issue_that_mentions_insufficient_balance_is_worked(self):
         out = self.run_loop("--harness", "pi", "--reviewer", "none",
