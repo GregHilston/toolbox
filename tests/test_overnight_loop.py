@@ -325,6 +325,15 @@ class TestHappyPath(LoopTest):
         self.assertIn("overnight:done", self.labels(1), out.stdout + out.stderr)
 
 
+    def test_a_failing_commit_hook_does_not_block_the_progress_note(self):
+        hook = self.repo / ".git" / "hooks" / "commit-msg"
+        hook.write_text('#!/bin/sh\n! grep -q "chore(overnight)" "$1"\n')
+        hook.chmod(0o755)
+        out = self.run_loop("--harness", "pi", "--reviewer", "none")
+        self.assertIn("Stopped: queue empty", out.stdout, out.stderr)
+        self.assertIn("progress for #2", self.git("log", "--format=%s"))
+
+
 class TestModel(LoopTest):
     def test_pi_defaults_to_the_gateway_cloud_model(self):
         self.run_loop("--harness", "pi", "--reviewer", "none")
