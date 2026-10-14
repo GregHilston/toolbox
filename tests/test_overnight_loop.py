@@ -681,6 +681,15 @@ class TestLog(LoopTest):
         self.assertIn('"type": "message_end"', log)
 
 
+class TestCommitSubjects(LoopTest):
+    def test_the_summary_names_subjects_that_are_not_conventional(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_2="badsubject")
+        self.assertIn("Not conventional commits", out.stdout, out.stderr)
+        self.assertIn("  Add stuff", out.stdout)
+        self.assertNotIn("feat: issue 1", out.stdout.split("Not conventional")[1])
+        self.assertNotIn("progress for", out.stdout.split("Not conventional")[1])
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})
