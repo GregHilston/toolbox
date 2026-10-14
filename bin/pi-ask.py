@@ -141,7 +141,7 @@ def pump(proc: subprocess.Popen, log: Path, narrator, tally: Tally, args) -> str
                 tally.feed(event)
             narrator.feed(line.decode("utf-8", errors="replace"))
             if tally.cost > args.max_cost:
-                return f"spent ${tally.cost:.4f}, over --max-cost ${args.max_cost:.2f}"
+                return f"spent ${tally.cost:.4f}, over --max-cost ${args.max_cost:g}"
             if tally.turns > args.max_turns:
                 return f"over --max-turns {args.max_turns}"
             return None
