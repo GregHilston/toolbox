@@ -101,6 +101,16 @@ AGENT = textwrap.dedent('''\
             git("add", mode)
         if mode == "leftover":
             detached_sleep()
+        if mode == "terminal":
+            # Stands in for a shell Greg opens in the repo mid-run.
+            import pty
+            pid, _ = pty.fork()
+            if pid == 0:
+                import signal
+                signal.signal(signal.SIGHUP, signal.SIG_IGN)
+                os.execvp("sleep", ["sleep", "300"])
+            with open(os.environ["FAKE_PIDS"] + ".spare", "a") as f:
+                f.write(f"{pid}\\n")
         with open(f"feature{n}.txt", "a") as f:
             f.write(role + "\\n")
         git("add", f"feature{n}.txt")
@@ -145,6 +155,8 @@ FAKE_CLAUDE = textwrap.dedent('''\
 
     signal.signal(signal.SIGINT, interrupted)
     NAME = "claude"
+    with open(os.environ["FAKE_LOG"] + ".env", "a") as f:
+        f.write(os.environ.get("CLAUDE_CODE_DISABLE_BACKGROUND_TASKS", "") + "\\n")
     role, text = act(NAME, prompt_of(sys.argv[1:]))
     result = {"type": "result", "subtype": "success", "is_error": False, "result": text, "total_cost_usd": 0.25}
     if failing(NAME, role):
@@ -219,7 +231,7 @@ FAKE_GH = textwrap.dedent('''\
 VERIFY = textwrap.dedent('''\
     #!/bin/sh
     if [ -e verifyhang ]; then sleep 600; fi
-    if [ -e verifyleak ]; then sh -c 'echo $$ >> "$FAKE_PIDS"; exec sleep 300' & fi
+    if [ -e verifyleak ]; then python3 -c "import os, subprocess; p = subprocess.Popen(['sleep', '300'], start_new_session=True); open(os.environ['FAKE_PIDS'], 'a').write(f'{p.pid}\\n')"; fi
     test ! -e BROKEN
 ''')
 
@@ -569,6 +581,47 @@ class TestInterrupt(LoopTest):
 
     def test_a_closed_terminal(self):
         self.interrupt(signal.SIGHUP)
+
+
+class TestLeftovers(LoopTest):
+    def assert_all_dead(self):
+        pids = list(map(int, self.pids.read_text().split()))
+        self.assertTrue(pids)
+        for pid in pids:
+            self.assertFalse(alive(pid), f"{pid} outlived its issue")
+
+    def test_a_detached_server_left_by_a_worker_dies(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="leftover")
+        self.assertIn("overnight:done", self.labels(1), out.stderr)
+        self.assert_all_dead()
+
+    def test_a_detached_server_left_by_verify_dies(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="verifyleak", FAKE_WORK_2="nocommit")
+        self.assertIn("overnight:done", self.labels(1), out.stderr)
+        self.assert_all_dead()
+
+    def test_a_process_with_a_terminal_is_spared(self):
+        self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="terminal")
+        spare = int(Path(str(self.pids) + ".spare").read_text())
+        try:
+            self.assertTrue(alive(spare))
+        finally:
+            os.kill(spare, signal.SIGKILL)
+
+    def test_the_shell_that_started_the_loop_is_spared(self):
+        # Started a second before the first agent, from the repo, with no terminal.
+        out = subprocess.run(["sh", "-c", f'"{sys.executable}" "{SCRIPT}" --harness pi --reviewer none; echo survived'],
+                             cwd=self.repo, env=self.env, capture_output=True, text=True, timeout=60,
+                             start_new_session=True)
+        self.assertIn("survived", out.stdout, out.stderr)
+
+    def test_reads_ps_elapsed_time(self):
+        self.assertEqual(loop.seconds("1-02:03:04"), 93784)
+        self.assertEqual(loop.seconds("03:04"), 184)
+
+    def test_claude_workers_cannot_background_tasks(self):
+        self.run_loop("--harness", "claude", "--reviewer", "none")
+        self.assertEqual(set(Path(str(self.agent_log) + ".env").read_text().split()), {"1"})
 
 
 class TestPiEvents(unittest.TestCase):
