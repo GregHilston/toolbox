@@ -50,10 +50,12 @@ def gh(*args: str) -> str:
 
 
 def status_field(owner: str, number: int) -> dict:
-    query = """query($o: String!, $n: Int!) { user(login: $o) { projectV2(number: $n) {
-        id field(name: "Status") { ... on ProjectV2SingleSelectField { id options { id name } } } } } }"""
+    # repositoryOwner, not user: the owner may be an organization.
+    query = """query($o: String!, $n: Int!) { repositoryOwner(login: $o) { ... on ProjectV2Owner {
+        projectV2(number: $n) { id field(name: "Status") {
+        ... on ProjectV2SingleSelectField { id options { id name } } } } } } }"""
     data = json.loads(gh("api", "graphql", "-f", f"o={owner}", "-F", f"n={number}", "-f", f"query={query}"))
-    return data["data"]["user"]["projectV2"]["field"]
+    return data["data"]["repositoryOwner"]["projectV2"]["field"]
 
 
 def create(owner: str, repo: str, title: str) -> int:

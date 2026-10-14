@@ -624,6 +624,16 @@ class TestLeftovers(LoopTest):
         self.assertEqual(set(Path(str(self.agent_log) + ".env").read_text().split()), {"1"})
 
 
+class TestBoardSync(unittest.TestCase):
+    def test_finds_the_status_field_of_an_organization_board(self):
+        board = load("board-sync.py")
+        field = {"id": "F", "options": []}
+        reply = json.dumps({"data": {"repositoryOwner": {"projectV2": {"id": "P", "field": field}}}})
+        with mock.patch.object(board, "gh", return_value=reply) as gh:
+            self.assertEqual(board.status_field("some-org", 3), field)
+        self.assertIn("repositoryOwner(login: $o)", gh.call_args.args[-1])
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})
