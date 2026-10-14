@@ -90,6 +90,7 @@ The diff:
 GH_RETRY = (2, 10, 30)  # seconds before each retry
 STREAMED = re.compile(r'^\{"type":\s*"message_update".*\n?', re.M)
 CONVENTIONAL = re.compile(r"^\w+(\([^)]+\))?!?: .+ \(#\d+\)$|^chore\(overnight\): ")
+MIN_BALANCE = 2.0  # deepseek-preflight's floor
 PING = "Reply with the word ok and nothing else."
 FIX = """\
 A reviewer asked for changes to the work already committed on this branch:
@@ -383,6 +384,21 @@ def allow_pi_writes() -> None:
         PI_OVERRIDE.write_text(json.dumps({"permission": {"write": {"*": "allow"}}}) + "\n")
 
 
+def check_balance(args) -> None:
+    """A worker that hits a 402 mid-issue dies with its work uncommitted."""
+    direct = any(harness == "pi" and (model or "").startswith("deepseek/")
+                 for harness, model in ((args.harness, args.model), (args.reviewer, args.reviewer_model)))
+    if not direct or not (key := os.environ.get("DEEPSEEK_API_KEY")):
+        return
+    try:
+        balance, _ = preflight.fetch_balance(key)
+    except Exception as e:  # noqa: BLE001 - the smoke test already proved the key works
+        print(f"Could not read the DeepSeek balance ({e}); starting anyway.", flush=True)
+        return
+    if balance < MIN_BALANCE:
+        sys.exit(f"the DeepSeek balance is ${balance:.2f}, under ${MIN_BALANCE:.2f}: top up first")
+
+
 def tidy(to: str = "HEAD") -> None:
     sh("git", "reset", "-q", "--hard", to)
     sh("git", "clean", "-qfd")
@@ -573,6 +589,7 @@ def main() -> None:
     smoke_test(args, args.harness, args.model)
     if args.reviewer != "none":
         smoke_test(args, args.reviewer, args.reviewer_model)
+    check_balance(args)
     for label, colour in ((DONE, "0e8a16"), (PARKED, "d93f0b"), (WORKING, "5319e7")):
         sh("gh", "label", "create", label, "--color", colour, "--force")
     for stale in json.loads(sh("gh", "issue", "list", "--label", WORKING, "--json", "number")):
