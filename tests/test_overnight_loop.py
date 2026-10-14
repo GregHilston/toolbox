@@ -673,6 +673,14 @@ class TestIssueComments(LoopTest):
         self.assertIn("the jump test timed out", Path(str(self.agent_log) + ".prompts").read_text())
 
 
+class TestLog(LoopTest):
+    def test_the_log_skips_streamed_tokens_and_keeps_the_rest(self):
+        self.run_loop("--harness", "pi", "--reviewer", "none")
+        log = (self.repo / ".overnight" / "logs" / "1.log").read_text()
+        self.assertNotIn("message_update", log)
+        self.assertIn('"type": "message_end"', log)
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})
