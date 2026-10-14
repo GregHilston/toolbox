@@ -26,13 +26,19 @@ which pi-subagents injects into every spawned process.
 ### Subagent (`PI_SUBAGENT_DEPTH` ≥ 1) — headless hard-block
 
 Spawned subagents have no UI (stdin is `/dev/null`), so prompting is impossible. Instead,
-a focused set of catastrophic/unrecoverable operations is hard-blocked with no user interaction:
+a focused set of catastrophic/unrecoverable operations is hard-blocked with no user interaction.
+
+`hard-block.ts` matches the **command word** of each simple command (after `;`, `&&`, `|`,
+newlines, `(`, and wrappers such as `env`, `timeout`, `xargs` or `FOO=1`), never its arguments,
+so `grep shutdown` or `rg 'git push'` runs. It also checks what runs inside `sh -c`, `eval`,
+`find -exec`, `$(...)` and backticks. A heredoc body is read as commands, so a line in one that
+starts with `reboot` is refused.
 
 | Pattern | Reason |
 |---|---|
 | `rm -r` / `-rf` / `-Rf` | Recursive deletion |
 | `sudo` | Elevated privileges |
-| `curl\|sh`, `wget\|sh` | Pipe to shell (remote code execution) |
+| `curl … \| sh`, `wget … \| bash` | Pipe to shell (remote code execution) |
 | `mkfs*`, `newfs_*` | Filesystem formatting |
 | `wipefs` | Disk signature wipe |
 | `diskutil erase/zeroDisk/secureErase/reformat` | Destructive disk operation |
@@ -47,6 +53,7 @@ a focused set of catastrophic/unrecoverable operations is hard-blocked with no u
 | `git commit` | Main-session operation |
 | `git pull` | Main-session operation |
 | `git push` | Main-session operation |
+| `git push --force` / `-f` | Rewrites remote history |
 | `git reset --hard` | Discard all uncommitted changes |
 | `git clean -f` | Delete untracked files |
 | `git reflog expire` | Remove recovery history |
@@ -54,9 +61,14 @@ a focused set of catastrophic/unrecoverable operations is hard-blocked with no u
 
 All other commands (including routine git operations) pass through unaffected.
 
+With `/bash-guard` off in a main session the same floor applies, minus `git commit`, `git pull`
+and a plain `git push`.
+
 ## Install
 
-Auto-discovered from `~/.pi/agent/extensions/bash-guard/`. Run `/reload` in pi.
+Auto-discovered from `~/.pi/agent/extensions/bash-guard/`. Run `/reload` in pi. Its one
+dependency, `shell-quote`, is installed by `npm ci` here (nix activation does it); the tests in
+`dot/pi/tests/` need it too.
 
 ## Notes
 

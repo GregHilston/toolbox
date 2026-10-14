@@ -3,6 +3,7 @@ import { DynamicBorder, isToolCallEventType } from "@mariozechner/pi-coding-agen
 import type { SelectItem } from "@mariozechner/pi-tui";
 import { Container, SelectList, Text } from "@mariozechner/pi-tui";
 import { parse as shellParse } from "shell-quote";
+import { DISABLED_FLOOR_RULES, HEADLESS_RULES, hardBlockReason } from "./hard-block.ts";
 
 type Severity = "high" | "medium";
 
@@ -357,57 +358,6 @@ async function promptRunOrAbort(ctx: any, command: string, risk: Risk): Promise<
 const _subagentDepth = Number(process.env.PI_SUBAGENT_DEPTH ?? "0");
 const _isSubagent = Number.isFinite(_subagentDepth) && _subagentDepth >= 1;
 
-// Hard-block patterns for subagent (headless) mode. Criteria: unrecoverable by default AND
-// unlikely to be intentional in an automated context. Fewer false positives over broad coverage —
-// the interactive prompt handles the rest for main sessions.
-const HEADLESS_BLOCKED: Array<{ pattern: RegExp; reason: string }> = [
-	// Recursive deletion
-	{ pattern: /(?<!\bgit\s+)\brm\b[^#\n]*\s-(?:[a-zA-Z]*[rR]|-\brecursive\b)/, reason: "recursive delete (rm -r / -rf / -Rf)" },
-	// Privilege escalation
-	{ pattern: /\bsudo\b/, reason: "elevated privileges (sudo)" },
-	// Remote code execution via pipe-to-shell
-	{ pattern: /\b(curl|wget)\b[^#\n]*\|\s*(ba?sh|zsh|fish|dash|sh)\b/, reason: "pipe to shell (remote code execution)" },
-	// Disk / filesystem destruction
-	{ pattern: /\bmkfs/, reason: "filesystem formatting (mkfs)" },
-	{ pattern: /\bnewfs_\w+/, reason: "filesystem formatting (newfs_*)" },
-	{ pattern: /\bwipefs\b/, reason: "disk signature wipe" },
-	{ pattern: /\bdiskutil\s+(erase|zeroDisk|secureErase|reformat)/i, reason: "destructive disk operation (diskutil)" },
-	{ pattern: /\bdd\b[^#\n]*\bof=\/dev\//, reason: "raw disk write (dd of=/dev/...)" },
-	{ pattern: /\b(parted|fdisk|gdisk|sgdisk)\b/, reason: "partition table management" },
-	{ pattern: /\bcryptsetup\b/, reason: "disk encryption management" },
-	{ pattern: /\bzpool\b/, reason: "ZFS pool management" },
-	// System power
-	{ pattern: /\b(shutdown|reboot|halt|poweroff)\b/, reason: "system power operation" },
-	// Infrastructure teardown
-	{ pattern: /\bterraform\s+destroy\b/, reason: "infrastructure teardown (terraform destroy)" },
-	{ pattern: /\bkubectl\s+delete\b/, reason: "Kubernetes resource deletion" },
-	{ pattern: /\baws\s+s3\s+rm\b[^#\n]*--recursive/, reason: "bulk S3 deletion (aws s3 rm --recursive)" },
-	// Destructive git operations
-	{ pattern: /\bgit\s+commit\b/, reason: "git commit (commits are main-session operations)" },
-	{ pattern: /\bgit\s+pull\b/, reason: "git pull (pulls are main-session operations)" },
-	{ pattern: /\bgit\s+push\b/, reason: "git push (pushes are main-session operations)" },
-	{ pattern: /\bgit\s+reset\b[^#\n]*--hard\b/, reason: "discard all uncommitted changes (git reset --hard)" },
-	{ pattern: /\bgit\s+clean\b[^#\n]*-[a-zA-Z]*f/, reason: "delete untracked files (git clean -f)" },
-	{ pattern: /\bgit\s+reflog\s+expire\b/, reason: "expire reflog (removes recovery history)" },
-	{ pattern: /\bgit\s+gc\b[^#\n]*--prune\b/, reason: "prune unreachable objects (git gc --prune)" },
-];
-
-// Subset of HEADLESS_BLOCKED used as the hard-block floor when bash-guard is
-// disabled in an interactive (main) session. The user explicitly opts into
-// autonomy here, so routine git operations (commit/pull/push) are allowed
-// through; only truly catastrophic / non-recoverable patterns remain blocked.
-const MAIN_DISABLED_BLOCKED: Array<{ pattern: RegExp; reason: string }> = HEADLESS_BLOCKED.filter(
-	({ pattern }) => {
-		const src = pattern.source;
-		return !(
-			src.includes("git\\s+commit") ||
-			src.includes("git\\s+pull") ||
-			// Keep `git push --force` blocked but allow plain `git push`.
-			src === "\\bgit\\s+push\\b"
-		);
-	},
-);
-
 // Warning shown via ctx.ui.setStatus when bash-guard is disabled. Pi joins all
 // extension statuses on a single line sorted alphabetically by key, so:
 //
@@ -427,17 +377,15 @@ export default function (pi: ExtensionAPI) {
 		// Subagent mode: hard-block catastrophic operations, no prompting.
 		pi.on("tool_call", async (event) => {
 			if (!isToolCallEventType("bash", event)) return;
-			const command = event.input.command;
-			for (const { pattern, reason } of HEADLESS_BLOCKED) {
-				if (pattern.test(command)) {
-					return {
-						block: true,
-						reason:
-							`Blocked by bash-guard: ${reason}. ` +
-							"This is a non-interactive subagent session — catastrophic operations are not permitted. " +
-							"Propose a safer alternative or ask the parent agent to confirm with the user.",
-					};
-				}
+			const reason = hardBlockReason(event.input.command, HEADLESS_RULES);
+			if (reason) {
+				return {
+					block: true,
+					reason:
+						`Blocked by bash-guard: ${reason}. ` +
+						"This is a non-interactive subagent session — catastrophic operations are not permitted. " +
+						"Propose a safer alternative or ask the parent agent to confirm with the user.",
+				};
 			}
 		});
 		return;
@@ -505,16 +453,15 @@ export default function (pi: ExtensionAPI) {
 		// Disabled (autonomous) mode: skip interactive prompting entirely, but keep
 		// a hard-block floor for catastrophic operations.
 		if (disabled) {
-			for (const { pattern, reason } of MAIN_DISABLED_BLOCKED) {
-				if (pattern.test(command)) {
-					return {
-						block: true,
-						reason:
-							`Blocked by bash-guard (disabled-mode floor): ${reason}. ` +
-							"Even with bash-guard disabled, this pattern is considered too destructive to run unattended. " +
-							"Re-enable bash-guard with /bash-guard and confirm interactively, or propose a safer alternative.",
-					};
-				}
+			const reason = hardBlockReason(command, DISABLED_FLOOR_RULES);
+			if (reason) {
+				return {
+					block: true,
+					reason:
+						`Blocked by bash-guard (disabled-mode floor): ${reason}. ` +
+						"Even with bash-guard disabled, this pattern is considered too destructive to run unattended. " +
+						"Re-enable bash-guard with /bash-guard and confirm interactively, or propose a safer alternative.",
+				};
 			}
 			return;
 		}
