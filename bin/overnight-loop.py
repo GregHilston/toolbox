@@ -119,6 +119,13 @@ def sh(*cmd: str, check: bool = True) -> str:
     return out.stdout.strip()
 
 
+def comment(n: int, body: str) -> None:
+    """Comment on an issue; a failure only warns, since the label already says it."""
+    out = subprocess.run(["gh", "issue", "comment", str(n), "--body", body], capture_output=True, text=True)
+    if out.returncode:
+        print(f"  could not comment on #{n}: {out.stderr.strip() or out.stdout.strip()}", flush=True)
+
+
 def cloud_spend() -> float:
     """What the gateway has counted against DeepSeek in its current daily window."""
     key = os.environ.get("LITELLM_API_KEY")
@@ -534,13 +541,12 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float
                            + review[-800:]
     if ok:
         sh("gh", "issue", "edit", str(n), "--add-label", DONE, "--remove-label", WORKING)
-        sh("gh", "issue", "comment", str(n), "--body", f"Done on `{branch}`.\n\n{message}")
+        comment(n, f"Done on `{branch}`.\n\n{message}")
         note(n, title, "done", message)
     else:
         tidy(base)
         sh("gh", "issue", "edit", str(n), "--add-label", PARKED, "--remove-label", WORKING)
-        sh("gh", "issue", "comment", str(n), "--body",
-           f"Parked by the overnight run.\n\n{message}\n\n```\n{tail}\n```")
+        comment(n, f"Parked by the overnight run.\n\n{message}\n\n```\n{tail}\n```")
         note(n, title, "parked", f"{message}\n\n```\n{tail}\n```")
     return ("done" if ok else "parked"), cost, broke
 
