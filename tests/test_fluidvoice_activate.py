@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import plistlib
 import shutil
 import subprocess
 import tempfile
@@ -139,9 +140,9 @@ class TestFluidVoiceActivate(unittest.TestCase):
 
     def models_for(self, key: str):
         exported = subprocess.run(["defaults", "export", self.domain, "-"], capture_output=True, check=True).stdout
-        r = subprocess.run(["plutil", "-extract", f"AvailableModelsByProvider.{key}", "json", "-o", "-", "-"],
+        r = subprocess.run(["plutil", "-extract", f"AvailableModelsByProvider.{key}", "xml1", "-o", "-", "-"],
                            input=exported, capture_output=True)
-        return json.loads(r.stdout) if r.returncode == 0 else None
+        return plistlib.loads(r.stdout) if r.returncode == 0 else None
 
     def test_command_mode_model_list_is_written(self):
         """1.6.9 Command Mode reads only AvailableModelsByProvider."""

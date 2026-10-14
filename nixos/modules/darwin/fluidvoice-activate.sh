@@ -111,8 +111,12 @@ prompt_configs() {
     'if has("__default__") then .__default__ += {providerID: "", modelName: ""} else . end'
 }
 # Command Mode reads only this list (1.6.9).
+# Via xml1: json rejects the whole plist's data values.
+# plutil prints a missing key's error to stdout.
 listed_models() {
-  defaults export "$DOMAIN" - | plutil -extract "AvailableModelsByProvider.custom:$PROVIDER_ID" json -o - - 2>/dev/null || echo '[]'
+  LISTED="$(defaults export "$DOMAIN" - | plutil -extract "AvailableModelsByProvider.custom:$PROVIDER_ID" xml1 -o - - 2>/dev/null \
+    | plutil -convert json -o - - 2>/dev/null)" || LISTED='[]'
+  printf '%s\n' "$LISTED"
 }
 models_listed() {
   listed_models | jq -e --argjson p "$PROVIDER" '($p.models - .) == []' >/dev/null 2>&1
