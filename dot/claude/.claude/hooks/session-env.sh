@@ -1,11 +1,13 @@
-#!/bin/bash
-# Give Claude Code's Bash tool the toolbox PATH and secrets a terminal has.
+#!/usr/bin/env bash
+# Give Claude Code's Bash tool the toolbox PATH and the LLM gateway keys.
 #
 # A SessionStart hook. Claude Code's shell snapshot ends by exporting its own
 # PATH, which undoes ~/.zshenv, and a session the desktop app started never
 # read ~/.zshrc's secrets. Claude Code runs $CLAUDE_ENV_FILE before every
 # Bash command, after the snapshot, so the lines written here stick.
-# The secrets stay in their gitignored file; this only names it.
+# Only the two keys pi-ask and the overnight loop need: every child,
+# including workers reading untrusted pages, inherits them. The values
+# stay in their gitignored file; this only names it.
 set -euo pipefail
 IFS=$'\n\t'
 
@@ -20,8 +22,8 @@ toolbox="${TOOLBOX_HOME:-$HOME/Git/toolbox}"
 dirs=$(find "$toolbox/bin" \( -name '.*' -o -name __pycache__ \) -prune -o -type d -print | paste -sd: -)
 secrets="$toolbox/nixos/secrets/.env"
 
-{
-  echo "$marker"
-  echo "export PATH=\"\$PATH:$dirs\""
-  echo "[ -f '$secrets' ] && { set -a; . '$secrets'; set +a; }"
-} >> "$CLAUDE_ENV_FILE"
+cat >> "$CLAUDE_ENV_FILE" <<EOF
+$marker
+export PATH="\$PATH:$dirs"
+[ -f '$secrets' ] && eval "\$(sed -nE 's/^(export )?((LITELLM|DEEPSEEK)_API_KEY=)/export \2/p' '$secrets')"
+EOF
