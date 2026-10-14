@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import errno
+import fcntl
 import importlib.util
 import json
 import os
@@ -193,6 +194,14 @@ def main() -> int:
         except (OSError, UnicodeDecodeError) as e:
             p.error(f"cannot read the prompt file {prompt[1:]}: {e}")
     LOG_DIR.mkdir(parents=True, exist_ok=True)
+    # Two runs at once fork pi's session and mix their logs.
+    lock = (LOG_DIR / f"{args.session}.lock").open("w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print(f"pi-ask.py: session {args.session} is already running; wait for it, or use another --session",
+              file=sys.stderr)
+        return 5
     log = LOG_DIR / f"{args.session}.jsonl"
     since = log.stat().st_size if log.exists() else 0
 

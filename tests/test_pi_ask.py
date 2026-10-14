@@ -217,6 +217,22 @@ class TestPiAsk(unittest.TestCase):
         out = self.signalled(signal.SIGHUP)
         self.assertEqual(out.returncode, 128 + signal.SIGHUP, out.stdout)
 
+    def test_a_second_run_of_a_busy_session_fails_fast(self):
+        first = self.start("--session", "t8", "--dir", self.tmp.name, "slow", FAKE_PI_SLEEP="60")
+        try:
+            deadline = time.monotonic() + 20
+            while not self.pids.exists() and time.monotonic() < deadline:
+                time.sleep(0.1)
+            out = self.ask("--session", "t8", "--dir", self.tmp.name, "meanwhile")
+            self.assertEqual(out.returncode, 5, out.stdout)
+            self.assertIn("already running", out.stdout)
+            self.assertNotIn("given meanwhile", out.stdout)
+        finally:
+            first.terminate()
+            first.wait(timeout=30)
+            first.stdin.close()
+            first.stdout.close()
+
     def test_kills_a_child_that_ignores_sigterm_after_pi_exits(self):
         out = self.ask("--session", "t7", "--dir", self.tmp.name, "hi", FAKE_PI_ORPHAN="1")
         self.assertEqual(out.returncode, 0, out.stdout)
