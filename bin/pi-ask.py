@@ -19,7 +19,9 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 import select
+import shlex
 import signal
 import subprocess
 import sys
@@ -43,8 +45,13 @@ preflight = _load("_preflight", "deepseek-preflight.py")
 LOG_DIR = Path.home() / ".cache" / "pi-ask"
 
 
-def answer_and_cost(log: Path, since: int) -> tuple[str, float]:
-    text, cost = "", 0.0
+# pi's own rule for session ids.
+SESSION_NAME = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$")
+
+
+def answer_and_cost(log: Path, since: int) -> tuple[str, float, str | None]:
+    """The turn's answer, its cost, and its error if the last message failed."""
+    text, cost, error = "", 0.0, None
     with log.open("rb") as f:
         f.seek(since)
         for line in f.read().split(b"\n"):
@@ -52,18 +59,65 @@ def answer_and_cost(log: Path, since: int) -> tuple[str, float]:
                 event = json.loads(line)
             except ValueError:
                 continue
-            message = event.get("message") if isinstance(event, dict) else None
-            if event.get("type") != "message_end" or not isinstance(message, dict):
+            if not isinstance(event, dict) or event.get("type") != "message_end":
                 continue
-            if message.get("role") != "assistant":
+            message = event.get("message")
+            if not isinstance(message, dict) or message.get("role") != "assistant":
                 continue
-            # pi's own cost uses a stale catalog; price it from DeepSeek's table.
+            # pi's catalog is stale; use DeepSeek's prices.
             when = datetime.fromtimestamp(message.get("timestamp", time.time() * 1000) / 1000, timezone.utc)
             cost += preflight.turn_cost(message.get("model"), message.get("usage") or {}, when)
             parts = [b.get("text", "") for b in message.get("content", []) if b.get("type") == "text"]
             if any(parts):
                 text = "".join(parts)
-    return text, cost
+            failed = message.get("stopReason") in ("error", "aborted")
+            error = (message.get("errorMessage") or message.get("stopReason")) if failed else None
+    return text, cost, error
+
+
+def pump(proc: subprocess.Popen, log: Path, narrator, idle: int) -> bool:
+    """Narrate pi's output into the log until it ends. Returns whether it stalled."""
+    fd = proc.stdout.fileno()
+    pending: list[bytes] = []
+    last = time.monotonic()
+    with log.open("ab") as raw:
+        while True:
+            ready, _, _ = select.select([fd], [], [], 5)
+            if not ready:
+                if proc.poll() is not None:  # done; a child holds stdout
+                    return False
+                if time.monotonic() - last > idle:
+                    narrator.emit("!", f"no event for {idle}s; killing pi")
+                    return True
+                continue
+            chunk = os.read(fd, 65536)
+            if not chunk:
+                return False
+            last = time.monotonic()
+            raw.write(chunk)
+            raw.flush()
+            pending.append(chunk)
+            if b"\n" not in chunk:  # join only once a line ends
+                continue
+            *lines, rest = b"".join(pending).split(b"\n")
+            pending = [rest]
+            for line in lines:
+                if line.strip():
+                    narrator.feed(line.decode("utf-8", errors="replace"))
+
+
+def kill_group(proc: subprocess.Popen) -> None:
+    """End pi and anything it started, such as a server."""
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(proc.pid, sig)
+        except (ProcessLookupError, PermissionError):  # macOS: group already gone
+            return
+        try:
+            proc.wait(10)
+            return
+        except subprocess.TimeoutExpired:
+            continue
 
 
 def main() -> int:
@@ -73,7 +127,9 @@ def main() -> int:
     p.add_argument("--model", default="cloud", help="LiteLLM alias (default cloud)")
     p.add_argument("--idle", type=int, default=300, help="kill after N silent seconds")
     p.add_argument("prompt", help="the question, or @file to read it from")
-    args, pi_extra = p.parse_known_args()
+    args = p.parse_args()
+    if not SESSION_NAME.match(args.session):
+        p.error("--session takes letters, digits, '.', '_' and '-', starting and ending alphanumeric")
 
     prompt = args.prompt
     if prompt.startswith("@"):
@@ -82,51 +138,38 @@ def main() -> int:
     log = LOG_DIR / f"{args.session}.jsonl"
     since = log.stat().st_size if log.exists() else 0
 
-    # Depth 1: bash-guard hard-blocks only catastrophes, never prompts.
+    # Depth 1: headless hard-block mode, no git writes.
     env = dict(os.environ, PATH=f"{TOOLBOX_BIN}:{os.environ.get('PATH', '')}", PI_SUBAGENT_DEPTH="1")
+    # "--": a prompt may start with - or ---.
     cmd = ["pi", "--mode", "json", "--approve", "--provider", "litellm", "--model", args.model,
-           "--session-id", args.session, *pi_extra, prompt]
-    # stdin=DEVNULL: pi reads piped stdin to EOF before anything else.
-    proc = subprocess.Popen(cmd, cwd=args.dir, env=env, stdin=subprocess.DEVNULL,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            start_new_session=True)
+           "--session-id", args.session, "--", prompt]
+    try:
+        # DEVNULL: pi reads piped stdin to EOF first.
+        proc = subprocess.Popen(cmd, cwd=args.dir, env=env, stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                start_new_session=True)
+    except FileNotFoundError:
+        sys.exit("pi-ask.py: pi is not on PATH")
+    # pi has its own group, so pass our death on.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     narrator = narrate.Narrator(label=args.session, out=sys.stdout)
-    fd = proc.stdout.fileno()
-    buffer, last, stalled = b"", time.monotonic(), False
-    with log.open("ab") as raw:
-        while True:
-            ready, _, _ = select.select([fd], [], [], 5)
-            if not ready:
-                if time.monotonic() - last > args.idle:
-                    stalled = True
-                    narrator.emit("!", f"no event for {args.idle}s; killing pi")
-                    os.killpg(proc.pid, signal.SIGTERM)
-                    try:
-                        proc.wait(10)
-                    except subprocess.TimeoutExpired:
-                        os.killpg(proc.pid, signal.SIGKILL)
-                    break
-                continue
-            chunk = os.read(fd, 65536)
-            if not chunk:
-                break
-            last = time.monotonic()
-            raw.write(chunk)
-            raw.flush()
-            buffer += chunk
-            *lines, buffer = buffer.split(b"\n")  # LF only, per pi's rpc.md
-            for line in lines:
-                if line.strip():
-                    narrator.feed(line.decode("utf-8", errors="replace"))
+    try:
+        stalled = pump(proc, log, narrator, args.idle)
+    finally:
+        kill_group(proc)
     code = proc.wait()
     narrator.finish()
 
-    text, cost = answer_and_cost(log, since)
-    print(f"\n=== answer ({args.session}, ${cost:.4f}, log {log}) ===")
+    text, cost, error = answer_and_cost(log, since)
+    print(f"\n=== answer ({args.session}, ${cost:.4f} at DeepSeek's prices, log {log}) ===")
     print(text or "(no answer)")
-    print(f"=== follow up: pi-ask.py --session {args.session} --dir {Path(args.dir).resolve()} \"...\" ===")
+    if error:
+        print(f"=== the last turn failed: {error} ===")
+    print(f"=== follow up: pi-ask.py --session {args.session} --dir {shlex.quote(str(Path(args.dir).resolve()))} \"...\" ===")
     if stalled:
         return 3
+    if error:
+        return code or 1
     return code or (0 if text else 1)
 
 
