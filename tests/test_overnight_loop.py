@@ -695,6 +695,26 @@ class TestCommitSubjects(LoopTest):
         self.assertNotIn("progress for", out.stdout.split("Not conventional")[1])
 
 
+class TestBalance(unittest.TestCase):
+    def balance(self, model: str | None, dollars: float) -> mock.Mock:
+        args = argparse.Namespace(harness="pi", model=model, reviewer="claude", reviewer_model=None)
+        with mock.patch.dict(os.environ, {"DEEPSEEK_API_KEY": "k"}), \
+                mock.patch.object(loop.preflight, "fetch_balance", return_value=(dollars, "USD")) as fetch:
+            loop.check_balance(args)
+        return fetch
+
+    def test_a_low_balance_stops_a_direct_deepseek_run(self):
+        with self.assertRaises(SystemExit) as e:
+            self.balance("deepseek/deepseek-flash", 1.2)
+        self.assertIn("$1.20", str(e.exception))
+
+    def test_a_funded_key_starts(self):
+        self.balance("deepseek/deepseek-flash", 9.0).assert_called_once()
+
+    def test_the_gateway_is_not_checked(self):
+        self.balance(None, 0.0).assert_not_called()
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})
