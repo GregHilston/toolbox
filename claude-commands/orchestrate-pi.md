@@ -403,11 +403,18 @@ cd /abs/path/to/worktrees/issue-16 && \
   --approve \
   --session-id issue-16 \
   --mode json \
-  -p "$(cat /abs/path/to/.claude/pi-prompts/issue-16.md)" 2>&1 \
+  -p "$(cat /abs/path/to/.claude/pi-prompts/issue-16.md)" \
+  --bash-guard-auto-allow < /dev/null 2>&1 \
   | pi-narrate.py --label issue-16 \
       --raw /abs/path/to/.claude/pi-logs/issue-16.jsonl \
       --alerts /abs/path/to/.claude/pi-logs/alerts.log
 ```
+
+Keep the last two pieces. `< /dev/null`, because pi reads a piped stdin to EOF
+before its first API call, so an inherited open one hangs the worker silently.
+`--bash-guard-auto-allow`, because a worker has no UI, and without it bash-guard
+blocks every pipe, redirect and git command. It goes after the prompt, since pi
+reads the word after an extension flag as the flag's value.
 
 Workers inherit the lean tool set from `dot/pi/CLAUDE.md` → "Lazy tools":
 no `reddit_*` and no `subagent_*` tools, which is ~4,300 tokens less on every
@@ -639,6 +646,12 @@ now in the wrong worker's context for the rest of its session, re-sent on every
 turn.
 
 ### A `--continue` that never makes its first API call — kill it, do not wait
+
+**Likely cause, found 2026-10-14:** when stdin is not a terminal, pi reads it to
+EOF before it does anything else, with no timeout. A worker that inherits an open
+stdin waits forever with exactly this signature: no session activity, no API
+call. Every spawn here now passes `< /dev/null`; if the hang still happens with
+it, the cause is something else.
 
 **Signature, and it is unmistakable once you know it:** a live pid, `phase`
 stuck at `starting`, `turn 0`, `$0.0000`, and a raw log of **27 bytes**. The
