@@ -1,188 +1,139 @@
-// The hard-block floor: commands refused with no prompt, by command word.
+// The hard-block floor: commands refused with no prompt.
 //
-// A regex over the raw string also matched arguments, so `grep shutdown`
-// and `rg 'git push'` were refused and reviewing shell code was impossible.
-// This looks at the command word of each simple command instead, and
-// re-checks what runs inside `sh -c`, `eval`, `find -exec` and `$(...)`.
-import { parse } from "shell-quote";
+// Each pattern matches anywhere in the command line, so wrappers, `sh -c`,
+// aliases and `$(...)` cannot hide a catastrophe. The one exemption is a
+// segment run by a read-only tool, so `grep shutdown` and `rg 'git push'`
+// run: its text is dropped before matching.
 
 export type HardRule = {
 	reason: string;
 	// Blocked only when headless, not in a disabled main session.
 	headlessOnly?: boolean;
-	test: (cmd: string, args: string[]) => boolean;
+	pattern: RegExp;
 };
 
-const SHELLS = new Set(["sh", "bash", "zsh", "dash", "fish", "ksh"]);
-// Words that run the command after them.
-const WRAPPERS = new Set([
-	"env", "command", "builtin", "exec", "nohup", "time", "nice", "timeout", "stdbuf", "caffeinate",
-	"xargs", "then", "do", "else", "elif", "if", "while", "until", "!", "{",
-]);
-const CONTROL_OPS = new Set([";", "&&", "||", "&", "(", ")", ";;", "<(", ">("]);
-const PIPE_OPS = new Set(["|", "|&"]);
-const MAX_DEPTH = 4;
-
-const hasShortFlag = (args: string[], letters: string) =>
-	args.some((a) => /^-[A-Za-z]+$/.test(a) && [...letters].some((l) => a.includes(l)));
-
-function gitSub(args: string[]): { sub: string | undefined; rest: string[] } {
-	for (let i = 0; i < args.length; i++) {
-		const a = args[i];
-		if (["-C", "-c", "--git-dir", "--work-tree", "--namespace"].includes(a)) i++;
-		else if (!a.startsWith("-")) return { sub: a, rest: args.slice(i + 1) };
-	}
-	return { sub: undefined, rest: [] };
-}
-
-const git = (sub: string, more: (rest: string[]) => boolean = () => true) => (cmd: string, args: string[]) => {
-	if (cmd !== "git") return false;
-	const g = gitSub(args);
-	return g.sub === sub && more(g.rest);
-};
+// `git`, then any global options, then the subcommand.
+const GIT = String.raw`\bgit(?:\s+(?:-[Cc]\s+\S+|--?[\w-]+(?:=\S*)?))*\s+`;
+// A shell as a word, with or without a path.
+const SH = String.raw`(?<![\w.-])(?:\S*\/)?(?:ba|z|da|k|fi)?sh(?![\w./-])`;
+const rx = (source: string) => new RegExp(source);
 
 export const HARD_RULES: HardRule[] = [
-	{ reason: "recursive delete (rm -r / -rf / -Rf)", test: (c, a) => c === "rm" && (hasShortFlag(a, "rR") || a.includes("--recursive")) },
-	{ reason: "elevated privileges (sudo)", test: (c) => c === "sudo" || c === "doas" },
-	{ reason: "filesystem formatting (mkfs)", test: (c) => c.startsWith("mkfs") },
-	{ reason: "filesystem formatting (newfs_*)", test: (c) => c.startsWith("newfs_") },
-	{ reason: "disk signature wipe", test: (c) => c === "wipefs" },
-	{ reason: "destructive disk operation (diskutil)", test: (c, a) => c === "diskutil" && /^(erase|zerodisk|secureerase|reformat)/i.test(a[0] ?? "") },
-	{ reason: "raw disk write (dd of=/dev/...)", test: (c, a) => c === "dd" && a.some((x) => x.startsWith("of=/dev/")) },
-	{ reason: "partition table management", test: (c) => ["parted", "fdisk", "gdisk", "sgdisk"].includes(c) },
-	{ reason: "disk encryption management", test: (c) => c === "cryptsetup" },
-	{ reason: "ZFS pool management", test: (c) => c === "zpool" },
-	{ reason: "system power operation", test: (c) => ["shutdown", "reboot", "halt", "poweroff"].includes(c) },
-	{ reason: "infrastructure teardown (terraform destroy)", test: (c, a) => c === "terraform" && a.includes("destroy") },
-	{ reason: "Kubernetes resource deletion", test: (c, a) => c === "kubectl" && a.includes("delete") },
-	{ reason: "bulk S3 deletion (aws s3 rm --recursive)", test: (c, a) => c === "aws" && a.includes("s3") && a.includes("rm") && a.includes("--recursive") },
-	{ reason: "git commit (commits are main-session operations)", headlessOnly: true, test: git("commit") },
-	{ reason: "git pull (pulls are main-session operations)", headlessOnly: true, test: git("pull") },
-	{ reason: "git push (pushes are main-session operations)", headlessOnly: true, test: git("push") },
-	{ reason: "force push (rewrites remote history)", test: git("push", (r) => r.some((x) => x === "-f" || x.startsWith("--force"))) },
-	{ reason: "discard all uncommitted changes (git reset --hard)", test: git("reset", (r) => r.includes("--hard")) },
-	{ reason: "delete untracked files (git clean -f)", test: git("clean", (r) => hasShortFlag(r, "f") || r.includes("--force")) },
-	{ reason: "expire reflog (removes recovery history)", test: git("reflog", (r) => r[0] === "expire") },
-	{ reason: "prune unreachable objects (git gc --prune)", test: git("gc", (r) => r.some((x) => x.startsWith("--prune"))) },
+	{ reason: "recursive delete (rm -r / -rf / -Rf)", pattern: /(?<!\bgit\s+)\brm\b[^#\n]*\s-(?:[a-zA-Z]*[rR]|-recursive\b)/ },
+	{ reason: "elevated privileges (sudo)", pattern: /\b(sudo|doas)\b/ },
+	{ reason: "pipe to shell (runs whatever feeds it)", pattern: rx(String.raw`\|&?[^|;&\n]*` + SH) },
+	{ reason: "here-string, heredoc or <(...) fed to a shell", pattern: rx(SH + String.raw`[^|;&\n]*<[<(]`) },
+	{ reason: "filesystem formatting (mkfs)", pattern: /\bmkfs/ },
+	{ reason: "filesystem formatting (newfs_*)", pattern: /\bnewfs_\w+/ },
+	{ reason: "disk signature wipe", pattern: /\bwipefs\b/ },
+	{ reason: "destructive disk operation (diskutil)", pattern: /\bdiskutil\s+(erase|zeroDisk|secureErase|reformat)/i },
+	{ reason: "raw disk write (dd of=/dev/...)", pattern: /\bdd\b[^#\n]*\bof=\/dev\// },
+	{ reason: "partition table management", pattern: /\b(parted|fdisk|gdisk|sgdisk)\b/ },
+	{ reason: "disk encryption management", pattern: /\bcryptsetup\b/ },
+	{ reason: "ZFS pool management", pattern: /\bzpool\b/ },
+	{ reason: "system power operation", pattern: /\b(systemctl|launchctl)\b[^#\n]*\b(poweroff|reboot|halt|suspend)\b/ },
+	{ reason: "system power operation", pattern: /\b(shutdown|reboot|halt|poweroff)\b/ },
+	{ reason: "infrastructure teardown (terraform destroy)", pattern: /\bterraform\b[^#\n]*\sdestroy\b/ },
+	{ reason: "Kubernetes resource deletion", pattern: /\bkubectl\b[^#\n]*\sdelete\b/ },
+	{ reason: "bulk S3 deletion (aws s3 rm --recursive)", pattern: /\baws\s+s3\s+rm\b[^#\n]*--recursive/ },
+	{ reason: "git commit (commits are main-session operations)", headlessOnly: true, pattern: rx(GIT + String.raw`commit(?![\w-])`) },
+	{ reason: "git pull (pulls are main-session operations)", headlessOnly: true, pattern: rx(GIT + String.raw`pull(?![\w-])`) },
+	{
+		reason: "force push or remote branch delete (rewrites remote history)",
+		pattern: rx(GIT + String.raw`push(?![\w-])[^#\n;&|]*\s(?:-[a-zA-Z]*[fd][a-zA-Z]*|--force\S*|--mirror|--delete|\+\S|:\S)`),
+	},
+	{ reason: "git push (pushes are main-session operations)", headlessOnly: true, pattern: rx(GIT + String.raw`push(?![\w-])`) },
+	{ reason: "discard all uncommitted changes (git reset --hard)", pattern: rx(GIT + String.raw`reset\b[^#\n]*--hard\b`) },
+	{ reason: "delete untracked files (git clean -f)", pattern: rx(GIT + String.raw`clean\b[^#\n]*(?:\s-[a-zA-Z]*f|--force)`) },
+	{ reason: "expire reflog (removes recovery history)", pattern: rx(GIT + String.raw`reflog\s+expire\b`) },
+	{ reason: "prune unreachable objects (git gc --prune)", pattern: rx(GIT + String.raw`gc\b[^#\n]*--prune\b`) },
 ];
 
-type Token = string | { op?: string; pattern?: string; comment?: string };
+const READ_ONLY = new Set(["grep", "egrep", "fgrep", "rg", "ag", "ack", "cat", "less", "head", "tail", "wc", "echo", "printf"]);
+const GIT_READ_ONLY = new Set(["grep", "log", "show", "diff", "blame"]);
 
-// shell-quote joins lines into one command, so split them first.
-function newlinesToSemicolons(s: string): string {
-	let out = "";
+type Segment = { text: string; substituted: boolean };
+
+/**
+ * The command split on unquoted `;`, `&&`, `||`, `|`, `&`, newlines,
+ * parentheses and backticks, each piece kept with the separator before
+ * it. Null if a quote is left open. The body of a heredoc with a quoted
+ * delimiter is dropped: nothing in it runs as shell.
+ */
+function segments(command: string): Segment[] | null {
+	const out: Segment[] = [];
+	let text = "";
 	let quote: string | null = null;
-	for (let i = 0; i < s.length; i++) {
-		const c = s[i];
+	let backtick = false;
+	const parens: boolean[] = []; // true for `$(`
+	const quotedBodies: string[] = [];
+	const end = (sep: string) => {
+		out.push({ text, substituted: backtick || parens.includes(true) });
+		text = sep;
+	};
+	for (let i = 0; i < command.length; i++) {
+		const c = command[i];
 		if (c === "\\" && quote !== "'") {
-			out += c + (s[++i] ?? "");
-			continue;
-		}
-		if (quote) {
+			text += c + (command[i + 1] ?? "");
+			i++;
+		} else if (quote) {
 			if (c === quote) quote = null;
+			text += c;
 		} else if (c === "'" || c === '"') {
 			quote = c;
+			text += c;
 		} else if (c === "\n") {
-			out += ";";
-			continue;
-		}
-		out += c;
-	}
-	return out;
-}
-
-/** Simple commands as word lists, grouped into pipelines. */
-function pipelines(command: string): string[][][] {
-	const tokens = parse(newlinesToSemicolons(command), (name: string) => `$${name}`) as Token[];
-	const out: string[][][] = [];
-	let pipeline: string[][] = [];
-	let words: string[] = [];
-	const endCommand = () => {
-		if (words.length) pipeline.push(words);
-		words = [];
-	};
-	const endPipeline = () => {
-		endCommand();
-		if (pipeline.length) out.push(pipeline);
-		pipeline = [];
-	};
-	for (let i = 0; i < tokens.length; i++) {
-		const t = tokens[i];
-		if (typeof t === "string") words.push(t);
-		else if (t.op === "glob") words.push(t.pattern ?? "");
-		else if (t.op && PIPE_OPS.has(t.op)) endCommand();
-		else if (t.op && CONTROL_OPS.has(t.op)) endPipeline();
-		else if (t.op) i++; // a redirect: its target is not a command
-	}
-	endPipeline();
-	return out;
-}
-
-function commandWord(words: string[]): { cmd: string; args: string[] } | null {
-	let i = 0;
-	let wrapped = false;
-	while (i < words.length) {
-		const w = words[i];
-		if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(w)) i++;
-		else if (WRAPPERS.has(w)) {
-			wrapped = true;
-			i++;
-		} else if (wrapped && (w.startsWith("-") || /^\d+(\.\d+)?[smhd]?$/.test(w))) i++;
-		else break;
-	}
-	if (i >= words.length) return null;
-	return { cmd: words[i].split("/").pop() ?? "", args: words.slice(i + 1) };
-}
-
-// Command strings that a simple command runs in turn.
-function innerCommands(cmd: string, args: string[]): string[] {
-	if (SHELLS.has(cmd)) {
-		const c = args.indexOf("-c");
-		return c >= 0 && args[c + 1] !== undefined ? [args[c + 1]] : [];
-	}
-	if (cmd === "eval") return [args.join(" ")];
-	if (cmd === "find") {
-		const inner: string[] = [];
-		args.forEach((a, i) => {
-			if (["-exec", "-execdir", "-ok", "-okdir"].includes(a)) {
-				const end = args.findIndex((x, j) => j > i && (x === ";" || x === "+"));
-				inner.push(args.slice(i + 1, end < 0 ? undefined : end).join(" "));
+			end(c);
+			for (const delim of quotedBodies.splice(0)) {
+				const escaped = delim.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+				const close = new RegExp(`^\\t*${escaped}$`, "m").exec(command.slice(i + 1));
+				i = close ? i + close.index + close[0].length : command.length;
 			}
-		});
-		return inner;
+		} else if (command.startsWith("<<", i) && command[i + 2] !== "<") {
+			const m = /^<<-?[ \t]*(?:(['"])([^'"\s]+)\1|\\(\S+))/.exec(command.slice(i));
+			if (m) {
+				quotedBodies.push(m[2] ?? m[3]);
+				text += m[0];
+				i += m[0].length - 1;
+			} else text += c;
+		} else if (["&&", "||", "|&"].includes(command.slice(i, i + 2))) {
+			end(command.slice(i, i + 2));
+			i++;
+		} else if (c === "(") {
+			const dollar = text.endsWith("$");
+			end(c);
+			parens.push(dollar);
+		} else if (c === ")") {
+			end(c);
+			parens.pop();
+		} else if (c === "`") {
+			end(c);
+			backtick = !backtick;
+		} else if (c === ";" || c === "|" || c === "&") {
+			end(c);
+		} else text += c;
 	}
-	return [];
+	if (quote) return null;
+	end("");
+	return out;
+}
+
+function readOnly({ text, substituted }: Segment): boolean {
+	// Output of `$(...)` or backticks becomes a command.
+	if (substituted || /\$\(|`/.test(text)) return false;
+	const words = text.replace(/^[;&|()`\n]+/, "").trim().split(/\s+/);
+	// rg --pre, ack --pager and less +! run a command.
+	if (words.some((w) => /^(--pre|--pager|\+)/.test(w))) return false;
+	const cmd = words[0].split("/").pop() ?? "";
+	return cmd === "git" ? GIT_READ_ONLY.has(words[1]) : READ_ONLY.has(cmd);
 }
 
 /** Why `command` is refused, or null if it may run. */
-export function hardBlockReason(command: string, rules: HardRule[], depth = 0): string | null {
-	if (depth > MAX_DEPTH) return "command nested too deeply to check";
-	// Substitutions run wherever they sit, even inside double quotes.
-	for (const m of command.matchAll(/\$\(([^()]*)\)|`([^`]*)`/g)) {
-		const inner = hardBlockReason(m[1] ?? m[2], rules, depth + 1);
-		if (inner) return inner;
-	}
-	let parsed: string[][][];
-	try {
-		parsed = pipelines(command);
-	} catch {
-		return "a command that could not be parsed";
-	}
-	for (const pipeline of parsed) {
-		const words = pipeline.map(commandWord);
-		for (const [i, w] of words.entries()) {
-			if (!w) continue;
-			const rule = rules.find((r) => r.test(w.cmd, w.args));
-			if (rule) return rule.reason;
-			const fetched = words.slice(0, i).some((u) => u && (u.cmd === "curl" || u.cmd === "wget"));
-			if (fetched && SHELLS.has(w.cmd) && !w.args.includes("-c")) return "pipe to shell (remote code execution)";
-			for (const inner of innerCommands(w.cmd, w.args)) {
-				const reason = hardBlockReason(inner, rules, depth + 1);
-				if (reason) return reason;
-			}
-		}
-	}
-	return null;
+export function hardBlockReason(command: string, rules: HardRule[]): string | null {
+	const segs = segments(command);
+	// An exempt segment keeps its separator so the pipe before a shell stays.
+	const checked = segs ? segs.map((s) => (readOnly(s) ? s.text.match(/^[;&|()`\n]*/)![0] : s.text)).join("") : command;
+	return rules.find((r) => r.pattern.test(checked))?.reason ?? null;
 }
 
 export const HEADLESS_RULES = HARD_RULES;
