@@ -69,8 +69,8 @@ Check these with Greg, then start it, and stop there:
    agent run, and $60 a night (pi priced from DeepSeek's table, Claude by its own report).
 4. **The sandbox.** pi workers run with bash-guard off, and the loop gives
    them the write tool inside the repo through a git-excluded
-   `.pi/extensions/pi-permission-system/config.json` (a repo that commits its
-   own keeps it). pi's own write tool is refused outside the repo, but its
+   `.pi/extensions/pi-permission-system/config.json`, removed when the run
+   ends (a repo that commits its own keeps it). pi's own write tool is refused outside the repo, but its
    bash reaches anything, and `--yolo` turns Claude's permissions off. Run
    either inside a container or VM that mounts only this repo.
 5. **Detach it.** Run it in `tmux new -d -s overnight '…'`, not as a harness

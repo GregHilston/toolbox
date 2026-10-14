@@ -21,6 +21,7 @@ request gets a 429.
 from __future__ import annotations
 
 import argparse
+import atexit
 import importlib.util
 import json
 import os
@@ -392,6 +393,17 @@ def allow_pi_writes() -> None:
     elif not PI_OVERRIDE.exists():
         PI_OVERRIDE.parent.mkdir(parents=True, exist_ok=True)
         PI_OVERRIDE.write_text(json.dumps({"permission": {"write": {"*": "allow"}}}) + "\n")
+        atexit.register(drop_pi_override)
+
+
+def drop_pi_override() -> None:
+    # Left behind, it lets interactive pi here write without asking.
+    PI_OVERRIDE.unlink(missing_ok=True)
+    for empty in PI_OVERRIDE.parents[:-1]:
+        try:
+            empty.rmdir()
+        except OSError:
+            break
 
 
 def check_balance(args) -> None:
