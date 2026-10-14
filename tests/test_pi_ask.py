@@ -183,13 +183,14 @@ class TestPiAsk(unittest.TestCase):
         self.assertFalse(alive(pi))
         self.assertFalse(alive(child))
 
-    def test_a_terminated_pi_ask_takes_pi_with_it(self):
+    def signalled(self, sig: int) -> subprocess.CompletedProcess:
         proc = self.start("--session", "t6", "--dir", self.tmp.name, "slow", FAKE_PI_SLEEP="60")
         try:
             deadline = time.monotonic() + 20
             while not self.pids.exists() and time.monotonic() < deadline:
                 time.sleep(0.1)
-            proc.terminate()
+            proc.send_signal(sig)
+            output = proc.stdout.read()
             proc.wait(timeout=30)
         finally:
             proc.kill()
@@ -198,6 +199,29 @@ class TestPiAsk(unittest.TestCase):
         pi, child = map(int, self.pids.read_text().split())
         time.sleep(0.5)
         self.assertFalse(alive(pi))
+        self.assertFalse(alive(child))
+        return subprocess.CompletedProcess(proc.args, proc.returncode, output, "")
+
+    def test_a_terminated_pi_ask_takes_pi_with_it(self):
+        out = self.signalled(signal.SIGTERM)
+        self.assertEqual(out.returncode, 128 + signal.SIGTERM, out.stdout)
+
+    def test_ctrl_c_stops_pi_and_still_prints_the_answer_block(self):
+        out = self.signalled(signal.SIGINT)
+        self.assertEqual(out.returncode, 128 + signal.SIGINT, out.stdout)
+        self.assertNotIn("Traceback", out.stdout)
+        self.assertIn("=== answer", out.stdout)
+        self.assertIn("=== follow up", out.stdout)
+
+    def test_a_hangup_stops_pi_too(self):
+        out = self.signalled(signal.SIGHUP)
+        self.assertEqual(out.returncode, 128 + signal.SIGHUP, out.stdout)
+
+    def test_kills_a_child_that_ignores_sigterm_after_pi_exits(self):
+        out = self.ask("--session", "t7", "--dir", self.tmp.name, "hi", FAKE_PI_ORPHAN="1")
+        self.assertEqual(out.returncode, 0, out.stdout)
+        _, child = map(int, self.pids.read_text().split())
+        time.sleep(0.5)
         self.assertFalse(alive(child))
 
 
