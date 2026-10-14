@@ -258,6 +258,22 @@ class TestPiAsk(unittest.TestCase):
         self.assertIn("from inside one", out.stdout)
         self.assertFalse(argv.exists())
 
+    def test_stops_a_worker_that_spends_past_max_cost(self):
+        out = self.ask("--session", "t11", "--dir", self.tmp.name, "--max-cost", "0.2", "hi", FAKE_PI_TURNS="5")
+        self.assertEqual(out.returncode, 4, out.stdout)
+        self.assertIn("over --max-cost", out.stdout)
+        self.assertIn("$0.3000 at DeepSeek's prices", out.stdout)
+        self.assertNotIn("given hi", out.stdout)
+
+    def test_stops_a_worker_that_takes_more_than_max_turns(self):
+        out = self.ask("--session", "t12", "--dir", self.tmp.name, "--max-turns", "2", "hi", FAKE_PI_TURNS="5")
+        self.assertEqual(out.returncode, 4, out.stdout)
+        self.assertIn("over --max-turns 2", out.stdout)
+
+    def test_reports_the_gateways_figure_too(self):
+        out = self.ask("--session", "t13", "--dir", self.tmp.name, "hi")
+        self.assertIn("daily cap counts $0.3000", out.stdout)
+
     def test_kills_a_child_that_ignores_sigterm_after_pi_exits(self):
         out = self.ask("--session", "t7", "--dir", self.tmp.name, "hi", FAKE_PI_ORPHAN="1")
         self.assertEqual(out.returncode, 0, out.stdout)

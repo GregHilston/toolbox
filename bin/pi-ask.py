@@ -60,68 +60,83 @@ def failure(message: dict) -> str | None:
     return None
 
 
-def answer_and_cost(log: Path, since: int) -> tuple[str, float, str | None]:
-    """The turn's answer, its cost, and its error if the last message failed."""
-    text, cost, error = "", 0.0, None
-    with log.open("rb") as f:
-        f.seek(since)
-        for line in f.read().split(b"\n"):
+class Tally:
+    """The run's answer, cost and turns, from pi's events as they arrive."""
+
+    def __init__(self) -> None:
+        self.text, self.error = "", None
+        self.cost = self.gateway_cost = 0.0
+        self.turns = 0
+
+    def feed(self, event: dict) -> None:
+        if event.get("type") == "turn_start":
+            self.turns += 1
+        message = event.get("message")
+        if event.get("type") != "message_end" or not isinstance(message, dict) or message.get("role") != "assistant":
+            return
+        usage = message.get("usage") or {}
+        when = datetime.fromtimestamp(message.get("timestamp", time.time() * 1000) / 1000, timezone.utc)
+        self.cost += preflight.turn_cost(message.get("model"), usage, when)
+        # pi prices it from models.json, as the gateway does.
+        self.gateway_cost += float((usage.get("cost") or {}).get("total") or 0)
+        parts = [b.get("text", "") for b in message.get("content", []) if b.get("type") == "text"]
+        if any(parts):
+            self.text = "".join(parts)
+        self.error = failure(message)
+        if self.error and not any(parts):
+            self.text = ""  # earlier filler is not the answer
+
+
+def pump(proc: subprocess.Popen, log: Path, narrator, tally: Tally, args) -> str | None:
+    """Log, tally and narrate pi's output until it ends. Returns why it was cut short, if it was."""
+    fd = proc.stdout.fileno()
+    pending = b""
+    last = time.monotonic()
+    with log.open("ab") as raw:
+        if raw.tell():
+            with log.open("rb") as f:
+                f.seek(-1, os.SEEK_END)
+                if f.read() != b"\n":  # a killed run's partial line
+                    raw.write(b"\n")
+
+        def handle(line: bytes) -> str | None:
+            raw.write(line + b"\n")
+            raw.flush()
             try:
                 event = json.loads(line)
             except ValueError:
-                continue
-            if not isinstance(event, dict) or event.get("type") != "message_end":
-                continue
-            message = event.get("message")
-            if not isinstance(message, dict) or message.get("role") != "assistant":
-                continue
-            # pi's catalog is stale; use DeepSeek's prices.
-            when = datetime.fromtimestamp(message.get("timestamp", time.time() * 1000) / 1000, timezone.utc)
-            cost += preflight.turn_cost(message.get("model"), message.get("usage") or {}, when)
-            parts = [b.get("text", "") for b in message.get("content", []) if b.get("type") == "text"]
-            if any(parts):
-                text = "".join(parts)
-            error = failure(message)
-            if error and not any(parts):
-                text = ""  # earlier filler is not the answer
-    return text, cost, error
+                event = None
+            if isinstance(event, dict):
+                tally.feed(event)
+            narrator.feed(line.decode("utf-8", errors="replace"))
+            if tally.cost > args.max_cost:
+                return f"spent ${tally.cost:.4f}, over --max-cost ${args.max_cost:.2f}"
+            if tally.turns > args.max_turns:
+                return f"over --max-turns {args.max_turns}"
+            return None
 
-
-def pump(proc: subprocess.Popen, log: Path, narrator, idle: int) -> bool:
-    """Narrate pi's output into the log until it ends. Returns whether it stalled."""
-    fd = proc.stdout.fileno()
-    pending: list[bytes] = []
-    last = time.monotonic()
-    with log.open("ab") as raw:
-        if raw.tell() and not log.read_bytes().endswith(b"\n"):  # a killed run's partial line
-            raw.write(b"\n")
         while True:
             ready, _, _ = select.select([fd], [], [], 5)
             if not ready:
                 if proc.poll() is not None:  # done; a child holds stdout
                     break
-                if time.monotonic() - last > idle:
-                    narrator.emit("!", f"no event for {idle}s; killing pi")
-                    return True
+                if time.monotonic() - last > args.idle:
+                    narrator.emit("!", f"no event for {args.idle}s; killing pi")
+                    return "stalled"
                 continue
             chunk = os.read(fd, 65536)
             if not chunk:
                 break
             last = time.monotonic()
-            raw.write(chunk)
-            raw.flush()
-            pending.append(chunk)
-            if b"\n" not in chunk:  # join only once a line ends
-                continue
-            *lines, rest = b"".join(pending).split(b"\n")
-            pending = [rest]
+            pending += chunk
+            *lines, pending = pending.split(b"\n")
             for line in lines:
-                if line.strip():
-                    narrator.feed(line.decode("utf-8", errors="replace"))
-    rest = b"".join(pending)
-    if rest.strip():
-        narrator.feed(rest.decode("utf-8", errors="replace"))
-    return False
+                if line.strip() and (over := handle(line)):
+                    narrator.emit("!", f"{over}; stopping pi")
+                    return over
+        if pending.strip():
+            handle(pending)
+    return None
 
 
 def group_alive(proc: subprocess.Popen) -> bool:
@@ -179,6 +194,8 @@ def main() -> int:
     p.add_argument("--dir", help="worker cwd; a follow-up reuses the first turn's (default .)")
     p.add_argument("--model", default="cloud", help="LiteLLM alias (default cloud)")
     p.add_argument("--idle", type=int, default=300, help="kill after N silent seconds")
+    p.add_argument("--max-cost", type=float, default=0.50, help="stop past $N at DeepSeek's prices (default 0.50)")
+    p.add_argument("--max-turns", type=int, default=100, help="stop past N model turns (default 100)")
     p.add_argument("prompt", help="the question, or @file to read it from")
     args = p.parse_args()
     # A worker sees this skill and PATH too.
@@ -218,7 +235,6 @@ def main() -> int:
         p.error(f"--dir {workdir} is not a directory")
     saved.write_text(f"{workdir}\n")
     log = LOG_DIR / f"{args.session}.jsonl"
-    since = log.stat().st_size if log.exists() else 0
 
     # Depth 1: headless hard-block mode, no git writes.
     env = dict(os.environ, PATH=f"{TOOLBOX_BIN}:{os.environ.get('PATH', '')}", PI_SUBAGENT_DEPTH="1")
@@ -240,12 +256,13 @@ def main() -> int:
             raise
         sys.exit(f"pi-ask.py: the prompt ({len(prompt.encode())} bytes) is over the OS argument limit; shorten it")
     narrator = narrate.Narrator(label=args.session, out=sys.stdout)
-    stalled = False
+    tally = Tally()
+    cut_short = None
     try:
         _armed = True
         if _caught:
             raise Interrupted(_caught)
-        stalled = pump(proc, log, narrator, args.idle)
+        cut_short = pump(proc, log, narrator, tally, args)
     except Interrupted as e:
         narrator.emit("!", f"{signal.Signals(e.signum).name}; stopping pi")
     finally:
@@ -255,17 +272,22 @@ def main() -> int:
     code = proc.wait()
     narrator.finish()
 
-    text, cost, error = answer_and_cost(log, since)
-    print(f"\n=== answer ({args.session}, ${cost:.4f} at DeepSeek's prices, log {log}) ===")
+    text, error = tally.text, tally.error
+    print(f"\n=== answer ({args.session}: ${tally.cost:.4f} at DeepSeek's prices; "
+          f"the gateway's daily cap counts ${tally.gateway_cost:.4f}; log {log}) ===")
     print(text or "(no answer)")
     if error:
         print(f"=== the last turn failed: {error} ===")
+    if cut_short and cut_short != "stalled":
+        print(f"=== stopped: {cut_short} ===")
     print(f"=== follow up: pi-ask.py --session {args.session} \"...\" (it runs in {workdir}) ===")
     if _caught:
         print(f"=== stopped by {signal.Signals(_caught).name} ===")
         return 128 + _caught
-    if stalled:
+    if cut_short == "stalled":
         return 3
+    if cut_short:
+        return 4
     if error:
         return code or 1
     return code or (0 if text else 1)
