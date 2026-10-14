@@ -412,6 +412,7 @@ def main() -> None:
         sys.exit("--budget routes pi workers through LiteLLM; it does not cover claude workers")
     sh("gh", "auth", "status")
     Path(".overnight/logs").mkdir(parents=True, exist_ok=True)
+    Path(".overnight/STOP").unlink(missing_ok=True)  # it ended an earlier run
     exclude = Path(sh("git", "rev-parse", "--git-path", "info/exclude"))
     exclude.parent.mkdir(parents=True, exist_ok=True)
     exclude.touch()
