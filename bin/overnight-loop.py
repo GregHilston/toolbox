@@ -313,7 +313,7 @@ def pi_result(out: str) -> Run:
 def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
               read_only: bool = False) -> Run:
     if harness == "claude":
-        cmd = ["claude", "-p", prompt, "--output-format", "json", "--max-turns", "200",
+        cmd = ["claude", "-p", "--output-format", "json", "--max-turns", "200",
                "--max-budget-usd", str(args.issue_usd)]
         if read_only:
             cmd += ["--permission-mode", "dontAsk", "--allowedTools", "Read", "Grep", "Glob"]
@@ -327,19 +327,18 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         if model in (None, "cloud"):
             cmd += ["--provider", "litellm"]
             model = "cloud"
-        cmd += ["--", prompt]
     if model:
         cmd[1:1] = ["--model", model]
     # 1M-context models otherwise compact only near 967K tokens. claude -p
     # waits for background tasks, so a backgrounded server held it open.
     env = os.environ | {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000", "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1"}
-    stdout = Path(".overnight/agent.out")
-    # stdin=DEVNULL: pi reads a piped stdin to EOF before anything else.
-    # SIGINT on timeout lets claude end the turn and print its result.
+    stdout, stdin = Path(".overnight/agent.out"), Path(".overnight/prompt.md")
+    # The prompt goes on stdin: a diff in argv can pass the OS's argument limit.
+    stdin.write_text(prompt)
     started = time.time()
-    with stdout.open("w") as out, log.open("a") as err:
-        code = run_group(cmd, args.issue_minutes, signal.SIGINT, stdin=subprocess.DEVNULL,
-                         stdout=out, stderr=err, env=env)
+    # SIGINT on timeout lets claude end the turn and print its result.
+    with stdin.open() as inp, stdout.open("w") as out, log.open("a") as err:
+        code = run_group(cmd, args.issue_minutes, signal.SIGINT, stdin=inp, stdout=out, stderr=err, env=env)
     kill_leftovers(started)
     out = stdout.read_text(errors="replace")
     with log.open("a") as f:
