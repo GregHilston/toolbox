@@ -298,6 +298,17 @@ class TestOutOfMoney(LoopTest):
         self.assertIn("Stopped: out of money", out.stdout, out.stderr)
 
 
+class TestVerify(LoopTest):
+    def test_a_hung_verify_times_out_and_parks(self):
+        started = time.monotonic()
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", "--verify-minutes", "0.05",
+                            FAKE_WORK_1="verifyhang")
+        self.assertLess(time.monotonic() - started, 40)
+        self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
+        self.assertIn("timed out", self.comments(1)[-1])
+        self.assertIn("overnight:done", self.labels(2))
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})

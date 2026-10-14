@@ -123,12 +123,45 @@ class RunSpend:
         return self.total
 
 
-def verify(log: Path) -> tuple[bool, str]:
-    out = subprocess.run(["./verify.sh"], capture_output=True, text=True)
-    text = out.stdout + out.stderr
+def signal_group(pgid: int, sig: int) -> None:
+    try:
+        os.killpg(pgid, sig)
+    except ProcessLookupError:
+        pass
+
+
+def run_group(cmd: list[str], minutes: float, stop: int = signal.SIGINT, **popen) -> int | None:
+    """Run cmd in a process group of its own; None means it timed out.
+
+    Output goes to files, not pipes: a leftover child holding a pipe open would
+    keep a wait on EOF hanging after cmd itself has exited.
+    """
+    proc = subprocess.Popen(cmd, start_new_session=True, **popen)
+    try:
+        return proc.wait(timeout=minutes * 60)
+    except subprocess.TimeoutExpired:
+        signal_group(proc.pid, stop)
+        try:
+            proc.wait(timeout=60)
+        except subprocess.TimeoutExpired:
+            pass
+        return None
+    finally:
+        signal_group(proc.pid, signal.SIGKILL)
+        proc.wait()
+
+
+def verify(args, log: Path) -> tuple[bool, str]:
+    out = Path(".overnight/verify.out")
+    with out.open("w") as f:
+        code = run_group(["./verify.sh"], args.verify_minutes, signal.SIGKILL,
+                         stdin=subprocess.DEVNULL, stdout=f, stderr=subprocess.STDOUT)
+    text = out.read_text(errors="replace")
+    if code is None:
+        text += f"\n./verify.sh timed out after {args.verify_minutes:g} min"
     with log.open("a") as f:
-        f.write(f"\n--- verify.sh exit {out.returncode} ---\n{text}")
-    return out.returncode == 0, "\n".join(text.strip().splitlines()[-20:])
+        f.write(f"\n--- verify.sh exit {code} ---\n{text}")
+    return code == 0, "\n".join(text.strip().splitlines()[-20:])
 
 
 def unblocked(n: int, finished: set[int]) -> bool:
@@ -299,7 +332,7 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[bool, float, bool
         tidy(base)
         return False, cost, True
     tidy()  # keep only what the worker committed
-    ok, tail = verify(log) if sh("git", "rev-parse", "HEAD") != base else (False, "no commits")
+    ok, tail = verify(args, log) if sh("git", "rev-parse", "HEAD") != base else (False, "no commits")
     if ok and args.reviewer != "none":
         diff = sh("git", "diff", f"{base}..HEAD")[:60000]
         run = run_agent(args, args.reviewer, args.reviewer_model,
@@ -312,7 +345,7 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[bool, float, bool
             message, broke = run.text, run.broke
             cost += run.cost
             tidy()
-            ok, tail = verify(log)
+            ok, tail = verify(args, log)
             message += "\n\nAfter review:\n" + review[-800:]
         if broke:
             tidy(base)
@@ -342,6 +375,8 @@ def main() -> None:
     p.add_argument("--max-issues", type=int, default=20)
     p.add_argument("--max-fails", type=int, default=3, help="stop after this many parks in a row (default 3)")
     p.add_argument("--issue-minutes", type=int, default=90, help="time limit per agent run (default 90)")
+    p.add_argument("--verify-minutes", type=float, default=15,
+                   help="time limit per ./verify.sh run, past which it counts as a fail (default 15)")
     p.add_argument("--issue-usd", type=float, default=10, help="claude only: budget per agent run (default 10)")
     p.add_argument("--max-cost", type=float, default=60,
                    help="stop past this total (default 60); pi is priced from DeepSeek's table")
@@ -371,7 +406,7 @@ def main() -> None:
     if ".overnight/" not in exclude.read_text():
         with exclude.open("a") as f:
             f.write("\n.overnight/\n")
-    ok, tail = verify(Path(".overnight/logs/baseline.log"))
+    ok, tail = verify(args, Path(".overnight/logs/baseline.log"))
     if not ok:
         sys.exit(f"./verify.sh fails before any work, so nothing can be judged:\n{tail}")
     for label, colour in ((DONE, "0e8a16"), (PARKED, "d93f0b"), (WORKING, "5319e7")):
