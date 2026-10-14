@@ -654,6 +654,14 @@ class TestGateway(unittest.TestCase):
             self.assertEqual(spend.read(), 0.5)
 
 
+class TestLongPrompt(LoopTest):
+    def test_a_prompt_past_the_argument_limit_reaches_the_agent(self):
+        self.issues({1: "Huge"}, body="Done when: it works.\n" + "x" * 2_000_000)
+        out = self.run_loop("--harness", "pi", "--reviewer", "claude")
+        self.assertIn("overnight:done", self.labels(1), out.stderr[-2000:])
+        self.assertIn("claude review", self.roles())
+
+
 class TestPiEvents(unittest.TestCase):
     def test_reads_errors_only_from_error_events(self):
         quoted = json.dumps({"type": "tool_execution_end", "result": "Insufficient Balance"})
