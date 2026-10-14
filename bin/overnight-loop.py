@@ -255,32 +255,32 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         cmd[1:1] = ["--model", model]
     # 1M-context models otherwise compact only near 967K tokens.
     env = os.environ | {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000"}
-    # Own process group, so a Godot server the worker left running dies with it.
+    stdout = Path(".overnight/agent.out")
     # stdin=DEVNULL: pi reads a piped stdin to EOF before anything else.
-    proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            text=True, env=env, start_new_session=True)
-    try:
-        out, _ = proc.communicate(timeout=args.issue_minutes * 60)
-    except subprocess.TimeoutExpired:
-        os.killpg(proc.pid, signal.SIGINT)  # SIGINT lets claude end the turn cleanly
-        try:
-            out, _ = proc.communicate(timeout=60)
-        except subprocess.TimeoutExpired:
-            os.killpg(proc.pid, signal.SIGKILL)
-            out, _ = proc.communicate()
-        out += f"\n(timed out after {args.issue_minutes} min)"
+    # SIGINT on timeout lets claude end the turn and print its result.
+    with stdout.open("w") as out, log.open("a") as err:
+        code = run_group(cmd, args.issue_minutes, signal.SIGINT, stdin=subprocess.DEVNULL,
+                         stdout=out, stderr=err, env=env)
+    out = stdout.read_text(errors="replace")
     with log.open("a") as f:
-        f.write(out)
+        f.write(out + (f"\n(timed out after {args.issue_minutes:g} min)\n" if code is None else ""))
     if harness == "pi":
         run = pi_result(out)
         run.text = run.text[-1500:]
         return run
-    try:
-        result = json.loads(out.strip().splitlines()[-1])
-    except (json.JSONDecodeError, IndexError):
-        return Run(out.strip()[-1500:], error="claude printed no result")
-    text = str(result.get("result", ""))
-    return Run(text[-1500:], float(result.get("total_cost_usd") or 0), text if result.get("is_error") else "")
+    return claude_result(out)
+
+
+def claude_result(out: str) -> Run:
+    for line in reversed(out.splitlines()):
+        try:
+            result = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(result, dict) and result.get("type") == "result":
+            text = str(result.get("result", ""))
+            return Run(text[-1500:], float(result.get("total_cost_usd") or 0), text if result.get("is_error") else "")
+    return Run(out.strip()[-1500:], error="claude printed no result")
 
 
 def smoke_test(args, harness: str, model: str | None) -> None:
@@ -408,7 +408,7 @@ def main() -> None:
     p.add_argument("--hours", type=float, default=8, help="stop starting issues after this (default 8)")
     p.add_argument("--max-issues", type=int, default=20)
     p.add_argument("--max-fails", type=int, default=3, help="stop after this many parks in a row (default 3)")
-    p.add_argument("--issue-minutes", type=int, default=90, help="time limit per agent run (default 90)")
+    p.add_argument("--issue-minutes", type=float, default=90, help="time limit per agent run (default 90)")
     p.add_argument("--verify-minutes", type=float, default=15,
                    help="time limit per ./verify.sh run, past which it counts as a fail (default 15)")
     p.add_argument("--issue-usd", type=float, default=10, help="claude only: budget per agent run (default 10)")

@@ -134,9 +134,16 @@ FAKE_PI = textwrap.dedent('''\
 
 FAKE_CLAUDE = textwrap.dedent('''\
     #!/usr/bin/env python3
-    import json, os, sys
+    import json, os, signal, sys
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from agent import act, failing, prompt_of
+
+    def interrupted(*_):
+        # Claude ends the turn on SIGINT and still prints its result.
+        print(json.dumps({"type": "result", "is_error": False, "result": "interrupted", "total_cost_usd": 0.25}))
+        sys.exit(130)
+
+    signal.signal(signal.SIGINT, interrupted)
     NAME = "claude"
     role, text = act(NAME, prompt_of(sys.argv[1:]))
     result = {"type": "result", "subtype": "success", "is_error": False, "result": text, "total_cost_usd": 0.25}
@@ -405,6 +412,18 @@ class TestOffPeak(unittest.TestCase):
                                   spend=None, max_cost=60)
         with mock.patch.object(loop.preflight, "minutes_until_peak", return_value=5):
             self.assertIsNone(loop.stop_reason(args, set(), 0, 0.0, time.time() + 3600))
+
+
+class TestClaudeCost(LoopTest):
+    def test_counts_cost_when_stderr_follows_the_result(self):
+        out = self.run_loop("--harness", "claude", "--reviewer", "none", FAKE_CLAUDE_STDERR="1")
+        self.assertIn("$0.50 spent", out.stdout, out.stderr)
+
+    def test_counts_the_cost_of_a_run_that_timed_out(self):
+        out = self.run_loop("--harness", "claude", "--reviewer", "none", "--issue-minutes", "0.05",
+                            FAKE_WORK_1="hang")
+        self.assertIn("$0.50 spent", out.stdout, out.stderr)
+        self.assertIn("overnight:parked", self.labels(1))
 
 
 class TestPiEvents(unittest.TestCase):
