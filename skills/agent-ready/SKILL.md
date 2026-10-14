@@ -48,7 +48,9 @@ For a Godot game, run each step under `timeout`:
    asserts they connect and sync. It takes about six seconds.
 4. A grep of every log for `SCRIPT ERROR` and `Parse Error`.
 
-Put the Godot version and a list of banned Godot 3 patterns in `CLAUDE.md`, such as
+Use GDScript, fully typed: in `project.godot` set the `untyped_declaration` and
+`unsafe_*` warnings to error, so the import step rejects untyped calls. Put the
+Godot version and a list of banned Godot 3 patterns in `CLAUDE.md`, such as
 `yield`, `KinematicBody2D` and `remote func`. Models drift into Godot 3 syntax,
 worst of all in networking code. Make the gate pass on an empty project first.
 Every failure seen overnight becomes a new check.
