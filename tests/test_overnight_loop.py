@@ -569,9 +569,18 @@ class TestGhRetry(LoopTest):
 
     def test_a_gh_hiccup_does_not_end_the_night(self):
         out = self.run_loop("--harness", "pi", "--reviewer", "none",
-                            FAKE_GH_FAIL="issue comment 1", FAKE_GH_FAIL_TIMES="1")
+                            FAKE_GH_FAIL="issue edit 1", FAKE_GH_FAIL_TIMES="1")
         self.assertIn("Stopped: queue empty", out.stdout, out.stderr)
-        self.assertTrue(self.comments(1))
+        self.assertIn("overnight:done", self.labels(1))
+
+    def test_writes_that_are_not_idempotent_are_tried_once(self):
+        for cmd in (["issue", "comment", "1", "--body", "x"], ["auth", "status"]):
+            with mock.patch.dict(os.environ, self.env | {"FAKE_GH_FAIL": " ".join(cmd[:2])}), \
+                    mock.patch.object(loop.time, "sleep") as sleep:
+                loop.sh("gh", *cmd, check=False)
+            sleep.assert_not_called()
+        log = Path(str(self.state) + ".log").read_text()
+        self.assertEqual((log.count("issue comment"), log.count("auth status")), (1, 1))
 
     def test_a_gh_that_stays_down_still_gets_a_summary(self):
         out = self.run_loop("--harness", "pi", "--reviewer", "none", no_sleep=True,
