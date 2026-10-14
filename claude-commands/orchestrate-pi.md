@@ -815,11 +815,12 @@ in-flight reasoning. **If you expect to intervene, resume through `pi-rpc.py run
 rather than a bare `--continue`.**
 
 **Do not add `--session-id` here.** pi refuses the pair outright —
-`Error: --session-id cannot be combined with --continue`. `--session-id` is
-create-if-missing, for *starting* an addressable session; `--continue` resumes
-one. Sessions are keyed by project directory, so a bare `--continue` from the
-worktree's own cwd is unambiguous — one worktree, one session. If you need to
-name it explicitly, `--session <id>` is the flag that accepts one.
+`Error: --session-id cannot be combined with --continue`. Use one or the other.
+Sessions are keyed by project directory, so a bare `--continue` from the
+worktree's own cwd is unambiguous — one worktree, one session. In pi 1.1.0
+`--session-id <id>` alone also resumes: it creates the session if it is missing
+and continues it if it exists, so re-running the spawn with the same id is a
+follow-up turn (checked 2026-10-14; `pi-ask.py` relies on it).
 
 Cheaper than a fresh worker, and it keeps the prior reasoning in context. This is
 also how the review loop closes: a fresh Claude subagent reviews

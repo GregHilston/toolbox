@@ -449,10 +449,10 @@ one of these fails **silently or misleadingly**; none announces itself.
 
 **`--session-id` cannot be combined with `--continue`.** pi rejects the pair
 outright: `Error: --session-id cannot be combined with --continue`. To push back
-on a live worker, use bare `--continue` from the worktree's cwd (sessions are
-keyed by project directory, so one worktree has exactly one session and it is
-unambiguous), or address it explicitly with `--session <id>`. `--session-id` is
-create-if-missing and is for *starting* an addressable session, not resuming one.
+on a worker, either use bare `--continue` from the worktree's cwd (sessions are
+keyed by project directory, so one worktree has exactly one session), or pass the
+same `--session-id <id>` again: in pi 1.1.0 it creates the session if missing and
+resumes it if not (checked 2026-10-14). `pi-ask.py` relies on the second.
 
 **A worker cannot create new files by default.** The global permission config
 (`~/.pi/agent/extensions/pi-permission-system/config.json`) sets
