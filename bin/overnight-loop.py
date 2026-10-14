@@ -12,9 +12,10 @@ one fix pass when it asks for changes. Kept work stays on an overnight/<time>
 branch labelled overnight:done; the rest is reset away and labelled
 overnight:parked. Each issue appends to progress.md, which the next worker reads.
 
-pi workers use the LiteLLM gateway's `cloud` model unless --model names another.
---budget stops starting issues once this run has spent that much there. The gateway's own daily
-cap on `cloud` is the hard limit underneath: past it, every request gets a 429.
+pi workers use the LiteLLM gateway's `cloud` model unless --model names another,
+and --budget stops starting issues once this run has spent that much there. The
+gateway's own daily cap on `cloud` is the hard limit underneath: past it, every
+request gets a 429.
 """
 
 from __future__ import annotations
@@ -47,6 +48,10 @@ PI_OVERRIDE = Path(".pi/extensions/pi-permission-system/config.json")
 GATE = ("verify.sh", "tests/baseline_count")
 OUT_OF_MONEY = re.compile(r"Budget has been exceeded|budget_exceeded|Exceeded budget|Insufficient Balance"
                           r"|usage limit|hit your limit|Credit balance is too low", re.I)
+GH_RETRY = (2, 10, 30)  # seconds before each retry
+STREAMED = re.compile(r'^\{"type":\s*"message_update".*\n?', re.M)
+CONVENTIONAL = re.compile(r"^\w+(\([^)]+\))?!?: .+ \(#\d+\)$|^chore\(overnight\): ")
+MIN_BALANCE = 2.0  # deepseek-preflight's floor
 
 WORKER = """\
 You are one worker in an unattended overnight run. Nobody will answer questions.
@@ -87,11 +92,6 @@ The diff:
 
 {diff}
 """
-GH_RETRY = (2, 10, 30)  # seconds before each retry
-STREAMED = re.compile(r'^\{"type":\s*"message_update".*\n?', re.M)
-CONVENTIONAL = re.compile(r"^\w+(\([^)]+\))?!?: .+ \(#\d+\)$|^chore\(overnight\): ")
-MIN_BALANCE = 2.0  # deepseek-preflight's floor
-PING = "Reply with the word ok and nothing else."
 FIX = """\
 A reviewer asked for changes to the work already committed on this branch:
 
@@ -99,6 +99,7 @@ A reviewer asked for changes to the work already committed on this branch:
 
 Make them, run ./verify.sh until it passes, and commit.
 """
+PING = "Reply with the word ok and nothing else."
 
 
 def sh(*cmd: str, check: bool = True) -> str:
