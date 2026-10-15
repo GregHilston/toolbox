@@ -140,7 +140,7 @@ def fetch_youtube(it: Item) -> None:
 
 
 def fetch_instagram(it: Item) -> None:
-    data = json.loads(_run([str(IG_SCRIPT), it.url], timeout=660))
+    data = json.loads(_run([str(IG_SCRIPT), it.url], timeout=200))
     it.meta = {k: data[k] for k in ("author", "published", "caption") if data.get(k)}
     it.body = data["transcript"]
 

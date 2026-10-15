@@ -6,44 +6,43 @@
 """Transcribe an Instagram reel on moria and print its details as JSON.
 
 Reels have no captions to download, so speech-to-text is the only source.
-Everything runs on moria over one ssh call: Parakeet on its GPU takes
-seconds, where Whisper on a CPU took ten minutes. yt-dlp needs no login.
+Everything runs on moria in instagram-transcribe-moria.sh, over one ssh call:
+Parakeet on its GPU takes seconds, where Whisper on a CPU took ten minutes.
+yt-dlp needs no login.
 
 Usage:
     instagram-transcript.py https://www.instagram.com/reel/DecfvksvHiW/
 """
 
 import json
-import shlex
+import re
 import subprocess
 import sys
 
 HOST = "moria"
-MODEL = "mlx-community/parakeet-tdt-0.6b-v3"
+REMOTE = "~/Git/toolbox/bin/instagram-transcribe-moria.sh"
+TIMEOUT = 180
 
-REMOTE = """
-set -euo pipefail
-export PATH=/opt/homebrew/bin:$HOME/.local/bin:$PATH
-dir=$(mktemp -d)
-trap 'rm -rf "$dir"' EXIT
-cd "$dir"
-uvx -q yt-dlp --no-progress -q --no-simulate -x --audio-format mp3 -o 'reel.%(ext)s' \
-  -O '%(.{{uploader,channel,upload_date,description}})j' {url}
-uvx -q --from parakeet-mlx parakeet-mlx --model {model} --output-format txt reel.mp3 >&2
-cat reel.txt
-"""
+
+def canonical(url: str) -> str:
+    """The reel's bare URL, the only shape moria's side accepts."""
+    m = re.search(r"instagram\.com/(reels?|p)/([A-Za-z0-9_-]+)", url)
+    if not m:
+        sys.exit(f"not an instagram reel or post: {url}")
+    kind = "p" if m[1] == "p" else "reel"
+    return f"https://www.instagram.com/{kind}/{m[2]}/"
 
 
 def main() -> None:
     if len(sys.argv) != 2:
         sys.exit("usage: instagram-transcript.py <instagram_reel_url>")
-    url = sys.argv[1]
-    cmd = REMOTE.format(url=shlex.quote(url), model=MODEL)
+    url = canonical(sys.argv[1])
+    # BatchMode: a prompt would hang a headless caller.
+    cmd = ["ssh", "-o", "ConnectTimeout=5", "-o", "BatchMode=yes", HOST, REMOTE, url]
     try:
-        out = subprocess.run(["ssh", HOST, "bash", "-c", shlex.quote(cmd)],
-                             capture_output=True, text=True, timeout=600)
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=TIMEOUT)
     except subprocess.TimeoutExpired:
-        sys.exit(f"transcribing on {HOST} took over 10 minutes; is it asleep?")
+        sys.exit(f"transcribing on {HOST} took over {TIMEOUT} seconds")
     if out.returncode != 0:
         tail = "\n".join(out.stderr.strip().splitlines()[-5:])
         sys.exit(f"failed on {HOST} (exit {out.returncode}). Is it awake and on the tailnet?\n{tail}")

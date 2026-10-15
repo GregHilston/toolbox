@@ -26,6 +26,11 @@
 
   networking.hostName = "moria";
 
+  # Hermes on dungeon transcribes reels here; its key runs nothing else.
+  users.users.${vars.user.name}.openssh.authorizedKeys.keys = [
+    "restrict,command=\"/Users/${vars.user.name}/Git/toolbox/bin/instagram-transcribe-moria.sh\" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFMxwdR8UdqWn3YD0kBX5yREKgQCF0kq/1ItiyKV083V hermes-moria-transcribe"
+  ];
+
   # Display sleep timeout (30 minutes instead of default 5)
   power.sleep.display = lib.mkForce 30;
 
