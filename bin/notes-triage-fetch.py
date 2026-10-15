@@ -38,7 +38,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fetch_hn import fetch_item  # noqa: E402
@@ -50,6 +50,7 @@ OUT_ROOT = Path.home() / ".cache/notes-triage"
 
 CAP = {"youtube": 7000, "instagram": 7000, "reddit-comment": 3000, "reddit": 4500, "hn": 4500, "article": 3500}
 SKIP_PREFIXES = ("about:", "moz-extension:", "chrome:", "file:")
+TRACKING = re.compile(r"^(utm_\w+|si|igsh|igshid|xtok|fbclid|gclid|share_id|ref_src)$")
 SEARCH_PAGE = re.compile(r"https?://(www\.)?(google\.[a-z.]+/search|duckduckgo\.com/\?|bing\.com/search)")
 
 
@@ -102,6 +103,13 @@ def parse_file(path: Path) -> list[Item]:
         note = re.sub(r"^\)[^\w]*", "", note.strip()).strip(" -—:")
         items.append(Item(url=m.group(0).rstrip(".,"), note=note))
     return items
+
+
+def clean_url(url: str) -> str:
+    """The URL without share and tracking parameters: clips dedupe on it."""
+    u = urlparse(url)
+    query = [(k, v) for k, v in parse_qs(u.query, keep_blank_values=True).items() if not TRACKING.match(k)]
+    return u._replace(query=urlencode(query, doseq=True)).geturl()
 
 
 # --------------------------------------------------------------------------- classify
@@ -264,6 +272,8 @@ def main() -> None:
         items += parse_file(args.file.expanduser())
     items += [Item(url=u) for u in args.urls]
 
+    for it in items:
+        it.url = clean_url(it.url)
     seen: set[str] = set()
     items = [it for it in items if not (it.url in seen or seen.add(it.url))]
     if not items:
