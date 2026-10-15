@@ -50,6 +50,7 @@ OUT_ROOT = Path.home() / ".cache/notes-triage"
 
 CAP = {"youtube": 7000, "instagram": 7000, "reddit-comment": 3000, "reddit": 4500, "hn": 4500, "article": 3500}
 SKIP_PREFIXES = ("about:", "moz-extension:", "chrome:", "file:")
+TRACKING = re.compile(r"^(utm_\w+|si|igsh|igshid|xtok|fbclid|gclid|share_id|ref_src)$")
 SEARCH_PAGE = re.compile(r"https?://(www\.)?(google\.[a-z.]+/search|duckduckgo\.com/\?|bing\.com/search)")
 
 
@@ -102,6 +103,14 @@ def parse_file(path: Path) -> list[Item]:
         note = re.sub(r"^\)[^\w]*", "", note.strip()).strip(" -—:")
         items.append(Item(url=m.group(0).rstrip(".,"), note=note))
     return items
+
+
+def clean_url(url: str) -> str:
+    """Clips dedupe on this, so drop share tokens."""
+    u = urlparse(url)
+    # Raw segments: re-encoding would change the key.
+    query = "&".join(p for p in u.query.split("&") if p and not TRACKING.match(p.split("=", 1)[0]))
+    return u._replace(query=query).geturl()
 
 
 # --------------------------------------------------------------------------- classify
@@ -264,6 +273,8 @@ def main() -> None:
         items += parse_file(args.file.expanduser())
     items += [Item(url=u) for u in args.urls]
 
+    for it in items:
+        it.url = clean_url(it.url)
     seen: set[str] = set()
     items = [it for it in items if not (it.url in seen or seen.add(it.url))]
     if not items:
