@@ -471,12 +471,12 @@ class TestOffPeak(unittest.TestCase):
 class TestClaudeCost(LoopTest):
     def test_counts_cost_when_stderr_follows_the_result(self):
         out = self.run_loop("--harness", "claude", "--reviewer", "none", FAKE_CLAUDE_STDERR="1")
-        self.assertIn("$0.50 spent", out.stdout, out.stderr)
+        self.assertIn("$0.50 at list price", out.stdout, out.stderr)
 
     def test_counts_the_cost_of_a_run_that_timed_out(self):
         out = self.run_loop("--harness", "claude", "--reviewer", "none", "--issue-minutes", "0.05",
                             FAKE_WORK_1="hang")
-        self.assertIn("$0.50 spent", out.stdout, out.stderr)
+        self.assertIn("$0.50 at list price", out.stdout, out.stderr)
         self.assertIn("overnight:parked", self.labels(1))
 
 
@@ -709,6 +709,32 @@ class TestGateway(unittest.TestCase):
             spend = loop.RunSpend()
             self.assertEqual(spend.read(), 0.5)
             self.assertEqual(spend.read(), 0.5)
+
+
+class TestCostLabels(LoopTest):
+    def test_claude_phases_are_labelled_list_price(self):
+        out = self.run_loop("--harness", "claude", "--reviewer", "none")
+        self.assertIn("done: worker claude/default $0.25 list", out.stdout, out.stderr)
+        self.assertIn("Real: $0.00. Claude: subscription, $0.50 at list price.", out.stdout)
+
+    def test_an_unreadable_gateway_is_said_not_guessed(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "claude")
+        self.assertIn("pi/cloud", out.stdout, out.stderr)
+        self.assertIn("Real: unknown, the gateway could not be read", out.stdout)
+
+    def test_the_gateway_delta_is_the_real_cost(self):
+        args = argparse.Namespace(gateway_used=True, spend=mock.Mock(total=0.42, gaps=0))
+        self.assertEqual(loop.money_line(args, 15.7, 3.91),
+                         "Real: $0.42 gateway. Claude: subscription, $15.70 at list price.")
+
+    def test_a_run_keeps_its_whole_text(self):
+        long = "x" * 5000
+        self.assertEqual(len(loop.claude_result(json.dumps({"type": "result", "result": long})).text), 5000)
+        event = {"type": "message_end", "message": {"role": "assistant", "content": [{"type": "text", "text": long}]}}
+        self.assertEqual(len(loop.pi_result(json.dumps(event)).text), 5000)
+
+    def test_the_worker_is_not_told_to_gate_before_starting(self):
+        self.assertNotIn("before changing anything", loop.WORKER)
 
 
 class TestLongPrompt(LoopTest):

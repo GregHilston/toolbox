@@ -16,6 +16,9 @@ pi workers use the LiteLLM gateway's `cloud` model unless --model names another,
 and --budget stops starting issues once this run has spent that much there. The
 gateway's own daily cap on `cloud` is the hard limit underneath: past it, every
 request gets a 429.
+
+Claude's cost figures are list-price estimates, since a subscription bills none
+of it; the gateway's counter is the real DeepSeek spend.
 """
 
 from __future__ import annotations
@@ -62,12 +65,12 @@ Implement GitHub issue #{n} in this repository, then stop.
 
 1. Read the issue with `gh issue view {n}`. Read CLAUDE.md, docs/design.md if it
    exists, the titles in docs/adr/, and the end of progress.md.
-2. Run ./verify.sh before changing anything, so you know the starting state.
-3. Implement only this issue. Turn each checkable line under "Done when" into a
+2. Implement only this issue. Turn each checkable line under "Done when" into a
    test that ./verify.sh runs.
-4. Run ./verify.sh until it passes. Never edit verify.sh or the issue, and never
+3. Run focused tests while you iterate. When you think you are done, run
+   ./verify.sh until it passes. Never edit verify.sh or the issue, and never
    delete or weaken a test to make it pass.
-5. Commit with a conventional commit message ending in "(#{n})", such as
+4. Commit with a conventional commit message ending in "(#{n})", such as
    "feat(car): add handbrake (#{n})". Do not push and do not write to GitHub.
 
 If the issue contradicts an accepted ADR, or you cannot finish, commit nothing
@@ -143,11 +146,13 @@ class RunSpend:
     def __init__(self) -> None:
         self.last = cloud_spend()
         self.total = 0.0
+        self.gaps = 0
 
     def read(self) -> float:
         try:
             now = cloud_spend()
         except (OSError, ValueError, KeyError) as e:  # URLError is an OSError
+            self.gaps += 1
             print(f"  could not read the gateway's spend ({e}); keeping ${self.total:.2f}", flush=True)
             return self.total
         self.total += now - self.last if now >= self.last else now
@@ -304,6 +309,16 @@ class Run:
     text: str = ""
     cost: float = 0.0
     error: str = ""
+    harness: str = ""
+    model: str = ""
+
+    @property
+    def priced(self) -> str:
+        # A subscription bills claude nothing; its figure is list price.
+        return f"${self.cost:.2f}" + (" list" if self.harness == "claude" else "")
+
+    def phase(self, name: str) -> str:
+        return f"{name} {self.harness}/{self.model} {self.priced}"
 
     @property
     def broke(self) -> bool:
@@ -337,7 +352,9 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
     if harness == "claude":
         # A prompt nobody answers is denied at once, so claude stops retrying it.
         cmd = ["claude", "-p", "--output-format", "json", "--max-turns", "200",
-               "--max-budget-usd", str(args.issue_usd), "--permission-prompts", "none"]
+               "--max-budget-usd", str(args.issue_usd), "--permission-prompts", "none",
+               # Hooks and CLAUDE.md must stay on.
+               "--disable-slash-commands", "--strict-mcp-config", "--exclude-dynamic-system-prompt-sections"]
         if read_only:
             cmd += ["--permission-mode", "dontAsk", "--allowedTools", "Read", "Grep", "Glob"]
         else:
@@ -350,6 +367,7 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         if model in CLOUD:
             cmd += ["--provider", "litellm"]
             model = "cloud"
+    shown = model or "default"
     if model:
         cmd[1:1] = ["--model", model]
     # 1M-context models otherwise compact only near 967K tokens. claude -p
@@ -369,9 +387,10 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         f.write(STREAMED.sub("", out) + (f"\n(timed out after {args.issue_minutes:g} min)\n" if code is None else ""))
     if harness == "pi":
         run = pi_result(out)
-        run.text = run.text[-1500:]
-        return run
-    return claude_result(out)
+    else:
+        run = claude_result(out)
+    run.harness, run.model = harness, shown
+    return run
 
 
 def claude_result(out: str) -> Run:
@@ -382,8 +401,8 @@ def claude_result(out: str) -> Run:
             continue
         if isinstance(result, dict) and result.get("type") == "result":
             text = str(result.get("result", ""))
-            return Run(text[-1500:], float(result.get("total_cost_usd") or 0), text if result.get("is_error") else "")
-    return Run(out.strip()[-1500:], error="claude printed no result")
+            return Run(text, float(result.get("total_cost_usd") or 0), text if result.get("is_error") else "")
+    return Run(out.strip(), error="claude printed no result")
 
 
 def smoke_test(args, harness: str, model: str | None) -> None:
@@ -465,7 +484,7 @@ def stop_reason(args, tried: set[int], fails: int, cost: float, deadline: float)
         return "issue limit"
     if fails >= args.max_fails:
         return f"{fails} parks in a row"
-    if args.spend:
+    if args.spend and args.budget:
         spent = args.spend.read()
         if spent >= args.budget - 0.05:
             return f"budget (${spent:.2f} of ${args.budget:.2f})"
@@ -480,11 +499,11 @@ def drop_reviewer(args, n: int, error: str) -> None:
     args.reviewer, args.unreviewed_from = "none", n
 
 
-def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float, bool]:
+def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, list[str], float, float, bool]:
     """Plan, build, verify, review and maybe fix one issue.
 
-    Returns "done", "parked" or None (left as it was), the cost, and whether
-    money ran out.
+    Returns "done", "parked" or None (left as it was), a label per phase, the
+    claude list-price total, the pi estimate, and whether money ran out.
     """
     log = Path(f".overnight/logs/{n}.log")
     issue = sh("gh", "issue", "view", str(n))
@@ -493,22 +512,23 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float
     if comments := sh("gh", "issue", "view", str(n), "--comments"):
         issue += "\n\nComments:\n\n" + comments
     base = sh("git", "rev-parse", "HEAD")
-    cost, plan = 0.0, ""
+    runs: list[tuple[str, Run]] = []
+    plan = ""
     if args.reviewer != "none":
         run = run_agent(args, args.reviewer, args.reviewer_model, PLAN.format(issue=issue), log, read_only=True)
         plan = run.text
-        cost += run.cost
+        runs.append(("plan", run))
         tidy()
         if run.broke:
             drop_reviewer(args, n, run.error)
             plan = ""
     prompt = WORKER.format(n=n) + (f"\nA planner suggests:\n\n{plan}\n" if plan else "")
     run = run_agent(args, args.harness, args.model, prompt, log)
-    message = run.text
-    cost += run.cost
+    message = run.text[-1500:]
+    runs.append(("worker", run))
     if run.broke:
         tidy(base)
-        return None, cost, True
+        return None, *tally(runs), True
     tidy()  # keep only what the worker committed
     ok, tail = check(args, base, branch, log)
     broke = False
@@ -517,7 +537,7 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float
         run = run_agent(args, args.reviewer, args.reviewer_model,
                         REVIEW.format(n=n, issue=issue, diff=diff), log, read_only=True)
         review = run.text
-        cost += run.cost
+        runs.append(("review", run))
         tidy()
         if run.broke:
             drop_reviewer(args, n, run.error)
@@ -529,12 +549,12 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float
         elif verdict(review) == "changes":
             green = sh("git", "rev-parse", "HEAD")
             run = run_agent(args, args.harness, args.model, WORKER.format(n=n) + "\n" + FIX.format(findings=review), log)
-            cost += run.cost
+            runs.append(("fix", run))
             broke = run.broke
             tidy()
             fixed, why = (False, "it ran out of money") if broke else check(args, green, branch, log)
             if fixed:
-                message = run.text + "\n\nAfter review:\n" + review[-800:]
+                message = run.text[-1500:] + "\n\nAfter review:\n" + review[-800:]
             else:
                 tidy(green)  # keep the green work from before the fix
                 message += f"\n\nThe review's findings are not addressed: the fix pass failed ({why[-300:]}).\n\n" \
@@ -548,7 +568,28 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, float
         sh("gh", "issue", "edit", str(n), "--add-label", PARKED, "--remove-label", WORKING)
         comment(n, f"Parked by the overnight run.\n\n{message}\n\n```\n{tail}\n```")
         note(n, title, "parked", f"{message}\n\n```\n{tail}\n```")
-    return ("done" if ok else "parked"), cost, broke
+    return ("done" if ok else "parked"), *tally(runs), broke
+
+
+def tally(runs: list[tuple[str, Run]]) -> tuple[list[str], float, float]:
+    """Phase labels, claude's list-price total and pi's estimated total."""
+    claude = sum(r.cost for _, r in runs if r.harness == "claude")
+    return [r.phase(name) for name, r in runs], claude, sum(r.cost for _, r in runs) - claude
+
+
+def money_line(args, claude_list: float, estimate: float) -> str:
+    """Real money apart from list price, which a subscription never bills."""
+    spend = args.spend
+    if not args.gateway_used:
+        real = f"~${estimate:.2f} DeepSeek, estimated from its price table" if estimate else "$0.00"
+    elif spend is None:
+        real = f"unknown, the gateway could not be read (table estimate ${estimate:.2f})"
+    elif spend.gaps:
+        real = f"at least ${spend.total:.2f} gateway ({spend.gaps} readings failed)"
+    else:
+        real = f"${spend.total:.2f} gateway"
+    claude = f" Claude: subscription, ${claude_list:.2f} at list price." if claude_list else ""
+    return f"Real: {real}.{claude}"
 
 
 def interrupt(signum, frame) -> None:
@@ -577,7 +618,7 @@ def main() -> None:
                    help="time limit per ./verify.sh run, past which it counts as a fail (default 15)")
     p.add_argument("--issue-usd", type=float, default=10, help="claude only: budget per agent run (default 10)")
     p.add_argument("--max-cost", type=float, default=60,
-                   help="stop past this total (default 60); pi is priced from DeepSeek's table")
+                   help="stop past this total (default 60): claude at list price, pi from DeepSeek's table")
     p.add_argument("--budget", type=float,
                    help="pi only: dollars this run may spend on the gateway's `cloud` model")
     p.add_argument("--off-peak", action="store_true",
@@ -589,6 +630,8 @@ def main() -> None:
                    help="claude workers: bypassPermissions instead of auto; only inside a container or VM")
     args = p.parse_args()
     args.spend, args.unreviewed_from = None, None
+    phases = [(args.harness, args.model)] + ([(args.reviewer, args.reviewer_model)] if args.reviewer != "none" else [])
+    args.gateway_used = any(h == "pi" and m in CLOUD for h, m in phases)
     begun = time.time()
 
     if not os.access("verify.sh", os.X_OK):
@@ -628,21 +671,23 @@ def main() -> None:
     deadline = time.time() + args.hours * 3600
     branch = "overnight/" + datetime.now().strftime("%Y-%m-%d-%H%M")
     sh("git", "checkout", "-q", "-b", branch)
-    if args.budget:
+    if args.gateway_used:
         try:
             args.spend = RunSpend()
-        except (OSError, KeyError) as e:
-            sys.exit(f"could not read the gateway's spend at {GATEWAY}/provider/budgets: {e}")
+        except (OSError, ValueError, KeyError) as e:
+            if args.budget:
+                sys.exit(f"could not read the gateway's spend at {GATEWAY}/provider/budgets: {e}")
+            print(f"Could not read the gateway's spend ({e}); the summary will say so.", flush=True)
     board(args)
 
     done: dict[int, str] = {}
     parked: dict[int, str] = {}
     tried: set[int] = set()
-    cost, fails, why = 0.0, 0, "an error"
+    claude_list, estimate, fails, why = 0.0, 0.0, 0, "an error"
     current: tuple[int, str] | None = None  # the issue in hand, and its base
     try:
         waiting = False
-        while not (why := stop_reason(args, tried, fails, cost, deadline)):
+        while not (why := stop_reason(args, tried, fails, claude_list + estimate, deadline)):
             if args.off_peak and peak_soon(datetime.now(timezone.utc), args.off_peak_margin):
                 if not waiting:
                     print("Peak hours: waiting for the off-peak window.", flush=True)
@@ -660,15 +705,17 @@ def main() -> None:
             current = n, sh("git", "rev-parse", "HEAD")
             sh("gh", "issue", "edit", str(n), "--add-label", WORKING)
             board(args)
-            outcome, spent, broke = work_issue(args, n, title, branch)
+            before = args.spend.read() if args.spend else 0.0
+            outcome, labels, listed, estimated, broke = work_issue(args, n, title, branch)
             current = None
-            cost += spent
+            claude_list, estimate = claude_list + listed, estimate + estimated
             if outcome is None:
                 sh("gh", "issue", "edit", str(n), "--remove-label", WORKING)
             else:
                 (done if outcome == "done" else parked)[n] = title
                 fails = 0 if outcome == "done" else fails + 1
-                print(f"  {outcome}, ${spent:.2f}", flush=True)
+                real = f", gateway ${args.spend.read() - before:.2f}" if args.spend else ""
+                print(f"  {outcome}: {', '.join(labels)}{real}", flush=True)
             if broke:
                 why = "out of money"
                 break
@@ -685,18 +732,21 @@ def main() -> None:
         if current:
             sh("gh", "issue", "edit", str(current[0]), "--remove-label", WORKING, check=False)
         board(args)
-        summary(args, why, f"{start}..{branch}", cost, done, parked)
+        summary(args, why, f"{start}..{branch}", claude_list, estimate, done, parked)
     if why == "interrupted":
         sys.exit(130)
 
 
-def summary(args, why: str, commits: str, cost: float, done: dict[int, str], parked: dict[int, str]) -> None:
+def summary(args, why: str, commits: str, claude_list: float, estimate: float,
+            done: dict[int, str], parked: dict[int, str]) -> None:
     branch = commits.split("..")[1]
-    gateway = f" (the gateway counted ${args.spend.read():.2f})" if args.spend else ""
-    print(f"\nStopped: {why}. Branch {branch}, ${cost:.2f} spent{gateway}.")
+    if args.spend:
+        args.spend.read()
+    print(f"\nStopped: {why}. Branch {branch}.")
     for heading, items in (("Done", done), ("Parked", parked)):
         if items:
             print(f"{heading}:\n" + "\n".join(f"  #{k} {v}" for k, v in items.items()))
+    print(money_line(args, claude_list, estimate))
     if args.unreviewed_from:
         print(f"The reviewer stopped at #{args.unreviewed_from}: it and later issues went unreviewed.")
     subjects = sh("git", "log", "--format=%s", commits, check=False).splitlines()
