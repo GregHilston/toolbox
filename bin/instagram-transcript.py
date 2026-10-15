@@ -26,7 +26,7 @@ TIMEOUT = 180
 
 def canonical(url: str) -> str:
     """The reel's bare URL, the only shape moria's side accepts."""
-    m = re.search(r"instagram\.com/(reels?|p)/([A-Za-z0-9_-]+)", url)
+    m = re.search(r"instagram\.com/(?:[\w.]+/)?(reels?|p)/([A-Za-z0-9_-]+)", url)
     if not m:
         sys.exit(f"not an instagram reel or post: {url}")
     kind = "p" if m[1] == "p" else "reel"
@@ -37,7 +37,7 @@ def main() -> None:
     if len(sys.argv) != 2:
         sys.exit("usage: instagram-transcript.py <instagram_reel_url>")
     url = canonical(sys.argv[1])
-    # BatchMode: a prompt would hang a headless caller.
+    # A prompt would hang headless callers.
     cmd = ["ssh", "-o", "ConnectTimeout=5", "-o", "BatchMode=yes", HOST, REMOTE, url]
     try:
         out = subprocess.run(cmd, capture_output=True, text=True, timeout=TIMEOUT)

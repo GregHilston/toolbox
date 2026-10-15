@@ -16,6 +16,7 @@ class TestCanonical(unittest.TestCase):
             "https://www.instagram.com/reel/Dec-hkEAaXz/?xtok=MXR6==": "https://www.instagram.com/reel/Dec-hkEAaXz/",
             "instagram.com/reels/Abc_1": "https://www.instagram.com/reel/Abc_1/",
             "https://instagram.com/p/XYZ/?igsh=1": "https://www.instagram.com/p/XYZ/",
+            "https://www.instagram.com/some.user/reel/Q1/": "https://www.instagram.com/reel/Q1/",
         }
         for given, want in cases.items():
             self.assertEqual(ig.canonical(given), want)
@@ -25,7 +26,7 @@ class TestCanonical(unittest.TestCase):
             ig.canonical("https://www.instagram.com/someuser/")
 
     def test_moria_side_accepts_every_canonical_url(self):
-        # The two regexes must agree, or every call fails.
+        # Disagreeing regexes fail every call.
         sh = (BIN / "instagram-transcribe-moria.sh").read_text()
         pattern = re.search(r"\[\[ ! \$url =~ (\S+) \]\]", sh)[1]
         for url in ("https://www.instagram.com/reel/Dec-hkEAaXz/", "https://www.instagram.com/p/XYZ/"):
