@@ -38,7 +38,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fetch_hn import fetch_item  # noqa: E402
@@ -106,10 +106,11 @@ def parse_file(path: Path) -> list[Item]:
 
 
 def clean_url(url: str) -> str:
-    """The URL without share and tracking parameters: clips dedupe on it."""
+    """Clips dedupe on this, so drop share tokens."""
     u = urlparse(url)
-    query = [(k, v) for k, v in parse_qs(u.query, keep_blank_values=True).items() if not TRACKING.match(k)]
-    return u._replace(query=urlencode(query, doseq=True)).geturl()
+    # Raw segments: re-encoding would change the key.
+    query = "&".join(p for p in u.query.split("&") if p and not TRACKING.match(p.split("=", 1)[0]))
+    return u._replace(query=query).geturl()
 
 
 # --------------------------------------------------------------------------- classify

@@ -1,4 +1,4 @@
-"""notes-triage-fetch.py drops share tokens, which would break clip dedupe."""
+"""Share tokens would break clip dedupe."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ class TestCleanUrl(unittest.TestCase):
             "https://news.ycombinator.com/item?id=43753049": "https://news.ycombinator.com/item?id=43753049",
             "https://www.reddit.com/r/x/comments/1/y/?share_id=q&utm_medium=android_app": "https://www.reddit.com/r/x/comments/1/y/",
             "https://example.com/a#section": "https://example.com/a#section",
+            "https://example.com/s?q=a%20b&flag&utm_source=x": "https://example.com/s?q=a%20b&flag",
         }
         for given, want in cases.items():
             self.assertEqual(fetch.clean_url(given), want)
