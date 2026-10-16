@@ -19,6 +19,8 @@ Read the repo's `CLAUDE.md`, its design and ADR docs, its glossary, `docs/orches
 - whether you may land on `main` and push without asking (default yes, after a green gate and a review)
 - anything only he can judge that is blocking (feel, taste, hardware)
 
+Tickets labelled `next-session` were queued by the last session for you: start there, relabelling each into a lane.
+
 After that, work autonomously. Don't ask again; make the call, note it, and put anything needing his hands, ears or judgement in a `manual` + `attended` ticket that no loop picks up.
 
 ## 2. Tickets
@@ -69,5 +71,6 @@ When lanes drain, fan out read-only audits in parallel, each a subagent with one
 - `button.pressed.emit()` misses a control drawn over the button; UI tests click at the button's centre.
 - A tiling window manager (AeroSpace) resizes game windows; captures render at a fixed content-scale size.
 - Each loop commit appends to `progress.md`; `lane.py fetch` sets `merge=union` so rebases don't conflict there.
+- A worktree's first gate can fail on import-order errors a warm `.godot/` cache hides; if the repo has such an open bug, run `godot --headless --path . --import` once in the worktree before `lane.py land`.
 - Two lanes started in the same minute share a branch name; `lane.py fetch` gives each its own.
 - When one side renamed a file and the other edited it, resolving needs `git rm` of the old path, which the auto-mode permission check refuses to a subagent. Run that one command yourself, and tell subagents to report such paths rather than work around the refusal.
