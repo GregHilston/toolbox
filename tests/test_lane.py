@@ -47,11 +47,14 @@ class LaneCase(unittest.TestCase):
         env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
                "GIT_COMMITTER_EMAIL": "t@t", "GIT_CONFIG_GLOBAL": os.devnull}
         stubs = self.root / "stubs"
-        write(stubs / "gh", '#!/bin/sh\necho "$@" >> "$FAKE_GH"\n', stat.S_IXUSR)
+        write(stubs / "gh", '#!/bin/sh\nif [ "$2" = view ]; then\n  f="$FAKE_VIEW/$3"\n'
+              '  if [ -f "$f" ]; then cat "$f"; else echo \'{"state":"OPEN","labels":[{"name":"b"}]}\'; fi\n'
+              '  exit 0\nfi\necho "$@" >> "$FAKE_GH"\n', stat.S_IXUSR)
+        (self.root / "view").mkdir()
         write(stubs / "overnight-loop.py", '#!/bin/sh\necho "$@" > "$PWD/.overnight/args"\nexec sleep 30\n',
               stat.S_IXUSR)
         self.gh_log = self.root / "gh.log"
-        env.update(PATH=f"{stubs}:{os.environ['PATH']}", FAKE_GH=str(self.gh_log))
+        env.update(PATH=f"{stubs}:{os.environ['PATH']}", FAKE_GH=str(self.gh_log), FAKE_VIEW=str(self.root / "view"))
         patcher = mock.patch.dict(os.environ, env)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -134,6 +137,10 @@ class StatusTest(LaneCase):
         self.assertTrue(row.endswith("overnight/2026-10-16-0628"), out)
         self.assertEqual(row.split()[0], "b")
 
+    def test_hand_started_lane_is_unknown(self) -> None:
+        self.make_clone()
+        self.assertEqual(lane.lane_row(self.root / "proj-b", "b"), ["b", "unknown", "-", "-", "-", ""])
+
     def test_running_lane_counts(self) -> None:
         clone = self.make_clone()
         (clone / ".overnight" / "lane.log").write_text(LOG)
@@ -160,6 +167,28 @@ class FetchTest(LaneCase):
         text = (wt / "progress.md").read_text()
         self.assertIn("- lane note", text)
         self.assertIn("- main note", text)
+
+    def test_refuses_while_running(self) -> None:
+        self.lane_commit(self.clone, self.br, "file.txt", "x\n", "feat(x): a (#7)")
+        (self.clone / ".overnight" / "lane.pid").write_text(f"{os.getpid()}\n")
+        with self.assertRaises(lane.LaneError):
+            lane.fetch(self.repo, "b", None)
+        self.assertIn("worktree", lane.fetch(self.repo, "b", None, force=True))
+
+    def test_uses_the_stopped_branch_not_the_newest(self) -> None:
+        self.lane_commit(self.clone, self.br, "file.txt", "old\n", "feat(x): old (#7)")
+        git(self.clone, "checkout", "-q", "main")
+        self.lane_commit(self.clone, "overnight/2026-10-17-0100", "file.txt", "new\n", "feat(x): new (#8)")
+        (self.clone / ".overnight" / "lane.log").write_text(f"Stopped: queue empty. Branch {self.br}.\n")
+        out = lane.fetch(self.repo, "b", None)
+        self.assertIn(f"from {self.br}", out)
+        self.assertNotIn("warning", out)
+
+    def test_falls_back_to_newest_with_warning(self) -> None:
+        self.lane_commit(self.clone, self.br, "file.txt", "old\n", "feat(x): old (#7)")
+        out = lane.fetch(self.repo, "b", None)
+        self.assertIn("warning", out)
+        self.assertIn(f"from {self.br}", out)
 
     def test_same_minute_branch_gets_its_own_name(self) -> None:
         self.lane_commit(self.clone, self.br, "file.txt", "x\n", "feat(x): a (#7)")
@@ -197,11 +226,45 @@ class LandTest(LaneCase):
         self.assertFalse(wt.exists())
         self.assertEqual(git(self.repo, "branch", "--list", "b-0628"), "")
 
-    def test_baseline_never_lowered(self) -> None:
+    def test_refuses_a_test_drop(self) -> None:
         wt = self.fetched()
         self.verify_out.write_text("PASS 5 tests\n")
+        with self.assertRaises(lane.LaneError) as cm:
+            lane.land(self.repo, wt, False)
+        self.assertIn("below tests/baseline_count 10", str(cm.exception))
+        self.assertEqual(git(self.repo, "rev-list", "--count", "main"), "1")
+
+    def test_refuses_dirty_main(self) -> None:
+        wt = self.fetched()
+        (self.repo / "file.txt").write_text("wip\n")
+        git(self.repo, "add", "file.txt")
+        (self.repo / "untracked.txt").write_text("x")
+        with self.assertRaises(lane.LaneError) as cm:
+            lane.land(self.repo, wt, False)
+        self.assertIn("uncommitted", str(cm.exception))
+        git(self.repo, "reset", "-q", "--hard")
         lane.land(self.repo, wt, False)
-        self.assertEqual((self.repo / "tests" / "baseline_count").read_text().strip(), "10")
+
+    def test_skips_revert_docs_closed_and_unlabelled(self) -> None:
+        clone = self.make_clone()
+        br = "overnight/2026-10-16-0628"
+        for subject in ("revert: undo a thing (#1)", "docs(x): words (#2)", "feat(x): closed (#3)",
+                        "feat(x): other lane (#4)", "feat(x): good (#5)"):
+            self.lane_commit(clone, br, "file.txt", subject + "\n", subject)
+        (self.root / "view" / "3").write_text('{"state":"CLOSED","labels":[{"name":"b"}]}')
+        (self.root / "view" / "4").write_text('{"state":"OPEN","labels":[{"name":"lane-c"}]}')
+        lane.fetch(self.repo, "b", None)
+        lane.land(self.repo, self.root / "proj-wt-b", False)
+        self.assertEqual(self.gh_log.read_text().splitlines(),
+                         ["issue close 5 --comment Merged to main; gate PASS 12."])
+
+    def test_refuses_while_running(self) -> None:
+        wt = self.fetched()
+        (self.root / "proj-b" / ".overnight" / "lane.pid").write_text(f"{os.getpid()}\n")
+        with self.assertRaises(lane.LaneError) as cm:
+            lane.land(self.repo, wt, False)
+        self.assertIn("still running", str(cm.exception))
+        lane.land(self.repo, wt, False, force=True)
 
     def test_refuses_non_fast_forward(self) -> None:
         wt = self.fetched()

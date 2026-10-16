@@ -18,6 +18,7 @@ appends to progress.md, so `fetch` marks it merge=union before rebasing.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -29,6 +30,7 @@ PASS_LINE = re.compile(r"^PASS (\d+) tests\b")
 ISSUE_REF = re.compile(r"\(#(\d+)\)")
 CURRENT = re.compile(r"^#\d+ .+")
 STOPPED = re.compile(r"^Stopped: .*Branch (\S+?)\.$")
+SKIPPED = re.compile(r"^(revert|docs)\b")
 UNION = "progress.md merge=union"
 
 
@@ -104,11 +106,30 @@ def start(repo: Path, lane: str, label: str | None, extra: list[str]) -> str:
         proc = subprocess.Popen([loop, "--label", label or lane, *extra], cwd=clone, stdin=subprocess.DEVNULL,
                                 stdout=out, stderr=subprocess.STDOUT, start_new_session=True)
     pid_file.write_text(f"{proc.pid}\n")
+    (clone / ".overnight" / "lane.label").write_text(f"{label or lane}\n")
     return f"started lane {lane} (label {label or lane}), pid {proc.pid}, log {log}"
+
+
+def refuse_running(clone: Path, lane: str, force: bool) -> None:
+    """A branch taken mid-issue can land work the loop later discards."""
+    if not force and (pid := pid_alive(clone / ".overnight" / "lane.pid")):
+        raise LaneError(f"lane {lane} is still running (pid {pid}); `lane.py stop {lane}` first, or pass --force")
+
+
+def stopped_branch(clone: Path) -> str | None:
+    """The branch in the lane log's last Stopped line."""
+    log = clone / ".overnight" / "lane.log"
+    found = None
+    for line in (log.read_text(errors="replace").splitlines() if log.exists() else []):
+        if m := STOPPED.match(line):
+            found = m.group(1)
+    return found
 
 
 def lane_row(clone: Path, lane: str) -> list[str]:
     """One status row: lane, state, current issue, done, parked, stopped branch."""
+    if not (clone / ".overnight" / "lane.pid").exists() and not (clone / ".overnight" / "lane.log").exists():
+        return [lane, "unknown", "-", "-", "-", ""]
     running = pid_alive(clone / ".overnight" / "lane.pid") is not None
     current, branch, done, parked = "-", "", 0, 0
     log = clone / ".overnight" / "lane.log"
@@ -138,12 +159,17 @@ def status(repo: Path) -> str:
         "  ".join(c.ljust(w) for c, w in zip(r[:5], widths)) + ("  " + r[5] if r[5] else "") for r in rows)
 
 
-def fetch(repo: Path, lane: str, branch: str | None) -> str:
+def fetch(repo: Path, lane: str, branch: str | None, force: bool = False) -> str:
     """Bring a lane's branch into a worktree, rebased onto the default branch."""
     clone = clone_path(repo, lane)
     if not clone.is_dir():
         raise LaneError(f"no clone at {clone}; start the lane first")
+    refuse_running(clone, lane, force)
+    warning = ""
     if not branch:
+        branch = stopped_branch(clone)
+    if not branch:
+        warning = f"warning: {clone}/.overnight/lane.log names no stopped branch; took the newest overnight/* branch\n"
         found = run("git", "branch", "--list", "overnight/*", "--format=%(refname:short)", cwd=clone).split()
         if not found:
             raise LaneError(f"no overnight/* branch in {clone}")
@@ -172,14 +198,19 @@ def fetch(repo: Path, lane: str, branch: str | None) -> str:
         state = "conflicts, rebase left stopped in the worktree:\n" + "\n".join(f"  {f}" for f in files)
     else:
         state = "clean"
-    return f"worktree {wt}\nbranch {local} (from {branch})\ncommits {count}\n{state}"
+    return f"{warning}worktree {wt}\nbranch {local} (from {branch})\ncommits {count}\n{state}"
 
 
-def land(repo: Path, wt: Path, no_verify: bool) -> str:
+def land(repo: Path, wt: Path, no_verify: bool, force: bool = False) -> str:
     """Verify the worktree, fast-forward the default branch, raise the baseline, close issues."""
     wt = wt.resolve()
     if not wt.is_dir():
         raise LaneError(f"worktree {wt} does not exist")
+    if run("git", "status", "--porcelain", "--untracked-files=no", cwd=repo):
+        raise LaneError(f"the main checkout {repo} has uncommitted changes; commit or stash them first")
+    lane = wt.name.removeprefix(f"{repo.name}-wt-")
+    clone = clone_path(repo, lane)
+    refuse_running(clone, lane, force)
     branch = run("git", "branch", "--show-current", cwd=wt)
     if not branch:
         raise LaneError(f"{wt} has no branch checked out (rebase in progress?)")
@@ -197,8 +228,14 @@ def land(repo: Path, wt: Path, no_verify: bool) -> str:
             tail = "\n".join(lines[-5:])
             raise LaneError(f"`./verify.sh` in {wt} did not end in `PASS <n> tests` (exit {proc.returncode}):\n{tail}")
         passed = int(m.group(1))
+        floor = repo / "tests" / "baseline_count"
+        if floor.exists() and passed < int(floor.read_text().strip() or 0):
+            raise LaneError(f"`./verify.sh` in {wt} passed {passed} tests, below tests/baseline_count "
+                            f"{floor.read_text().strip()}: tests were dropped")
     subjects = run("git", "log", "--format=%s", f"{base}..{branch}", cwd=repo).splitlines()
-    issues = sorted({int(n) for s in subjects for n in ISSUE_REF.findall(s)})
+    wanted = sorted({int(n) for s in subjects if not SKIPPED.match(s) for n in ISSUE_REF.findall(s)})
+    label_file = clone / ".overnight" / "lane.label"
+    label = label_file.read_text().strip() if label_file.exists() else lane
     out = [f"verify: {'skipped' if passed is None else f'PASS {passed} tests'}"]
     run("git", "merge", "-q", "--ff-only", branch, cwd=repo)
     out.append(f"fast-forwarded {base} to {branch} ({len(subjects)} commits)")
@@ -211,6 +248,11 @@ def land(repo: Path, wt: Path, no_verify: bool) -> str:
     run("git", "push", "-q", cwd=repo)
     out.append(f"pushed {base}")
     note = f"Merged to main; gate PASS {passed}." if passed is not None else "Merged to main; gate skipped."
+    issues = []
+    for n in wanted:
+        info = json.loads(run("gh", "issue", "view", str(n), "--json", "labels,state", cwd=repo))
+        if info["state"] == "OPEN" and label in [x["name"] for x in info["labels"]]:
+            issues.append(n)
     for n in issues:
         run("gh", "issue", "close", str(n), "--comment", note, cwd=repo)
     out.append("closed " + (", ".join(f"#{n}" for n in issues) or "no issues"))
@@ -242,10 +284,12 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("status", help="one line per lane")
     f = sub.add_parser("fetch", help="bring a lane's branch into a rebased worktree")
     f.add_argument("lane")
-    f.add_argument("--branch", help="overnight branch (default: the latest)")
+    f.add_argument("--branch", help="overnight branch (default: the one the lane log says it stopped on)")
+    f.add_argument("--force", action="store_true", help="even while the lane's loop runs")
     land_p = sub.add_parser("land", help="verify, fast-forward, raise baseline, close issues")
     land_p.add_argument("worktree", type=Path)
     land_p.add_argument("--no-verify", action="store_true")
+    land_p.add_argument("--force", action="store_true", help="even while the lane's loop runs")
     sub.add_parser("stop", help="ask a lane to stop after its current issue").add_argument("lane")
     return p
 
@@ -260,9 +304,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd == "status":
             msg = status(repo)
         elif args.cmd == "fetch":
-            msg = fetch(repo, args.lane, args.branch)
+            msg = fetch(repo, args.lane, args.branch, args.force)
         elif args.cmd == "land":
-            msg = land(repo, args.worktree, args.no_verify)
+            msg = land(repo, args.worktree, args.no_verify, args.force)
         else:
             msg = stop(repo, args.lane)
     except LaneError as e:
