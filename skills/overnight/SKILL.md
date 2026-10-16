@@ -91,3 +91,17 @@ for the `overnight/<time>` branch. `progress.md` holds each worker's notes,
 and `.overnight/logs/<issue>.log` its full output. Greg playtests the branch. A parked issue keeps its label and a comment with the
 verify output: fix the issue or the test, remove the label, and it rejoins the
 next run.
+
+## Parallel lanes
+
+Several loops can run at once, each in its own clone on its own label. Run these from the repo's main checkout, exactly as shown:
+
+```bash
+lane.py start b --label lane-b -- --harness claude --model sonnet   # clone beside the repo, start the loop detached
+lane.py status                                                      # one line per lane: running, current issue, done, parked, branch
+lane.py stop b                                                      # end the lane after its current issue
+lane.py fetch b                                                     # latest overnight branch into a rebased worktree
+lane.py land ../backseat-drivers-wt-b                               # verify, fast-forward main, raise baseline, push, close issues
+```
+
+`fetch` leaves a rebase stopped when it reports conflicts: resolve them in the worktree, then `land`.
