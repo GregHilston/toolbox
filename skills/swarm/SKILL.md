@@ -42,7 +42,7 @@ lane.py stop <lane>
 
 `fetch` and `land` refuse while that lane's loop still runs (add `--force` only for a branch you know is finished), refuse a dirty main checkout, and refuse a test count below the baseline.
 
-Watch the lane logs with `Monitor` (grep for `Stopped|parked|Traceback`), never a sleep loop. Land each lane as soon as it stops: long-lived branches conflict. Before parallel lanes, check the repo's tests use per-process temp folders and free ports, or gates collide.
+Watch the lane logs with `Monitor` (grep for `Stopped|parked|Traceback`), never a sleep loop. Land each lane as soon as it stops, and keep runs short (`--max-issues 3`): a lane branch of 5 to 14 tickets rebased onto a busy `main` hit a conflict on almost every commit. Before parallel lanes, check the repo's tests use per-process temp folders and free ports, or gates collide.
 
 ## 4. Review and land
 
@@ -70,3 +70,4 @@ When lanes drain, fan out read-only audits in parallel, each a subagent with one
 - A tiling window manager (AeroSpace) resizes game windows; captures render at a fixed content-scale size.
 - Each loop commit appends to `progress.md`; `lane.py fetch` sets `merge=union` so rebases don't conflict there.
 - Two lanes started in the same minute share a branch name; `lane.py fetch` gives each its own.
+- When one side renamed a file and the other edited it, resolving needs `git rm` of the old path, which the auto-mode permission check refuses to a subagent. Run that one command yourself, and tell subagents to report such paths rather than work around the refusal.
