@@ -71,7 +71,8 @@ Implement GitHub issue #{n} in this repository, then stop.
 2. Implement only this issue. Turn each checkable line under "Done when" into a
    test that ./verify.sh runs.
 3. Run focused tests while you iterate. When you think you are done, run
-   ./verify.sh until it passes. Never edit verify.sh or the issue, and never
+   `gateslot.py -- ./verify.sh` (it queues for a machine-wide gate slot)
+   until it passes. Never edit verify.sh or the issue, and never
    delete or weaken a test to make it pass.
 4. Commit with a conventional commit message ending in "(#{n})", such as
    "feat(car): add handbrake (#{n})". Do not push and do not write to GitHub.
@@ -106,7 +107,7 @@ A reviewer asked for changes to the work already committed on this branch:
 
 {findings}
 
-Make them, run ./verify.sh until it passes, and commit.
+Make them, run `gateslot.py -- ./verify.sh` until it passes, and commit.
 """
 PING = "Reply with the word ok and nothing else."
 
