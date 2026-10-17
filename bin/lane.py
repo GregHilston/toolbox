@@ -26,6 +26,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import gateslot  # noqa: E402
+
 PASS_LINE = re.compile(r"^PASS (\d+) tests\b")
 ISSUE_REF = re.compile(r"\(#(\d+)\)")
 CURRENT = re.compile(r"^#\d+ .+")
@@ -221,7 +224,8 @@ def land(repo: Path, wt: Path, no_verify: bool, force: bool = False) -> str:
         raise LaneError(f"{branch} is not a fast-forward of {base}; rebase it in {wt} first")
     passed = None
     if not no_verify:
-        proc = subprocess.run(["./verify.sh"], cwd=wt, capture_output=True, text=True)
+        with gateslot.slot(land=True):
+            proc = subprocess.run(["./verify.sh"], cwd=wt, capture_output=True, text=True)
         lines = [x for x in (proc.stdout + proc.stderr).splitlines() if x.strip()]
         m = PASS_LINE.match(lines[-1]) if lines else None
         if proc.returncode or not m:

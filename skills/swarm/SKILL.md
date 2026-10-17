@@ -46,6 +46,15 @@ lane.py stop <lane>
 
 Watch the lane logs with `Monitor` (grep for `Stopped|parked|Traceback`), never a sleep loop. Land each lane as soon as it stops, and keep runs short (`--max-issues 3`): a lane branch of 5 to 14 tickets rebased onto a busy `main` hit a conflict on almost every commit. Before parallel lanes, check the repo's tests use per-process temp folders and free ports, or gates collide.
 
+## Gates with many lanes
+
+The gate is the one shared bottleneck: each `./verify.sh` runs 4 to 5 CPU-bound processes, and past about 4 at once the load passes 20 and timing-sensitive tests flake. Don't cap lanes; queue gates.
+
+- `lane.py` and `overnight-loop.py` take a slot from `bin/gateslot.py` (flock files in `~/.cache/gate-slots/`) around every gate; a dead holder frees its slot, and the wait doesn't count against `--verify-minutes`.
+- `GATE_SLOTS` is the gate count (default 2, `0` turns the queue off); `lane.py land` also gets one reserved slot. Tune it by `uptime`: keep the 1-minute load under the core count. Set it in the shell that starts the lanes.
+- Workers iterate with the repo's one-suite test script and gate once, at the end. Run a hand gate as `gateslot.py [--land] -- ./verify.sh`.
+- Before many lanes, check RAM (a Godot process is a few hundred MB), that tests use free ports and per-process temp folders, and that a gate's own ports can't collide.
+
 ## 4. Review and land
 
 For every finished branch:

@@ -38,6 +38,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import gateslot  # noqa: E402
+
 HERE = Path(__file__).resolve().parent
 _spec = importlib.util.spec_from_file_location("preflight", HERE / "deepseek-preflight.py")
 preflight = importlib.util.module_from_spec(_spec)
@@ -250,8 +253,8 @@ def kill_leftovers(since: float) -> None:
 
 def verify(args, log: Path) -> tuple[bool, str]:
     out = Path(".overnight/verify.out")
-    started = time.time()
-    with out.open("w") as f:
+    with gateslot.slot(), out.open("w") as f:
+        started = time.time()  # queue wait stays outside the limit
         code = run_group(["./verify.sh"], args.verify_minutes, signal.SIGKILL,
                          stdin=subprocess.DEVNULL, stdout=f, stderr=subprocess.STDOUT)
     kill_leftovers(started)
