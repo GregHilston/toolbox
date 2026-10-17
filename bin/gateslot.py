@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """A machine-wide counting semaphore for ./verify.sh gates.
 
 Lanes spend most of their time coding; the gate is the one CPU-heavy step.
