@@ -77,7 +77,13 @@ The gate is the bottleneck, not coding. Spend gates only where they buy safety.
 - **Check the diff has code.** DeepSeek workers sometimes stop mid-task ("Now I'll implement…") and the loop records only `progress.md`; a review that finds no code means unpark and rerun. Give large UI or networking tickets to Sonnet workers.
 - **`--budget` reads the gateway's whole counter,** so with N lanes each lane sees every lane's spend: set it to the night's total, not a per-lane share. A negative gateway offset (Greg's workaround to lift the cap) disables it.
 - **Gate slots:** measure load while gates run. On 16 cores, 4 slots plus a landing slot reached load 57 and gates timed out; 3 held load near 15.
-- **One watcher** for lane state changes, DeepSeek answers and landing results, re-armed every 30 minutes. Key "seen" results by content, not mtime (GNU `stat` breaks `-f %m`).
+- **One watcher** for lane state changes, DeepSeek answers and landing results, re-armed every 30 minutes. Key "seen" results by content, not mtime (GNU `stat` breaks `-f %m`). Run `lane.py status` from the repo; from elsewhere it prints nothing and the watcher goes blind. A reused PID makes an old lane look "running" for a minute; ignore it.
+- **Skipped landing gates let interactions through.** Two branches each green can break main together (a HUD test pinned a panel size another branch changed). The periodic main gate caught every case; when it fails, fix main before landing more, and don't mark a tree passed while main is red, or lanes skip their baseline on a broken tree and park good work.
+- **Check a gate's result before queuing what depends on it,** and delete a result file before re-queuing, or a stale "LANDED" line triggers the next step early.
+- **Re-run a failed main gate once** before chasing it: under load a shard can stall or lose its coverage data, which reads as a coverage drop with no test removed.
+- **Workers never run the formatter on `tests/`;** it rewrites unrelated files. A subagent denied a cleanup must report it, and the orchestrator asks Greg instead of running the denied command.
+- **Greg playtests from the main checkout,** and Godot rewrites `.import` sidecars there, which blocks `lane.py land`. Commit Godot's sidecar change and land again.
+- **Small, test-checkable tickets suit DeepSeek; large UI and networking tickets suit Sonnet.** DeepSeek parked every big polish ticket at least once; Sonnet finished couch play (five tickets) in one lane.
 
 ## 5. Keep the queue full
 
