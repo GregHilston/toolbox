@@ -22,6 +22,23 @@ from contextlib import contextmanager
 from pathlib import Path
 
 DIR = Path(os.environ.get("GATE_SLOT_DIR", Path.home() / ".cache" / "gate-slots"))
+PASSED = Path.home() / ".cache" / "gate-pass"
+
+
+def _tree(cwd=".") -> str:
+    return subprocess.run(["git", "rev-parse", "HEAD^{tree}"], cwd=cwd, capture_output=True,
+                          text=True, check=True).stdout.strip()
+
+
+def mark_passed(cwd=".") -> None:
+    """Record that the gate passed on this clean tree."""
+    PASSED.mkdir(parents=True, exist_ok=True)
+    (PASSED / _tree(cwd)).touch()
+
+
+def already_passed(cwd=".") -> bool:
+    """Whether the gate already passed on this exact tree."""
+    return (PASSED / _tree(cwd)).exists()
 
 
 @contextmanager

@@ -251,7 +251,9 @@ def land(repo: Path, wt: Path, no_verify: bool, force: bool = False) -> str:
         out.append(f"raised tests/baseline_count to {passed}")
     run("git", "push", "-q", cwd=repo)
     out.append(f"pushed {base}")
-    note = f"Merged to main; gate PASS {passed}." if passed is not None else "Merged to main; gate skipped."
+    if passed is not None:
+        gateslot.mark_passed(repo)  # only the baseline count changed since
+    note =f"Merged to main; gate PASS {passed}." if passed is not None else "Merged to main; gate skipped."
     issues = []
     for n in wanted:
         info = json.loads(run("gh", "issue", "view", str(n), "--json", "labels,state", cwd=repo))

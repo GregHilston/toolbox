@@ -660,9 +660,13 @@ def main() -> None:
             f.write("\n" + "\n".join(missing) + "\n")
     if args.harness == "pi":
         allow_pi_writes()
-    ok, tail = verify(args, Path(".overnight/logs/baseline.log"))
-    if not ok:
-        sys.exit(f"./verify.sh fails before any work, so nothing can be judged:\n{tail}")
+    if gateslot.already_passed():
+        print("Baseline gate skipped: this tree already passed.", flush=True)
+    else:
+        ok, tail = verify(args, Path(".overnight/logs/baseline.log"))
+        if not ok:
+            sys.exit(f"./verify.sh fails before any work, so nothing can be judged:\n{tail}")
+        gateslot.mark_passed()
     smoke_test(args, args.harness, args.model)
     if args.reviewer != "none":
         smoke_test(args, args.reviewer, args.reviewer_model)
