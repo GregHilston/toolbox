@@ -64,6 +64,20 @@ For every finished branch:
 3. Ask DeepSeek for a second opinion on every branch with real logic in it, and always on large or risky ones (architecture, networking, auth, data): `pi-ask.py --session review-<x> --dir <a separate detached worktree> @prompt.md`. A different model family catches different bugs: its review of a 20-commit refactor found four real bugs that Sonnet passed.
 4. Fix small leftovers yourself; ticket the rest. Then `lane.py land`.
 
+## Throughput: what kept a 20-lane night moving
+
+The gate is the bottleneck, not coding. Spend gates only where they buy safety.
+
+- **Land without a second gate** (`lane.py land --no-verify`) when the rebase onto main is clean and the lane's own gate passed. Run the full gate at landing only when the rebase had conflicts or the lane's gate evidence is missing. Every 5 landings, gate main in its own detached worktree (never the main checkout, which landings change under it).
+- **Skip a lane's startup gate** on a tree that already passed: `gateslot.mark_passed()` records a tree, the loop checks `already_passed()`. Mark main after each landing.
+- **Serialise landings with a lock** and script the routine: rebase, check `shard_weights` duplicates, land, restart the lane if its label still has open tickets. Run long chains with `nohup`; a harness background task dies at 30 minutes.
+- **Split a multi-ticket label into parallel lanes** by file area as soon as a lane has more than two tickets queued. Keep only true dependencies (a guard test after the fixes it guards) in one lane.
+- **Review by risk.** DeepSeek reviews every branch with logic; skip review for data-only or test-only branches. Land a non-blocking finding and file it as a follow-up on the same label; drop nits.
+- **Check the diff has code.** DeepSeek workers sometimes stop mid-task ("Now I'll implement…") and the loop records only `progress.md`; a review that finds no code means unpark and rerun. Give large UI or networking tickets to Sonnet workers.
+- **`--budget` reads the gateway's whole counter,** so with N lanes each lane sees every lane's spend: set it to the night's total, not a per-lane share. A negative gateway offset (Greg's workaround to lift the cap) disables it.
+- **Gate slots:** measure load while gates run. On 16 cores, 4 slots plus a landing slot reached load 57 and gates timed out; 3 held load near 15.
+- **One watcher** for lane state changes, DeepSeek answers and landing results, re-armed every 30 minutes. Key "seen" results by content, not mtime (GNU `stat` breaks `-f %m`).
+
 ## 5. Keep the queue full
 
 When lanes drain, fan out read-only audits in parallel, each a subagent with one lens: architecture against Greg's rules and the ADRs, tests and coverage, performance (measured, not guessed), agent tooling, and a visual pass on fresh captures. Turn verified findings into tickets and start the next round. Stop when only `manual` tickets remain, then report: what landed, what each manual ticket needs from Greg, real spend.
