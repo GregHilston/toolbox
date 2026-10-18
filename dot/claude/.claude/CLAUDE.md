@@ -116,8 +116,9 @@ unreliable.
 **Don't reach for `searxngr` to find Reddit threads.** It was the old workaround and
 it no longer earns its place — the self-hosted instance's egress IP is blocked by
 every engine that indexes Reddit deeply (DuckDuckGo and Startpage CAPTCHA, Brave
-rate-limits, Google and Mojeek return nothing), leaving only Bing, which serves it
-results unrelated to the query. `WebSearch` is the reliable general-web fallback.
+rate-limits, Google and Mojeek return nothing). For general web search it still works:
+Bing and Yahoo answer, and on 2026-10-18 it beat DeepSeek Search on dev queries
+(`~/Git/home-lab/docs/llm-gateway.md`). `WebSearch` is the fallback.
 
 ## Agent skills
 
