@@ -83,3 +83,21 @@ When lanes drain, fan out read-only audits in parallel, each a subagent with one
 - A worktree's first gate can fail on import-order errors a warm `.godot/` cache hides; if the repo has such an open bug, run `godot --headless --path . --import` once in the worktree before `lane.py land`.
 - Two lanes started in the same minute share a branch name; `lane.py fetch` gives each its own.
 - When one side renamed a file and the other edited it, resolving needs `git rm` of the old path, which the auto-mode permission check refuses to a subagent. Run that one command yourself, and tell subagents to report such paths rather than work around the refusal.
+- A loop worker ran `pkill -f godot` to clear its own tests and killed every other lane's gate at once (all shards exit 143). Every subagent and worker prompt, and the repo's `CLAUDE.md`, must forbid killing processes by name.
+- A subagent filed six tickets with each body shifted onto the next title, and five lanes built the wrong things. After any batch filing, compare each `gh issue view` title with its body before starting a lane.
+- DeepSeek found new bugs on the fix rounds too, not only the first review (snapshot bloat from a lazy ghost, a replay that lost a restored key). Recheck a fix round with the same `pi-ask` session.
+- Reviewers pass tests that can't fail. Ask them to prove each new test by mutation: remove the line under test and watch it fail.
+- In a networked game, effects driven by local signals never reach guests, who only apply snapshots. Ask reviewers of any sound, shake or popup change how a guest gets it, and whether a guest joining mid-run replays old events.
+- In zsh an unquoted `$ARGS` is not word-split, so `lane.py start x -- $S` passes one argument and the loop dies at once. Write the arguments out.
+- A ticket parked only because its _Done when_ asks for an orchestrator capture is finished work: recover the commit (`git branch parked-N <sha>` in the lane clone, fetch, cherry-pick) instead of rerunning it.
+
+## Big features: a staged pipeline
+
+For a feature with real design in it (new maps, a new mode, a networking change), don't ticket straight from the request. Each stage gets a review before the next:
+
+1. **Concept:** a Sonnet subagent reads the code and pitches options; DeepSeek checks the pitch against the code. It caught claims that would have made a map unplayable.
+2. **Design:** one spec per piece with real numbers and a verification list; DeepSeek reviews it, the designer revises, DeepSeek rechecks. Two rounds caught jump physics, spawns in traffic and unreachable zones before any code.
+3. **Groundwork tickets** shared by every piece, landed first so the pieces don't collide.
+4. **Build** one piece per lane, then **verify**: scripted drives of the spec's checks, captures judged for the intended feel, Sonnet and DeepSeek reviews.
+
+Put the approved designs and any ADR in the repo before the build tickets, so workers read them.

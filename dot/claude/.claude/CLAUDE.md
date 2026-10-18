@@ -44,6 +44,23 @@ When writing or updating any CLAUDE.md or README:
 
 Active voice. No stage performances. Pick the commonest word among alternatives.
 
+## Ending a chat
+
+When I say I'm ending the chat, or ask for a handoff, first reflect: what did we learn this session that a future session should know? Cover technical lessons, domain lessons (game dev, the project's rules), how you and I work together, and how subagents and lanes behaved. Write each lesson where it will be read next time, then write the handoff and list what you changed:
+
+- Project rules every worker needs: the repo's `CLAUDE.md`.
+- Project process for orchestrators: the repo's docs (such as `docs/orchestrating.md`).
+- Orchestration that applies to any repo: the skill that runs it (such as `~/Git/toolbox/skills/swarm/SKILL.md`).
+- How we work together, in every repo: this file, under "Working with me".
+
+Skip lessons already written down; edit the existing line instead of adding a near-duplicate.
+
+## Working with me
+
+- I often chat from my phone while you work: keep status updates to short bullets, lead with what changed, and give me decisions as `AskUserQuestion` picks with a recommended option first.
+- Answer a message I send mid-task in your very next reply, even if it's a short "got it, doing X after Y". I shouldn't have to repeat myself.
+- When I ask "are we good?" or for status, say plainly what's done, what's still running, and what needs me.
+
 ## Bash working directory — use absolute paths
 
 **The Bash tool's cwd persists between calls, and it is almost never where you
