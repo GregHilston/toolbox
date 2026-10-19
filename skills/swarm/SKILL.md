@@ -116,6 +116,8 @@ When lanes drain, fan out read-only audits in parallel, each a subagent with one
 - Reviewers pass tests that can't fail. Ask them to prove each new test by mutation: remove the line under test and watch it fail.
 - In a networked game, effects driven by local signals never reach guests, who only apply snapshots. Ask reviewers of any sound, shake or popup change how a guest gets it, and whether a guest joining mid-run replays old events.
 - In zsh an unquoted `$ARGS` is not word-split, so `lane.py start x -- $S` passes one argument and the loop dies at once. Write the arguments out.
+- Under auto mode an unattended orchestrator can't fast-forward or push main, commit a guard-test edit, force-push, or edit its own permissions; each is refused as a security action. Before the owner sleeps, ask for a narrow landing rule (`git merge --ff-only`, `git push origin main`). Without one, stack gated work on one integration branch for a morning merge.
+- Gate time tracks the test suites, not overhead: profile per-suite times from the gate's results files before guessing. One night's 4× gate speedup was test cleanup re-listing thousands of leaked temp folders, and coverage instrumentation making core suites 6–7× slower.
 - A ticket parked only because its _Done when_ asks for an orchestrator capture is finished work: recover the commit (`git branch parked-N <sha>` in the lane clone, fetch, cherry-pick) instead of rerunning it.
 
 ## Big features: a staged pipeline
