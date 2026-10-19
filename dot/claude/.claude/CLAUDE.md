@@ -66,7 +66,9 @@ Skip lessons already written down; edit the existing line instead of adding a ne
 ## Picking a model for delegated work
 
 - **Always pass `model` on every `Agent` call.** A call without one inherits the orchestrator's model, usually Opus. On 2026-10-19 a research agent ran on Opus that way, and that was a miss.
-- **Sonnet** for code lanes, reviews, rebases, research and audits. **Haiku** for mechanical sweeps (status, running captures, listing results). **Opus** only when I ask for it.
+- **Haiku first:** it costs far less, so use it wherever it can do the job. That covers status sweeps, running captures and gates, listing results, rebases without real conflicts, small well-specified tickets, reviews of test-only or data-only diffs, and focused read-only searches.
+- **Sonnet** when the task needs judgement: design, perf work that must stay bit-identical, networking, multi-file refactors, conflict resolution, research that weighs sources, and reviews of branches with real logic. If a Haiku agent's report is thin or wrong, rerun that task on Sonnet and note it.
+- **Opus** only when I ask for it.
 - **DeepSeek** (`pi-ask.py`, `--harness pi` lanes) for every second-opinion review of a branch with logic in it, for bulk reading, and for small test-checkable tickets. Use it from the start of a session, not as an afterthought.
 - **DeepSeek half price** is everything except its peak hours: 01:00–04:00 and 06:00–10:00 UTC, Monday to Friday. Weekends and Chinese public holidays are off-peak all day ([pricing](https://api-docs.deepseek.com/quick_start/pricing)). In Eastern time that is Sun–Thu 21:00–00:00 and Mon–Fri 02:00–06:00 under EDT, one hour earlier under EST (from the first Sunday of November).
 - Run `deepseek-preflight.py` before starting DeepSeek work: it prints the rate now, minutes to the next peak, and the balance. Start long `pi` lanes with `--off-peak`, so they wait out peak hours. A review costs cents, so run it even at peak price.
