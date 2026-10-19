@@ -89,6 +89,8 @@ The gate is the bottleneck, not coding. Spend gates only where they buy safety.
 - **Rescue work parked by a loaded gate.** A gate under load dies with exit 124 (shard timeout) or 134 (gdUnit crashes handling a test timeout) after about half the suite, and the lane parks a finished ticket whose own worker gate passed. The park comment names the commit ("committed as `1b11f32`"); the commit is dangling in the lane's clone. Branch it there, fetch it into the landing worktree, cherry-pick, and land with the full gate.
 - **Keep every suite under a minute.** A shard is killed at 600 s, so one 3-minute suite plus load timed out whole shards, and workers couldn't run it through `tools/test.sh`'s 120 s limit. Split a slow suite by screen with a shared fixture as soon as it passes a minute.
 - **Cap DeepSeek reviews:** add "Answer in under 40 tool calls" to the prompt; an uncapped review hit `--max-turns 100` with no answer. Start a review only after the worktree's conflicts are resolved; `dsreview.sh` reviews whatever HEAD is.
+- **Land on the gate's words, not a piped exit code.** `gate | tail -n 2 && merge` merges on `tail`'s exit status; capture the output and grep it for `PASS` before merging.
+- **Re-measure a win when its conditions change.** A suite queue beat fixed shards only while shard weights were stale; with fresh weights it lost on both time and CPU, and was reverted.
 - **When main goes red, stop queued landings** (by their own PIDs): every full gate behind it fails on the same test and wastes its slot.
 
 ## 5. Keep the queue full
