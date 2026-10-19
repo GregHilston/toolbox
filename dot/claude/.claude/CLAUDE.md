@@ -63,6 +63,14 @@ Skip lessons already written down; edit the existing line instead of adding a ne
 - My machines: **moria** is the M4 Max (16 cores, 128 GB) I develop on, and Claude usually runs on it; it's dev-only, so use all its hardware. **dungeon** is the home lab (M3 Pro, 48 GB, RAM nearly full) running services that must not be interrupted; don't put build or test load on it.
 - DeepSeek credit isn't scarce: a few dollars of real balance is more than a day of work. Don't reroute work to save it; just don't waste it.
 
+## Picking a model for delegated work
+
+- **Always pass `model` on every `Agent` call.** A call without one inherits the orchestrator's model, usually Opus. On 2026-10-19 a research agent ran on Opus that way, and that was a miss.
+- **Sonnet** for code lanes, reviews, rebases, research and audits. **Haiku** for mechanical sweeps (status, running captures, listing results). **Opus** only when I ask for it.
+- **DeepSeek** (`pi-ask.py`, `--harness pi` lanes) for every second-opinion review of a branch with logic in it, for bulk reading, and for small test-checkable tickets. Use it from the start of a session, not as an afterthought.
+- **DeepSeek half price** is everything except its peak hours: 01:00–04:00 and 06:00–10:00 UTC, Monday to Friday. Weekends and Chinese public holidays are off-peak all day ([pricing](https://api-docs.deepseek.com/quick_start/pricing)). In Eastern time that is Sun–Thu 21:00–00:00 and Mon–Fri 02:00–06:00 under EDT, one hour earlier under EST (from the first Sunday of November).
+- Run `deepseek-preflight.py` before starting DeepSeek work: it prints the rate now, minutes to the next peak, and the balance. Start long `pi` lanes with `--off-peak`, so they wait out peak hours. A review costs cents, so run it even at peak price.
+
 ## Bash working directory — use absolute paths
 
 **The Bash tool's cwd persists between calls, and it is almost never where you
