@@ -27,6 +27,7 @@ import sys
 import time
 import tomllib
 import urllib.request
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 GRAFANA = "https://grafana.grehg2.xyz/api"
@@ -34,6 +35,7 @@ HOST = os.environ.get("LAB_ALERTS_HOST", "dungeon")
 LOG = "~/Library/Logs/ops-broker/alerts.jsonl"
 TAIL = 5000
 STALE = timedelta(hours=24)
+LEAD = timedelta(minutes=10)
 DEPS = os.environ.get("LAB_ALERTS_DEPS", "~/Git/home-lab/ops/dependencies.toml")
 
 
@@ -64,12 +66,24 @@ def firing(now: datetime) -> list[dict]:
     return sorted(out, key=lambda r: r["since"])
 
 
-def load_deps(path: str) -> list[dict]:
+def load_deps(path: str) -> tuple[list[dict], str]:
+    """Roots and a warning. A missing file is silent; a broken one warns."""
     try:
         with open(os.path.expanduser(path), "rb") as f:
-            return tomllib.load(f).get("root", [])
-    except (OSError, tomllib.TOMLDecodeError):
-        return []
+            roots = tomllib.load(f).get("root", [])
+    except FileNotFoundError:
+        return [], ""
+    except (OSError, tomllib.TOMLDecodeError) as e:
+        return [], f"Dependency map {path} unreadable ({e}); no shared-cause grouping."
+    try:
+        for root in roots:
+            for rule in [root["down"], *root.get("explains", [])]:
+                re.compile(rule["alert"])
+                for rx in rule.get("labels", {}).values():
+                    re.compile(rx)
+    except (KeyError, TypeError, re.error) as e:
+        return [], f"Dependency map {path} invalid ({e!r}); no shared-cause grouping."
+    return roots, ""
 
 
 def matches(rule: dict, alert: dict) -> bool:
@@ -85,22 +99,53 @@ def label(alert: dict) -> str:
     return host.group(1) if host else lab.get("app") or alert["name"]
 
 
+def detail(alert: dict) -> str:
+    """Name plus the label that says which one, for unexplained alerts."""
+    lab = alert["labels"]
+    which = label(alert) if label(alert) != alert["name"] else next(
+        (lab[k] for k in ("disk", "repo", "job") if lab.get(k)), "")
+    return f"{alert['name']} ({which})" if which and which != alert["name"] else alert["name"]
+
+
+def counted(names: list[str]) -> list[str]:
+    return [n if c == 1 else f"{n} x{c}" for n, c in Counter(names).items()]
+
+
 def shared_causes(alerts: list[dict], roots: list[dict]) -> dict:
-    """Group alerts under a root only when that root's own down alert fires."""
-    groups, claimed = [], set()
+    """Group alerts under a root only when that root's own down alert fires.
+
+    Silenced roots form no group; alerts older than a root by more than
+    LEAD cannot be its fallout.
+    """
+    live = {}
     for root in roots:
-        sig = [i for i, a in enumerate(alerts) if matches(root["down"], a)]
-        if not sig:
+        sig = [a for a in alerts if not a["flag"] and matches(root["down"], a)]
+        if sig:
+            live[root["id"]] = (root, sig, min(datetime.fromisoformat(a["since"]) for a in sig))
+    sig_ids = {id(a) for _, sig, _ in live.values() for a in sig}
+    owned: dict[str, list[str]] = {rid: [] for rid in live}
+    shared: dict[tuple, list[str]] = {}
+    unexplained = []
+    for a in alerts:
+        if id(a) in sig_ids:
             continue
-        hit = [i for i, a in enumerate(alerts)
-               if i not in sig and any(matches(r, a) for r in root.get("explains", []))]
-        claimed.update(sig, hit)
-        a0 = alerts[sig[0]]
-        names = list(dict.fromkeys(label(alerts[i]) for i in hit))
-        groups.append({"root": root["id"], "down_alert": a0["name"], "down_label": label(a0),
-                       "state": root.get("state", "is down"), "explains": names})
-    rest = [a["name"] for i, a in enumerate(alerts) if i not in claimed]
-    return {"groups": groups, "unexplained": list(dict.fromkeys(rest))} if groups else {}
+        since = datetime.fromisoformat(a["since"])
+        by = tuple(rid for rid, (root, _, start) in live.items()
+                   if since >= start - LEAD and any(matches(r, a) for r in root.get("explains", [])))
+        if len(by) == 1:
+            owned[by[0]].append(label(a))
+        elif by:
+            shared.setdefault(by, []).append(label(a))
+        else:
+            unexplained.append(detail(a))
+    if not live:
+        return {}
+    groups = [{"root": rid, "down_alert": sig[0]["name"], "down_label": label(sig[0]),
+               "state": root.get("state", "is down"), "explains": counted(owned[rid])}
+              for rid, (root, sig, _) in live.items()]
+    return {"groups": groups,
+            "shared": [{"roots": list(by), "explains": counted(n)} for by, n in shared.items()],
+            "unexplained": counted(unexplained)}
 
 
 def age(delta: timedelta) -> str:
@@ -218,10 +263,17 @@ def main() -> int:
 
     try:
         result["firing"] = firing(now)
-        result["shared_cause"] = shared_causes(result["firing"], load_deps(DEPS))
     except Exception as e:
         result["firing"] = None
         notes.append(f"Could not read Grafana firing alerts: {e}")
+    if result["firing"]:
+        roots, warn = load_deps(DEPS)
+        if warn:
+            notes.append(warn)
+        try:
+            result["shared_cause"] = shared_causes(result["firing"], roots)
+        except Exception as e:
+            notes.append(f"Dependency grouping failed ({e!r}); ignore it.")
 
     try:
         rows, skipped = read_log(HOST)
@@ -275,6 +327,8 @@ def main() -> int:
                 sig = g["down_alert"] if g["down_label"] == g["down_alert"] else f"{g['down_alert']}: {g['down_label']}"
                 print(f"  {g['root']} {g['state']} ({sig}) \u2192 explains: "
                       + (", ".join(g["explains"]) or "nothing else firing"))
+            for g in sc["shared"]:
+                print(f"  explained by {' or '.join(g['roots'])}: " + ", ".join(g["explains"]))
             print("  not explained by a known dependency: " + (", ".join(sc["unexplained"]) or "none"))
     print(f"\nHISTORY, last {args.days:g} days ({result['history_source']})")
     for line in history_lines or ["nothing"]:
