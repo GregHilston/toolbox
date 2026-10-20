@@ -17,22 +17,25 @@ const GIT = String.raw`\bgit(?:\s+(?:-[Cc]\s+\S+|--?[\w-]+(?:=\S*)?))*\s+`;
 // A shell as a word, with or without a path.
 const SH = String.raw`(?<![\w.-])(?:\S*\/)?(?:ba|z|da|k|fi)?sh(?![\w./-])`;
 const rx = (source: string) => new RegExp(source);
+// A command word, not part of a filename or flag.
+const cmd = (names: string, tail = "") =>
+	rx(String.raw`(?<![^\s;|&!('"\x60])(?:\/(?:usr\/)?s?bin\/)?(?:${names})(?![\w./-])` + tail);
 
 export const HARD_RULES: HardRule[] = [
 	{ reason: "recursive delete (rm -r / -rf / -Rf)", pattern: /(?<!\bgit\s+)\brm\b[^#\n]*\s-(?:[a-zA-Z]*[rR]|-recursive\b)/ },
-	{ reason: "elevated privileges (sudo)", pattern: /\b(sudo|doas)\b/ },
+	{ reason: "elevated privileges (sudo)", pattern: cmd("sudo|doas") },
 	{ reason: "pipe to shell (runs whatever feeds it)", pattern: rx(String.raw`\|&?[^|;&\n]*` + SH) },
 	{ reason: "here-string, heredoc or <(...) fed to a shell", pattern: rx(SH + String.raw`[^|;&\n]*<[<(]`) },
 	{ reason: "filesystem formatting (mkfs)", pattern: /\bmkfs/ },
 	{ reason: "filesystem formatting (newfs_*)", pattern: /\bnewfs_\w+/ },
-	{ reason: "disk signature wipe", pattern: /\bwipefs\b/ },
+	{ reason: "disk signature wipe", pattern: cmd("wipefs") },
 	{ reason: "destructive disk operation (diskutil)", pattern: /\bdiskutil\s+(erase|zeroDisk|secureErase|reformat)/i },
 	{ reason: "raw disk write (dd of=/dev/...)", pattern: /\bdd\b[^#\n]*\bof=\/dev\// },
-	{ reason: "partition table management", pattern: /\b(parted|fdisk|gdisk|sgdisk)\b/ },
-	{ reason: "disk encryption management", pattern: /\bcryptsetup\b/ },
-	{ reason: "ZFS pool management", pattern: /\bzpool\b/ },
-	{ reason: "system power operation", pattern: /\b(systemctl|launchctl)\b[^#\n]*\b(poweroff|reboot|halt|suspend)\b/ },
-	{ reason: "system power operation", pattern: /\b(shutdown|reboot|halt|poweroff)\b/ },
+	{ reason: "partition table management", pattern: cmd("parted|fdisk|gdisk|sgdisk") },
+	{ reason: "disk encryption management", pattern: cmd("cryptsetup") },
+	{ reason: "ZFS pool management", pattern: cmd("zpool") },
+	{ reason: "system power operation", pattern: cmd("systemctl|launchctl", String.raw`[^#\n]*\s(?:poweroff|reboot|halt|suspend)(?![\w./-])`) },
+	{ reason: "system power operation", pattern: cmd("shutdown|reboot|halt|poweroff") },
 	{ reason: "infrastructure teardown (terraform destroy)", pattern: /\bterraform\b[^#\n]*\sdestroy\b/ },
 	{ reason: "Kubernetes resource deletion", pattern: /\bkubectl\b[^#\n]*\sdelete\b/ },
 	{ reason: "bulk S3 deletion (aws s3 rm --recursive)", pattern: /\baws\s+s3\s+rm\b[^#\n]*--recursive/ },
