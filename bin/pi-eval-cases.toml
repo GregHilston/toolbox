@@ -7,7 +7,6 @@ name = "alerts-home-lab"
 cwd = "~/Git/home-lab"
 prompt = "what's been alerting lately?"
 bash_matches = ['lab-alerts']
-reads_skill = ["lab-alerts"]
 max_turns = 12
 
 [[case]]
@@ -28,7 +27,7 @@ max_turns = 12
 name = "sabnzbd-down"
 cwd = "~"
 prompt = "is sabnzbd down?"
-bash_matches = ['curl.*grehg2\.xyz']
+bash_matches = ['curl.*grehg2\.xyz|lab-alerts']
 not_tool = ["web_search"]
 max_turns = 8
 
@@ -44,8 +43,7 @@ max_turns = 10
 name = "pushover-backup"
 cwd = "~/Git/home-lab"
 prompt = "why did I get a pushover saying offsite backup failed?"
-bash_matches = ['lab-alerts']
-calls_match = ['ssh dungeon|runbooks/backup']
+calls_match = ['lab-alerts|oncall/SKILL\.md|promql\.sh --alerts', 'ssh dungeon|runbooks/backup']
 max_turns = 20
 
 [[case]]

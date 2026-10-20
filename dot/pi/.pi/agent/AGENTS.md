@@ -63,7 +63,8 @@ down. Work read-only by default: diagnose, then propose a fix and ask before act
 
 - Home-lab alerts or "what is broken": run `lab-alerts`, then use the `oncall` skill
   for one alert, `triage` for a full sweep, `post-reboot` after dungeon restarts.
-- Network trouble (no DNS, no internet, tailnet down): run `netcheck`.
+- Network trouble (no DNS, no internet, tailnet down): run `netcheck` first. Do not
+  web search; it needs the network you are checking.
 - A service name (sabnzbd, sonarr, plex, nextcloud, grafana…) means Greg's own copy at
   `https://<name>.grehg2.xyz`, never the public project. Check it with `lab-alerts` and
   `curl -sS -o /dev/null -w '%{http_code}' <url>`. Never use a public status site.
@@ -75,8 +76,9 @@ down. Work read-only by default: diagnose, then propose a fix and ask before act
   "possibly", and name the check that would confirm it. Two alerts firing together do
   not prove one caused the other.
 - The default model, `litellm/local-small`, goes through the gateway on dungeon. If
-  dungeon or DNS is down, it fails. Switch with `/model` to `omlx/Qwen3.6-35B-A3B-4bit`
-  (localhost:8000, 262k window, runs on moria only).
+  dungeon or DNS is down, it fails. pi switches to `omlx/Qwen3.6-35B-A3B-4bit`
+  (localhost:8000, 262k window, moria only) at start when the gateway is down. To
+  switch by hand, Greg types `/model`; it is not a shell command.
 - Every `litellm/*` model, `litellm/cloud` included, goes through dungeon.
   `litellm/cloud` and `deepseek/*` also need the internet.
 - What each tool needs: `netcheck` and file work need nothing. `lab-alerts`,

@@ -154,7 +154,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--only", help="comma-separated case names")
-    ap.add_argument("--jobs", type=int, default=4)
+    ap.add_argument("--jobs", type=int, default=2)
     ap.add_argument("--keep", type=Path, help="directory for raw jsonl transcripts")
     ap.add_argument("--cases", type=Path, default=CASES)
     ap.add_argument("--json", action="store_true")
