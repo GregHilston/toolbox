@@ -19,7 +19,7 @@ spec.loader.exec_module(netcheck)
 
 def healthy():
     r = {k: (True, "x") for k in (
-        "gateway", "dungeon", "wan", "dns_router", "dns_direct", "local_dnsmasq",
+        "gateway", "dungeon", "wan", "dns_router", "dns_direct", "local_dnsmasq", "dns_system",
         "tailscale", "svc_gateway", "svc_omlx", "svc_searxng")}
     r["link"] = (True, "en0 192.168.1.50")
     r["local_router"] = r["local_dnsmasq"] = (True, netcheck.DUNGEON)
