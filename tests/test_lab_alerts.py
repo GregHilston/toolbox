@@ -6,6 +6,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
@@ -93,6 +94,13 @@ class TestFormat(unittest.TestCase):
         i = la.pair([row(5, "backup", "alert", "failed")], NOW, 3)[0]
         self.assertIn("OPEN", la.fmt_incident(i, NOW))
         self.assertIn("no clear yet", la.fmt_incident(i, NOW))
+
+    def test_open_line_names_its_log_on_dungeon(self):
+        i = la.pair([row(5, "backup-offsite", "alert", "failed")], NOW, 3)[0]
+        with mock.patch.object(la, "ON_HOST", True):
+            line = la.fmt_incident(i, NOW)
+        self.assertIn("log: tail -n 50 ~/Library/Logs/backup-offsite.log", line)
+        self.assertNotIn("ssh", line)
 
     def test_open_line_names_its_log(self):
         i = la.pair([row(5, "backup-offsite", "alert", "failed")], NOW, 3)[0]
@@ -205,6 +213,24 @@ class TestLoadDeps(unittest.TestCase):
         self.assertGreater(len(roots), 0)
         for r in roots:
             self.assertTrue(r["explains"], r["id"])
+
+
+class TestReadLog(unittest.TestCase):
+    def test_on_dungeon_reads_the_file_without_ssh(self):
+        good = json.dumps({"ts": "2026-10-20T10:00:00+00:00", "source": "nfs", "kind": "alert", "title": "down"})
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "alerts.jsonl")
+            Path(path).write_text("old junk\n" + good + "\n" + good + "\n")
+            with mock.patch.object(la, "ON_HOST", True), mock.patch.object(la, "LOG", path), \
+                    mock.patch.object(la.subprocess, "run", side_effect=AssertionError("ssh")):
+                rows, bad = la.read_log("dungeon", lines=2)
+        self.assertEqual((len(rows), bad), (2, 0))
+
+    def test_elsewhere_goes_over_ssh(self):
+        proc = mock.Mock(returncode=0, stdout="", stderr="")
+        with mock.patch.object(la, "ON_HOST", False), mock.patch.object(la.subprocess, "run", return_value=proc) as run:
+            la.read_log("dungeon")
+        self.assertEqual(run.call_args.args[0][0], "ssh")
 
 
 if __name__ == "__main__":

@@ -739,7 +739,30 @@ in {
   # SearXNG is a container on this host, so pi talks to it directly instead of
   # bouncing out to the tailnet address and back. Every other host keeps the
   # default in modules/programs/tui/pi.nix.
-  home-manager.users.${vars.user.name}.custom.programs.pi.searxngBaseUrl = lib.mkForce "http://localhost:8214";
+  home-manager.users.${vars.user.name}.custom.programs.pi = {
+    searxngBaseUrl = lib.mkForce "http://localhost:8214";
+    # RAM is nearly full: the 64k oMLX profile is the fallback.
+    wideFallback = false;
+  };
+
+  # Nightly pi config check, no LLM. Pushover only on a problem.
+  launchd.user.agents.pi-doctor = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/Users/${vars.user.name}/Git/toolbox/bin/pi-doctor.py"
+        "--push"
+      ];
+      EnvironmentVariables.PATH = "/etc/profiles/per-user/${vars.user.name}/bin:/Users/${vars.user.name}/.nix-profile/bin:/opt/homebrew/bin:/usr/bin:/bin";
+      StartCalendarInterval = [
+        {
+          Hour = 7;
+          Minute = 0;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/pi-doctor.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/pi-doctor.log";
+    };
+  };
 
   # Engine. Run in AUTO mode: Frigate ships the yolov9 model over ZMQ on connect.
   # Manual one-time install (not auto-cloned — see darwin-post-deploy.md):

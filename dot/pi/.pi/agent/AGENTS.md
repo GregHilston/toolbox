@@ -70,14 +70,17 @@ down. Work read-only by default: diagnose, then propose a fix and ask before act
   `curl -sS -o /dev/null -w '%{http_code}' <url>`. Never use a public status site.
 - Runbooks live in `~/Git/home-lab/docs/runbooks/`; `README.md` there is the index.
   Read the matching runbook before you run anything.
-- Watchdog and backup logs live on dungeon, not here:
-  `ssh dungeon tail -n 50 ~/Library/Logs/<name>.log`.
+- Run `hostname` if unsure where you are. Watchdog and backup logs live on dungeon:
+  on moria `ssh dungeon tail -n 50 ~/Library/Logs/<name>.log`; on dungeon run the
+  commands directly, without `ssh dungeon`. Never put load on dungeon: no builds,
+  tests or benchmarks, and no `docker` or `launchctl` changes without Greg's say.
 - **State a cause only when a command output or a doc line shows it.** Otherwise say
   "possibly", and name the check that would confirm it. Two alerts firing together do
   not prove one caused the other.
 - The default model, `litellm/local-small`, goes through the gateway on dungeon. If
-  dungeon or DNS is down, it fails. pi switches to `omlx/Qwen3.6-35B-A3B-4bit`
-  (localhost:8000, 262k window, moria only) at start when the gateway is down. To
+  dungeon or DNS is down, it fails. pi switches to this host's local oMLX model
+  (localhost:8000; 262k window on moria, the 64k `:lab` profile on dungeon) at start
+  when the gateway is down. To
   switch by hand, Greg types `/model`; it is not a shell command.
 - Every `litellm/*` model, `litellm/cloud` included, goes through dungeon.
   `litellm/cloud` and `deepseek/*` also need the internet.

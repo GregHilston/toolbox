@@ -26,6 +26,12 @@ The direct `omlx` provider (`localhost:8000`) is still in `models.json` and in
 `/model`, out of the Ctrl+P cycle. On moria it is the way round a dungeon that is
 down, since the gateway itself runs on dungeon.
 
+## Running pi on dungeon
+
+Greg runs `pi` over ssh on dungeon when moria is off; the gateway is local there.
+`~/.pi/agent` on dungeon links into this directory per file, not as one symlink.
+`bin/pi-doctor.py` (nightly there, no LLM) checks that it still does; `just dr dungeon` installs it.
+
 ## Secret Management
 
 `models.json` holds the gateway's master key (`op://Infra/LiteLLM/master_key`)

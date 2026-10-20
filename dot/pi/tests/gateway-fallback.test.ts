@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { test } from "node:test";
 
-import { decide, looksLikeOutage, probeTwice, reachable } from "../.pi/agent/extensions/gateway-fallback.ts";
+import { decide, looksLikeOutage, pickLocal, probeTwice, reachable } from "../.pi/agent/extensions/gateway-fallback.ts";
 
 const G = "https://gateway.test/v1";
 const L = "http://localhost:8000/v1";
@@ -78,4 +78,20 @@ test("outage errors: connection and 5xx yes, 4xx no", () => {
 	for (const e of ["401 invalid api key", "400 oMLX memory guard: prompt too large", "context length exceeded", undefined]) {
 		assert.equal(looksLikeOutage(e), false, String(e));
 	}
+});
+
+test("pickLocal: wide profile first, :lab when it is all there is", () => {
+	assert.deepEqual(pickLocal(["litellm/local-small", "omlx/Q:lab", "omlx/Q"]), { provider: "omlx", id: "Q" });
+	assert.deepEqual(pickLocal(["litellm/local-small", "omlx/Q:lab", "deepseek/*"]), { provider: "omlx", id: "Q:lab" });
+});
+
+test("pickLocal: no concrete omlx entry uses the default", () => {
+	for (const e of [undefined, [], ["omlx/*"], "x"]) {
+		assert.deepEqual(pickLocal(e), { provider: "omlx", id: "Qwen3.6-35B-A3B-4bit" });
+	}
+});
+
+test("decide names the given local model in the switch notice", async () => {
+	const out = await decide("litellm", G, L, only(L), "omlx/Q:lab");
+	assert.match((out as { message: string }).message, /switched to omlx\/Q:lab \(local\)/);
 });

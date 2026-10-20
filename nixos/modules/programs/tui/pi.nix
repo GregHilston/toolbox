@@ -54,6 +54,15 @@ in {
     };
 
     # Set by modules/darwin/omlx.nix on every host that runs oMLX.
+    wideFallback = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Offer the 262k oMLX profile as the gateway fallback. dungeon turns it
+        off: its memory is nearly full, so the 64k profile is the fallback.
+      '';
+    };
+
     localModel = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -243,11 +252,11 @@ in {
           if cfg.gateway
           then
             map (m: "litellm/${m.id}") (builtins.filter (m: m.id != "cloud") modelsTemplate.providers.litellm.models)
-            ++ lib.optionals (cfg.localModel != null) [
-              "omlx/${cfg.localModel}"
+            ++ lib.optionals (cfg.localModel != null) (
+              ["omlx/${cfg.localModel}"]
               # 262k profile: the way round a down gateway.
-              "omlx/${lib.removeSuffix ":lab" cfg.localModel}"
-            ]
+              ++ lib.optional cfg.wideFallback "omlx/${lib.removeSuffix ":lab" cfg.localModel}"
+            )
             ++ lib.optionals cfg.deepseek ["litellm/cloud" "deepseek/*"]
           else ["omlx/*"] ++ lib.optionals cfg.deepseek ["deepseek/*"];
 

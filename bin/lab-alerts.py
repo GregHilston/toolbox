@@ -6,7 +6,7 @@
 """What is alerting in the home lab: firing now, plus recent history.
 
 Firing alerts come from Grafana (anonymous read). History comes from dungeon's
-ops-broker alert log over ssh, because it also holds launchd watchdog alerts
+ops-broker alert log (over ssh, or read directly on dungeon), because it also holds launchd watchdog alerts
 Grafana never sees. If ssh fails, history falls back to Grafana annotations.
 Read-only.
 
@@ -22,6 +22,7 @@ import argparse
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 import time
@@ -33,6 +34,7 @@ from datetime import datetime, timedelta, timezone
 GRAFANA = "https://grafana.grehg2.xyz/api"
 HOST = os.environ.get("LAB_ALERTS_HOST", "dungeon")
 LOG = "~/Library/Logs/ops-broker/alerts.jsonl"
+ON_HOST = socket.gethostname().split(".")[0].lower() == HOST.lower()
 TAIL = 5000
 STALE = timedelta(hours=24)
 # Root alerts wait 15m (for:) before firing.
@@ -160,11 +162,15 @@ def age(delta: timedelta) -> str:
 
 def read_log(host: str, lines: int = TAIL) -> tuple[list[dict], int]:
     """Parsed rows and the count of lines that would not parse."""
-    cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", host, f"tail -n {lines} {LOG}"]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else f"ssh exit {proc.returncode}")
-    raw = [l for l in proc.stdout.splitlines() if l.strip()]
+    if ON_HOST:
+        with open(os.path.expanduser(LOG)) as f:
+            raw = [l for l in f.read().splitlines()[-lines:] if l.strip()]
+    else:
+        cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", host, f"tail -n {lines} {LOG}"]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if proc.returncode != 0:
+            raise RuntimeError(proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else f"ssh exit {proc.returncode}")
+        raw = [l for l in proc.stdout.splitlines() if l.strip()]
     rows = [r for r in map(parse_row, raw) if r]
     return rows, len(raw) - len(rows)
 
@@ -215,8 +221,8 @@ def pair(rows: list[dict], now: datetime, days: float) -> list[dict]:
 
 
 def log_cmd(source: str) -> str:
-    # Logs live on dungeon, not this machine.
-    return f"ssh {HOST} tail -n 50 ~/Library/Logs/{source}.log"
+    tail = f"tail -n 50 ~/Library/Logs/{source}.log"
+    return tail if ON_HOST else f"ssh {HOST} {tail}"
 
 
 def fmt_incident(i: dict, now: datetime) -> str:
@@ -297,7 +303,7 @@ def main() -> int:
         result["history_source"] = "ops-broker alert log"
         history_lines = [fmt_incident(i, now) for i in incidents]
     except Exception as e:
-        notes.append(f"ssh to {HOST} failed ({e}); history below is Grafana annotations only, no watchdog alerts.")
+        notes.append(f"reading the {HOST} alert log failed ({e}); history below is Grafana annotations only, no watchdog alerts.")
         try:
             ann = annotations(now, args.days)
         except Exception as e2:
