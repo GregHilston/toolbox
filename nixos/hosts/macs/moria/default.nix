@@ -98,6 +98,25 @@
     };
   };
 
+  # Nightly pi regression suite; alerts only on repeat or mass failures.
+  # A missed 03:30 (asleep) runs on wake. moria only: it hosts the model.
+  launchd.user.agents.pi-eval-nightly = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/Users/${vars.user.name}/Git/toolbox/bin/pi-eval-nightly.py"
+      ];
+      EnvironmentVariables.PATH = "/etc/profiles/per-user/${vars.user.name}/bin:/Users/${vars.user.name}/.nix-profile/bin:/opt/homebrew/bin:/usr/bin:/bin";
+      StartCalendarInterval = [
+        {
+          Hour = 3;
+          Minute = 30;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/pi-eval-nightly.launchd.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/pi-eval-nightly.launchd.log";
+    };
+  };
+
   # PI WEB deploys its config here; the service itself is installed once with
   # `just pi-web-setup`. See modules/darwin/pi-web.nix for why nix does not own
   # its launchd agents.

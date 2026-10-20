@@ -427,6 +427,11 @@ After changing pi config, `AGENTS.md`, a skill or a tool, run `pi-eval.py` (case
 read-only chats on the local model and checks the transcripts; exit 1 means a
 behaviour regressed. A model stall can fail a case once, so rerun a failure with `--only <name>`.
 
+moria runs it nightly at 03:30 through `bin/pi-eval-nightly.py` (launchd agent in
+`hosts/macs/moria`). It pushes only when a case fails two nights running or more than
+2 fail, and names a changed `pi --version`. Report: `~/Library/Logs/pi-eval-nightly.log`;
+failure transcripts: `~/.cache/pi-eval/<date>/`.
+
 ### The review loop is practically free — use it every time
 
 The single highest-value habit found in the 2026-08-27 run, and the one most
