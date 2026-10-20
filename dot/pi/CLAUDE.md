@@ -413,6 +413,13 @@ loaded, *executed*, and then errors with "does not export a valid factory
 function", which pollutes every pi session on the machine. They live in
 `dot/pi/tests/` and import across.
 
+### Regression check — pi-eval
+
+After changing pi config, `AGENTS.md`, a skill or a tool, run `pi-eval.py` (cases in
+`bin/pi-eval-cases.toml`, `-h` for flags). It replays about a dozen realistic
+read-only chats on the local model and checks the transcripts; exit 1 means a
+behaviour regressed. A model stall can fail a case once, so rerun a failure with `--only <name>`.
+
 ### The review loop is practically free — use it every time
 
 The single highest-value habit found in the 2026-08-27 run, and the one most
