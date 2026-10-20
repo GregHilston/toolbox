@@ -97,6 +97,8 @@ The gate is the bottleneck, not coding. Spend gates only where they buy safety.
 
 When lanes drain, fan out read-only audits in parallel, each a subagent with one lens: architecture against Greg's rules and the ADRs, tests and coverage, performance (measured, not guessed), agent tooling, and a visual pass on fresh captures. Turn verified findings into tickets and start the next round. Stop when only `manual` tickets remain, then report: what landed, what each manual ticket needs from Greg, real spend.
 
+Before that report, run the repo's ship steps if its `docs/orchestrating.md` has them (a build and upload for a playtest), on a green final `main`, then send Greg a phone ping with `pushover.py -m "..."` saying what is ready.
+
 ## Subagents
 
 - **Models:** pass `model` on every `Agent` call; one without it inherits the orchestrator's Opus. Haiku wherever it can do the job (mechanical work, small well-specified tickets, test-only reviews); Sonnet for judgement, for code, reviews, rebases and audits, as subagents and as loop workers. DeepSeek next, and freely: it is cheap, not a reserve for hard problems. A whole review of a 20-commit refactor cost $0.05 at DeepSeek's prices (the gateway's daily cap counts about twice that), and off-peak hours halve it. Run `deepseek-preflight.py` first: peak (double price) is 01:00–04:00 and 06:00–10:00 UTC on weekdays. Use it for every second-opinion review, for extra lanes (`--harness pi`) when Sonnet lanes are busy or rate-limited, and for bulk reading. Only its daily cap and Greg's `--budget` limit it. Haiku for mechanical work only: status sweeps, running captures and listing results.
