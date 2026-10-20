@@ -258,10 +258,10 @@ Flash/`high` and Pro/`high`, diffed against each other.
 
 ### Gateway fallback
 
-`extensions/gateway-fallback.ts` probes the litellm base URL at `session_start` (1.5 s).
+`extensions/gateway-fallback.ts` probes the litellm base URL at `session_start` (2 s, retried once; 5xx counts as down).
 Down and oMLX answering: it switches to `omlx/Qwen3.6-35B-A3B-4bit` and notifies. It
 switches in subagents too, since pi-ask's worker would otherwise just fail.
-`PI_FALLBACK_PROBE_URL` forces the probe target for tests. Headless runs show no notice.
+`PI_FALLBACK_PROBE_URL` forces the probe target for tests. Headless runs print the notice to stderr.
 
 ### Extensions written here for orchestration
 

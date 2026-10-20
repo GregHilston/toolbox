@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { test } from "node:test";
 
-import { decide, reachable } from "../.pi/agent/extensions/gateway-fallback.ts";
+import { decide, probeTwice, reachable } from "../.pi/agent/extensions/gateway-fallback.ts";
 
 const G = "https://gateway.test/v1";
 const L = "http://localhost:8000/v1";
@@ -38,11 +38,35 @@ test("both down: stranded, points at /model", async () => {
 	assert.match((out as { message: string }).message, /\/model/);
 });
 
-test("reachable: an error status is up, a closed port is down", async () => {
-	const server = createServer((_q, r) => r.writeHead(401).end());
+test("no local model in the registry: stranded notice, no oMLX probe", async () => {
+	const out = await decide("litellm", G, undefined, only());
+	assert.equal(out.action, "stranded");
+	assert.match((out as { message: string }).message, /no local fallback configured/);
+});
+
+test("probeTwice retries only after a failure", async () => {
+	let calls = 0;
+	assert.equal(await probeTwice(G, async () => (calls++, true)), true);
+	assert.equal(calls, 1);
+	calls = 0;
+	assert.equal(await probeTwice(G, async () => calls++ > 0), true);
+	assert.equal(calls, 2);
+	calls = 0;
+	assert.equal(await probeTwice(G, async () => (calls++, false)), false);
+	assert.equal(calls, 2);
+});
+
+test("reachable: 4xx is up, 5xx and a closed port are down", async () => {
+	let status = 401;
+	const server = createServer((_q, r) => r.writeHead(status).end());
 	await new Promise<void>((ok) => server.listen(0, "127.0.0.1", ok));
 	const { port } = server.address() as { port: number };
-	assert.equal(await reachable(`http://127.0.0.1:${port}/v1`), true);
+	const url = `http://127.0.0.1:${port}/v1`;
+	assert.equal(await reachable(url), true);
+	status = 404;
+	assert.equal(await reachable(url), true);
+	status = 502;
+	assert.equal(await reachable(url), false);
 	await new Promise((ok) => server.close(ok));
 	assert.equal(await reachable(`http://127.0.0.1:${port}/v1`), false);
 });
