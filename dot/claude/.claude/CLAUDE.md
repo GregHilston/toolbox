@@ -97,6 +97,10 @@ The tell is an error naming a path with a doubled or missing prefix
 (`api-backend/tests/goldens/`, `can't open file ROADMAP.md`). Treat that as a
 cwd problem first, not a missing-file problem.
 
+The shell is zsh: an unquoted `$var` doesn't word-split, so
+`for p in "515 01"; do set -- $p` passes one argument. Write the values out,
+or use `${=p}`.
+
 ## File Inspection
 
 Prefer the `Read`, `Grep`, and `Glob` tools over shelling out to `cat`/`head`/`tail`/`sed`/`grep` for inspecting files — they return cleaner, line-numbered, structured output and fail less. Reserve Bash for things that genuinely need it (running builds/tests, `git`, `nix`, etc.).
