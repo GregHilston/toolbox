@@ -1,6 +1,6 @@
 /**
  * Falls back to local oMLX when the litellm gateway on dungeon is down.
- * Only the startup model is checked; a mid-session outage is not handled.
+ * A failed litellm turn mid-session re-probes and switches too, without resending.
  * Subagents switch too: a worker on a dead gateway would only fail.
  * PI_FALLBACK_PROBE_URL forces the gateway probe target, for tests.
  */
@@ -61,6 +61,15 @@ export async function decide(
 	};
 }
 
+const CONNECTION_ERROR = /\b5\d\d\b|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|fetch failed|connection|network|timed? ?out|socket|getaddrinfo/i;
+
+/** 4xx (auth, context, oMLX guards) is the request's fault, not the gateway's. */
+export function looksLikeOutage(errorMessage: string | undefined): boolean {
+	if (!errorMessage) return false;
+	if (/\b4\d\d\b/.test(errorMessage) && !/\b5\d\d\b/.test(errorMessage)) return false;
+	return CONNECTION_ERROR.test(errorMessage);
+}
+
 export default function gatewayFallbackExtension(pi: ExtensionAPI): void {
 	pi.on("session_start", async (_event, ctx) => {
 		const local = ctx.modelRegistry.find(LOCAL.provider, LOCAL.id);
@@ -74,6 +83,27 @@ export default function gatewayFallbackExtension(pi: ExtensionAPI): void {
 		}
 		ctx.ui.notify(message, "warning");
 		// headless modes drop notify()
+		if (ctx.mode !== "tui") console.error(message);
+	});
+
+	pi.on("message_end", async (event, ctx) => {
+		const m = event.message as { role?: string; provider?: string; stopReason?: string; errorMessage?: string };
+		if (m.role !== "assistant" || m.stopReason !== "error" || m.provider !== GATEWAY_PROVIDER) return;
+		if (!looksLikeOutage(m.errorMessage)) return;
+		const local = ctx.modelRegistry.find(LOCAL.provider, LOCAL.id);
+		const gatewayUrl = process.env.PI_FALLBACK_PROBE_URL ?? ctx.model?.baseUrl;
+		if (!gatewayUrl) return;
+		const outcome = await decide(m.provider, gatewayUrl, local?.baseUrl);
+		if (outcome.action === "none") return;
+		let message = outcome.message;
+		if (outcome.action === "switch") {
+			if (local && (await pi.setModel(local))) {
+				message = `gateway on dungeon went down; switched to ${LOCAL_LABEL}. Say 'continue' to retry`;
+			} else {
+				message = `${LOCAL_LABEL} has no API key; pick another with /model`;
+			}
+		}
+		ctx.ui.notify(message, "warning");
 		if (ctx.mode !== "tui") console.error(message);
 	});
 }
