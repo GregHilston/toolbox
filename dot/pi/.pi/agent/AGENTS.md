@@ -64,12 +64,24 @@ down. Work read-only by default: diagnose, then propose a fix and ask before act
 - Home-lab alerts or "what is broken": run `lab-alerts`, then use the `oncall` skill
   for one alert, `triage` for a full sweep, `post-reboot` after dungeon restarts.
 - Network trouble (no DNS, no internet, tailnet down): run `netcheck`.
+- A service name (sabnzbd, sonarr, plex, nextcloud, grafana…) means Greg's own copy at
+  `https://<name>.grehg2.xyz`, never the public project. Check it with `lab-alerts` and
+  `curl -sS -o /dev/null -w '%{http_code}' <url>`. Never use a public status site.
 - Runbooks live in `~/Git/home-lab/docs/runbooks/`; `README.md` there is the index.
   Read the matching runbook before you run anything.
+- Watchdog and backup logs live on dungeon, not here:
+  `ssh dungeon tail -n 50 ~/Library/Logs/<name>.log`.
+- **State a cause only when a command output or a doc line shows it.** Otherwise say
+  "possibly", and name the check that would confirm it. Two alerts firing together do
+  not prove one caused the other.
 - The default model, `litellm/local-small`, goes through the gateway on dungeon. If
   dungeon or DNS is down, it fails. Switch with `/model` to `omlx/Qwen3.6-35B-A3B-4bit`
   (localhost:8000, 262k window, runs on moria only).
-- `litellm/cloud` and `deepseek/*` need the internet. They are no help in an outage.
+- Every `litellm/*` model, `litellm/cloud` included, goes through dungeon.
+  `litellm/cloud` and `deepseek/*` also need the internet.
+- What each tool needs: `netcheck` and file work need nothing. `lab-alerts`,
+  `ha-state.py` and `web_search` need dungeon. Web search, web fetch, Reddit, weather
+  and Wikipedia also need the internet.
 - Local models are slower and weaker than Claude. Keep steps small and check each result.
 
 ## Agent skills
