@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { test } from "node:test";
 
-import { decide, probeTwice, reachable } from "../.pi/agent/extensions/gateway-fallback.ts";
+import { decide, looksLikeOutage, probeTwice, reachable } from "../.pi/agent/extensions/gateway-fallback.ts";
 
 const G = "https://gateway.test/v1";
 const L = "http://localhost:8000/v1";
@@ -69,4 +69,13 @@ test("reachable: 4xx is up, 5xx and a closed port are down", async () => {
 	assert.equal(await reachable(url), false);
 	await new Promise((ok) => server.close(ok));
 	assert.equal(await reachable(`http://127.0.0.1:${port}/v1`), false);
+});
+
+test("outage errors: connection and 5xx yes, 4xx no", () => {
+	for (const e of ["Connection error.", "fetch failed", "502 Bad Gateway", "getaddrinfo ENOTFOUND llm.grehg2.xyz", "Request timed out"]) {
+		assert.equal(looksLikeOutage(e), true, e);
+	}
+	for (const e of ["401 invalid api key", "400 oMLX memory guard: prompt too large", "context length exceeded", undefined]) {
+		assert.equal(looksLikeOutage(e), false, String(e));
+	}
 });
