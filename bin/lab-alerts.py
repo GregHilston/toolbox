@@ -35,7 +35,8 @@ HOST = os.environ.get("LAB_ALERTS_HOST", "dungeon")
 LOG = "~/Library/Logs/ops-broker/alerts.jsonl"
 TAIL = 5000
 STALE = timedelta(hours=24)
-LEAD = timedelta(minutes=10)
+# Root alerts wait 15m (for:) before firing.
+LEAD = timedelta(minutes=20)
 DEPS = os.environ.get("LAB_ALERTS_DEPS", "~/Git/home-lab/ops/dependencies.toml")
 
 
