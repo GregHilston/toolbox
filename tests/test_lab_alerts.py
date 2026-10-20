@@ -91,6 +91,14 @@ class TestFormat(unittest.TestCase):
         self.assertIn("OPEN", la.fmt_incident(i, NOW))
         self.assertIn("no clear yet", la.fmt_incident(i, NOW))
 
+    def test_open_line_names_its_log(self):
+        i = la.pair([row(5, "backup-offsite", "alert", "failed")], NOW, 3)[0]
+        self.assertIn("log: ssh dungeon tail -n 50 ~/Library/Logs/backup-offsite.log", la.fmt_incident(i, NOW))
+
+    def test_closed_line_has_no_log(self):
+        i = la.pair([row(5, "backup", "alert", "failed"), row(1, "backup", "clear", "failed")], NOW, 3)[0]
+        self.assertNotIn("log:", la.fmt_incident(i, NOW))
+
     def test_age(self):
         self.assertEqual([la.age(timedelta(minutes=m)) for m in (5, 120, 1500, 4000)], ["5m", "2h", "1d", "2d"])
 

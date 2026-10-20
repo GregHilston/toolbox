@@ -126,6 +126,11 @@ def pair(rows: list[dict], now: datetime, days: float) -> list[dict]:
     return sorted(keep, key=lambda i: i["start"])
 
 
+def log_cmd(source: str) -> str:
+    # Logs live on dungeon, not this machine.
+    return f"ssh {HOST} tail -n 50 ~/Library/Logs/{source}.log"
+
+
 def fmt_incident(i: dict, now: datetime) -> str:
     stamp = i["start"].strftime("%a %m-%d %H:%M")
     again = f" (x{i['repeats']})" if i["repeats"] > 1 else ""
@@ -134,7 +139,8 @@ def fmt_incident(i: dict, now: datetime) -> str:
     if i["end"] is None:
         sc = i.get("source_cleared")
         extra = f"; a {i['source']} clear came {sc.strftime('%m-%d %H:%M')} but did not name this" if sc else ""
-        return f"OPEN   {stamp}  {i['source']}: {i['title']}{again}, open {age(now - i['start'])}, no clear yet{extra}"
+        return (f"OPEN   {stamp}  {i['source']}: {i['title']}{again}, open {age(now - i['start'])}, no clear yet{extra}"
+                f"\n      log: {log_cmd(i['source'])}")
     return f"closed {stamp}  {i['source']}: {i['title']}{again}, lasted {age(i['end'] - i['start'])}"
 
 
@@ -186,7 +192,12 @@ def main() -> int:
         if len(rows) + skipped >= TAIL:
             prov += f" (read only the last {TAIL} lines; older history is cut off)"
         notes.append(prov)
-        result["history"] = [{**i, "start": i["start"].isoformat(), "end": i["end"] and i["end"].isoformat()} for i in incidents]
+        result["history"] = []
+        for i in incidents:
+            d = {**i, "start": i["start"].isoformat(), "end": i["end"] and i["end"].isoformat()}
+            if i["end"] is None:
+                d["log_cmd"] = log_cmd(i["source"])
+            result["history"].append(d)
         result["history_source"] = "ops-broker alert log"
         history_lines = [fmt_incident(i, now) for i in incidents]
     except Exception as e:
@@ -209,7 +220,7 @@ def main() -> int:
     if result["firing"] is not None:
         print(f"FIRING NOW ({len(result['firing'])})")
         for a in result["firing"]:
-            rb = f" [runbook: {a['runbook']}]" if a["runbook"] else ""
+            rb = f" [runbook: ~/Git/home-lab/docs/runbooks/{a['runbook']}.md]" if a["runbook"] else ""
             fl = f" ({a['flag']}, not paging)" if a["flag"] else ""
             print(f"  {a['age']:>4}  {a['name']}{fl}: {a['summary']}{rb}")
         if not result["firing"]:

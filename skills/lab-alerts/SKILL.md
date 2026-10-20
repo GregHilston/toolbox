@@ -18,6 +18,7 @@ lab-alerts.py --json       # the same, as JSON
 
 `OPEN` means no all-clear has arrived. Some alerts never send one, so check
 whether the thing is still broken.
+Each open item prints its log command; run it as shown.
 
 For each alert:
 
