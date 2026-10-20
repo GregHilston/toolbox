@@ -22,13 +22,16 @@ def healthy():
         "gateway", "dungeon", "wan", "dns_router", "dns_direct", "local_dnsmasq",
         "tailscale", "svc_gateway", "svc_omlx", "svc_searxng")}
     r["link"] = (True, "en0 192.168.1.50")
-    r["local_router"] = (True, netcheck.DUNGEON)
+    r["local_router"] = r["local_dnsmasq"] = (True, netcheck.DUNGEON)
     return r
 
 
 def broken(**probes):
     r = healthy()
     r.update({k: (False, "x") for k in probes})
+    for k in ("local_router", "local_dnsmasq"):
+        if k in probes:
+            r[k] = (False, "no answer")
     return r
 
 
@@ -54,8 +57,13 @@ class TestDiagnose(unittest.TestCase):
 
     def test_dhcp_failure_is_link_local(self):
         r = healthy()
-        r["link"] = (True, "en0 169.254.3.4")
+        r["link"] = (False, "en0 169.254.3.4")
         self.assertEqual(netcheck.diagnose(r), "DHCP_FAIL")
+
+    def test_dnsmasq_wrong_answer_is_down(self):
+        r = healthy()
+        r["local_dnsmasq"] = (True, "1.2.3.4")
+        self.assertEqual(netcheck.diagnose(r), "DNSMASQ_DOWN")
 
     def test_router_not_forwarding_to_dnsmasq(self):
         r = healthy()
@@ -71,6 +79,35 @@ class TestDiagnose(unittest.TestCase):
             self.assertTrue(msg and nxt, key)
 
 
+class TestDig(unittest.TestCase):
+    def dig(self, out):
+        with mock.patch.object(netcheck, "run", return_value=(0, out)):
+            return netcheck.dig("x", "y")
+
+    def test_dot_is_not_an_address(self):
+        self.assertEqual(self.dig("."), (False, "no answer"))
+
+    def test_cname_skipped_and_ipv6_accepted(self):
+        self.assertEqual(self.dig("a.example.\n2606:4700::1"), (True, "2606:4700::1"))
+
+
+class TestSkip(unittest.TestCase):
+    def test_layers_above_the_failure_are_skipped(self):
+        skip = netcheck.skipped("GATEWAY_DOWN")
+        self.assertIn("dns_router", skip)
+        self.assertNotIn("link", skip)
+        self.assertNotIn("gateway", skip)
+
+    def test_ok_skips_nothing(self):
+        self.assertEqual(netcheck.skipped("OK"), set())
+
+    def test_output_marks_skipped(self):
+        code, out = TestMain().run_main(broken(gateway=1))
+        self.assertIn("skip dns_router", out)
+        self.assertNotIn("FAIL dns_router", out)
+        self.assertIn("VERDICT: GATEWAY_DOWN - ", out)
+
+
 class TestWorks(unittest.TestCase):
     def test_offline_keeps_the_local_model(self):
         r = broken(wan=1)
@@ -82,6 +119,9 @@ class TestWorks(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
+    def runTest(self):
+        pass
+
     def run_main(self, results, *args):
         out = StringIO()
         with mock.patch.object(netcheck, "collect", return_value=results), redirect_stdout(out):

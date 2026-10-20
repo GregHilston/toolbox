@@ -7,6 +7,7 @@ walked in order, so one slow timeout cannot stack and "what still works" is
 known even when a low layer fails. macOS only.
 """
 import argparse
+import ipaddress
 import json
 import re
 import subprocess
@@ -25,7 +26,7 @@ SERVICES = {
 
 # verdict -> (message, next step)
 VERDICTS = {
-    "NO_LINK": ("no IP on the active interface", f"{RUNBOOK} NO_LINK"),
+    "NO_LINK": ("no network interface has an IP", f"{RUNBOOK} NO_LINK"),
     "DHCP_FAIL": ("interface has a 169.254 address; DHCP failed", f"{RUNBOOK} DHCP_FAIL"),
     "GATEWAY_DOWN": ("router 192.168.1.1 does not answer", f"{RUNBOOK} GATEWAY_DOWN"),
     "DUNGEON_DOWN": ("router is up but dungeon does not answer", f"{RUNBOOK} DUNGEON_DOWN"),
@@ -49,12 +50,19 @@ def run(cmd, timeout=5):
 
 
 def probe_link():
-    _, out = run(["route", "-n", "get", "default"])
-    m = re.search(r"interface:\s*(\S+)", out)
-    if not m:
-        return False, "no default route"
-    _, ip = run(["ipconfig", "getifaddr", m.group(1)])
-    return bool(ip), f"{m.group(1)} {ip or 'no IP'}"
+    # Not the default route: a VPN owns it, and DHCP failure leaves none.
+    _, out = run(["networksetup", "-listallhardwareports"])
+    found = []
+    for port, dev in re.findall(r"Hardware Port: (.+)\nDevice: (\S+)", out):
+        if re.search(r"Bridge|Bluetooth", port):
+            continue
+        _, ip = run(["ipconfig", "getifaddr", dev])
+        if ip:
+            found.append((ip.startswith("169.254"), dev, ip))
+    if not found:
+        return False, "no IP on any interface"
+    _, dev, ip = min(found)
+    return not ip.startswith("169.254"), f"{dev} {ip}"
 
 
 def ping(host):
@@ -62,9 +70,17 @@ def ping(host):
     return rc == 0, host
 
 
+def is_ip(text):
+    try:
+        ipaddress.ip_address(text)
+    except ValueError:
+        return False
+    return True
+
+
 def dig(name, server):
     _, out = run(["dig", "+short", "+time=2", "+tries=1", name, f"@{server}"], timeout=5)
-    ips = [l for l in out.splitlines() if re.fullmatch(r"[\d.]+", l)]
+    ips = [l for l in out.splitlines() if is_ip(l)]
     return bool(ips), ips[0] if ips else "no answer"
 
 
@@ -83,17 +99,13 @@ def probe_tailscale():
     return state == "Running", state
 
 
-def probe_wan():
-    ok = [ping(h) for h in ("1.1.1.1", "8.8.8.8")]
-    return any(o for o, _ in ok), " ".join(f"{h}={'up' if o else 'down'}" for (o, h) in ok)
-
-
 def collect():
     jobs = {
         "link": probe_link,
         "gateway": lambda: ping(GATEWAY),
         "dungeon": lambda: ping(DUNGEON),
-        "wan": probe_wan,
+        "wan_a": lambda: ping("1.1.1.1"),
+        "wan_b": lambda: ping("8.8.8.8"),
         "dns_router": lambda: dig("example.com", GATEWAY),
         "dns_direct": lambda: dig("example.com", "1.1.1.1"),
         "local_router": lambda: dig(LOCAL_NAME, GATEWAY),
@@ -103,15 +115,16 @@ def collect():
     }
     with ThreadPoolExecutor(len(jobs)) as pool:
         futures = {k: pool.submit(f) for k, f in jobs.items()}
-        return {k: f.result() for k, f in futures.items()}
+        r = {k: f.result() for k, f in futures.items()}
+    a, b = r.pop("wan_a"), r.pop("wan_b")
+    wan = {"wan": (a[0] or b[0], " ".join(f"{h}={'up' if o else 'down'}" for o, h in (a, b)))}
+    return {**{k: r[k] for k in ("link", "gateway", "dungeon")}, **wan, **r}
 
 
 def diagnose(r):
     """First failing layer of results {probe: (ok, detail)} -> verdict key."""
     if not r["link"][0]:
-        return "NO_LINK"
-    if r["link"][1].split()[-1].startswith("169.254"):
-        return "DHCP_FAIL"
+        return "DHCP_FAIL" if "169.254" in r["link"][1] else "NO_LINK"
     if not r["gateway"][0]:
         return "GATEWAY_DOWN"
     if not r["dungeon"][0]:
@@ -120,15 +133,35 @@ def diagnose(r):
         return "WAN_DOWN"
     if not r["dns_router"][0]:
         return "ROUTER_DNS_DOWN" if r["dns_direct"][0] else "UPSTREAM_DNS_DOWN"
-    if not r["local_dnsmasq"][0]:
+    if r["local_dnsmasq"] != (True, DUNGEON):
         return "DNSMASQ_DOWN"
-    if not (r["local_router"][0] and r["local_router"][1] == DUNGEON):
+    if r["local_router"] != (True, DUNGEON):
         return "LOCAL_DNS_RULE"
     if not r["tailscale"][0]:
         return "TAILSCALE_DOWN"
     if any(not r[f"svc_{k}"][0] for k in SERVICES):
         return "SERVICE_DOWN"
     return "OK"
+
+
+LADDER = [
+    ("NO_LINK DHCP_FAIL", ["link"]),
+    ("GATEWAY_DOWN", ["gateway"]),
+    ("DUNGEON_DOWN", ["dungeon"]),
+    ("WAN_DOWN", ["wan"]),
+    ("ROUTER_DNS_DOWN UPSTREAM_DNS_DOWN", ["dns_router", "dns_direct"]),
+    ("DNSMASQ_DOWN LOCAL_DNS_RULE", ["local_dnsmasq", "local_router"]),
+    ("TAILSCALE_DOWN", ["tailscale"]),
+    ("SERVICE_DOWN", [f"svc_{k}" for k in SERVICES]),
+]
+
+
+def skipped(key):
+    """Probes in layers above the failing one: their results mean nothing."""
+    for i, (verdicts, _) in enumerate(LADDER):
+        if key in verdicts.split():
+            return {p for _, probes in LADDER[i + 1:] for p in probes}
+    return set()
 
 
 def works(r):
@@ -155,15 +188,18 @@ def main(argv=None):
     message, nxt = VERDICTS[key]
     if key == "SERVICE_DOWN":
         message += f" ({service_detail(r)})"
+    skip = skipped(key)
     if args.json:
         print(json.dumps({
             "verdict": key, "message": message, "next": nxt, "works": works(r),
-            "probes": {k: {"ok": ok, "detail": d} for k, (ok, d) in r.items()},
+            "probes": {k: {"ok": None if k in skip else ok, "detail": "skipped" if k in skip else d}
+                       for k, (ok, d) in r.items()},
         }, indent=2))
     else:
         for k, (ok, d) in r.items():
-            print(f"{'ok  ' if ok else 'FAIL'} {k:14} {d}")
-        print(f"VERDICT: {key}: {message}")
+            status = "skip" if k in skip else "ok  " if ok else "FAIL"
+            print(f"{status} {k:14} {'' if k in skip else d}")
+        print(f"VERDICT: {key} - {message}")
         print(f"next: {nxt}")
         print(f"works: {works(r)}")
     return 0 if key == "OK" else 1
