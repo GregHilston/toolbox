@@ -70,6 +70,11 @@ class TestDiagnose(unittest.TestCase):
         r["local_router"] = (True, "100.103.22.125")
         self.assertEqual(netcheck.diagnose(r), "LOCAL_DNS_RULE")
 
+    def test_mac_resolver_failing_alone(self):
+        r = healthy()
+        r["dns_system"] = (False, "example.com: no answer")
+        self.assertEqual(netcheck.diagnose(r), "SYSTEM_DNS")
+
     def test_lowest_failing_layer_wins(self):
         self.assertEqual(netcheck.diagnose(broken(gateway=1, wan=1, tailscale=1)), "GATEWAY_DOWN")
 

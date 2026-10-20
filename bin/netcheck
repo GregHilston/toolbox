@@ -35,6 +35,7 @@ VERDICTS = {
     "UPSTREAM_DNS_DOWN": ("no public DNS from router or 1.1.1.1", f"{RUNBOOK} UPSTREAM_DNS_DOWN"),
     "DNSMASQ_DOWN": ("dnsmasq on dungeon does not resolve local names", f"{RUNBOOK} DNSMASQ_DOWN"),
     "LOCAL_DNS_RULE": ("dnsmasq works but the router does not forward to it", f"{RUNBOOK} LOCAL_DNS_RULE"),
+    "SYSTEM_DNS": ("dig works but this Mac's own resolver fails", f"{RUNBOOK} SYSTEM_DNS"),
     "TAILSCALE_DOWN": ("Tailscale is not running", f"{RUNBOOK} TAILSCALE_DOWN"),
     "SERVICE_DOWN": ("a key service does not answer", f"{RUNBOOK} SERVICE_DOWN"),
     "OK": ("every layer passes", "nothing"),
@@ -84,6 +85,15 @@ def dig(name, server):
     return bool(ips), ips[0] if ips else "no answer"
 
 
+def system_dns(*names):
+    """Resolve the way apps do: hosts file, Tailscale DNS, scutil order."""
+    for name in names:
+        _, out = run(["dscacheutil", "-q", "host", "-a", "name", name], timeout=5)
+        if not re.search(r"^ip(v6)?_address: ", out, re.M):
+            return False, f"{name}: no answer"
+    return True, "ok"
+
+
 def http(url):
     _, out = run(["curl", "-s", "-o", "/dev/null", "-m", "4", "-w", "%{http_code}", url], timeout=6)
     code = out or "000"
@@ -110,6 +120,7 @@ def collect():
         "dns_direct": lambda: dig("example.com", "1.1.1.1"),
         "local_router": lambda: dig(LOCAL_NAME, GATEWAY),
         "local_dnsmasq": lambda: dig(LOCAL_NAME, DUNGEON),
+        "dns_system": lambda: system_dns("example.com", LOCAL_NAME),
         "tailscale": probe_tailscale,
         **{f"svc_{k}": (lambda u=u: http(u)) for k, u in SERVICES.items()},
     }
@@ -137,6 +148,8 @@ def diagnose(r):
         return "DNSMASQ_DOWN"
     if r["local_router"] != (True, DUNGEON):
         return "LOCAL_DNS_RULE"
+    if not r["dns_system"][0]:
+        return "SYSTEM_DNS"
     if not r["tailscale"][0]:
         return "TAILSCALE_DOWN"
     if any(not r[f"svc_{k}"][0] for k in SERVICES):
@@ -151,6 +164,7 @@ LADDER = [
     ("WAN_DOWN", ["wan"]),
     ("ROUTER_DNS_DOWN UPSTREAM_DNS_DOWN", ["dns_router", "dns_direct"]),
     ("DNSMASQ_DOWN LOCAL_DNS_RULE", ["local_dnsmasq", "local_router"]),
+    ("SYSTEM_DNS", ["dns_system"]),
     ("TAILSCALE_DOWN", ["tailscale"]),
     ("SERVICE_DOWN", [f"svc_{k}" for k in SERVICES]),
 ]
