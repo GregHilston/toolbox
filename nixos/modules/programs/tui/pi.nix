@@ -29,6 +29,11 @@
   (map packageSource cfg.packages);
 
   modelsTemplate = builtins.fromJSON (builtins.readFile ../../../../dot/pi/.pi/agent/models.json.tpl);
+
+  # Models whose 64k window makes the default 16k reserve and 20k keep too big.
+  smallWindowModels =
+    map (m: "litellm/${m.id}") (builtins.filter (m: m.contextWindow <= 65536) modelsTemplate.providers.litellm.models)
+    ++ lib.optional (cfg.localModel != null) "omlx/${cfg.localModel}";
 in {
   options.custom.programs.pi = {
     enable = lib.mkEnableOption "pi (pi-mono coding agent)";
@@ -238,15 +243,34 @@ in {
           if cfg.gateway
           then
             map (m: "litellm/${m.id}") (builtins.filter (m: m.id != "cloud") modelsTemplate.providers.litellm.models)
-            ++ lib.optional (cfg.localModel != null) "omlx/${cfg.localModel}"
+            ++ lib.optionals (cfg.localModel != null) [
+              "omlx/${cfg.localModel}"
+              # 262k profile: the way round a down gateway.
+              "omlx/${lib.removeSuffix ":lab" cfg.localModel}"
+            ]
             ++ lib.optionals cfg.deepseek ["litellm/cloud" "deepseek/*"]
           else ["omlx/*"] ++ lib.optionals cfg.deepseek ["deepseek/*"];
+
+        # Local Qwen models have no reasoning flag, so pi sends no level.
+        defaultThinkingLevel = "off";
+        modelThinkingLevels = lib.optionalAttrs cfg.deepseek ({
+            "deepseek/deepseek-v4-flash" = "low";
+            "deepseek/deepseek-v4-pro" = "high";
+          }
+          // lib.optionalAttrs cfg.gateway {"litellm/cloud" = "low";});
+
+        compaction.modelOverrides = lib.genAttrs smallWindowModels (_: {
+          reserveTokens = 8192;
+          keepRecentTokens = 10000;
+        });
 
         # synced/ is claude.ai's; pi can't use it.
         # Absolute: pi's globs skip dot-directories like .claude.
         skills = [
           "${config.home.homeDirectory}/.claude/skills"
           "!${config.home.homeDirectory}/.claude/skills/synced/**"
+          # Absolute path: oncall, triage, post-reboot from any cwd.
+          "${config.home.homeDirectory}/Git/home-lab/.claude/skills"
         ];
 
         # pi-powerline-footer. This file is a read-only /nix/store symlink, so
