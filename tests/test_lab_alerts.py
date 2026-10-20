@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 import unittest
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 from _loader import load
@@ -101,6 +104,107 @@ class TestFormat(unittest.TestCase):
 
     def test_age(self):
         self.assertEqual([la.age(timedelta(minutes=m)) for m in (5, 120, 1500, 4000)], ["5m", "2h", "1d", "2d"])
+
+
+def alert(name: str, mins_ago: int = 60, flag: str = "", **labels) -> dict:
+    return {"name": name, "summary": "", "labels": labels, "flag": flag,
+            "since": (NOW - timedelta(minutes=mins_ago)).isoformat()}
+
+
+def rule(**kw) -> dict:
+    return {"alert": kw.pop("alert"), "labels": kw}
+
+
+def root(rid: str, down: dict, *explains: dict) -> dict:
+    return {"id": rid, "down": down, "explains": list(explains)}
+
+
+UNRAID = root("unraid", rule(alert=r"Service down \(standard\)", instance=r"^https://unraid\."),
+              rule(alert=r"Service down \((critical|standard)\)", instance=r"^https://(sonarr|plex)\."),
+              rule(alert="UPS telemetry lost"))
+GLUETUN = root("gluetun", rule(alert="VPN-routed container missing"),
+               rule(alert=r"Service down \(critical\)", instance=r"^https://sonarr\."))
+UNRAID_DOWN = alert("Service down (standard)", instance="https://unraid.grehg2.xyz/login")
+SONARR = alert("Service down (critical)", instance="https://sonarr.grehg2.xyz/ping")
+
+
+class TestSharedCause(unittest.TestCase):
+    def test_groups_dependents_when_root_is_down(self):
+        got = la.shared_causes([UNRAID_DOWN, alert("UPS telemetry lost"), SONARR], [UNRAID])
+        self.assertEqual(got["groups"][0]["explains"], ["UPS telemetry lost", "sonarr"])
+        self.assertEqual(got["unexplained"], [])
+
+    def test_no_root_down_means_no_grouping(self):
+        self.assertEqual(la.shared_causes([alert("UPS telemetry lost")], [UNRAID]), {})
+
+    def test_undeclared_alerts_say_which_one(self):
+        got = la.shared_causes([UNRAID_DOWN, alert("Battery-backed AP down"),
+                                alert("Unraid disk failing", disk="parity")], [UNRAID])
+        self.assertEqual(got["unexplained"], ["Battery-backed AP down", "Unraid disk failing (parity)"])
+
+    def test_label_regex_must_match(self):
+        roam = alert("Service down (critical)", instance="https://roger.grehg2.xyz/")
+        got = la.shared_causes([UNRAID_DOWN, roam], [UNRAID])
+        self.assertEqual((got["groups"][0]["explains"], got["unexplained"]), ([], ["Service down (critical) (roger)"]))
+
+    def test_alert_for_two_roots_prints_once_as_shared(self):
+        got = la.shared_causes([UNRAID_DOWN, alert("VPN-routed container missing"), SONARR], [UNRAID, GLUETUN])
+        self.assertEqual([g["explains"] for g in got["groups"]], [[], []])
+        self.assertEqual(got["shared"], [{"roots": ["unraid", "gluetun"], "explains": ["sonarr"]}])
+
+    def test_alert_older_than_root_is_not_explained(self):
+        old = alert("UPS telemetry lost", mins_ago=60 * 24 * 8)
+        got = la.shared_causes([UNRAID_DOWN, old], [UNRAID])
+        self.assertEqual((got["groups"][0]["explains"], got["unexplained"]), ([], ["UPS telemetry lost"]))
+
+    def test_alert_just_before_root_still_counts(self):
+        early = alert("UPS telemetry lost", mins_ago=65)
+        got = la.shared_causes([alert("Service down (standard)", mins_ago=60, instance="https://unraid.x/"), early], [UNRAID])
+        self.assertEqual(got["groups"][0]["explains"], ["UPS telemetry lost"])
+
+    def test_silenced_root_forms_no_group(self):
+        got = la.shared_causes([alert(UNRAID_DOWN["name"], flag="silenced", **UNRAID_DOWN["labels"]),
+                                alert("UPS telemetry lost")], [UNRAID])
+        self.assertEqual(got, {})
+
+    def test_duplicates_keep_a_count(self):
+        got = la.shared_causes([UNRAID_DOWN, alert("UPS telemetry lost"), alert("UPS telemetry lost")], [UNRAID])
+        self.assertEqual(got["groups"][0]["explains"], ["UPS telemetry lost x2"])
+
+
+class TestLoadDeps(unittest.TestCase):
+    def write(self, text: str) -> str:
+        f = tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False)
+        self.addCleanup(os.unlink, f.name)
+        f.write(text)
+        f.close()
+        return f.name
+
+    def test_missing_file_is_silent(self):
+        self.assertEqual(la.load_deps("/nonexistent/deps.toml"), ([], ""))
+
+    def test_unparsable_file_warns(self):
+        roots, warn = la.load_deps(self.write("[[root"))
+        self.assertEqual(roots, [])
+        self.assertIn("unreadable", warn)
+
+    def test_bad_regex_warns(self):
+        roots, warn = la.load_deps(self.write('[[root]]\nid="x"\ndown={alert="(", }\n'))
+        self.assertEqual(roots, [])
+        self.assertIn("invalid", warn)
+
+    def test_missing_down_warns(self):
+        self.assertIn("invalid", la.load_deps(self.write('[[root]]\nid="x"\n'))[1])
+
+    def test_shipped_map_compiles_and_has_citations(self):
+        path = Path("~/Git/home-lab/ops/dependencies.toml").expanduser()
+        if not path.exists():
+            self.skipTest("home-lab map not present")
+        roots, warn = la.load_deps(str(path))
+        self.assertEqual(warn, "")
+        self.assertGreater(len(roots), 0)
+        for r in roots:
+            self.assertTrue(r["explains"], r["id"])
 
 
 if __name__ == "__main__":
