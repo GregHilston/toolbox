@@ -31,8 +31,8 @@ from datetime import datetime, timedelta, timezone
 GRAFANA = "https://grafana.grehg2.xyz/api"
 HOST = os.environ.get("LAB_ALERTS_HOST", "dungeon")
 LOG = "~/Library/Logs/ops-broker/alerts.jsonl"
-# Pairing looks back a week so an older still-open alert is not missed.
-LOOKBACK = timedelta(days=7)
+TAIL = 5000
+STALE = timedelta(hours=24)
 
 
 def get_json(url: str):
@@ -48,11 +48,14 @@ def firing(now: datetime) -> list[dict]:
             continue
         lab, ann = a["labels"], a["annotations"]
         started = datetime.fromisoformat(a["startsAt"])
+        st = a["status"]
+        flag = "silenced" if st.get("silencedBy") else "inhibited" if st.get("inhibitedBy") else ""
         out.append({
+            "flag": flag,
             "name": lab.get("alertname", "?"),
             "summary": ann.get("summary", ""),
             "since": started.isoformat(),
-            "age": age(now - started),
+            "age": age(max(now - started, timedelta(0))),
             "runbook": ann.get("runbook", ""),
         })
     return sorted(out, key=lambda r: r["since"])
@@ -62,52 +65,64 @@ def age(delta: timedelta) -> str:
     mins = int(delta.total_seconds() // 60)
     if mins < 60:
         return f"{mins}m"
-    if mins < 2880:
+    if mins < 1440:
         return f"{mins // 60}h"
     return f"{mins // 1440}d"
 
 
-def read_log(host: str, lines: int = 5000) -> list[dict]:
+def read_log(host: str, lines: int = TAIL) -> tuple[list[dict], int]:
+    """Parsed rows and the count of lines that would not parse."""
     cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", host, f"tail -n {lines} {LOG}"]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else f"ssh exit {proc.returncode}")
-    return [r for r in map(parse_row, proc.stdout.splitlines()) if r]
+    raw = [l for l in proc.stdout.splitlines() if l.strip()]
+    rows = [r for r in map(parse_row, raw) if r]
+    return rows, len(raw) - len(rows)
 
 
 def parse_row(line: str) -> dict | None:
     try:
         r = json.loads(line)
-        r["at"] = datetime.strptime(r["ts"], "%Y-%m-%dT%H:%M:%S%z")
-    except (ValueError, KeyError):
+        r["at"] = datetime.fromisoformat(r["ts"])
+    except (ValueError, KeyError, TypeError):
         return None
-    return r
+    return r if r["at"].tzinfo else None
+
+
+def norm(title: str) -> str:
+    """Alert and clear titles differ only by volatile suffixes."""
+    t = re.sub(r"\([^)]*\)", "", title.lower())
+    return " ".join(t.replace(" still ", " ").split())
 
 
 def pair(rows: list[dict], now: datetime, days: float) -> list[dict]:
-    """Incidents oldest first: repeats merge, a clear closes, info stands alone."""
-    rows = sorted((r for r in rows if r["at"] >= now - LOOKBACK), key=lambda r: r["at"])
+    """Incidents oldest first. Unmatched faults stay OPEN rather than hide."""
     open_: dict[tuple, dict] = {}
     done: list[dict] = []
-    for r in rows:
+    for r in sorted(rows, key=lambda r: r["at"]):
         source, title = r.get("source", ""), r.get("title", "")
-        key = (source, r.get("key") or "")
+        key = (source, r.get("key") or norm(title))
         if r.get("kind") == "alert":
             inc = open_.get(key)
             if inc:
                 inc["title"], inc["repeats"] = title, inc["repeats"] + 1
             else:
-                open_[key] = {"source": source, "title": title, "start": r["at"], "end": None, "repeats": 1, "kind": "alert"}
+                open_[key] = {"source": source, "title": title, "start": r["at"], "end": None,
+                              "repeats": 1, "kind": "alert", "source_cleared": None}
         elif r.get("kind") == "clear":
-            # A keyless clear means the whole source is healthy again.
-            for k in [k for k in open_ if k == key or (not r.get("key") and k[0] == source)]:
-                inc = open_.pop(k)
+            inc = open_.pop(key, None)
+            if inc:
                 inc["end"] = r["at"]
                 done.append(inc)
+            else:
+                for other in open_.values():
+                    if other["source"] == source:
+                        other["source_cleared"] = r["at"]
         else:
             done.append({"source": source, "title": title, "start": r["at"], "end": r["at"], "repeats": 1, "kind": "info"})
     cutoff = now - timedelta(days=days)
-    keep = [i for i in done + list(open_.values()) if (i["end"] or now) >= cutoff]
+    keep = [i for i in done + list(open_.values()) if i["end"] is None or i["end"] >= cutoff]
     return sorted(keep, key=lambda i: i["start"])
 
 
@@ -117,7 +132,9 @@ def fmt_incident(i: dict, now: datetime) -> str:
     if i["kind"] == "info":
         return f"info   {stamp}  {i['source']}: {i['title']}"
     if i["end"] is None:
-        return f"OPEN   {stamp}  {i['source']}: {i['title']}{again}, open {age(now - i['start'])}, no clear yet"
+        sc = i.get("source_cleared")
+        extra = f"; a {i['source']} clear came {sc.strftime('%m-%d %H:%M')} but did not name this" if sc else ""
+        return f"OPEN   {stamp}  {i['source']}: {i['title']}{again}, open {age(now - i['start'])}, no clear yet{extra}"
     return f"closed {stamp}  {i['source']}: {i['title']}{again}, lasted {age(i['end'] - i['start'])}"
 
 
@@ -158,7 +175,17 @@ def main() -> int:
         notes.append(f"Could not read Grafana firing alerts: {e}")
 
     try:
-        incidents = pair(read_log(HOST), now, args.days)
+        rows, skipped = read_log(HOST)
+        incidents = pair(rows, now, args.days)
+        newest = max((r["at"] for r in rows), default=None)
+        prov = f"log: {len(rows)} rows read, {skipped} unparsable, newest " + (newest.strftime("%m-%d %H:%M") if newest else "none")
+        if not rows or skipped:
+            prov += " (WARNING: log empty or unreadable lines, history may be incomplete)"
+        elif now - newest > STALE:
+            prov += f" (WARNING: nothing logged for {age(now - newest)})"
+        if len(rows) + skipped >= TAIL:
+            prov += f" (read only the last {TAIL} lines; older history is cut off)"
+        notes.append(prov)
         result["history"] = [{**i, "start": i["start"].isoformat(), "end": i["end"] and i["end"].isoformat()} for i in incidents]
         result["history_source"] = "ops-broker alert log"
         history_lines = [fmt_incident(i, now) for i in incidents]
@@ -183,7 +210,8 @@ def main() -> int:
         print(f"FIRING NOW ({len(result['firing'])})")
         for a in result["firing"]:
             rb = f" [runbook: {a['runbook']}]" if a["runbook"] else ""
-            print(f"  {a['age']:>4}  {a['name']}: {a['summary']}{rb}")
+            fl = f" ({a['flag']}, not paging)" if a["flag"] else ""
+            print(f"  {a['age']:>4}  {a['name']}{fl}: {a['summary']}{rb}")
         if not result["firing"]:
             print("  nothing")
     print(f"\nHISTORY, last {args.days:g} days ({result['history_source']})")
