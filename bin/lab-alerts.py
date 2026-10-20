@@ -25,6 +25,7 @@ import re
 import subprocess
 import sys
 import time
+import tomllib
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
@@ -33,6 +34,7 @@ HOST = os.environ.get("LAB_ALERTS_HOST", "dungeon")
 LOG = "~/Library/Logs/ops-broker/alerts.jsonl"
 TAIL = 5000
 STALE = timedelta(hours=24)
+DEPS = os.environ.get("LAB_ALERTS_DEPS", "~/Git/home-lab/ops/dependencies.toml")
 
 
 def get_json(url: str):
@@ -57,8 +59,48 @@ def firing(now: datetime) -> list[dict]:
             "since": started.isoformat(),
             "age": age(max(now - started, timedelta(0))),
             "runbook": ann.get("runbook", ""),
+            "labels": lab,
         })
     return sorted(out, key=lambda r: r["since"])
+
+
+def load_deps(path: str) -> list[dict]:
+    try:
+        with open(os.path.expanduser(path), "rb") as f:
+            return tomllib.load(f).get("root", [])
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+
+
+def matches(rule: dict, alert: dict) -> bool:
+    if not re.fullmatch(rule["alert"], alert["name"]):
+        return False
+    return all(re.search(rx, alert["labels"].get(k, "")) for k, rx in rule.get("labels", {}).items())
+
+
+def label(alert: dict) -> str:
+    """Short name for one alert in the shared-cause list."""
+    lab = alert["labels"]
+    host = re.match(r"https?://([^./]+)", lab.get("instance", ""))
+    return host.group(1) if host else lab.get("app") or alert["name"]
+
+
+def shared_causes(alerts: list[dict], roots: list[dict]) -> dict:
+    """Group alerts under a root only when that root's own down alert fires."""
+    groups, claimed = [], set()
+    for root in roots:
+        sig = [i for i, a in enumerate(alerts) if matches(root["down"], a)]
+        if not sig:
+            continue
+        hit = [i for i, a in enumerate(alerts)
+               if i not in sig and any(matches(r, a) for r in root.get("explains", []))]
+        claimed.update(sig, hit)
+        a0 = alerts[sig[0]]
+        names = list(dict.fromkeys(label(alerts[i]) for i in hit))
+        groups.append({"root": root["id"], "down_alert": a0["name"], "down_label": label(a0),
+                       "state": root.get("state", "is down"), "explains": names})
+    rest = [a["name"] for i, a in enumerate(alerts) if i not in claimed]
+    return {"groups": groups, "unexplained": list(dict.fromkeys(rest))} if groups else {}
 
 
 def age(delta: timedelta) -> str:
@@ -176,6 +218,7 @@ def main() -> int:
 
     try:
         result["firing"] = firing(now)
+        result["shared_cause"] = shared_causes(result["firing"], load_deps(DEPS))
     except Exception as e:
         result["firing"] = None
         notes.append(f"Could not read Grafana firing alerts: {e}")
@@ -225,6 +268,14 @@ def main() -> int:
             print(f"  {a['age']:>4}  {a['name']}{fl}: {a['summary']}{rb}")
         if not result["firing"]:
             print("  nothing")
+        sc = result.get("shared_cause")
+        if sc:
+            print("\nLIKELY SHARED CAUSE (from ops/dependencies.toml)")
+            for g in sc["groups"]:
+                sig = g["down_alert"] if g["down_label"] == g["down_alert"] else f"{g['down_alert']}: {g['down_label']}"
+                print(f"  {g['root']} {g['state']} ({sig}) \u2192 explains: "
+                      + (", ".join(g["explains"]) or "nothing else firing"))
+            print("  not explained by a known dependency: " + (", ".join(sc["unexplained"]) or "none"))
     print(f"\nHISTORY, last {args.days:g} days ({result['history_source']})")
     for line in history_lines or ["nothing"]:
         print(f"  {line}")

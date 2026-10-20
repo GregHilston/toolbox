@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 
@@ -101,6 +102,59 @@ class TestFormat(unittest.TestCase):
 
     def test_age(self):
         self.assertEqual([la.age(timedelta(minutes=m)) for m in (5, 120, 1500, 4000)], ["5m", "2h", "1d", "2d"])
+
+
+def alert(name: str, **labels) -> dict:
+    return {"name": name, "summary": "", "labels": labels}
+
+
+ROOTS = [
+    {"id": "unraid", "down": {"alert": r"Service down \(standard\)", "labels": {"instance": r"^https://unraid\."}},
+     "explains": [{"alert": r"Service down \((critical|standard)\)", "labels": {"instance": r"^https://(sonarr|plex)\."}},
+                  {"alert": "UPS telemetry lost"}]},
+]
+UNRAID = alert("Service down (standard)", instance="https://unraid.grehg2.xyz/login")
+
+
+class TestSharedCause(unittest.TestCase):
+    def test_groups_dependents_when_root_is_down(self):
+        got = la.shared_causes([UNRAID, alert("UPS telemetry lost"),
+                                alert("Service down (critical)", instance="https://sonarr.grehg2.xyz/ping")], ROOTS)
+        self.assertEqual(got["groups"][0]["explains"], ["UPS telemetry lost", "sonarr"])
+        self.assertEqual(got["unexplained"], [])
+
+    def test_no_root_down_means_no_grouping(self):
+        got = la.shared_causes([alert("UPS telemetry lost"), alert("Battery-backed AP down")], ROOTS)
+        self.assertEqual(got, {})
+
+    def test_undeclared_alerts_are_listed_unexplained(self):
+        got = la.shared_causes([UNRAID, alert("Battery-backed AP down"), alert("Unraid disk failing", disk="parity")], ROOTS)
+        self.assertEqual(got["unexplained"], ["Battery-backed AP down", "Unraid disk failing"])
+
+    def test_label_regex_must_match(self):
+        got = la.shared_causes([UNRAID, alert("Service down (critical)", instance="https://roger.grehg2.xyz/")], ROOTS)
+        self.assertEqual((got["groups"][0]["explains"], got["unexplained"]), ([], ["Service down (critical)"]))
+
+    def test_missing_deps_file_is_empty(self):
+        self.assertEqual(la.load_deps("/nonexistent/deps.toml"), [])
+
+    def test_real_map_parses(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".toml") as f:
+            f.write(SAMPLE)
+            f.flush()
+            roots = la.load_deps(f.name)
+        got = la.shared_causes([alert("VPN-routed container missing"), alert("Exporter down", job="exportarr")], roots)
+        self.assertEqual(got["groups"][0]["explains"], ["Exporter down"])
+
+
+SAMPLE = """
+[[root]]
+id = "gluetun"
+down = { alert = "VPN-routed container missing" }
+  [[root.explains]]
+  alert = "Exporter down"
+  labels = { job = "^exportarr$" }
+"""
 
 
 if __name__ == "__main__":

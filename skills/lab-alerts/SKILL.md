@@ -35,7 +35,8 @@ which one to dig into. Run nothing else.
    Stop and report after five commands, even if unsure; Greg can ask for more.
 
 If several alerts fire at once, look for one shared cause first (NFS, Unraid,
-power, Caddy).
+power, Caddy). Only call alerts related when LIKELY SHARED CAUSE says so; say the
+rest are separate or unknown.
 
 For one named alert use the home-lab `oncall` skill. Use `triage`, a full
 sweep, only when Greg asks for one.
