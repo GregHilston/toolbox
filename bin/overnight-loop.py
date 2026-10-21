@@ -56,6 +56,8 @@ PI_OVERRIDE = Path(".pi/extensions/pi-permission-system/config.json")
 GATE = ("verify.sh", "tests/baseline_count")
 OUT_OF_MONEY = re.compile(r"Budget has been exceeded|budget_exceeded|Exceeded budget|Insufficient Balance"
                           r"|usage limit|hit your limit|Credit balance is too low", re.I)
+CLAUDE_LIMIT = re.compile(r"usage limit|hit your limit|limit reached|limit resets", re.I)
+LIMIT_WAIT = 600  # seconds between probes
 GH_RETRY = (2, 10, 30)  # seconds before each retry
 GH_RETRIED = {("issue", "list"), ("issue", "view"), ("issue", "edit"), ("repo", "view"), ("label", "create")}
 STREAMED = re.compile(r'^\{"type":\s*"message_update".*\n?', re.M)
@@ -432,7 +434,23 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
     else:
         run = claude_result(out)
     run.harness, run.model = harness, shown
+    if harness == "claude" and CLAUDE_LIMIT.search(run.error):
+        wait_out_limit(log)
+        return run_agent(args, harness, model, prompt, log, read_only, session, thinking, bash)
     return run
+
+
+def wait_out_limit(log: Path) -> None:
+    """Probe with a cheap call; the reset wording changes too often to parse."""
+    while True:
+        line = f"claude usage limit hit; probing again in {LIMIT_WAIT // 60} min"
+        print(line, flush=True)
+        with log.open("a") as f:
+            f.write(line + "\n")
+        time.sleep(LIMIT_WAIT)
+        probe = subprocess.run(["claude", "-p", "ok", "--model", "haiku"], capture_output=True, text=True)
+        if probe.returncode == 0 and not CLAUDE_LIMIT.search(probe.stdout + probe.stderr):
+            return
 
 
 def claude_result(out: str) -> Run:

@@ -185,10 +185,17 @@ FAKE_CLAUDE = textwrap.dedent('''\
     NAME = "claude"
     with open(os.environ["FAKE_LOG"] + ".env", "a") as f:
         f.write(os.environ.get("CLAUDE_CODE_DISABLE_BACKGROUND_TASKS", "") + "\\n")
+    if "ok" in sys.argv[1:]:  # the usage-limit probe
+        print("ok")
+        sys.exit(0)
     role, text = act(NAME, prompt_of(sys.argv[1:]))
+    limit = os.environ.get("FAKE_LIMIT_ONCE")
     result = {"type": "result", "subtype": "success", "is_error": False, "result": text, "total_cost_usd": 0.25}
     if failing(NAME, role):
         result |= {"is_error": True, "result": failing(NAME, role), "total_cost_usd": 0}
+    elif limit and os.path.exists(limit):
+        os.remove(limit)
+        result |= {"is_error": True, "result": "Usage limit reached · limit resets 3:45pm", "total_cost_usd": 0}
     print(json.dumps(result), flush=True)
     if os.environ.get("FAKE_CLAUDE_STDERR"):
         print("SessionEnd hook: done", file=sys.stderr)
@@ -439,10 +446,13 @@ class TestOutOfMoney(LoopTest):
         self.assertNotIn("overnight:parked", self.labels(1))
         self.assertNotIn("overnight:working", self.labels(1))
 
-    def test_a_claude_usage_limit_stops_the_run(self):
-        out = self.run_loop("--harness", "claude", "--reviewer", "none",
-                            FAKE_ERROR="Claude AI usage limit reached")
-        self.assertIn("Stopped: out of money", out.stdout, out.stderr)
+    def test_a_claude_usage_limit_is_waited_out(self):
+        once = Path(self.tmp.name) / "limit-once"
+        once.touch()
+        out = self.run_loop("--harness", "claude", "--reviewer", "none", no_sleep=True, FAKE_LIMIT_ONCE=str(once))
+        self.assertIn("claude usage limit hit; probing again", out.stdout, out.stderr)
+        self.assertNotIn("out of money", out.stdout)
+        self.assertIn("overnight:done", self.labels(1))
 
 
 class TestVerify(LoopTest):
@@ -695,7 +705,7 @@ class TestFixPass(LoopTest):
 class TestReviewerLimit(LoopTest):
     def test_a_reviewer_out_of_money_leaves_the_rest_unreviewed(self):
         out = self.run_loop("--harness", "pi", "--reviewer", "claude",
-                            FAKE_ERROR="Claude AI usage limit reached", FAKE_ERROR_ROLES="claude:review")
+                            FAKE_ERROR="Credit balance is too low", FAKE_ERROR_ROLES="claude:review")
         self.assertIn("Stopped: queue empty", out.stdout, out.stderr)
         self.assertIn("overnight:done", self.labels(1))
         self.assertIn("overnight:done", self.labels(2))
@@ -706,7 +716,7 @@ class TestReviewerLimit(LoopTest):
 
     def test_a_planner_out_of_money_does_not_end_the_run(self):
         out = self.run_loop("--harness", "pi", "--reviewer", "claude",
-                            FAKE_ERROR="Claude AI usage limit reached", FAKE_ERROR_ROLES="claude:plan")
+                            FAKE_ERROR="Credit balance is too low", FAKE_ERROR_ROLES="claude:plan")
         self.assertIn("Stopped: queue empty", out.stdout, out.stderr)
         self.assertIn("overnight:done", self.labels(1))
 
