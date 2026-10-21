@@ -17,3 +17,8 @@ fetch-thread.py "https://news.ycombinator.com/item?id=<id>"     # story and comm
 ```
 
 Search first, then read the one or two threads whose titles fit.
+
+If an HN page answers with just "Sorry", the HTML site has flagged this IP
+as a crawler; the block lifts on its own after a while. `fetch-thread.py`
+reads the Firebase API instead, which is not blocked, so use it rather than
+`read-page.py`, `curl` or a browser for any `news.ycombinator.com` link.
