@@ -51,6 +51,9 @@ every host that imports `programs/tui`):
 - `~/.claude/settings.json`→ `dot/claude/.claude/settings.json` (permissions, hooks, plugins)
 - `~/.config/ccstatusline/settings.json` → `dot/ccstatusline/…` (status line layout)
 
+The global gitignore ignores `.claude/`, so a new file under `dot/claude/.claude/`
+(a hook script) needs `git add -f`. Check `git show --stat` after committing one.
+
 The RTK hook is the command `rtk hook claude` in `settings.json`, not a script:
 the script `rtk init` used to generate treated rtk's "rewrite, advisory" exit
 code as "no rewrite", so `git status`, `pytest`, `docker ps` and most other
