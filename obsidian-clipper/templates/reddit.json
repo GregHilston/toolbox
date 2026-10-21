@@ -35,11 +35,6 @@
       "name": "topics",
       "value": "",
       "type": "multitext"
-    },
-    {
-      "name": "status",
-      "value": "unread",
-      "type": "text"
     }
   ],
   "triggers": [
