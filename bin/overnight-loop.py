@@ -113,8 +113,8 @@ The diff:
 """
 REVIEW_READ = "You can read, grep, find and ls."
 REVIEW_BASH = ("You can also run bash: git diff, git show origin/main:<file>, the repo's one-suite test "
-               "script, or undo one \"Done when\" line's change to see its test fail. The loop resets "
-               "the tree afterwards.")
+               "script, or undo one \"Done when\" line's change to see its test fail. Run the full gate "
+               "only as `gateslot.py -- ./verify.sh`. The loop resets the tree afterwards.")
 REVIEW_GATE = ("\nThis issue may change the gate (verify.sh and baseline_count): scrutinise those changes. "
                "Fail the review if they loosen a check.\n")
 FIX = """\
@@ -305,7 +305,9 @@ def check(args, base: str, branch: str, log: Path, gate_ok: bool = False) -> tup
         return False, f"the worker moved off {branch} to {left or 'a detached HEAD'}"
     if sh("git", "rev-parse", "HEAD") == base:
         return False, "no commits"
-    if not gate_ok and (changed := sh("git", "diff", "--name-only", base, "HEAD", "--", *GATE).split()):
+    # Against the last kept gate, so an unlabelled issue cannot build on a labelled one's edit unnoticed.
+    gate_base = getattr(args, "gate_base", None) or base
+    if not gate_ok and (changed := sh("git", "diff", "--name-only", gate_base, "HEAD", "--", *GATE).split()):
         return False, f"the worker changed {', '.join(changed)}, which only a human may change"
     return verify(args, log)
 
@@ -390,7 +392,9 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
     else:
         # Disabled mode still blocks catastrophes but lets workers commit.
         # --no-skills: the skills list is re-sent every turn and no worker uses it.
-        cmd = ["pi", "-p", "--approve", "--no-skills", "--mode", "json", "--bash-guard-disabled"]
+        cmd = ["pi", "-p", "--approve", "--no-skills", "--mode", "json"]
+        if not bash:  # the reviewer's bash keeps pi's guard
+            cmd.append("--bash-guard-disabled")
         cmd += ["--session-id", session] if session else ["--no-session"]
         if thinking:
             cmd += ["--thinking", thinking]
@@ -484,7 +488,10 @@ def check_balance(args) -> None:
         sys.exit(f"the DeepSeek balance is ${balance:.2f}, under ${MIN_BALANCE:.2f}: top up first")
 
 
-def tidy(to: str = "HEAD") -> None:
+def tidy(to: str = "HEAD", branch: str | None = None) -> None:
+    """Reset the tree; with a branch, first force back onto it so no other branch is reset."""
+    if branch:
+        sh("git", "checkout", "-qf", branch)
     sh("git", "reset", "-q", "--hard", to)
     sh("git", "clean", "-qfd")
 
@@ -557,7 +564,7 @@ def work_issue(args, n: int, title: str, branch: str,
         run = run_agent(args, args.reviewer, args.reviewer_model, PLAN.format(issue=issue), log, read_only=True)
         plan = run.text
         runs.append(("plan", run))
-        tidy()
+        tidy(branch=branch)
         if run.broke:
             drop_reviewer(args, n, run.error)
             plan = ""
@@ -568,16 +575,16 @@ def work_issue(args, n: int, title: str, branch: str,
     message = run.text[-1500:]
     runs.append(("worker", run))
     if run.broke:
-        tidy(base)
+        tidy(base, branch)
         return None, *tally(runs), True
     tidy()  # keep only what the worker committed
     ok, tail = check(args, base, branch, log, gate_ok)
     broke = False
     if ok and args.reviewer != "none":
-        diff = sh("git", "diff", f"{base}..HEAD")[:60000]
-        green = sh("git", "rev-parse", "HEAD")
-        # The diff's size sets how much looking the review needs.
-        calls = min(60, 25 + diff.count("\n") // 10)
+        whole = sh("git", "diff", f"{base}..HEAD")
+        diff, green = whole[:60000], sh("git", "rev-parse", "HEAD")
+        # Prompt text only: pi has no turn limit.
+        calls = min(60, 25 + whole.count("\n") // 10)
         bash = args.reviewer == "pi"
         prompt = REVIEW.format(n=n, issue=issue, diff=diff, calls=calls, tools=REVIEW_BASH if bash else REVIEW_READ,
                                gate=REVIEW_GATE if gate_ok else "")
@@ -585,7 +592,7 @@ def work_issue(args, n: int, title: str, branch: str,
                         thinking=args.reviewer_thinking if bash else None)
         review = run.text
         runs.append(("review", run))
-        tidy(green)  # a reviewer's bash may have edited or committed
+        tidy(green, branch)  # a reviewer's bash may have moved HEAD
         if run.broke:
             drop_reviewer(args, n, run.error)
             message += "\n\nUnreviewed: the reviewer ran out of money or hit its usage limit."
@@ -594,29 +601,31 @@ def work_issue(args, n: int, title: str, branch: str,
             ok, tail = False, "the review gave no verdict"
             message += "\n\nReview:\n" + review[-800:]
         elif verdict(review) == "changes":
-            fix = FIX.format(n=n, findings=review)
-            if args.harness == "pi":  # resume the worker's session
+            fix = worker + "\n" + FIX.format(n=n, findings=review)
+            if args.harness == "pi":  # resume the worker's session; the full prompt stays in case it is missing
                 stat = sh("git", "diff", "--stat", f"{base}..HEAD")
                 run = run_agent(args, "pi", args.model, fix + f"\nWhat the branch changed so far:\n{stat}\n", log,
                                 session=session)
             else:
-                run = run_agent(args, args.harness, args.model, worker + "\n" + fix, log)
+                run = run_agent(args, args.harness, args.model, fix, log)
             runs.append(("fix", run))
             broke = run.broke
-            tidy()
+            tidy(branch=branch)
             fixed, why = (False, "it ran out of money") if broke else check(args, green, branch, log, gate_ok)
             if fixed:
                 message = run.text[-1500:] + "\n\nAfter review:\n" + review[-800:]
             else:
-                tidy(green)  # keep the green work from before the fix
+                tidy(green, branch)  # keep the green work from before the fix
                 message += f"\n\nThe review's findings are not addressed: the fix pass failed ({why[-300:]}).\n\n" \
                            + review[-800:]
     if ok:
+        if gate_ok:
+            args.gate_base = sh("git", "rev-parse", "HEAD")  # a human labelled it; later issues start from here
         sh("gh", "issue", "edit", str(n), "--add-label", DONE, "--remove-label", WORKING)
         comment(n, f"Done on `{branch}`.\n\n{message}")
         note(n, title, "done", message)
     else:
-        tidy(base)
+        tidy(base, branch)
         sh("gh", "issue", "edit", str(n), "--add-label", PARKED, "--remove-label", WORKING)
         comment(n, f"Parked by the overnight run.\n\n{message}\n\n```\n{tail}\n```")
         note(n, title, "parked", f"{message}\n\n```\n{tail}\n```")
@@ -731,6 +740,7 @@ def main() -> None:
     deadline = time.time() + args.hours * 3600
     branch = "overnight/" + datetime.now().strftime("%Y-%m-%d-%H%M")
     sh("git", "checkout", "-q", "-b", branch)
+    args.gate_base = sh("git", "rev-parse", "HEAD")
     if args.gateway_used:
         try:
             args.spend = RunSpend()
@@ -785,7 +795,7 @@ def main() -> None:
         why = "interrupted"
         kill_leftovers(begun)  # the worker's group is dead, not what it detached
         if current:
-            tidy(current[1])  # its work was never judged
+            tidy(current[1], branch)  # its work was never judged
     except SystemExit as e:
         why = str(e.code)
         raise

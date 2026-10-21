@@ -79,6 +79,10 @@ AGENT = textwrap.dedent('''\
         if role == "plan":
             return "Plan: touch src."
         if role == "review":
+            if os.environ.get("FAKE_REVIEW_MOVE") == "detach":
+                git("checkout", "-q", "--detach", "main")
+            elif os.environ.get("FAKE_REVIEW_MOVE"):
+                git("checkout", "-q", os.environ["FAKE_REVIEW_MOVE"])
             return os.environ.get("FAKE_REVIEW", "Looks fine.\\nVERDICT: approve")
         n = re.search(r"issue #(\\d+)", prompt).group(1)
         mode = os.environ.get("FAKE_WORK_" + n, os.environ.get("FAKE_WORK", "good"))
@@ -104,6 +108,10 @@ AGENT = textwrap.dedent('''\
         if mode == "gate":
             with open("verify.sh", "w") as f:
                 f.write("#!/bin/sh\\nexit 0\\n")
+            git("add", "verify.sh")
+        if mode == "gate2":
+            with open("verify.sh", "w") as f:
+                f.write("#!/bin/sh\\nexit 0 # again\\n")
             git("add", "verify.sh")
         if mode in ("bad",):
             open("BROKEN", "w").write("1")
@@ -524,7 +532,41 @@ class TestEfficiency(LoopTest):
         self.assertEqual(fix[fix.index("--session-id") + 1], work[work.index("--session-id") + 1])
         self.assertNotIn("--no-session", fix)
         self.assertIn("--no-session", self.argv("review")[0])
-        self.assertEqual(self.prompts().count("You are one worker"), 1)
+        self.assertEqual(self.prompts().count("You are one worker"), 2)
+
+    def test_a_reviewer_that_checks_out_main_leaves_main_alone(self):
+        self.issues({1: "First"})
+        main = self.git("rev-parse", "main").strip()
+        out = self.run_loop("--harness", "pi", "--reviewer", "pi", FAKE_REVIEW_MOVE="main")
+        self.assertEqual(self.git("rev-parse", "main").strip(), main, out.stdout + out.stderr)
+        self.assertIn("overnight:done", self.labels(1))
+
+    def test_a_fix_after_a_detached_review_is_kept(self):
+        self.issues({1: "First"})
+        out = self.run_loop("--harness", "pi", "--reviewer", "pi", FAKE_REVIEW_MOVE="detach",
+                            FAKE_REVIEW="Fix it.\nVERDICT: changes")
+        self.assertIn("overnight:done", self.labels(1), out.stdout + out.stderr)
+        branch = self.git("branch", "--show-current").strip()
+        self.assertIn("(fix)", self.git("log", "--format=%s", branch))
+
+    def test_a_later_unlabelled_issue_cannot_edit_a_gate_a_labelled_one_changed(self):
+        self.label(1, "gate-change")
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="gate", FAKE_WORK_2="gate2")
+        self.assertIn("overnight:done", self.labels(1), out.stdout + out.stderr)
+        self.assertIn("overnight:parked", self.labels(2), out.stdout + out.stderr)
+
+    def test_a_later_unlabelled_issue_may_leave_the_gate_alone(self):
+        self.label(1, "gate-change")
+        self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="gate")
+        self.assertIn("overnight:done", self.labels(2))
+
+    def test_only_the_reviewer_keeps_pis_bash_guard(self):
+        self.run_loop("--harness", "pi", "--reviewer", "pi")
+        self.assertNotIn("--bash-guard-disabled", self.argv("review")[0])
+        self.assertIn("--bash-guard-disabled", self.argv("work")[0])
+
+    def test_the_reviewer_is_told_to_gate_through_gateslot(self):
+        self.assertIn("gateslot.py -- ./verify.sh", loop.REVIEW_BASH)
 
     def test_a_claude_fix_pass_still_gets_the_full_prompt(self):
         self.issues({1: "First"})
