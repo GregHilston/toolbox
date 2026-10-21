@@ -284,7 +284,7 @@ def main() -> int:
     env = dict(os.environ, PATH=f"{TOOLBOX_BIN}:{os.environ.get('PATH', '')}", PI_SUBAGENT_DEPTH="1")
     # "--": a prompt may start with - or ---.
     cmd = ["pi", "--mode", "json", "--approve", "--provider", "litellm", "--model", args.model,
-           "--session-id", args.session, "--append-system-prompt", WORKER_ROLE,
+           "--session-id", args.session, "--no-skills", "--append-system-prompt", WORKER_ROLE,
            "--exclude-tools", HEADLESS_EXCLUDED_TOOLS, "--", prompt]
     # Before Popen, so no signal leaves pi orphaned.
     for sig in SIGNALS:

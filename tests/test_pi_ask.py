@@ -336,6 +336,7 @@ class TestPiAsk(unittest.TestCase):
         argv = json.loads(argv_file.read_text())["argv"]
         self.assertIn("headless worker", argv[argv.index("--append-system-prompt") + 1])
         self.assertEqual(argv[argv.index("--exclude-tools") + 1], "ask_user_question,plan_mode_*")
+        self.assertIn("--no-skills", argv)
 
     def test_kills_a_child_that_ignores_sigterm_after_pi_exits(self):
         out = self.ask("--session", "t7", "--dir", self.tmp.name, "hi", FAKE_PI_ORPHAN="1")
