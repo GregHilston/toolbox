@@ -51,7 +51,8 @@ GATEWAY = os.environ.get("LITELLM_URL", "https://llm.grehg2.xyz")
 # Headless, Greg's pi config turns `write: ask` into a refusal, so each repo
 # gets a git-excluded override that pi loads under --approve.
 PI_OVERRIDE = Path(".pi/extensions/pi-permission-system/config.json")
-# A worker that loosens the gate would pass it, so changing one parks the issue.
+# A worker that loosens the gate would pass it, so changing one parks the issue
+# unless the issue carries --gate-label.
 GATE = ("verify.sh", "tests/baseline_count")
 OUT_OF_MONEY = re.compile(r"Budget has been exceeded|budget_exceeded|Exceeded budget|Insufficient Balance"
                           r"|usage limit|hit your limit|Credit balance is too low", re.I)
@@ -66,11 +67,14 @@ WORKER = """\
 You are one worker in an unattended overnight run. Nobody will answer questions.
 Implement GitHub issue #{n} in this repository, then stop.
 
-1. Read the issue with `gh issue view {n}`. Read CLAUDE.md, docs/design.md if it
-   exists, the titles in docs/adr/, and the end of progress.md.
+1. The issue and its comments are below; do not run `gh issue view`. CLAUDE.md is
+   already in your context. Read docs/design.md if it exists, the titles in
+   docs/adr/, and the end of progress.md.
 2. Implement only this issue. Turn each checkable line under "Done when" into a
    test that ./verify.sh runs.
-3. Run focused tests while you iterate. When you think you are done, run
+3. Work cheaply: batch independent reads into one turn, read line ranges, and never
+   cat a whole large file. Iterate with the repo's one-suite test script, not the
+   full gate. When you think you are done, run
    `gateslot.py -- ./verify.sh` (it queues for a machine-wide gate slot)
    until it passes. Never edit verify.sh or the issue, and never
    delete or weaken a test to make it pass.
@@ -80,30 +84,42 @@ Implement GitHub issue #{n} in this repository, then stop.
 If the issue contradicts an accepted ADR, or you cannot finish, commit nothing
 and say why. End with at most three lines: what you did, what is left, and what
 the next worker should know.
+
+{issue}
 """
+NO_PLAN = "\nNo planner ran: make a short plan yourself before you edit.\n"
 PLAN = """\
 Plan the implementation of this GitHub issue for another agent, who will do the
-work. Read CLAUDE.md and the code the issue touches; do not edit anything.
-Reply with a short plan: the files to change, the test for each "Done when"
-line, and the risks.
+work. The issue is below; do not run `gh issue view`. CLAUDE.md is already in your
+context. Read the code the issue touches; do not edit anything; never read
+.overnight/. Reply with a short plan: the files to change, the test for each
+"Done when" line, and the risks.
 
 {issue}
 """
 REVIEW = """\
-Review this change for GitHub issue #{n}. Read CLAUDE.md and any file you need;
-do not edit anything. Check that every checkable "Done when" line has a test
-that would fail without the change, that the code follows CLAUDE.md, and that
-no test was weakened or deleted. List each required change. End with exactly
-one line, either "VERDICT: approve" or "VERDICT: changes".
-
+Review this change for GitHub issue #{n}. CLAUDE.md is already in your context.
+Never read .overnight/. Answer in under {calls} tool calls. {tools} Do not edit
+anything. Check that every checkable "Done when" line has a test that would fail
+without the change, that the code follows CLAUDE.md, and that no test was
+weakened or deleted. List each required change. End with exactly one line,
+either "VERDICT: approve" or "VERDICT: changes".
+{gate}
 {issue}
 
 The diff:
 
 {diff}
 """
+REVIEW_READ = "You can read, grep, find and ls."
+REVIEW_BASH = ("You can also run bash: git diff, git show origin/main:<file>, the repo's one-suite test "
+               "script, or undo one \"Done when\" line's change to see its test fail. The loop resets "
+               "the tree afterwards.")
+REVIEW_GATE = ("\nThis issue may change the gate (verify.sh and baseline_count): scrutinise those changes. "
+               "Fail the review if they loosen a check.\n")
 FIX = """\
-A reviewer asked for changes to the work already committed on this branch:
+A reviewer asked for changes to the work already committed on this branch for
+issue #{n}:
 
 {findings}
 
@@ -252,8 +268,15 @@ def kill_leftovers(since: float) -> None:
             time.sleep(2)  # a server gets to close its files
 
 
+def scratch() -> Path:
+    """The loop's own files, out of the work tree so no agent's tools find them."""
+    path = Path(sh("git", "rev-parse", "--git-path", "overnight-tmp")).resolve()
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def verify(args, log: Path) -> tuple[bool, str]:
-    out = Path(".overnight/verify.out")
+    out = scratch() / "verify.out"
     with gateslot.slot(), out.open("w") as f:
         started = time.time()  # queue wait stays outside the limit
         code = run_group(["./verify.sh"], args.verify_minutes, signal.SIGKILL,
@@ -275,14 +298,14 @@ def verdict(review: str) -> str | None:
     return "approve" if found[-1].lower().startswith("approve") else "changes"
 
 
-def check(args, base: str, branch: str, log: Path) -> tuple[bool, str]:
+def check(args, base: str, branch: str, log: Path, gate_ok: bool = False) -> tuple[bool, str]:
     """Judge what was committed on branch since base."""
     if (left := sh("git", "branch", "--show-current")) != branch:
         sh("git", "checkout", "-qf", branch)
         return False, f"the worker moved off {branch} to {left or 'a detached HEAD'}"
     if sh("git", "rev-parse", "HEAD") == base:
         return False, "no commits"
-    if changed := sh("git", "diff", "--name-only", base, "HEAD", "--", *GATE).split():
+    if not gate_ok and (changed := sh("git", "diff", "--name-only", base, "HEAD", "--", *GATE).split()):
         return False, f"the worker changed {', '.join(changed)}, which only a human may change"
     return verify(args, log)
 
@@ -352,7 +375,8 @@ def pi_result(out: str) -> Run:
 
 
 def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
-              read_only: bool = False) -> Run:
+              read_only: bool = False, session: str | None = None, thinking: str | None = None, bash: bool = False) -> Run:
+    """session: a pi session id to create or resume, else none. bash: pi read-only runs may use it."""
     if harness == "claude":
         # A prompt nobody answers is denied at once, so claude stops retrying it.
         cmd = ["claude", "-p", "--output-format", "json", "--max-turns", "200",
@@ -365,9 +389,13 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
             cmd += ["--permission-mode", "bypassPermissions" if args.yolo else "auto"]
     else:
         # Disabled mode still blocks catastrophes but lets workers commit.
-        cmd = ["pi", "-p", "--approve", "--no-session", "--mode", "json", "--bash-guard-disabled"]
+        # --no-skills: the skills list is re-sent every turn and no worker uses it.
+        cmd = ["pi", "-p", "--approve", "--no-skills", "--mode", "json", "--bash-guard-disabled"]
+        cmd += ["--session-id", session] if session else ["--no-session"]
+        if thinking:
+            cmd += ["--thinking", thinking]
         if read_only:
-            cmd += ["--tools", "read,grep,find,ls"]
+            cmd += ["--tools", "read,grep,find,ls" + (",bash" if bash else "")]
         if model in CLOUD:
             cmd += ["--provider", "litellm"]
             model = "cloud"
@@ -376,8 +404,12 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         cmd[1:1] = ["--model", model]
     # 1M-context models otherwise compact only near 967K tokens. claude -p
     # waits for background tasks, so a backgrounded server held it open.
-    env = os.environ | {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000", "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1"}
-    stdout, stdin = Path(".overnight/agent.out"), Path(".overnight/prompt.md")
+    tmp = scratch()
+    # A repo-local TMPDIR: /tmp is outside the work tree, so pi denies it.
+    (tmp / "tmp").mkdir(exist_ok=True)
+    env = os.environ | {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000", "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1",
+                        "TMPDIR": str(tmp / "tmp")}
+    stdout, stdin = tmp / "agent.out", tmp / "prompt.md"
     # The prompt goes on stdin: a diff in argv can pass the OS's argument limit.
     stdin.write_text(prompt)
     started = time.time()
@@ -503,7 +535,8 @@ def drop_reviewer(args, n: int, error: str) -> None:
     args.reviewer, args.unreviewed_from = "none", n
 
 
-def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, list[str], float, float, bool]:
+def work_issue(args, n: int, title: str, branch: str,
+               labels: frozenset[str] = frozenset()) -> tuple[str | None, list[str], float, float, bool]:
     """Plan, build, verify, review and maybe fix one issue.
 
     Returns "done", "parked" or None (left as it was), a label per phase, the
@@ -518,7 +551,9 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, list[
     base = sh("git", "rev-parse", "HEAD")
     runs: list[tuple[str, Run]] = []
     plan = ""
-    if args.reviewer != "none":
+    gate_ok = args.gate_label in labels
+    # A small issue is planned inline by its worker.
+    if args.reviewer != "none" and "size:S" not in labels:
         run = run_agent(args, args.reviewer, args.reviewer_model, PLAN.format(issue=issue), log, read_only=True)
         plan = run.text
         runs.append(("plan", run))
@@ -526,23 +561,31 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, list[
         if run.broke:
             drop_reviewer(args, n, run.error)
             plan = ""
-    prompt = WORKER.format(n=n) + (f"\nA planner suggests:\n\n{plan}\n" if plan else "")
-    run = run_agent(args, args.harness, args.model, prompt, log)
+    worker = WORKER.format(n=n, issue=issue)
+    prompt = worker + (f"\nA planner suggests:\n\n{plan}\n" if plan else NO_PLAN)
+    session = f"overnight-{branch.rpartition('/')[2]}-{n}"
+    run = run_agent(args, args.harness, args.model, prompt, log, session=session if args.harness == "pi" else None)
     message = run.text[-1500:]
     runs.append(("worker", run))
     if run.broke:
         tidy(base)
         return None, *tally(runs), True
     tidy()  # keep only what the worker committed
-    ok, tail = check(args, base, branch, log)
+    ok, tail = check(args, base, branch, log, gate_ok)
     broke = False
     if ok and args.reviewer != "none":
         diff = sh("git", "diff", f"{base}..HEAD")[:60000]
-        run = run_agent(args, args.reviewer, args.reviewer_model,
-                        REVIEW.format(n=n, issue=issue, diff=diff), log, read_only=True)
+        green = sh("git", "rev-parse", "HEAD")
+        # The diff's size sets how much looking the review needs.
+        calls = min(60, 25 + diff.count("\n") // 10)
+        bash = args.reviewer == "pi"
+        prompt = REVIEW.format(n=n, issue=issue, diff=diff, calls=calls, tools=REVIEW_BASH if bash else REVIEW_READ,
+                               gate=REVIEW_GATE if gate_ok else "")
+        run = run_agent(args, args.reviewer, args.reviewer_model, prompt, log, read_only=True, bash=bash,
+                        thinking=args.reviewer_thinking if bash else None)
         review = run.text
         runs.append(("review", run))
-        tidy()
+        tidy(green)  # a reviewer's bash may have edited or committed
         if run.broke:
             drop_reviewer(args, n, run.error)
             message += "\n\nUnreviewed: the reviewer ran out of money or hit its usage limit."
@@ -551,12 +594,17 @@ def work_issue(args, n: int, title: str, branch: str) -> tuple[str | None, list[
             ok, tail = False, "the review gave no verdict"
             message += "\n\nReview:\n" + review[-800:]
         elif verdict(review) == "changes":
-            green = sh("git", "rev-parse", "HEAD")
-            run = run_agent(args, args.harness, args.model, WORKER.format(n=n) + "\n" + FIX.format(findings=review), log)
+            fix = FIX.format(n=n, findings=review)
+            if args.harness == "pi":  # resume the worker's session
+                stat = sh("git", "diff", "--stat", f"{base}..HEAD")
+                run = run_agent(args, "pi", args.model, fix + f"\nWhat the branch changed so far:\n{stat}\n", log,
+                                session=session)
+            else:
+                run = run_agent(args, args.harness, args.model, worker + "\n" + fix, log)
             runs.append(("fix", run))
             broke = run.broke
             tidy()
-            fixed, why = (False, "it ran out of money") if broke else check(args, green, branch, log)
+            fixed, why = (False, "it ran out of money") if broke else check(args, green, branch, log, gate_ok)
             if fixed:
                 message = run.text[-1500:] + "\n\nAfter review:\n" + review[-800:]
             else:
@@ -612,6 +660,10 @@ def main() -> None:
     p.add_argument("--reviewer", choices=["claude", "pi", "none"], default="claude",
                    help="plans each issue and reviews green work (default claude)")
     p.add_argument("--reviewer-model", help="as --model, for the reviewer")
+    p.add_argument("--reviewer-thinking", default="high",
+                   help="pi reviewer's thinking level (default high); the worker keeps pi's own setting")
+    p.add_argument("--gate-label", default="gate-change",
+                   help="an issue with this label may change verify.sh and baseline_count (default gate-change)")
     p.add_argument("--base", help="the branch to start from (default: the repo's default branch)")
     p.add_argument("--label", default="ready-for-agent", help="issues to work (default ready-for-agent)")
     p.add_argument("--hours", type=float, default=8, help="stop starting issues after this (default 8)")
@@ -714,7 +766,8 @@ def main() -> None:
             sh("gh", "issue", "edit", str(n), "--add-label", WORKING)
             board(args)
             before = args.spend.read() if args.spend else 0.0
-            outcome, labels, listed, estimated, broke = work_issue(args, n, title, branch)
+            names = frozenset(lab["name"] for lab in issue["labels"])
+            outcome, labels, listed, estimated, broke = work_issue(args, n, title, branch, names)
             current = None
             claude_list, estimate = claude_list + listed, estimate + estimated
             if outcome is None:

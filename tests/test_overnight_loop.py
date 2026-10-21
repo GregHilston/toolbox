@@ -140,6 +140,8 @@ FAKE_PI = textwrap.dedent('''\
         print(json.dumps({"type": "tool_execution_end", "toolName": "bash",
                           "result": {"content": [{"type": "text", "text": os.environ["FAKE_ISSUE_TEXT"]}]}}))
     NAME = "pi"
+    with open(os.environ["FAKE_LOG"] + ".tmpdir", "a") as f:
+        f.write(os.environ.get("TMPDIR", "") + "\\n")
     config = ".pi/extensions/pi-permission-system/config.json"
     with open(os.environ["FAKE_LOG"] + ".pi-config", "a") as f:
         f.write((open(config).read() if os.path.exists(config) else "missing\\n"))
@@ -447,6 +449,113 @@ class TestGate(LoopTest):
         self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
         self.assertIn("verify.sh", self.comments(1)[-1])
         self.assertNotIn("exit 0", (self.repo / "verify.sh").read_text())
+
+
+class TestEfficiency(LoopTest):
+    def prompts(self) -> str:
+        return Path(str(self.agent_log) + ".prompts").read_text()
+
+    def argv(self, role: str) -> list[list[str]]:
+        return [json.loads(line.split(" ", 2)[2]) for line in self.agent_log.read_text().splitlines()
+                if line.split()[1] == role]
+
+    def label(self, n: int, name: str) -> None:
+        st = json.loads(self.state.read_text())
+        st["issues"][str(n)]["labels"].append(name)
+        self.state.write_text(json.dumps(st))
+
+    def test_the_worker_gets_the_issue_inline_and_the_reading_rules(self):
+        self.issues({1: "First"}, body="Done when: the zebra is striped.")
+        self.run_loop("--harness", "pi", "--reviewer", "none")
+        text = self.prompts()
+        self.assertIn("Done when: the zebra is striped.", text)
+        self.assertNotIn("Read the issue with", text)
+        self.assertIn("never\n   cat a whole large file", text)
+        self.assertIn("one-suite test script", text)
+
+    def test_the_reviewer_is_capped_and_kept_out_of_the_loops_files(self):
+        out = self.run_loop("--harness", "pi", "--reviewer", "pi")
+        review = "Review this change" + self.prompts().split("Review this change")[1].split("The diff")[0]
+        self.assertIn("Never read .overnight/", review)
+        self.assertIn("under 25 tool calls", review)
+        argv = self.argv("review")[0]
+        self.assertEqual(argv[argv.index("--tools") + 1], "read,grep,find,ls,bash", out.stderr)
+        self.assertEqual(argv[argv.index("--thinking") + 1], "high")
+        self.assertEqual(self.argv("work")[0].count("--thinking"), 0)
+
+    def test_the_cap_grows_with_the_diff(self):
+        self.assertEqual(min(60, 25 + 2000 // 10), 60)
+        self.assertIn("under {calls} tool calls", loop.REVIEW)
+
+    def test_a_claude_reviewer_gets_no_bash_and_no_thinking_flag(self):
+        self.run_loop("--harness", "pi", "--reviewer", "claude")
+        self.assertNotIn("--thinking", self.argv("review")[0])
+        self.assertIn("You can read, grep", self.prompts())
+
+    def test_reviewer_thinking_is_passed_on(self):
+        self.run_loop("--harness", "pi", "--reviewer", "pi", "--reviewer-thinking", "medium")
+        argv = self.argv("review")[0]
+        self.assertEqual(argv[argv.index("--thinking") + 1], "medium")
+
+    def test_scratch_files_live_under_the_git_dir(self):
+        self.run_loop("--harness", "pi", "--reviewer", "none")
+        scratch = self.repo / ".git" / "overnight-tmp"
+        self.assertTrue((scratch / "agent.out").exists())
+        self.assertTrue((scratch / "prompt.md").exists())
+        self.assertFalse((self.repo / ".overnight" / "agent.out").exists())
+        self.assertTrue((self.repo / ".overnight" / "logs" / "1.log").exists())
+
+    def test_workers_get_a_repo_local_tmpdir(self):
+        self.run_loop("--harness", "pi", "--reviewer", "none")
+        want = str((self.repo / ".git" / "overnight-tmp" / "tmp").resolve())
+        seen = Path(str(self.agent_log) + ".tmpdir").read_text().split()
+        self.assertEqual(set(seen), {want})
+
+    def test_pi_runs_without_skills(self):
+        self.run_loop("--harness", "pi", "--reviewer", "pi")
+        for role in ("work", "plan", "review", "ping"):
+            self.assertIn("--no-skills", self.argv(role)[0], role)
+
+    def test_the_fix_pass_resumes_the_workers_pi_session(self):
+        self.issues({1: "First"})
+        out = self.run_loop("--harness", "pi", "--reviewer", "pi", FAKE_REVIEW="Fix it.\nVERDICT: changes")
+        work, fix = self.argv("work")[0], self.argv("fix")[0]
+        self.assertIn("--session-id", work, out.stderr)
+        self.assertEqual(fix[fix.index("--session-id") + 1], work[work.index("--session-id") + 1])
+        self.assertNotIn("--no-session", fix)
+        self.assertIn("--no-session", self.argv("review")[0])
+        self.assertEqual(self.prompts().count("You are one worker"), 1)
+
+    def test_a_claude_fix_pass_still_gets_the_full_prompt(self):
+        self.issues({1: "First"})
+        self.run_loop("--harness", "claude", "--reviewer", "claude", FAKE_REVIEW="Fix it.\nVERDICT: changes")
+        self.assertEqual(self.prompts().count("You are one worker"), 2)
+
+    def test_a_size_s_issue_skips_the_plan_stage(self):
+        self.label(1, "size:S")
+        self.run_loop("--harness", "pi", "--reviewer", "pi")
+        plans = [line for line in self.roles() if line.endswith(" plan")]
+        self.assertEqual(len(plans), 1, self.roles())  # issue 2 only
+        self.assertIn("No planner ran", self.prompts())
+
+    def test_a_gate_label_lets_an_issue_change_the_gate(self):
+        self.issues({1: "First"})
+        self.label(1, "gate-change")
+        out = self.run_loop("--harness", "pi", "--reviewer", "pi", FAKE_WORK_1="gate")
+        self.assertIn("overnight:done", self.labels(1), out.stdout + out.stderr)
+        self.assertIn("scrutinise those changes", self.prompts())
+
+    def test_the_gate_label_is_configurable(self):
+        self.issues({1: "First"})
+        self.label(1, "custom")
+        self.run_loop("--harness", "pi", "--reviewer", "none", "--gate-label", "custom", FAKE_WORK_1="gate")
+        self.assertIn("overnight:done", self.labels(1))
+
+    def test_without_the_label_the_gate_still_parks(self):
+        self.issues({1: "First"})
+        self.run_loop("--harness", "pi", "--reviewer", "pi", FAKE_WORK_1="gate")
+        self.assertIn("overnight:parked", self.labels(1))
+        self.assertNotIn("scrutinise those changes", self.prompts())
 
 
 def utc(day: int, hour: int, minute: int = 0) -> datetime:
