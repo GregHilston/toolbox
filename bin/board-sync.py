@@ -16,14 +16,17 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import re
 import sys
+
+LANE = re.compile(r"(lane|ds)-[a-z0-9]+$")
 
 COLUMNS = [  # name, colour, description; the first matching rule wins
     ("Backlog", "GRAY", "Not yet prepped for an agent"),
-    ("Todo", "BLUE", "ready-for-agent or prep:ready"),
+    ("Ready", "BLUE", "ready-for-agent, prep:ready or a lane label"),
     ("In progress", "PURPLE", "overnight:working, the loop is on it"),
-    ("Review", "YELLOW", "overnight:done, playtest and merge"),
-    ("Blocked", "RED", "overnight:parked or prep:blocked, needs a human"),
+    ("In review", "YELLOW", "overnight:done, playtest and merge"),
+    ("Blocked", "RED", "overnight:parked, prep:blocked or manual, needs a human"),
     ("Done", "GREEN", "Closed"),
 ]
 
@@ -31,14 +34,14 @@ COLUMNS = [  # name, colour, description; the first matching rule wins
 def status(state: str, labels: set[str]) -> str:
     if state == "CLOSED":
         return "Done"
-    if labels & {"overnight:parked", "prep:blocked"}:
+    if labels & {"overnight:parked", "prep:blocked", "manual"}:
         return "Blocked"
     if "overnight:done" in labels:
-        return "Review"
+        return "In review"
     if "overnight:working" in labels:
         return "In progress"
-    if labels & {"ready-for-agent", "prep:ready"}:
-        return "Todo"
+    if labels & {"ready-for-agent", "prep:ready", "next"} or any(LANE.match(lab) for lab in labels):
+        return "Ready"
     return "Backlog"
 
 
