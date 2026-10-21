@@ -53,6 +53,21 @@
           {
             "type": "command",
             "command": "rtk hook claude"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/risk-classify.py"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "quota_auto_resume_stale|quota_auto_resume_disabled",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/pushover-quota-stall.sh"
           }
         ]
       }
