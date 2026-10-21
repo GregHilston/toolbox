@@ -81,6 +81,9 @@ AGENT = textwrap.dedent('''\
         if role == "review":
             if os.environ.get("FAKE_REVIEW_MOVE") == "detach":
                 git("checkout", "-q", "--detach", "main")
+            elif os.environ.get("FAKE_REVIEW_MOVE") == "gone":
+                git("checkout", "-q", "--detach", "main")
+                git("branch", "-D", "-q", subprocess.run(["git", "branch", "--list", "overnight/*", "--format=%(refname:short)"], capture_output=True, text=True).stdout.split()[0])
             elif os.environ.get("FAKE_REVIEW_MOVE"):
                 git("checkout", "-q", os.environ["FAKE_REVIEW_MOVE"])
             return os.environ.get("FAKE_REVIEW", "Looks fine.\\nVERDICT: approve")
@@ -150,6 +153,8 @@ FAKE_PI = textwrap.dedent('''\
     NAME = "pi"
     with open(os.environ["FAKE_LOG"] + ".tmpdir", "a") as f:
         f.write(os.environ.get("TMPDIR", "") + "\\n")
+    with open(os.environ["FAKE_LOG"] + ".depth", "a") as f:
+        f.write(prompt[:6] + "=" + os.environ.get("PI_SUBAGENT_DEPTH", "") + "\\n")
     config = ".pi/extensions/pi-permission-system/config.json"
     with open(os.environ["FAKE_LOG"] + ".pi-config", "a") as f:
         f.write((open(config).read() if os.path.exists(config) else "missing\\n"))
@@ -564,6 +569,19 @@ class TestEfficiency(LoopTest):
         self.run_loop("--harness", "pi", "--reviewer", "pi")
         self.assertNotIn("--bash-guard-disabled", self.argv("review")[0])
         self.assertIn("--bash-guard-disabled", self.argv("work")[0])
+
+    def test_the_pi_reviewer_runs_at_subagent_depth_and_workers_do_not(self):
+        self.run_loop("--harness", "pi", "--reviewer", "pi")
+        seen = Path(str(self.agent_log) + ".depth").read_text().splitlines()
+        self.assertIn("Review=1", seen)
+        self.assertIn("You ar=", seen)
+
+    def test_a_reviewer_that_deletes_the_lane_branch_parks_the_issue(self):
+        self.issues({1: "First"})
+        out = self.run_loop("--harness", "pi", "--reviewer", "pi", FAKE_REVIEW_MOVE="gone")
+        self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
+        self.assertIn("could not get back", self.comments(1)[-1])
+        self.assertNotIn("progress for #1", self.git("log", "--format=%s", "main"))
 
     def test_the_reviewer_is_told_to_gate_through_gateslot(self):
         self.assertIn("gateslot.py -- ./verify.sh", loop.REVIEW_BASH)

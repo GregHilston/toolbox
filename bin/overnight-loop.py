@@ -413,6 +413,8 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
     (tmp / "tmp").mkdir(exist_ok=True)
     env = os.environ | {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000", "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1",
                         "TMPDIR": str(tmp / "tmp")}
+    if bash:  # depth 1 leaves bash-guard's hard-block table; interactive mode would abort every flagged command
+        env["PI_SUBAGENT_DEPTH"] = "1"
     stdout, stdin = tmp / "agent.out", tmp / "prompt.md"
     # The prompt goes on stdin: a diff in argv can pass the OS's argument limit.
     stdin.write_text(prompt)
@@ -488,12 +490,18 @@ def check_balance(args) -> None:
         sys.exit(f"the DeepSeek balance is ${balance:.2f}, under ${MIN_BALANCE:.2f}: top up first")
 
 
-def tidy(to: str = "HEAD", branch: str | None = None) -> None:
-    """Reset the tree; with a branch, first force back onto it so no other branch is reset."""
+def tidy(to: str = "HEAD", branch: str | None = None) -> bool:
+    """Reset the tree; False if the branch could not be checked out, when nothing is reset.
+
+    With a branch, first force back onto it so no other branch is reset.
+    """
     if branch:
-        sh("git", "checkout", "-qf", branch)
+        subprocess.run(["git", "checkout", "-qf", branch], capture_output=True)
+        if sh("git", "branch", "--show-current") != branch:
+            return False
     sh("git", "reset", "-q", "--hard", to)
     sh("git", "clean", "-qfd")
+    return True
 
 
 def note(n: int, title: str, outcome: str, detail: str) -> None:
@@ -592,8 +600,10 @@ def work_issue(args, n: int, title: str, branch: str,
                         thinking=args.reviewer_thinking if bash else None)
         review = run.text
         runs.append(("review", run))
-        tidy(green, branch)  # a reviewer's bash may have moved HEAD
-        if run.broke:
+        back = tidy(green, branch)  # a reviewer's bash may have moved HEAD
+        if not back:
+            ok, tail = False, f"could not get back onto {branch} after the review"
+        elif run.broke:
             drop_reviewer(args, n, run.error)
             message += "\n\nUnreviewed: the reviewer ran out of money or hit its usage limit."
         elif verdict(review) is None:
@@ -625,10 +635,11 @@ def work_issue(args, n: int, title: str, branch: str,
         comment(n, f"Done on `{branch}`.\n\n{message}")
         note(n, title, "done", message)
     else:
-        tidy(base, branch)
+        on_branch = tidy(base, branch)
         sh("gh", "issue", "edit", str(n), "--add-label", PARKED, "--remove-label", WORKING)
         comment(n, f"Parked by the overnight run.\n\n{message}\n\n```\n{tail}\n```")
-        note(n, title, "parked", f"{message}\n\n```\n{tail}\n```")
+        if on_branch:  # a note elsewhere would land on the wrong branch
+            note(n, title, "parked", f"{message}\n\n```\n{tail}\n```")
     return ("done" if ok else "parked"), *tally(runs), broke
 
 
