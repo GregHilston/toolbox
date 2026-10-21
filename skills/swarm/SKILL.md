@@ -123,6 +123,11 @@ Before that report, run the repo's ship steps if its `docs/orchestrating.md` has
 - Under auto mode an unattended orchestrator can't fast-forward or push main, commit a guard-test edit, force-push, or edit its own permissions; each is refused as a security action. Before the owner sleeps, ask for a narrow landing rule (`git merge --ff-only`, `git push origin main`). Without one, stack gated work on one integration branch for a morning merge.
 - Gate time tracks the test suites, not overhead: profile per-suite times from the gate's results files before guessing. One night's 4× gate speedup was test cleanup re-listing thousands of leaked temp folders, and coverage instrumentation making core suites 6–7× slower.
 - A ticket parked only because its _Done when_ asks for an orchestrator capture is finished work: recover the commit (`git branch parked-N <sha>` in the lane clone, fetch, cherry-pick) instead of rerunning it.
+- `./verify.sh | tail -1 && git push` pushes on a red gate: the pipe's status is `tail`'s. Capture the gate's exit code first (`./verify.sh > out; rc=$?`) and push only on 0.
+- Count before `git reset --hard HEAD~N` on a batch branch: your own fix commits are in the count. Dropping one pushed a red `main`. Reset to a hash read from `git log` instead.
+- A branch cut before a batch adds a new check fails that check when it lands. When a batch adds a check, tell running agents and rebase every open branch before gating it.
+- When a refactor moves code, a changed-lines comment cap counts every moved comment. The first pass of one split deleted 49 comment blocks that held reasons; tell agents to move each reason into a docstring or doc, and to drop only comments that restate the code.
+- Two gates in one worktree interleave their logs and print nonsense counts. Give each gate its own worktree.
 
 ## Big features: a staged pipeline
 
