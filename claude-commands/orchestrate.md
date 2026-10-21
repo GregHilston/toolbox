@@ -441,6 +441,8 @@ loudly rather than silently substituting your own."
   them to the end** — an agent that dies mid-run keeps only what it committed, and
   in one `/orchestrate-pi` run three workers were killed by a provider error and
   lost everything they had done, while still reporting completion.
+- **A bug fix lands with a test that fails without the fix.** Write it first,
+  watch it fail, then fix.
 - **Never redirect unbounded output to a file.** Pipe through `tail -50` or
   `grep`; if you must keep a file, cap it. A worker teed a hanging test suite to a
   log to work around a tool timeout, and the runaway recursion behind the hang

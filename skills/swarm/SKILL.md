@@ -95,7 +95,7 @@ The gate is the bottleneck, not coding. Spend gates only where they buy safety.
 
 ## 5. Keep the queue full
 
-When lanes drain, fan out read-only audits in parallel, each a subagent with one lens: architecture against Greg's rules and the ADRs, tests and coverage, performance (measured, not guessed), agent tooling, and a visual pass on fresh captures. Turn verified findings into tickets and start the next round. Stop when only `manual` tickets remain, then report: what landed, what each manual ticket needs from Greg, real spend.
+When lanes drain, fan out read-only audits in parallel, each a subagent with one lens: architecture against Greg's rules and the ADRs, tests and coverage, performance (measured, not guessed), agent tooling, and a visual pass on fresh captures. Turn verified findings into tickets and start the next round. After each round, post three bullets in chat for Greg on his phone: what landed, what is red, what needs him. Stop when only `manual` tickets remain, then report: what landed, what each manual ticket needs from Greg, real spend.
 
 Before that report, run the repo's ship steps if its `docs/orchestrating.md` has them (a build and upload for a playtest), on a green final `main`, then send Greg a phone ping with `pushover.py -m "..."` saying what is ready.
 
