@@ -3,7 +3,11 @@
   pkgs,
   vars,
   ...
-}: {
+}: let
+  # dungeon's Syncthing device ID, from its UI after the first start. Empty
+  # declares nothing, so a rebuild before then is harmless.
+  dungeonSyncthingId = "";
+in {
   imports = [
     ../../../modules/darwin/common.nix
     ../../../modules/darwin/homebrew-server.nix
@@ -61,6 +65,35 @@
       whisper-ctranslate2
       ffmpeg
     ];
+
+    # Feeds paperless's inbox on dungeon (home-lab docs/syncthing.md). Tailscale
+    # only: discovery, relays and NAT traversal stay off.
+    services.syncthing = lib.mkIf (dungeonSyncthingId != "") {
+      enable = true;
+      overrideDevices = true;
+      overrideFolders = true;
+      settings = {
+        options = {
+          globalAnnounceEnabled = false;
+          localAnnounceEnabled = false;
+          relaysEnabled = false;
+          natEnabled = false;
+          urAccepted = -1;
+        };
+        devices.dungeon = {
+          id = dungeonSyncthingId;
+          addresses = ["tcp://100.103.22.125:22000"];
+        };
+        folders.paperless-inbox = {
+          id = "paperless-inbox";
+          path = "/Users/${vars.user.name}/PaperlessInbox";
+          devices = ["dungeon"];
+          type = "sendreceive";
+          ignorePerms = true;
+          versioning = null;
+        };
+      };
+    };
   };
 
   # Deploy oMLX with moria-specific settings (32GB hot cache for M4 Max 128GB).
