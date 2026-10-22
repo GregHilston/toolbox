@@ -6,7 +6,7 @@
 }: let
   # dungeon's Syncthing device ID, from its UI after the first start. Empty
   # declares nothing, so a rebuild before then is harmless.
-  dungeonSyncthingId = "";
+  dungeonSyncthingId = "X7KUTM4-4HZTCXP-RTPHNEK-IWTWWUI-IUVUSWS-R3FVLIF-EKNWT43-IIRR5QQ";
 in {
   imports = [
     ../../../modules/darwin/common.nix
@@ -82,7 +82,8 @@ in {
         };
         devices.dungeon = {
           id = dungeonSyncthingId;
-          addresses = ["tcp://100.103.22.125:22000"];
+          # LAN address at home, Tailscale away.
+          addresses = ["tcp://syncthing.grehg2.xyz:22000"];
         };
         folders.paperless-inbox = {
           id = "paperless-inbox";
