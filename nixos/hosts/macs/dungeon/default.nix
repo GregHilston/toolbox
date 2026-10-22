@@ -564,6 +564,29 @@ in {
     };
   };
 
+  # Daily service audit: coverage gaps, stale exemptions, new upstream releases. It speaks
+  # only on change, at Pushover priority -1, and is read-only toward the lab. A pi worker
+  # triages each new release once. After the 06:15 drift check so a bad morning reads in order.
+  # Rationale: home-lab/docs/runbooks/service-audit.md.
+  launchd.user.agents.service-audit-check = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/service-audit-check.sh"
+      ];
+      # false: mid-deploy the compose file is legitimately half-applied.
+      RunAtLoad = false;
+      StartCalendarInterval = [
+        {
+          Hour = 7;
+          Minute = 30;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/service-audit-check.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/service-audit-check.log";
+    };
+  };
+
   # Off: RAM goes to the model (home-lab docs/local-llms.md)
   # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
