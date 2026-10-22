@@ -65,6 +65,10 @@ per group: **Approve**, **Approve with changes** (he writes them in Other), **Dr
 
 ## 4. Implement, one group at a time
 
+An `Agent` with `isolation: "worktree"` makes the worktree in the repo of *your* current
+directory, which is often toolbox. For home-lab work, `git worktree add` it yourself under
+`~/Git/home-lab/.claude/worktrees/` and give the agent that absolute path.
+
 The groups all edit the same files (compose, Caddyfile, `prometheus.yml`,
 `backup-tier1.sh`), so build them **sequentially** in `~/Git/home-lab` on moria, never
 in parallel. For each approved group, do it yourself or give one Sonnet agent the pitch

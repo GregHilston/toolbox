@@ -640,6 +640,14 @@ host-side lever: raise the guest's RAM in VMware Fusion — moria has 128GB and 
 currently sees ~31GiB. Do the Fusion RAM bump *first* (a rebuild itself spikes memory),
 then deploy. Avoid fanning out many Claude Code subagents inside this RAM-limited guest.
 
+## A darwin rebuild can skip home-manager's activation
+
+On moria, 2026-10-22, `darwin-rebuild switch` built a system whose home-manager generation
+had the new Syncthing launch agents, but the active generation stayed the old one: no agent,
+no process, no error seen. Tell: `readlink -f ~/.local/state/home-manager/gcroots/current-home`
+differs from `nix-store -qR /run/current-system | grep home-manager-generation`. Fix, as the
+user and without sudo: run that newer generation's `activate`.
+
 ## Home-manager activation fails on a long-dormant host (stale `.backup` pileup)
 
 `backupFileExtension = "backup"` makes home-manager move any file it wants to own to

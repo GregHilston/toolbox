@@ -60,6 +60,8 @@ Skip lessons already written down; edit the existing line instead of adding a ne
 - I often chat from my phone while you work: keep status updates to short bullets, lead with what changed, and give me decisions as `AskUserQuestion` picks with a recommended option first.
 - Answer a message I send mid-task in your very next reply, even if it's a short "got it, doing X after Y". I shouldn't have to repeat myself.
 - When I ask "are we good?" or for status, say plainly what's done, what's still running, and what needs me.
+- Put steps I must act on in the last message of a turn. A table written mid-turn, between tool calls, is easy to miss on my phone; I missed one on 2026-10-22.
+- Before any change to the network (router, DHCP, DNS, Omada), write down the current value, the new one, and a rollback I can follow with the internet down, in the notes ledger and a home-lab runbook.
 - When I'm stuck on a website (Steamworks, a vendor dashboard), I save the page with ⌘S and give you the `.html` path. Parse it with a short `python3 -I` script for the text, links, inputs and selected options; don't Read the whole file. Walk me through one screen at a time, and say plainly when you're guessing at a screen you haven't seen.
 - My machines: **moria** is the M4 Max (16 cores, 128 GB) I develop on, and Claude usually runs on it; it's dev-only, so use all its hardware. It sleeps when idle, which stalls lanes and gates (on 2026-10-21 it slept when I undocked it, despite my keep-awake app): start `caffeinate -dims -t 43200` in the background before a long run. **dungeon** is the home lab (M3 Pro, 48 GB, RAM nearly full) running services that must not be interrupted; don't put build or test load on it.
 - DeepSeek credit isn't scarce: a few dollars of real balance is more than a day of work. Don't reroute work to save it; just don't waste it.
@@ -129,7 +131,8 @@ partials, because old.reddit.com redirects to a login page and `.json` answers 4
 `bin/fetch_reddit.py` explains the details. If they break,
 `REDDIT_LIVE=1 python3 -m unittest test_fetch_reddit_live` in `toolbox/tests/`
 says what Reddit changed. pi's `reddit_*` tools use the old endpoints and are
-unreliable.
+unreliable. **A 403 on moria is often only moria's IP being blocked:** run the same
+command through `ssh dungeon '…'` before debugging (worked all day on 2026-10-22).
 
 **Don't reach for `searxngr` to find Reddit threads.** It was the old workaround and
 it no longer earns its place — the self-hosted instance's egress IP is blocked by

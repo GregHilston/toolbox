@@ -424,6 +424,13 @@ as a PR diff). Mac-only; flags are in the root `README.md`.
 One divergence worth knowing: our `difit.sh` defaults a missing target to `.` (all
 uncommitted changes) where upstream would show the last commit.
 
+## This repo is public
+
+Nothing private goes in: no secrets, and no details of private repos. Claude Code writes to
+`dot/claude/.claude/settings.json` itself (it is `~/.claude/settings.json`); on 2026-10-22 it
+added an `autoMode` block describing the private notes vault. Such a block belongs in that
+repo's own `.claude/settings.json`. Read that file's diff before committing it.
+
 ## NixOS / nix-darwin
 
 See `nixos/CLAUDE.md` for host management, deployment commands, and common mistakes.
