@@ -61,7 +61,7 @@ Skip lessons already written down; edit the existing line instead of adding a ne
 - Answer a message I send mid-task in your very next reply, even if it's a short "got it, doing X after Y". I shouldn't have to repeat myself.
 - When I ask "are we good?" or for status, say plainly what's done, what's still running, and what needs me.
 - When I'm stuck on a website (Steamworks, a vendor dashboard), I save the page with ⌘S and give you the `.html` path. Parse it with a short `python3 -I` script for the text, links, inputs and selected options; don't Read the whole file. Walk me through one screen at a time, and say plainly when you're guessing at a screen you haven't seen.
-- My machines: **moria** is the M4 Max (16 cores, 128 GB) I develop on, and Claude usually runs on it; it's dev-only, so use all its hardware. **dungeon** is the home lab (M3 Pro, 48 GB, RAM nearly full) running services that must not be interrupted; don't put build or test load on it.
+- My machines: **moria** is the M4 Max (16 cores, 128 GB) I develop on, and Claude usually runs on it; it's dev-only, so use all its hardware. It sleeps when idle, which stalls lanes and gates (on 2026-10-21 it slept when I undocked it, despite my keep-awake app): start `caffeinate -dims -t 43200` in the background before a long run. **dungeon** is the home lab (M3 Pro, 48 GB, RAM nearly full) running services that must not be interrupted; don't put build or test load on it.
 - DeepSeek credit isn't scarce: a few dollars of real balance is more than a day of work. Don't reroute work to save it; just don't waste it.
 
 ## Picking a model for delegated work

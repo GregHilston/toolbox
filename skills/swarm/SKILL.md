@@ -92,12 +92,15 @@ The gate is the bottleneck, not coding. Spend gates only where they buy safety.
 - **Land on the gate's words, not a piped exit code.** `gate | tail -n 2 && merge` merges on `tail`'s exit status; capture the output and grep it for `PASS` before merging.
 - **Re-measure a win when its conditions change.** A suite queue beat fixed shards only while shard weights were stale; with fresh weights it lost on both time and CPU, and was reverted.
 - **When main goes red, stop queued landings** (by their own PIDs): every full gate behind it fails on the same test and wastes its slot.
+- **Red CI is red main, even when every local gate passes.** On 2026-10-21 gridkeep's CI failed for 20 hours unseen: the runner lacked `rg`, and `rg ... && fail` read "command not found" as "no match". After each push to main, check that commit's CI run and hold landings on red; put failed runs in the watcher. A check whose tool is missing or crashes must fail, not pass.
 
 ## 5. Keep the queue full
 
 When lanes drain, fan out read-only audits in parallel, each a subagent with one lens: architecture against Greg's rules and the ADRs, tests and coverage, performance (measured, not guessed), agent tooling, and a visual pass on fresh captures. Turn verified findings into tickets and start the next round. After each round, post three bullets in chat for Greg on his phone: what landed, what is red, what needs him. Stop when only `manual` tickets remain, then report: what landed, what each manual ticket needs from Greg, real spend.
 
 Before that report, run the repo's ship steps if its `docs/orchestrating.md` has them (a build and upload for a playtest), on a green final `main`, then send Greg a phone ping with `pushover.py -m "..."` saying what is ready.
+
+A handoff that suggests the next `/swarm` gives the prompt in a code block that starts `/swarm ` (slash, name, space), never in a `>` quote and never as `/swarm.`. This skill has `disable-model-invocation`, so only Greg's typed command starts it; on 2026-10-21 a pasted `/swarm.` went through as plain text and the new session, rightly, refused to run the skill by hand.
 
 ## Subagents
 
