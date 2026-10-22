@@ -40,7 +40,8 @@ Send every group's `Agent` call in one message, `model: "sonnet"`. Each brief ca
   (`ls`, `docker ps`, `showmount`), and read the web; it edits and restarts nothing;
 - sources: the project's own docs, its image repo and release notes first; then what
   self-hosters report (the `reddit` skill's `reddit-search.py` and `fetch-thread.py`),
-  plus any links Greg gave;
+  plus any links Greg gave. When Reddit answers 403 on moria, run the same commands
+  through `ssh dungeon`;
 - the output: a pitch at `<scratchpad>/pitch-<group>.md` with these sections:
   **Design** (and the alternatives rejected, one line each), **Touchpoints** (all twelve,
   each a concrete change or "n/a because …"), **Diff sketch** (the compose block, the
@@ -49,8 +50,9 @@ Send every group's `Agent` call in one message, `model: "sonnet"`. Each brief ca
   **Commit message** (conventional, e.g. `feat(audiobookshelf): serve audiobooks from the
   audio-books share`), and **Sources**.
 
-When a group carries real logic (DNS failover, an ingest pipeline), get a DeepSeek second
-opinion on the pitch with the `pi-ask` skill. **Done when** every pitch has all twelve
+When groups depend on each other (a sync tool feeding an inbox), compare their pitches and
+settle the shared contract before step 3: the first run's two pitches disagreed on where the
+inbox lived. **Done when** every pitch has all twelve
 touchpoints decided and you have checked each against the checklist yourself. A pitch with
 a blank touchpoint goes back to its agent.
 
@@ -71,7 +73,11 @@ and the checklist. Then:
 1. Apply every touchpoint in the pitch.
 2. Run the repo tests the change touches, at least `monitoring-config.test.sh` and
    `backup-tier1.test.sh` under `scripts/tests/`. Fix until green.
-3. Commit the group alone with its pitched message. No AI attribution lines: tell any
+3. Run `scripts/service-audit.py` (0 open gaps) and get a DeepSeek second opinion on any
+   group with logic, via the `pi-ask` skill. Tell the worker to skip
+   `backup-tier1.test.sh` (it outlasts pi's idle timeout) and cap `--max-turns`, or it
+   reads forever and answers nothing.
+4. Commit the group alone with its pitched message. No AI attribution lines: tell any
    agent that writes a commit the same.
 
 Greg's steps that block a deploy (a new secret needs a 1Password item and `just secrets`
@@ -80,7 +86,8 @@ new secrets where the app allows it.
 
 ## 5. Deploy and verify
 
-Push, then follow the Deploy section of the checklist: pull in `~/Git/home-lab` on dungeon
+**Push only the groups that can deploy now.** A pushed probe for a service that is not
+running pages Greg, so a group waiting on him stays on a local branch. Then follow the Deploy section of the checklist: pull in `~/Git/home-lab` on dungeon
 and `export COMPOSE_ENV_FILES` before any `compose up` over ssh. Then run every line of its
 Verify section. **A group is done only when every verify line passes.** Paste the evidence.
 A failure gets diagnosed and fixed before the next group deploys.
