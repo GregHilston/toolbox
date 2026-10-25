@@ -90,11 +90,12 @@ def start(repo: Path, lane: str, label: str | None, extra: list[str]) -> str:
     loop = shutil.which("overnight-loop.py")
     if not loop:
         raise LaneError("overnight-loop.py is not on PATH")
-    branch = default_branch(repo)
+    branch = extra[extra.index("--base") + 1] if "--base" in extra[:-1] else default_branch(repo)
     if not clone.exists():
         run("git", "clone", "-q", run("git", "remote", "get-url", "origin", cwd=repo), str(clone))
     if tracker := run("git", "config", "wayfinder.tracker", cwd=repo, check=False):
         run("git", "config", "wayfinder.tracker", tracker, cwd=clone)
+    run("git", "fetch", "-q", "origin", cwd=clone)
     run("git", "checkout", "-q", branch, cwd=clone)
     run("git", "pull", "-q", "--ff-only", cwd=clone)
     (clone / ".overnight").mkdir(exist_ok=True)
