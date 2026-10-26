@@ -56,6 +56,8 @@ ARG_KEYS = ("command", "path", "file_path", "pattern", "query", "url")
 # narration you read when you go looking.
 ALERT_SYMBOLS = frozenset({"✗", "■", "⚠", "!"})
 
+# Guardrail refusals arrive as failed tool calls; their reasons start "Never".
+REFUSED = re.compile(r"\bNever\b|permission-system|guardrail|blocked", re.I)
 MODEL_MISSING = re.compile(r'Model "[^"]*" not found')
 
 
@@ -167,7 +169,7 @@ class Narrator:
     def routine(self, symbol: str, text: str) -> bool:
         """Alert lines an orchestrator never acts on: a clean finish, a tool error, a model warning."""
         if symbol == "✗":
-            return True
+            return not REFUSED.search(text)
         if symbol == "!":
             return bool(MODEL_MISSING.search(text))
         if symbol == "■":

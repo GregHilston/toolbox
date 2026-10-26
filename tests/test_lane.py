@@ -254,7 +254,7 @@ class StatusTest(LaneCase):
             write(folder / "s.jsonl", json.dumps({"type": "assistant", "message": {
                 "id": "a", "usage": {"input_tokens": 3, "cache_read_input_tokens": 252000,
                                      "cache_creation_input_tokens": 997}}}) + "\n")
-            self.assertEqual(lane.status(self.repo).splitlines()[-1], "orchestrator context 253k (cap 150k)")
+            self.assertEqual(lane.status(self.repo).splitlines()[-1], "orchestrator context 253k (cap 150k) OVER: hand off and /clear")
 
     def test_hand_started_lane_is_unknown(self) -> None:
         self.make_clone()

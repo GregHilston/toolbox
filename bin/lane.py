@@ -187,7 +187,9 @@ def context_line(repo: Path) -> str:
     """The orchestrator's context size, or nothing when it has no transcript."""
     path = session_ctx.newest_transcript(repo)
     tokens = session_ctx.context_tokens(path) if path else None
-    return "" if tokens is None else f"orchestrator context {session_ctx.short(tokens)} (cap 150k)"
+    if tokens is None:
+        return ""
+    return f"orchestrator context {session_ctx.short(tokens)} (cap 150k)" + (" OVER: hand off and /clear" if tokens > 150000 else "")
 
 
 def status(repo: Path) -> str:
@@ -328,10 +330,14 @@ class Watcher:
 def watch(repo: Path, minutes: float) -> None:
     """Print a lane event at once, or batched into a digest, until interrupted."""
     watcher = Watcher(repo, minutes)
-    while True:
-        for line in watcher.step():
-            print(line, flush=True)
-        time.sleep(POLL_SECONDS)
+    try:
+        while True:
+            for line in watcher.step():
+                print(line, flush=True)
+            time.sleep(POLL_SECONDS)
+    except KeyboardInterrupt:
+        if watcher.starts:
+            print("lane starts:\n  " + "\n  ".join(watcher.starts), flush=True)
 
 
 def fetch(repo: Path, lane: str, branch: str | None, force: bool = False) -> str:

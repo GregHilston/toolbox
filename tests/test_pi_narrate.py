@@ -330,6 +330,17 @@ class RoutineAlerts(unittest.TestCase):
         self.assertIn('! Model "deepseek-v4-flash" not found', text)
         self.assertIn("■ done", text)
 
+    def test_a_guardrail_refusal_is_kept(self):
+        alerts = io.StringIO()
+        narrator, _, _ = make(alerts=alerts, alerts_all=False)
+        feed(
+            narrator,
+            {"type": "tool_execution_start", "toolCallId": "c1", "toolName": "bash", "args": {"command": "git push"}},
+            {"type": "tool_execution_end", "toolCallId": "c1", "toolName": "bash", "isError": True,
+             "result": "Never push. The orchestrator does that."},
+        )
+        self.assertIn("✗ bash FAILED", alerts.getvalue())
+
     def test_a_worker_that_died_before_settling_is_kept(self):
         self.assertIn("■ done", self.alerts_of(False, settle=False))
 
