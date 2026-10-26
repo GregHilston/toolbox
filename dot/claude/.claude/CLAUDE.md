@@ -46,7 +46,14 @@ Active voice. No stage performances. Pick the commonest word among alternatives.
 
 ## Ending a chat
 
-When I say I'm ending the chat, or ask for a handoff, first reflect: what did we learn this session that a future session should know? Cover technical lessons, domain lessons (game dev, the project's rules), how you and I work together, and how subagents and lanes behaved. Write each lesson where it will be read next time, then write the handoff and list what you changed:
+When I say I'm ending the chat, or ask for a handoff, first reflect: what did we learn this session that a future session should know? Cover technical lessons, domain lessons (game dev, the project's rules), how you and I work together, and how subagents and lanes behaved.
+
+Then answer two questions with this session's numbers, not guesses:
+
+- **How could the next chat go faster?** Where did work wait: gates, lanes stuck or parked, my answers, setup steps redone by hand, a tool that failed silently.
+- **How could it use fewer tokens?** Cover both meters: DeepSeek dollars (`pi-usage.py`, lane `Real:` lines, `pi-ask` costs) and Claude subscription use (orchestrator turns, especially wake-ups for routine events; subagent runs and their models; duplicated reviews). Name the biggest spender on each meter and one change that would cut it.
+
+Write each lesson where it will be read next time, then write the handoff and list what you changed:
 
 - Project rules every worker needs: the repo's `CLAUDE.md`.
 - Project process for orchestrators: the repo's docs (such as `docs/orchestrating.md`).
@@ -67,6 +74,7 @@ End every handoff with the exact message I paste to start the next chat, in a co
 - When I report a playtest bug, ask what I saw on screen and which build I ran before theorising; on 2026-10-25 two theories were wrong because nobody asked. While I sleep, send one Pushover per finding, and a correcting one when a finding turns out wrong. Prove each playtest bug with a test that fails first.
 - When I'm stuck on a website (Steamworks, a vendor dashboard), I save the page with ⌘S and give you the `.html` path. Parse it with a short `python3 -I` script for the text, links, inputs and selected options; don't Read the whole file. Walk me through one screen at a time, and say plainly when you're guessing at a screen you haven't seen. If the file isn't there, say so and wait for me to re-save; don't fetch the same facts another way (2026-10-26).
 - My machines: **moria** is the M4 Max (16 cores, 128 GB) I develop on, and Claude usually runs on it; it's dev-only, so use all its hardware. It sleeps when idle, which stalls lanes and gates (on 2026-10-21 it slept when I undocked it, despite my keep-awake app): start `caffeinate -dims -t 43200` in the background before a long run. **dungeon** is the home lab (M3 Pro, 48 GB, RAM nearly full) running services that must not be interrupted; don't put build or test load on it.
+- In a decision question, explain any game mechanic or term in one plain line first; I forget names (rider damage, the action cap, 2026-10-26). Write what we decide onto the tickets, not only into notes.
 - DeepSeek credit isn't scarce: a few dollars of real balance is more than a day of work. Don't reroute work to save it; just don't waste it.
 
 ## Picking a model for delegated work
