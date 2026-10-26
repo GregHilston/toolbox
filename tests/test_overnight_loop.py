@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -896,15 +897,18 @@ class TestCostLabels(LoopTest):
         self.assertIn("done: worker claude/default $0.25 list", out.stdout, out.stderr)
         self.assertIn("Real: $0.00. Claude: subscription, $0.50 at list price.", out.stdout)
 
-    def test_an_unreadable_gateway_is_said_not_guessed(self):
+    def test_real_sums_the_runs_own_phases(self):
         out = self.run_loop("--harness", "pi", "--reviewer", "claude")
-        self.assertIn("pi/cloud", out.stdout, out.stderr)
-        self.assertIn("Real: unknown, the gateway could not be read", out.stdout)
+        costs = [float(c) for c in re.findall(r"pi/cloud \$([\d.]+)", out.stdout)]
+        self.assertEqual(len(costs), 2, out.stdout + out.stderr)
+        self.assertIn(f"Real: ~${sum(costs):.2f} DeepSeek", out.stdout)
 
-    def test_the_gateway_delta_is_the_real_cost(self):
-        args = argparse.Namespace(gateway_used=True, spend=mock.Mock(total=0.42, gaps=0))
-        self.assertEqual(loop.money_line(args, 15.7, 3.91),
-                         "Real: $0.42 gateway. Claude: subscription, $15.70 at list price.")
+    def test_the_shared_gateway_counter_is_not_the_real_cost(self):
+        # Two lanes share one counter; each reads all of it.
+        args = argparse.Namespace(gateway_used=True, spend=mock.Mock(total=27.97, gaps=0))
+        self.assertEqual(loop.money_line(args, 15.7, 2.24),
+                         "Real: ~$2.24 DeepSeek, summed from this run's own phases. "
+                         "Claude: subscription, $15.70 at list price.")
 
     def test_a_run_keeps_its_whole_text(self):
         long = "x" * 5000

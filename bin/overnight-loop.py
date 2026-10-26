@@ -18,7 +18,8 @@ gateway's own daily cap on `cloud` is the hard limit underneath: past it, every
 request gets a 429.
 
 Claude's cost figures are list-price estimates, since a subscription bills none
-of it; the gateway's counter is the real DeepSeek spend.
+of it. The `Real:` line sums this run's own pi phases, priced from DeepSeek's table;
+the gateway's counter is shared by every lane, so it only feeds --budget.
 """
 
 from __future__ import annotations
@@ -669,15 +670,7 @@ def tally(runs: list[tuple[str, Run]]) -> tuple[list[str], float, float]:
 
 def money_line(args, claude_list: float, estimate: float) -> str:
     """Real money apart from list price, which a subscription never bills."""
-    spend = args.spend
-    if not args.gateway_used:
-        real = f"~${estimate:.2f} DeepSeek, estimated from its price table" if estimate else "$0.00"
-    elif spend is None:
-        real = f"unknown, the gateway could not be read (table estimate ${estimate:.2f})"
-    elif spend.gaps:
-        real = f"at least ${spend.total:.2f} gateway ({spend.gaps} readings failed)"
-    else:
-        real = f"${spend.total:.2f} gateway"
+    real = f"~${estimate:.2f} DeepSeek, summed from this run's own phases" if estimate else "$0.00"
     claude = f" Claude: subscription, ${claude_list:.2f} at list price." if claude_list else ""
     return f"Real: {real}.{claude}"
 
@@ -814,7 +807,7 @@ def main() -> None:
             else:
                 (done if outcome == "done" else parked)[n] = title
                 fails = 0 if outcome == "done" else fails + 1
-                real = f", gateway ${args.spend.read() - before:.2f}" if args.spend else ""
+                real = f", gateway ${args.spend.read() - before:.2f} (shared)" if args.spend else ""
                 print(f"  {outcome}: {', '.join(labels)}{real}", flush=True)
             if broke:
                 why = "out of money"

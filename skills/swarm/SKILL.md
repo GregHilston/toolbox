@@ -110,7 +110,7 @@ A handoff that suggests the next `/swarm` gives the prompt in a code block that 
 
 ## Lessons that cost a night to learn
 
-- The DeepSeek balance is the only true cost: read it before and after a run. Each lane's `Real:` line reads the gateway's shared counter, and `pi-usage.py` overcounts; on 2026-10-26 they summed several times the $2.54 the balance actually fell.
+- The DeepSeek balance is the only true cost: read it before and after a run. Each lane's `Real:` line sums that run's own phase costs from DeepSeek's price table; the gateway's counter is shared by every lane, so never add it across lanes (on 2026-10-26 `pi-usage.py` and the old `Real:` lines summed several times the $2.54 the balance actually fell).
 - Every monitor line wakes the orchestrator for a full turn, which costs more than most lanes. Alert only on stops, parks, landings and real failures, never on routine tool failures or lane ticket changes.
 - A decision recorded in one session can be reversed in the next. When Greg reverses one, close the ticket as not planned, keep the lane's commits for it off main, and say so in the handoff.
 
