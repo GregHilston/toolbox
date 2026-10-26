@@ -18,6 +18,7 @@ appends to progress.md, so `fetch` marks it merge=union before rebasing.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -29,6 +30,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gateslot  # noqa: E402
+
+_spec = importlib.util.spec_from_file_location("session_ctx", Path(__file__).resolve().parent / "session-ctx.py")
+session_ctx = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(session_ctx)
 
 PASS_LINE = re.compile(r"^PASS (\d+) tests\b")
 ISSUE_REF = re.compile(r"\(#(\d+)\)")
@@ -178,17 +183,24 @@ def lane_row(clone: Path, lane: str) -> list[str]:
             "" if running else branch]
 
 
+def context_line(repo: Path) -> str:
+    """The orchestrator's context size, or nothing when it has no transcript."""
+    path = session_ctx.newest_transcript(repo)
+    tokens = session_ctx.context_tokens(path) if path else None
+    return "" if tokens is None else f"orchestrator context {session_ctx.short(tokens)} (cap 150k)"
+
+
 def status(repo: Path) -> str:
     """A plain table of every lane clone beside the repo."""
     rows = [["LANE", "STATE", "CURRENT", "DONE", "PARKED", "BRANCH"]]
     for clone in lane_clones(repo):
         rows.append(lane_row(clone, clone.name.removeprefix(f"{repo.name}-")))
-    head = load_line(repo)
+    head, foot = load_line(repo), context_line(repo)
     if len(rows) == 1:
-        return f"{head}\nno lanes beside {repo}"
+        return f"{head}\nno lanes beside {repo}" + (f"\n{foot}" if foot else "")
     widths = [max(len(r[i]) for r in rows) for i in range(5)]
     return head + "\n" + "\n".join(
-        "  ".join(c.ljust(w) for c, w in zip(r[:5], widths)) + ("  " + r[5] if r[5] else "") for r in rows)
+        "  ".join(c.ljust(w) for c, w in zip(r[:5], widths)) + ("  " + r[5] if r[5] else "") for r in rows) + (f"\n{foot}" if foot else "")
 
 
 def log_tail(path: Path) -> str:

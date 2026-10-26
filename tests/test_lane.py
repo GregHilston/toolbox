@@ -6,6 +6,7 @@ gh, overnight-loop.py and ./verify.sh are stand-ins that record or answer.
 
 from __future__ import annotations
 
+import json
 import os
 import stat
 import subprocess
@@ -244,6 +245,16 @@ class StatusTest(LaneCase):
         self.assertIn("#95 Title screen", row)
         self.assertTrue(row.endswith("overnight/2026-10-16-0628"), out)
         self.assertEqual(row.split()[0], "b")
+
+    def test_ends_with_the_context_line_only_when_a_transcript_exists(self) -> None:
+        self.make_clone()
+        with mock.patch.object(lane.session_ctx, "PROJECTS", self.root / "projects"):
+            self.assertNotIn("orchestrator context", lane.status(self.repo))
+            folder = self.root / "projects" / lane.re.sub(r"[^A-Za-z0-9]", "-", str(self.repo))
+            write(folder / "s.jsonl", json.dumps({"type": "assistant", "message": {
+                "id": "a", "usage": {"input_tokens": 3, "cache_read_input_tokens": 252000,
+                                     "cache_creation_input_tokens": 997}}}) + "\n")
+            self.assertEqual(lane.status(self.repo).splitlines()[-1], "orchestrator context 253k (cap 150k)")
 
     def test_hand_started_lane_is_unknown(self) -> None:
         self.make_clone()
