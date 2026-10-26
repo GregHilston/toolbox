@@ -105,6 +105,18 @@ AGENT = textwrap.dedent('''\
             with open(os.environ["FAKE_PIDS"], "a") as f:
                 f.write(f"{os.getpid()}\\n")
             time.sleep(600)
+        retry = "blocked by a permission classifier" in prompt
+        if mode == "blocked" and not retry:
+            open(f"first{n}.txt", "w").write("committed\\n")
+            git("add", f"first{n}.txt")
+            git("commit", "-qm", f"feat: first (#{n})")
+            open(f"second{n}.txt", "w").write("left uncommitted\\n")
+            return os.environ["FAKE_BLOCKED"]
+        if mode == "blocked":
+            git("add", "-A")
+            if os.environ.get("FAKE_RETRY_BREAKS"):
+                open("BROKEN", "w").write("1")
+                git("add", "BROKEN")
         if mode == "nocommit":
             return "could not finish"
         if mode == "branch":
@@ -918,6 +930,69 @@ class TestCostLabels(LoopTest):
 
     def test_the_worker_is_not_told_to_gate_before_starting(self):
         self.assertNotIn("before changing anything", loop.WORKER)
+
+
+class TestClassifierBlock(LoopTest):
+    BLOCKED = "Stopped: the auto mode classifier blocked my edit of tests/test_theme.gd."
+
+    def test_a_blocked_claude_worker_is_retried_on_pi_and_keeps_its_work(self):
+        self.issues({1: "First"})
+        out = self.run_loop("--harness", "claude", "--reviewer", "none", FAKE_WORK_1="blocked",
+                            FAKE_BLOCKED=self.BLOCKED)
+        self.assertEqual(self.roles(), ["claude ping", "claude work", "pi work"], out.stdout + out.stderr)
+        self.assertIn("overnight:done", self.labels(1), out.stdout + out.stderr)
+        log = self.git("log", "--format=%s")
+        self.assertIn("feat: first (#1)", log)
+        self.assertEqual((self.repo / "second1.txt").read_text(), "left uncommitted\n")
+        self.assertEqual(self.git("status", "--porcelain"), "")
+        self.assertIn("blocked: classifier", (self.repo / ".overnight/logs/1.log").read_text())
+        self.assertIn("blocked: classifier", self.comments(1)[-1])
+        self.assertIn("retry pi/cloud", out.stdout)
+        retry = float(re.search(r"retry pi/cloud \$([\d.]+)", out.stdout).group(1))
+        self.assertIn(f"Real: ~${retry:.2f} DeepSeek", out.stdout)
+
+    def test_the_retrys_cost_counts_toward_max_cost(self):
+        self.issues({1: "First", 2: "Second"})
+        out = self.run_loop("--harness", "claude", "--reviewer", "none", "--max-cost", "0.26",
+                            FAKE_WORK_1="blocked", FAKE_BLOCKED=self.BLOCKED)
+        self.assertIn("Stopped: cost limit", out.stdout, out.stderr)
+        self.assertEqual(self.labels(2), ["ready-for-agent"])
+
+    def test_a_budget_is_allowed_for_a_claude_harness(self):
+        out = self.run_loop("--harness", "claude", "--reviewer", "none", "--budget", "5")
+        self.assertNotIn("--budget counts", out.stderr)
+
+    def test_the_retry_runs_on_the_gateway_model_and_names_the_blocked_edit(self):
+        self.issues({1: "First"})
+        self.run_loop("--harness", "claude", "--reviewer", "none", FAKE_WORK_1="blocked",
+                      FAKE_BLOCKED=self.BLOCKED)
+        argv = self.argv_of("pi work")[0]
+        self.assertEqual(argv[argv.index("--model") + 1], "cloud")
+        self.assertIn("tests/test_theme.gd", Path(str(self.agent_log) + ".prompts").read_text())
+
+    def test_a_retry_that_fails_verify_parks_with_the_reason(self):
+        self.issues({1: "First"})
+        out = self.run_loop("--harness", "claude", "--reviewer", "none", FAKE_WORK_1="blocked",
+                            FAKE_BLOCKED=self.BLOCKED, FAKE_RETRY_BREAKS="1")
+        self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
+        self.assertIn("blocked: classifier", self.comments(1)[-1])
+        self.assertNotIn("feat: first", self.git("log", "--format=%s"))
+
+    def test_a_claude_result_without_the_text_parks_as_before(self):
+        self.issues({1: "First"})
+        out = self.run_loop("--harness", "claude", "--reviewer", "none", FAKE_WORK_1="nocommit")
+        self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
+        self.assertEqual(self.roles(), ["claude ping", "claude work"])
+
+    def test_a_pi_worker_is_never_retried(self):
+        self.issues({1: "First"})
+        self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="blocked",
+                      FAKE_BLOCKED=self.BLOCKED)
+        self.assertEqual(self.roles().count("pi work"), 1)
+
+    def argv_of(self, role: str) -> list[list[str]]:
+        return [json.loads(line.split(" ", 2)[2]) for line in self.agent_log.read_text().splitlines()
+                if " ".join(line.split()[:2]) == role]
 
 
 class TestLongPrompt(LoopTest):

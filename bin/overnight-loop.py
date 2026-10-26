@@ -20,6 +20,9 @@ request gets a 429.
 Claude's cost figures are list-price estimates, since a subscription bills none
 of it. The `Real:` line sums this run's own pi phases, priced from DeepSeek's table;
 the gateway's counter is shared by every lane, so it only feeds --budget.
+
+A claude worker the auto-mode classifier blocks gets one retry on pi in the same
+tree, which keeps what the claude worker committed and left uncommitted.
 """
 
 from __future__ import annotations
@@ -57,6 +60,7 @@ PI_OVERRIDE = Path(".pi/extensions/pi-permission-system/config.json")
 GATE = ("verify.sh", "tests/baseline_count")
 OUT_OF_MONEY = re.compile(r"Budget has been exceeded|budget_exceeded|Exceeded budget|Insufficient Balance"
                           r"|usage limit|hit your limit|Credit balance is too low", re.I)
+CLASSIFIER = re.compile(r"classifier", re.I)
 CLAUDE_LIMIT = re.compile(r"usage limit|hit your limit|limit reached|limit resets", re.I)
 LIMIT_WAIT = 600  # seconds between probes
 GH_RETRY = (2, 10, 30)  # seconds before each retry
@@ -127,6 +131,15 @@ issue #{n}:
 {findings}
 
 Make them, run `gateslot.py -- ./verify.sh` until it passes, and commit.
+"""
+RETRY = """\
+
+A previous worker was blocked by a permission classifier and stopped. It left
+commits on this branch since {base} and maybe uncommitted changes in the tree: run
+`git status` and `git log {base}..HEAD`, keep that work, and finish the issue.
+It reported:
+
+{blocked}
 """
 PING = "Reply with the word ok and nothing else."
 
@@ -604,6 +617,19 @@ def work_issue(args, n: int, title: str, branch: str,
     if run.broke:
         tidy(base, branch)
         return None, *tally(runs), True
+    if args.harness == "claude" and CLASSIFIER.search(run.text):
+        # No tidy: the retry builds on the blocked worker's tree.
+        blocked = "blocked: classifier\n" + "\n".join(x for x in run.text.splitlines() if CLASSIFIER.search(x))
+        with log.open("a") as f:
+            f.write(blocked + "\n")
+        allow_pi_writes()
+        run = run_agent(args, "pi", None, prompt + RETRY.format(base=base[:12], blocked=blocked), log,
+                        session=session)
+        message = blocked + "\n\n" + run.text[-1500:]
+        runs.append(("retry", run))
+        if run.broke:
+            tidy(base, branch)
+            return None, *tally(runs), True
     tidy()  # keep only what the worker committed
     ok, tail = check(args, base, branch, log, gate_ok)
     broke = False
@@ -707,7 +733,8 @@ def main() -> None:
     p.add_argument("--max-cost", type=float, default=60,
                    help="stop past this total (default 60): claude at list price, pi from DeepSeek's table")
     p.add_argument("--budget", type=float,
-                   help="pi only: dollars this run may spend on the gateway's `cloud` model")
+                   help="dollars this run may spend on the gateway's `cloud` model (a claude harness spends it "
+                        "only on classifier retries)")
     p.add_argument("--off-peak", action="store_true",
                    help="work only in DeepSeek's off-peak hours, waiting through peak; weekends are all off-peak")
     p.add_argument("--off-peak-margin", type=int, default=20,
@@ -718,15 +745,16 @@ def main() -> None:
     args = p.parse_args()
     args.spend, args.unreviewed_from = None, None
     phases = [(args.harness, args.model)] + ([(args.reviewer, args.reviewer_model)] if args.reviewer != "none" else [])
-    args.gateway_used = any(h == "pi" and m in CLOUD for h, m in phases)
+    # A claude worker the classifier blocks retries on the gateway's pi.
+    args.gateway_used = args.harness == "claude" or any(h == "pi" and m in CLOUD for h, m in phases)
     begun = time.time()
 
     if not os.access("verify.sh", os.X_OK):
         sys.exit("no executable ./verify.sh here: run this from the repo root, after setting one up")
     if sh("git", "status", "--porcelain"):
         sys.exit("the working tree is not clean: commit or stash first")
-    if args.budget and (args.harness != "pi" or args.model not in CLOUD):
-        sys.exit("--budget counts the gateway's `cloud` model, so it needs --harness pi and no other --model")
+    if args.budget and args.harness == "pi" and args.model not in CLOUD:
+        sys.exit("--budget counts the gateway's `cloud` model, so a pi harness needs no other --model")
     sh("gh", "auth", "status")
     start = args.base or sh("gh", "repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name")
     if (on := sh("git", "branch", "--show-current")) != start:
@@ -769,7 +797,7 @@ def main() -> None:
         except (OSError, ValueError, KeyError) as e:
             if args.budget:
                 sys.exit(f"could not read the gateway's spend at {GATEWAY}/provider/budgets: {e}")
-            print(f"Could not read the gateway's spend ({e}); the summary will say so.", flush=True)
+            print(f"Could not read the gateway's spend ({e}).", flush=True)
     board(args)
 
     done: dict[int, str] = {}
