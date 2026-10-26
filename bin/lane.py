@@ -35,6 +35,7 @@ CURRENT = re.compile(r"^#\d+ .+")
 STOPPED = re.compile(r"^Stopped: .*Branch (\S+?)\.$")
 SKIPPED = re.compile(r"^(revert|docs)\b")
 UNION = "progress.md merge=union"
+MAX_LANES = 10
 
 
 class LaneError(Exception):
@@ -81,12 +82,32 @@ def pid_alive(pid_file: Path) -> int | None:
     return pid
 
 
-def start(repo: Path, lane: str, label: str | None, extra: list[str]) -> str:
+def lane_clones(repo: Path) -> list[Path]:
+    """Every lane clone beside the repo."""
+    return [c for c in sorted(repo.parent.glob(f"{repo.name}-*")) if (c / ".git").is_dir() and (c / ".overnight").is_dir()]
+
+
+def running_count(repo: Path) -> int:
+    """Lanes whose loop is alive."""
+    return sum(pid_alive(c / ".overnight" / "lane.pid") is not None for c in lane_clones(repo))
+
+
+def load_line(repo: Path) -> str:
+    """The load average and running-lane count, as status and the refusal print them."""
+    return f"load {os.getloadavg()[0]:.1f}, {running_count(repo)} lanes running"
+
+
+def start(repo: Path, lane: str, label: str | None, extra: list[str], force: bool = False,
+          max_lanes: int = MAX_LANES, max_load: float | None = None) -> str:
     """Clone if missing, bring it to the default branch, start the loop detached."""
     clone = clone_path(repo, lane)
     pid_file = clone / ".overnight" / "lane.pid"
     if pid := pid_alive(pid_file):
         raise LaneError(f"lane {lane} is already running (pid {pid}, {pid_file}); `lane.py stop {lane}` ends it")
+    limit = max_load if max_load is not None else 2 * (os.cpu_count() or 1)
+    if not force and (running_count(repo) >= max_lanes or os.getloadavg()[0] > limit):
+        raise LaneError(f"not starting lane {lane}: {load_line(repo)} (limits {max_lanes} lanes, load {limit:g}); "
+                        "wait for a lane to finish, or pass --force")
     loop = shutil.which("overnight-loop.py")
     if not loop:
         raise LaneError("overnight-loop.py is not on PATH")
@@ -153,13 +174,13 @@ def lane_row(clone: Path, lane: str) -> list[str]:
 def status(repo: Path) -> str:
     """A plain table of every lane clone beside the repo."""
     rows = [["LANE", "STATE", "CURRENT", "DONE", "PARKED", "BRANCH"]]
-    for clone in sorted(repo.parent.glob(f"{repo.name}-*")):
-        if (clone / ".git").is_dir() and (clone / ".overnight").is_dir():
-            rows.append(lane_row(clone, clone.name.removeprefix(f"{repo.name}-")))
+    for clone in lane_clones(repo):
+        rows.append(lane_row(clone, clone.name.removeprefix(f"{repo.name}-")))
+    head = load_line(repo)
     if len(rows) == 1:
-        return f"no lanes beside {repo}"
+        return f"{head}\nno lanes beside {repo}"
     widths = [max(len(r[i]) for r in rows) for i in range(5)]
-    return "\n".join(
+    return head + "\n" + "\n".join(
         "  ".join(c.ljust(w) for c, w in zip(r[:5], widths)) + ("  " + r[5] if r[5] else "") for r in rows)
 
 
@@ -288,7 +309,10 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("lane")
     s.add_argument("--label", help="issue label to work (default: the lane name)")
     s.add_argument("extra", nargs="*", help="after --: arguments for overnight-loop.py")
-    sub.add_parser("status", help="one line per lane")
+    s.add_argument("--max-lanes", type=int, default=MAX_LANES, help="refuse at this many running lanes (default 10)")
+    s.add_argument("--max-load", type=float, help="refuse above this 1-minute load average (default 2 x cores)")
+    s.add_argument("--force", action="store_true", help="start despite the lane count or load")
+    sub.add_parser("status", help="load and lane count, then one line per lane")
     f = sub.add_parser("fetch", help="bring a lane's branch into a rebased worktree")
     f.add_argument("lane")
     f.add_argument("--branch", help="overnight branch (default: the one the lane log says it stopped on)")
@@ -307,7 +331,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         repo = toplevel()
         if args.cmd == "start":
-            msg = start(repo, args.lane, args.label, args.extra)
+            msg = start(repo, args.lane, args.label, args.extra, args.force, args.max_lanes, args.max_load)
         elif args.cmd == "status":
             msg = status(repo)
         elif args.cmd == "fetch":

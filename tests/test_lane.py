@@ -58,6 +58,9 @@ class LaneCase(unittest.TestCase):
         patcher = mock.patch.dict(os.environ, env)
         patcher.start()
         self.addCleanup(patcher.stop)
+        load = mock.patch.object(lane.os, "getloadavg", return_value=(0.5, 0.5, 0.5))
+        self.getload = load.start()
+        self.addCleanup(load.stop)
 
         origin = self.root / "origin.git"
         git(self.root, "init", "-q", "--bare", "-b", "main", str(origin))
@@ -126,12 +129,37 @@ class StartTest(LaneCase):
             lane.start(self.repo, "b", None, [])
 
 
+class LimitTest(LaneCase):
+    def stop_later(self) -> None:
+        pid_file = self.root / "proj-b" / ".overnight" / "lane.pid"
+        self.addCleanup(lambda: os.kill(int(pid_file.read_text()), 9))
+
+    def test_high_load_refuses_unless_forced(self) -> None:
+        self.getload.return_value = (99.0, 80.0, 60.0)
+        with self.assertRaises(lane.LaneError) as cm:
+            lane.start(self.repo, "b", None, [], max_load=32)
+        self.assertIn("load 99.0", str(cm.exception))
+        self.assertFalse((self.root / "proj-b").exists())
+        lane.start(self.repo, "b", None, [], force=True, max_load=32)
+        self.stop_later()
+
+    def test_refuses_the_eleventh_lane(self) -> None:
+        for i in range(10):
+            write(self.make_clone(f"r{i}") / ".overnight" / "lane.pid", f"{os.getpid()}\n")
+        with self.assertRaises(lane.LaneError) as cm:
+            lane.start(self.repo, "b", None, [])
+        self.assertIn("10 lanes running", str(cm.exception))
+        lane.start(self.repo, "b", None, [], max_lanes=11)
+        self.stop_later()
+
+
 class StatusTest(LaneCase):
     def test_parses_the_log(self) -> None:
         clone = self.make_clone()
         (clone / ".overnight" / "lane.log").write_text(STOPPED)
         out = lane.status(self.repo)
-        row = out.splitlines()[1]
+        self.assertEqual(out.splitlines()[0], "load 0.5, 0 lanes running")
+        row = out.splitlines()[2]
         self.assertIn("stopped", row)
         self.assertIn("#95 Title screen", row)
         self.assertTrue(row.endswith("overnight/2026-10-16-0628"), out)
