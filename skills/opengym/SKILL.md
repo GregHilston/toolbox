@@ -38,6 +38,9 @@ file in the app to change a routine: an import always adds a copy.
   browser, Settings → Account → Pair the mobile app, and gives you the code.
   Run `opengym.py pair <CODE>` within 5 minutes.
 - **Cannot reach the server:** the machine needs Tailscale.
+- **moria and dungeon each hold a token** (`~/.config/opengym/token`), and each
+  stays alive only while used there. With moria asleep, run
+  `ssh dungeon 'zsh -lc "opengym.py show"'`, after `git pull` in both repos there.
 - **Two routines of one name:** ask Greg which to keep, then `delete` the
   other by the id `show` prints.
 
