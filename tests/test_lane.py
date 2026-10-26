@@ -153,6 +153,51 @@ class LimitTest(LaneCase):
         self.stop_later()
 
 
+class DigestTest(LaneCase):
+    def make_lanes(self) -> None:
+        run_ = self.make_clone("run")
+        write(run_ / ".overnight" / "lane.log", LOG.split("#94")[0] + "#95 Title screen\n")
+        write(run_ / ".overnight" / "lane.pid", f"{os.getpid()}\n")
+        write(run_ / ".overnight" / "logs" / "95.log", "x\n--- verify.sh exit 0 ---\nPASS\n")
+        self.lane_commit(run_, "overnight/x", "file.txt", "a\n", "feat(x): newest thing (#95)")
+        parked = self.make_clone("pk")
+        write(parked / ".overnight" / "lane.log", "#94 Settings screen\n  parked: plan x\n\n"
+              "Stopped: 3 parks in a row. Branch overnight/2026-10-16-0628.\n")
+        write(parked / ".overnight" / "logs" / "94.log", "--- verify.sh exit 1 ---\nERROR boom\n")
+
+    def test_one_line_per_lane_without_gh(self) -> None:
+        self.make_lanes()
+        real = subprocess.run
+
+        def no_gh(cmd, *a, **k):
+            self.assertNotEqual(cmd[0], "gh", "digest called gh")
+            return real(cmd, *a, **k)
+
+        with mock.patch.object(lane.subprocess, "run", no_gh):
+            out = lane.digest(self.repo)
+        lines = out.splitlines()
+        self.assertEqual(lines[0], "load 0.5, 1 lanes running")
+        run_line = next(x for x in lines if x.startswith("run "))
+        self.assertIn("#95 Title screen", run_line)
+        self.assertIn("review", run_line)
+        self.assertIn("gate PASS", run_line)
+        self.assertIn("feat(x): newest thing", run_line)
+        pk_line = next(x for x in lines if x.startswith("pk "))
+        self.assertIn("#94 Settings screen", pk_line)
+        self.assertIn("parked: 3 parks in a row", pk_line)
+        self.assertIn("gate FAIL", pk_line)
+        self.assertTrue(all(len(x) <= 160 for x in lines), out)
+
+    def test_since_adds_landings_and_parks(self) -> None:
+        self.make_lanes()
+        self.main_commit("file.txt", "m\n")
+        out = lane.digest(self.repo, "30m")
+        self.assertIn("landed since 30m: chore: main moves", out)
+        self.assertIn("parked since 30m: pk #94", out)
+        with self.assertRaises(lane.LaneError):
+            lane.digest(self.repo, "soon")
+
+
 class StatusTest(LaneCase):
     def test_parses_the_log(self) -> None:
         clone = self.make_clone()

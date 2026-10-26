@@ -24,6 +24,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -34,6 +35,11 @@ ISSUE_REF = re.compile(r"\(#(\d+)\)")
 CURRENT = re.compile(r"^#\d+ .+")
 STOPPED = re.compile(r"^Stopped: .*Branch (\S+?)\.$")
 SKIPPED = re.compile(r"^(revert|docs)\b")
+GATE_EXIT = re.compile(r"^--- verify\.sh exit (\w+) ---$", re.M)
+STOP_WHY = re.compile(r"^Stopped: (.*?)\. Branch ")
+SINCE = re.compile(r"^(\d+)([mh])$")
+TAIL_BYTES = 400_000
+LINE_MAX = 160
 UNION = "progress.md merge=union"
 MAX_LANES = 10
 
@@ -184,6 +190,81 @@ def status(repo: Path) -> str:
         "  ".join(c.ljust(w) for c, w in zip(r[:5], widths)) + ("  " + r[5] if r[5] else "") for r in rows)
 
 
+def log_tail(path: Path) -> str:
+    """The end of a log; issue logs run to megabytes."""
+    try:
+        with path.open("rb") as f:
+            f.seek(0, os.SEEK_END)
+            f.seek(max(0, f.tell() - TAIL_BYTES))
+            return f.read().decode(errors="replace")
+    except OSError:
+        return ""
+
+
+def lane_facts(clone: Path) -> dict:
+    """What lane.log, lane.pid and the newest commit say about one lane; no network."""
+    overnight = clone / ".overnight"
+    facts = {"pid": pid_alive(overnight / "lane.pid"), "ticket": "-", "issue": None, "done": 0, "parked": 0,
+             "parked_issues": [], "last": "", "why": "", "gate": "-", "phase": "-", "idle": 0}
+    log = overnight / "lane.log"
+    for line in (log.read_text(errors="replace").splitlines() if log.exists() else []):
+        if CURRENT.match(line):
+            facts["ticket"], facts["issue"], facts["last"] = line, int(line[1:].split()[0]), ""
+        elif line.startswith("  done:"):
+            facts["done"], facts["last"] = facts["done"] + 1, "done"
+        elif line.startswith("  parked:"):
+            facts["parked"], facts["last"] = facts["parked"] + 1, "parked"
+            facts["parked_issues"].append(facts["issue"])
+        elif m := STOP_WHY.match(line):
+            facts["why"] = m.group(1)
+    issue_log = overnight / "logs" / f"{facts['issue']}.log"
+    gates = GATE_EXIT.findall(log_tail(issue_log))
+    if gates:
+        facts["gate"] = "PASS" if gates[-1] == "0" else "FAIL"
+    if issue_log.exists():
+        facts["idle"] = int((time.time() - issue_log.stat().st_mtime) // 60)
+    if facts["pid"]:
+        facts["phase"] = ("work", "review", "fix")[min(len(gates), 2)]
+    else:
+        facts["phase"] = facts["last"] or ("stopped" if facts["why"] else "dead")
+    facts["commit"] = run("git", "log", "-1", "--format=%s", cwd=clone, check=False)
+    return facts
+
+
+def minutes(since: str) -> int:
+    """30m or 2h as minutes."""
+    m = SINCE.match(since)
+    if not m:
+        raise LaneError(f"--since wants a number and m or h, such as 30m; got {since!r}")
+    return int(m.group(1)) * (60 if m.group(2) == "h" else 1)
+
+
+def digest(repo: Path, since: str | None = None) -> str:
+    """One line per lane, plus landings and parks since a time."""
+    clones = lane_clones(repo)
+    out = [load_line(repo)]
+    window = minutes(since) if since else 0
+    parks = []
+    for clone in clones:
+        lane = clone.name.removeprefix(f"{repo.name}-")
+        f = lane_facts(clone)
+        idle = f" {f['idle']}m idle" if f["pid"] else ""
+        reason = f": {f['why']}" if f["why"] and not f["pid"] else ""
+        gate = f" gate {f['gate']}" if f["gate"] != "-" else ""
+        line = (f"{lane} {f['ticket']} | {f['phase']}{idle}{reason} | pid {f['pid'] or 'dead'} | "
+                f"done {f['done']} parked {f['parked']}{gate} | {f['commit']}")
+        out.append(line if len(line) <= LINE_MAX else line[:LINE_MAX - 3] + "...")
+        for n in f["parked_issues"]:
+            logged = clone / ".overnight" / "logs" / f"{n}.log"
+            if window and logged.exists() and time.time() - logged.stat().st_mtime < window * 60:
+                parks.append(f"{lane} #{n}")
+    if window:
+        landed = run("git", "log", f"--since={window} minutes ago", "--format=%s", default_branch(repo), cwd=repo)
+        out.append(f"landed since {since}: " + ("; ".join(landed.splitlines()) or "none"))
+        out.append(f"parked since {since}: " + (", ".join(parks) or "none"))
+    return "\n".join(out)
+
+
 def fetch(repo: Path, lane: str, branch: str | None, force: bool = False) -> str:
     """Bring a lane's branch into a worktree, rebased onto the default branch."""
     clone = clone_path(repo, lane)
@@ -312,6 +393,8 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--max-lanes", type=int, default=MAX_LANES, help="refuse at this many running lanes (default 10)")
     s.add_argument("--max-load", type=float, help="refuse above this 1-minute load average (default 2 x cores)")
     s.add_argument("--force", action="store_true", help="start despite the lane count or load")
+    d = sub.add_parser("digest", help="one line per lane, from lane files and git log only")
+    d.add_argument("--since", help="also list landings and parks in this window, such as 30m or 2h")
     sub.add_parser("status", help="load and lane count, then one line per lane")
     f = sub.add_parser("fetch", help="bring a lane's branch into a rebased worktree")
     f.add_argument("lane")
@@ -334,6 +417,8 @@ def main(argv: list[str] | None = None) -> int:
             msg = start(repo, args.lane, args.label, args.extra, args.force, args.max_lanes, args.max_load)
         elif args.cmd == "status":
             msg = status(repo)
+        elif args.cmd == "digest":
+            msg = digest(repo, args.since)
         elif args.cmd == "fetch":
             msg = fetch(repo, args.lane, args.branch, args.force)
         elif args.cmd == "land":
