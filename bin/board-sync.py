@@ -27,13 +27,14 @@ COLUMNS = [  # name, colour, description; the first matching rule wins
     ("In progress", "PURPLE", "overnight:working, the loop is on it"),
     ("In review", "YELLOW", "overnight:done, playtest and merge"),
     ("Blocked", "RED", "overnight:parked, prep:blocked or manual, needs a human"),
-    ("Done", "GREEN", "Closed"),
+    ("Done", "GREEN", "Closed as completed"),
+    ("Not doing", "PINK", "Closed as not planned, kept for the record"),
 ]
 
 
-def status(state: str, labels: set[str]) -> str:
+def status(state: str, reason: str, labels: set[str]) -> str:
     if state == "CLOSED":
-        return "Done"
+        return "Not doing" if reason == "NOT_PLANNED" else "Done"
     if labels & {"overnight:parked", "prep:blocked", "manual"}:
         return "Blocked"
     if "overnight:done" in labels:
@@ -79,12 +80,12 @@ def create(owner: str, repo: str, title: str) -> int:
 
 def sync(owner: str, repo: str, number: int, dry_run: bool) -> None:
     issues = json.loads(gh("issue", "list", "-R", repo, "--state", "all", "--limit", "1000",
-                           "--json", "number,url,state,labels"))
+                           "--json", "number,url,state,stateReason,labels"))
     items = json.loads(gh("project", "item-list", str(number), "--owner", owner, "--limit", "1000",
                           "--format", "json"))["items"]
     current = {i["content"].get("url"): i.get("status") for i in items if i.get("content")}
     for issue in sorted(issues, key=lambda i: i["number"]):
-        want = status(issue["state"], {lab["name"] for lab in issue["labels"]})
+        want = status(issue["state"], issue.get("stateReason") or "", {lab["name"] for lab in issue["labels"]})
         if current.get(issue["url"]) == want:
             continue
         print(f"#{issue['number']}: {current.get(issue['url']) or 'not on board'} -> {want}")
