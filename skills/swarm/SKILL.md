@@ -131,6 +131,7 @@ A handoff that suggests the next `/swarm` gives the prompt in a code block that 
 - A branch cut before a batch adds a new check fails that check when it lands. When a batch adds a check, tell running agents and rebase every open branch before gating it.
 - When a refactor moves code, a changed-lines comment cap counts every moved comment. The first pass of one split deleted 49 comment blocks that held reasons; tell agents to move each reason into a docstring or doc, and to drop only comments that restate the code.
 - Two gates in one worktree interleave their logs and print nonsense counts. Give each gate its own worktree.
+- A green gate missed three game-breaking bugs that one human playtest found, because nothing played the real flow through the real client. When a repo has none, ticket an end-to-end suite (every faction or mode, real clicks, real signals) early. Brief bug investigators to drive the real client path too: on 2026-10-25 three that read code and hit the API directly were all wrong.
 
 ## Big features: a staged pipeline
 
