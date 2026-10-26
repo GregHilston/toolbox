@@ -111,6 +111,8 @@ A handoff that suggests the next `/swarm` gives the prompt in a code block that 
 ## Lessons that cost a night to learn
 
 - The DeepSeek balance is the only true cost: read it before and after a run. Each lane's `Real:` line sums that run's own phase costs from DeepSeek's price table; the gateway's counter is shared by every lane, so never add it across lanes (on 2026-10-26 `pi-usage.py` and the old `Real:` lines summed several times the $2.54 the balance actually fell).
+- The orchestrator's own context is the biggest Claude cost: on 2026-10-26 it was about 77% of it, grown to 370k and never cleared. `lane.py status` prints it and `session-ctx.py` says OVER past 150k; hand off and start a new session then, even mid-run.
+- About 8 lanes saturate a 16-core gate machine. Past that, add no lanes or subagents; `lane.py start` refuses past 10 or a high load.
 - Every monitor line wakes the orchestrator for a full turn, which costs more than most lanes. Alert only on stops, parks, landings and real failures, never on routine tool failures or lane ticket changes.
 - A decision recorded in one session can be reversed in the next. When Greg reverses one, close the ticket as not planned, keep the lane's commits for it off main, and say so in the handoff.
 
