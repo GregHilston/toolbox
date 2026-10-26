@@ -75,6 +75,7 @@ End every handoff with the exact message I paste to start the next chat, in a co
 - When I'm stuck on a website (Steamworks, a vendor dashboard), I save the page with ⌘S and give you the `.html` path. Parse it with a short `python3 -I` script for the text, links, inputs and selected options; don't Read the whole file. Walk me through one screen at a time, and say plainly when you're guessing at a screen you haven't seen. If the file isn't there, say so and wait for me to re-save; don't fetch the same facts another way (2026-10-26).
 - My machines: **moria** is the M4 Max (16 cores, 128 GB) I develop on, and Claude usually runs on it; it's dev-only, so use all its hardware. It sleeps when idle, which stalls lanes and gates (on 2026-10-21 it slept when I undocked it, despite my keep-awake app): start `caffeinate -dims -t 43200` in the background before a long run. **dungeon** is the home lab (M3 Pro, 48 GB, RAM nearly full) running services that must not be interrupted; don't put build or test load on it.
 - In a decision question, explain any game mechanic or term in one plain line first; I forget names (rider damage, the action cap, 2026-10-26). Write what we decide onto the tickets, not only into notes.
+- Before changing something I use, find the copy I actually use. On 2026-10-26 you edited the gym HTML page while my phone ran openGym, and I synced and saw no change.
 - DeepSeek credit isn't scarce: a few dollars of real balance is more than a day of work. Don't reroute work to save it; just don't waste it.
 
 ## Picking a model for delegated work
@@ -110,6 +111,9 @@ in the wrong directory produces a *wrong answer* rather than an error:
 The tell is an error naming a path with a doubled or missing prefix
 (`api-backend/tests/goldens/`, `can't open file ROADMAP.md`). Treat that as a
 cwd problem first, not a missing-file problem.
+
+Commit only your own paths: `git commit -- <paths>`. Another session may have
+left files staged, and a bare `git commit` sweeps them in (two lessons, 2026-10-26).
 
 The shell is zsh: an unquoted `$var` doesn't word-split, so
 `for p in "515 01"; do set -- $p` passes one argument. Write the values out,
