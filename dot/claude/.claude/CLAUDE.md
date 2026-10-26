@@ -118,6 +118,8 @@ left files staged, and a bare `git commit` sweeps them in (two lessons, 2026-10-
 The shell is zsh: an unquoted `$var` doesn't word-split, so
 `for p in "515 01"; do set -- $p` passes one argument. Write the values out,
 or use `${=p}`.
+A word starting with `=` is a command lookup, so `echo ====` fails with
+`=== not found` and ends a `&&` chain. Quote it (2026-10-26).
 
 ## File Inspection
 
