@@ -75,13 +75,16 @@ UNITS = (
         Room("Guest room", "Zigbee sensor", sensor("sensor.guest_bedroom_temperature")),
     )),
     OutdoorUnit("MXZ-3C30NAHZ4", "33P10945", "R410A", (
-        Room("Dining room", "T6 Pro thermostat (boiler zone)", None),
-        Room("Master bedroom", "T6 Pro thermostat (boiler zone)", None),
-    )),
-    OutdoorUnit("MUZ-FX24NLHZ", "4001455T20U4G5", "R454B", (
-        Room("Living room", "kitchen T6 Pro thermostat, which drives this head",
+        Room("Dining room", "T6 Pro thermostat (boiler zone)",
              thermostat("climate.1st_floor_thermostat"),
-             call_entity="climate.1st_floor_thermostat", call_label="thermostat calling for heat"),
+             call_entity="climate.1st_floor_thermostat", call_label="boiler zone calling for heat"),
+        Room("Master bedroom", "T6 Pro thermostat (boiler zone)",
+             thermostat("climate.2nd_floor_thermostat"),
+             call_entity="climate.2nd_floor_thermostat", call_label="boiler zone calling for heat"),
+    )),
+    # The kitchen thermostat driving this head is not Z-Wave.
+    OutdoorUnit("MUZ-FX24NLHZ", "4001455T20U4G5", "R454B", (
+        Room("Living room", "no sensor yet", None),
     )),
     OutdoorUnit("unknown model", "unknown serial", "R454B", (
         Room("Basement", "Zigbee sensor", sensor("sensor.basement_temperature")),
