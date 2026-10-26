@@ -20,10 +20,12 @@ It writes the raw JSONL to `--raw` itself, so `tee` is not needed, and emits a
 compact narration on stdout. The harness then shows the most recent line as the
 task's status, and the full narration is readable at any time.
 
-`--alerts` appends the small subset worth interrupting a human over — tool
-failures, guardrail blocks, retries, compaction, completion — to a **shared**
+`--alerts` appends the small subset worth interrupting a human over — guardrail
+blocks, retries, compaction, and a worker that failed or stalled — to a **shared**
 file across all workers in a run, which is what a `tail -F` monitor should
 watch. The full narration is far too chatty for that (~150 lines per worker).
+Routine tool failures, the model-not-found warning and a clean `■ done` stay out
+of it; `--alerts-all` keeps them.
 
 Usage:
     pi --mode json -p "$(cat prompt.md)" 2>&1 \\
@@ -41,6 +43,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from typing import Any, BinaryIO, TextIO
@@ -52,6 +55,8 @@ ARG_KEYS = ("command", "path", "file_path", "pattern", "query", "url")
 # Events that mean "a human might want to know right now". Everything else is
 # narration you read when you go looking.
 ALERT_SYMBOLS = frozenset({"✗", "■", "⚠", "!"})
+
+MODEL_MISSING = re.compile(r'Model "[^"]*" not found')
 
 
 def brief(tool: str, args: Any) -> str:
@@ -122,10 +127,16 @@ class Narrator:
         slow_tool: float = 20.0,
         show_thinking: bool = False,
         clock: Any = time.monotonic,
+        alerts_all: bool = True,
+        stall_minutes: float = 30.0,
     ) -> None:
         self.label = label
         self.out = out
         self.alerts = alerts
+        self.alerts_all = alerts_all
+        self.stall_minutes = stall_minutes
+        self.settled = False
+        self.final_error = ""
         self.width = width
         self.heartbeat = heartbeat
         self.slow_tool = slow_tool
@@ -147,11 +158,22 @@ class Narrator:
         # thread's line land inside another's.
         self.out.write(line + "\n")
         self.out.flush()
-        if self.alerts is not None and symbol in ALERT_SYMBOLS:
+        if self.alerts is not None and symbol in ALERT_SYMBOLS and (self.alerts_all or not self.routine(symbol, text)):
             # O_APPEND keeps concurrent workers from interleaving mid-line, so
             # every worker in a run can share one alerts file.
             self.alerts.write(line + "\n")
             self.alerts.flush()
+
+    def routine(self, symbol: str, text: str) -> bool:
+        """Alert lines an orchestrator never acts on: a clean finish, a tool error, a model warning."""
+        if symbol == "✗":
+            return True
+        if symbol == "!":
+            return bool(MODEL_MISSING.search(text))
+        if symbol == "■":
+            stalled = self.clock() - self.started > self.stall_minutes * 60
+            return self.settled and not self.final_error and not stalled
+        return False
 
     def feed(self, record: str) -> None:
         """Handle one line of pi's stdout. Never raises: visibility is best-effort."""
@@ -196,6 +218,7 @@ class Narrator:
         elif kind == "agent_settled":
             # The real completion signal: pi's docs define it as "no automatic
             # retry, compaction retry, or queued continuation remains".
+            self.settled = True
             self.finish()
 
     def finish(self) -> None:
@@ -250,7 +273,9 @@ class Narrator:
             self.emit("✓", f"{tool} ok ({elapsed(took)})")
 
     def on_turn_end(self, event: dict[str, Any]) -> None:
-        usage = (event.get("message") or {}).get("usage") or {}
+        message = event.get("message") or {}
+        self.final_error = str(message.get("errorMessage") or "error") if message.get("stopReason") == "error" else ""
+        usage = message.get("usage") or {}
         cost = (usage.get("cost") or {}).get("total")
         if isinstance(cost, (int, float)):
             self.cost += float(cost)
@@ -311,6 +336,17 @@ def main(argv: list[str] | None = None) -> int:
         "--alerts",
         help="Append alert-worthy lines here. Share one file across a run's workers.",
     )
+    parser.add_argument(
+        "--alerts-all",
+        action="store_true",
+        help="With --alerts, also write routine tool failures, the model-not-found warning and clean finishes.",
+    )
+    parser.add_argument(
+        "--stall-minutes",
+        type=float,
+        default=30.0,
+        help="A worker that ran longer than this keeps its closing alert (default 30).",
+    )
     parser.add_argument("--width", type=int, default=200, help="Truncate lines to N chars.")
     parser.add_argument(
         "--heartbeat",
@@ -352,6 +388,8 @@ def main(argv: list[str] | None = None) -> int:
             heartbeat=args.heartbeat,
             slow_tool=args.slow_tool,
             show_thinking=args.thinking,
+            alerts_all=args.alerts_all,
+            stall_minutes=args.stall_minutes,
         )
 
         for record in records(sys.stdin.buffer):

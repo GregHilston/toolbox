@@ -198,6 +198,41 @@ class DigestTest(LaneCase):
             lane.digest(self.repo, "soon")
 
 
+class WatchTest(LaneCase):
+    def test_starts_batch_until_the_interval_and_a_park_prints_at_once(self) -> None:
+        clone = self.make_clone("w")
+        write(clone / ".overnight" / "lane.log", "#93 Old\n  done: x\n")
+        now = [0.0]
+        watcher = lane.Watcher(self.repo, 20, clock=lambda: now[0])
+        self.assertEqual(watcher.step(), [])
+        write(clone / ".overnight" / "lane.pid", f"{os.getpid()}\n")
+        write(clone / ".overnight" / "lane.log", "#93 Old\n  done: x\n#94 Next\n")
+        now[0] = 5 * 60
+        self.assertEqual(watcher.step(), [], "a start waits for the digest")
+        write(clone / ".overnight" / "lane.log", "#93 Old\n  done: x\n#94 Next\n  parked: y\n")
+        now[0] = 10 * 60
+        self.assertEqual(watcher.step(), ["lane w parked #94"])
+        now[0] = 21 * 60
+        out = watcher.step()
+        self.assertEqual(len(out), 1)
+        self.assertIn("w started #94 Next", out[0])
+        now[0] = 42 * 60
+        self.assertEqual(watcher.step(), [], "nothing left to batch")
+
+    def test_stop_gate_failure_and_landing_print_at_once(self) -> None:
+        clone = self.make_clone("w")
+        write(clone / ".overnight" / "lane.pid", f"{os.getpid()}\n")
+        write(clone / ".overnight" / "lane.log", "#94 Next\n")
+        watcher = lane.Watcher(self.repo, 20, clock=lambda: 0.0)
+        watcher.step()
+        write(clone / ".overnight" / "logs" / "94.log", "--- verify.sh exit 1 ---\nERROR\n")
+        self.main_commit("file.txt", "m\n")
+        self.assertEqual(sorted(watcher.step()), ["landed: chore: main moves", "lane w gate FAIL on #94"])
+        (clone / ".overnight" / "lane.pid").write_text("999999999\n")
+        write(clone / ".overnight" / "lane.log", "#94 Next\nStopped: queue empty. Branch overnight/x.\n")
+        self.assertEqual(watcher.step(), ["lane w stopped: queue empty"])
+
+
 class StatusTest(LaneCase):
     def test_parses_the_log(self) -> None:
         clone = self.make_clone()

@@ -32,6 +32,7 @@ class FakeClock:
 def make(**kwargs):
     out = io.StringIO()
     alerts = kwargs.pop("alerts", None)
+    kwargs.setdefault("alerts_all", True)
     clock = kwargs.pop("clock", FakeClock())
     narrator = narrate.Narrator(
         label=kwargs.pop("label", "issue-16"),
@@ -294,6 +295,79 @@ class Alerts(unittest.TestCase):
         )
         self.assertIn("▸ read a", out.getvalue())
         self.assertEqual(alerts.getvalue(), "")
+
+
+ROUTINE = [
+    {"type": "turn_start"},
+    {"type": "tool_execution_start", "toolCallId": "c1", "toolName": "bash", "args": {"command": "gdlint"}},
+    {"type": "tool_execution_end", "toolCallId": "c1", "toolName": "bash", "isError": True, "result": "lint error"},
+]
+
+
+def routine_run(narrator, settle=True) -> None:
+    feed(narrator, *ROUTINE)
+    narrator.feed('Model "deepseek-v4-flash" not found')
+    if settle:
+        feed(narrator, {"type": "agent_settled"})
+    narrator.finish()
+
+
+class RoutineAlerts(unittest.TestCase):
+    """The orchestrator woke for these 25 times in one day and acted on none."""
+
+    def alerts_of(self, alerts_all, **kwargs):
+        alerts = io.StringIO()
+        narrator, _, _ = make(alerts=alerts, alerts_all=alerts_all)
+        routine_run(narrator, **kwargs)
+        return alerts.getvalue()
+
+    def test_alerts_drops_lint_failure_model_warning_and_clean_done(self):
+        self.assertEqual(self.alerts_of(False), "")
+
+    def test_alerts_all_keeps_all_three(self):
+        text = self.alerts_of(True)
+        self.assertIn("✗ bash FAILED", text)
+        self.assertIn('! Model "deepseek-v4-flash" not found', text)
+        self.assertIn("■ done", text)
+
+    def test_a_worker_that_died_before_settling_is_kept(self):
+        self.assertIn("■ done", self.alerts_of(False, settle=False))
+
+    def test_a_worker_whose_last_turn_errored_is_kept(self):
+        alerts = io.StringIO()
+        narrator, _, _ = make(alerts=alerts, alerts_all=False)
+        feed(narrator, {"type": "turn_start"}, {"type": "turn_end", "message": {"stopReason": "error", "errorMessage": "402"}},
+             {"type": "agent_settled"})
+        self.assertIn("■ done", alerts.getvalue())
+
+    def test_a_worker_past_the_stall_limit_is_kept(self):
+        alerts = io.StringIO()
+        narrator, _, clock = make(alerts=alerts, alerts_all=False, stall_minutes=30)
+        feed(narrator, {"type": "turn_start"})
+        clock.advance(31 * 60)
+        feed(narrator, {"type": "agent_settled"})
+        self.assertIn("■ done", alerts.getvalue())
+
+    def test_the_command_line_flag_picks_the_mode(self):
+        import contextlib
+        import os
+        import tempfile
+        stream = "\n".join(json.dumps(e) for e in ROUTINE + [{"type": "agent_settled"}]) + "\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            for flag, expect in (([], ""), (["--alerts-all"], "FAILED")):
+                path = os.path.join(tmp, "a" + "".join(flag) + ".log")
+                stdin = type("S", (), {"buffer": io.BytesIO(stream.encode())})()
+                with contextlib.redirect_stdout(io.StringIO()):
+                    old, narrate.sys.stdin = narrate.sys.stdin, stdin
+                    try:
+                        narrate.main(["--alerts", path, *flag])
+                    finally:
+                        narrate.sys.stdin = old
+                with open(path) as f:
+                    text = f.read()
+                self.assertIn(expect, text)
+                if not expect:
+                    self.assertEqual(text, "")
 
 
 class Formatting(unittest.TestCase):

@@ -40,6 +40,7 @@ STOP_WHY = re.compile(r"^Stopped: (.*?)\. Branch ")
 SINCE = re.compile(r"^(\d+)([mh])$")
 TAIL_BYTES = 400_000
 LINE_MAX = 160
+POLL_SECONDS = 30
 UNION = "progress.md merge=union"
 MAX_LANES = 10
 
@@ -205,7 +206,7 @@ def lane_facts(clone: Path) -> dict:
     """What lane.log, lane.pid and the newest commit say about one lane; no network."""
     overnight = clone / ".overnight"
     facts = {"pid": pid_alive(overnight / "lane.pid"), "ticket": "-", "issue": None, "done": 0, "parked": 0,
-             "parked_issues": [], "last": "", "why": "", "gate": "-", "phase": "-", "idle": 0}
+             "parked_issues": [], "last": "", "why": "", "gate": "-", "gate_runs": 0, "phase": "-", "idle": 0}
     log = overnight / "lane.log"
     for line in (log.read_text(errors="replace").splitlines() if log.exists() else []):
         if CURRENT.match(line):
@@ -219,6 +220,7 @@ def lane_facts(clone: Path) -> dict:
             facts["why"] = m.group(1)
     issue_log = overnight / "logs" / f"{facts['issue']}.log"
     gates = GATE_EXIT.findall(log_tail(issue_log))
+    facts["gate_runs"] = len(gates)
     if gates:
         facts["gate"] = "PASS" if gates[-1] == "0" else "FAIL"
     if issue_log.exists():
@@ -263,6 +265,61 @@ def digest(repo: Path, since: str | None = None) -> str:
         out.append(f"landed since {since}: " + ("; ".join(landed.splitlines()) or "none"))
         out.append(f"parked since {since}: " + (", ".join(parks) or "none"))
     return "\n".join(out)
+
+
+class Watcher:
+    """Diffs lane state between polls; lane starts wait for the digest, the rest print at once."""
+
+    def __init__(self, repo: Path, minutes: float, clock=time.monotonic) -> None:
+        self.repo, self.window, self.clock = repo, minutes * 60, clock
+        self.prev: dict | None = None
+        self.starts: list[str] = []
+        self.flushed = clock()
+
+    def snapshot(self) -> dict:
+        """Lane facts by name, plus the main checkout's newest commit under the key ''."""
+        snap = {c.name.removeprefix(f"{self.repo.name}-"): lane_facts(c) for c in lane_clones(self.repo)}
+        snap[""] = {"commit": run("git", "log", "-1", "--format=%H %s", cwd=self.repo, check=False)}
+        return snap
+
+    def step(self) -> list[str]:
+        """Lines to print now."""
+        cur, prev = self.snapshot(), self.prev
+        self.prev = cur
+        if prev is None:
+            return []
+        now = []
+        for lane, f in cur.items():
+            old = prev.get(lane)
+            if not lane:
+                if old and f["commit"] != old["commit"]:
+                    now.append(f"landed: {f['commit'].partition(' ')[2]}")
+                continue
+            if f["pid"] and (not old or not old["pid"] or old["issue"] != f["issue"]):
+                self.starts.append(f"{lane} started {f['ticket']}")
+            if not old:
+                continue
+            if old["pid"] and not f["pid"]:
+                now.append(f"lane {lane} stopped: {f['why'] or 'no Stopped line, it died'}")
+            if f["parked"] > old["parked"]:
+                now.append(f"lane {lane} parked #{f['parked_issues'][-1]}")
+            if f["gate"] == "FAIL" and (f["issue"], f["gate_runs"]) != (old["issue"], old["gate_runs"]):
+                now.append(f"lane {lane} gate FAIL on #{f['issue']}")
+        if self.clock() - self.flushed >= self.window:
+            self.flushed = self.clock()
+            if self.starts:
+                now.append("lane starts:\n  " + "\n  ".join(self.starts))
+                self.starts = []
+        return now
+
+
+def watch(repo: Path, minutes: float) -> None:
+    """Print a lane event at once, or batched into a digest, until interrupted."""
+    watcher = Watcher(repo, minutes)
+    while True:
+        for line in watcher.step():
+            print(line, flush=True)
+        time.sleep(POLL_SECONDS)
 
 
 def fetch(repo: Path, lane: str, branch: str | None, force: bool = False) -> str:
@@ -395,6 +452,8 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--force", action="store_true", help="start despite the lane count or load")
     d = sub.add_parser("digest", help="one line per lane, from lane files and git log only")
     d.add_argument("--since", help="also list landings and parks in this window, such as 30m or 2h")
+    w = sub.add_parser("watch", help="print stops, parks, landings and gate failures; batch lane starts")
+    w.add_argument("--digest", type=float, default=20, metavar="MINUTES", help="minutes between start digests (20)")
     sub.add_parser("status", help="load and lane count, then one line per lane")
     f = sub.add_parser("fetch", help="bring a lane's branch into a rebased worktree")
     f.add_argument("lane")
@@ -419,6 +478,9 @@ def main(argv: list[str] | None = None) -> int:
             msg = status(repo)
         elif args.cmd == "digest":
             msg = digest(repo, args.since)
+        elif args.cmd == "watch":
+            watch(repo, args.digest)
+            return 0
         elif args.cmd == "fetch":
             msg = fetch(repo, args.lane, args.branch, args.force)
         elif args.cmd == "land":
