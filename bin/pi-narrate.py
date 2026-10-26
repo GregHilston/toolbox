@@ -56,8 +56,8 @@ ARG_KEYS = ("command", "path", "file_path", "pattern", "query", "url")
 # narration you read when you go looking.
 ALERT_SYMBOLS = frozenset({"✗", "■", "⚠", "!"})
 
-# Guardrail refusals arrive as failed tool calls; their reasons start "Never".
-REFUSED = re.compile(r"\bNever\b|permission-system|guardrail|blocked", re.I)
+# Guardrail refusals arrive as failed tool calls; their reasons say Never, scaffolding or orchestrator.
+REFUSED = re.compile(r"\bNever\b|permission-system|guardrail|scaffolding|orchestrator")
 MODEL_MISSING = re.compile(r'Model "[^"]*" not found')
 
 

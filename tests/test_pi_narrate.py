@@ -340,6 +340,12 @@ class RoutineAlerts(unittest.TestCase):
              "result": "Never push. The orchestrator does that."},
         )
         self.assertIn("✗ bash FAILED", alerts.getvalue())
+        feed(
+            narrator,
+            {"type": "tool_execution_end", "toolCallId": "c2", "toolName": "write", "isError": True,
+             "result": ".pi/ is orchestrator scaffolding, not part of your change."},
+        )
+        self.assertEqual(alerts.getvalue().count("FAILED"), 2)
 
     def test_a_worker_that_died_before_settling_is_kept(self):
         self.assertIn("■ done", self.alerts_of(False, settle=False))
