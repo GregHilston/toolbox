@@ -104,6 +104,8 @@ in {
   services.omlxDeploy = {
     enable = true;
     cacheSize = "32GB";
+    # Idle models hold memory Strata's mmap'd weights need.
+    idleTimeoutSeconds = 1800;
   };
 
   services.fluidvoice.enable = true;
