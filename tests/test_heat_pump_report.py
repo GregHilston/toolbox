@@ -1,4 +1,4 @@
-"""heat-pump-report.py turns Prometheus and Open-Meteo responses into report rows."""
+"""heat-pump-report.py turns Prometheus and NWS responses into report rows."""
 
 from __future__ import annotations
 
@@ -43,7 +43,29 @@ class HeatingSpansTest(unittest.TestCase):
         self.assertEqual(report.heating_spans([(0, 1), (600, 1)], 60), [(0, 60), (600, 660)])
 
 
+class ObservationsTest(unittest.TestCase):
+    def test_celsius_becomes_fahrenheit_and_nulls_are_dropped(self):
+        def obs(ts, temp, rh):
+            return {"properties": {"timestamp": ts, "temperature": {"value": temp},
+                                   "relativeHumidity": {"value": rh}}}
+        body = {"features": [obs("2026-10-27T11:55:00+00:00", -0.6, 92.4),
+                             obs("2026-10-27T11:35:00+00:00", None, 90.0),
+                             obs("2026-10-27T11:15:00+00:00", 0.0, None)]}
+        rows = report.parse_observations(body)
+        self.assertEqual([(f, rh) for _, f, rh in rows], [(30.9, 92), (32.0, None)])
+
+
 class CsvTest(unittest.TestCase):
+    def test_row_takes_the_latest_earlier_outdoor_reading(self):
+        hour = 1792587600
+        data = {"temps": {"Basement": [(hour + 1500, 68.0)]},
+                "outdoor": [(hour, 30.0, 90), (hour + 1200, 31.0, None), (hour + 2400, 32.0, 80)]}
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "out.csv"
+            report.write_csv(path, data)
+            rows = list(csv.reader(path.open()))
+        self.assertEqual(rows[1][1:], ["68.0", "31.0", ""])
+
     def test_rows_take_their_hours_outdoor_reading(self):
         hour = 1792587600  # on the hour, UTC
         data = {

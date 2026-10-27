@@ -8,8 +8,8 @@
 The heads cannot be read directly (no Kumo, no CN105 adapter yet), so each room's
 own sensor or thermostat stands in. Room data comes from Prometheus, which scrapes
 Home Assistant every minute and keeps 90 days; query through Grafana's datasource
-proxy, the one hostname reachable over the tailnet. Outdoor weather comes from
-Open-Meteo, not HA, so a report can cover days before HA recorded it.
+proxy, the one hostname reachable over the tailnet. Outdoor weather is measured
+at the KFSO airport station, read from NWS for the last week and from Prometheus before that.
 
 Usage:
     heat-pump-report.py                       # the last 7 days
@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import bisect
 import csv
 import json
 import os
@@ -35,8 +36,9 @@ from zoneinfo import ZoneInfo
 PROMETHEUS = os.environ.get(
     "PROMETHEUS_URL", "https://grafana.grehg2.xyz/api/datasources/proxy/uid/prometheus"
 )
-OPEN_METEO = "https://api.open-meteo.com/v1/forecast"
-HOME = (44.884037, -73.001239)
+# Franklin County State Airport, Highgate: about 6 mi from the house.
+NWS = "https://api.weather.gov/stations/KFSO/observations"
+NWS_AGENT = "home-lab heat-pump-report (grehg2.xyz)"
 TZ = ZoneInfo("America/New_York")
 # Prometheus refuses a range query over 11,000 points.
 MAX_POINTS = 2000
@@ -139,22 +141,53 @@ def heating_spans(points: list[tuple[float, float]], step: int) -> list[tuple[fl
     return [(a, b + step) for a, b in spans]
 
 
-def outdoor(start: datetime, end: datetime) -> list[tuple[float, float, float]]:
-    """Hourly (unix time, °F, relative humidity %) at home."""
-    params = urlencode({
-        "latitude": HOME[0], "longitude": HOME[1],
-        "hourly": "temperature_2m,relative_humidity_2m",
-        "temperature_unit": "fahrenheit", "timezone": "UTC",
-        "start_date": start.date().isoformat(), "end_date": end.date().isoformat(),
-    })
-    hourly = fetch_json(f"{OPEN_METEO}?{params}")["hourly"]
-    rows = []
-    for t, temp, rh in zip(hourly["time"], hourly["temperature_2m"], hourly["relative_humidity_2m"]):
-        ts = datetime.fromisoformat(t).replace(tzinfo=timezone.utc).timestamp()
-        # Keep the hour that contains the start.
-        if temp is not None and start.timestamp() - 3600 < ts <= end.timestamp():
-            rows.append((ts, temp, rh))
+def outdoor(start: datetime, end: datetime) -> list[tuple[float, float, float | None]]:
+    """(unix time, °F, RH %) measured at KFSO, oldest first.
+
+    NWS keeps about 7 days, so anything older comes from Home Assistant's copy
+    in Prometheus, recorded since 2026-10-27.
+    """
+    rows = nws_observations(start, end)
+    first = rows[0][0] if rows else end.timestamp()
+    if start.timestamp() < first - 3600:
+        rows = recorded_outdoor(start, datetime.fromtimestamp(first, timezone.utc)) + rows
     return rows
+
+
+def nws_observations(start: datetime, end: datetime) -> list[tuple[float, float, float | None]]:
+    url = f"{NWS}?" + urlencode({"start": _utc(start), "end": _utc(end)})
+    rows = []
+    while url:
+        req = urllib.request.Request(url, headers={"User-Agent": NWS_AGENT, "Accept": "application/geo+json"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = json.load(resp)
+        page = parse_observations(body)
+        rows += page
+        # The next link drops start and end, so stop once past start.
+        nxt = body.get("pagination", {}).get("next")
+        url = nxt if page and min(page)[0] > start.timestamp() and nxt != url else None
+    return sorted(r for r in set(rows) if start.timestamp() <= r[0] <= end.timestamp())
+
+
+def parse_observations(body: dict) -> list[tuple[float, float, float | None]]:
+    rows = []
+    for f in body.get("features", []):
+        p = f["properties"]
+        temp, rh = p["temperature"]["value"], p["relativeHumidity"]["value"]
+        if temp is not None:
+            ts = datetime.fromisoformat(p["timestamp"]).timestamp()
+            rows.append((ts, round(c_to_f(temp), 1), None if rh is None else round(rh)))
+    return rows
+
+
+def recorded_outdoor(start: datetime, end: datetime) -> list[tuple[float, float, float | None]]:
+    temps = query_range('hass_sensor_temperature_celsius{entity="sensor.outdoor_temperature_kfso"}', start, end)
+    rh = dict(query_range('hass_sensor_humidity_percent{entity="sensor.outdoor_humidity_kfso"}', start, end))
+    return [(t, round(c_to_f(v), 1), rh.get(t)) for t, v in temps]
+
+
+def _utc(d: datetime) -> str:
+    return d.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def collect(start: datetime, end: datetime) -> dict:
@@ -176,13 +209,15 @@ def write_csv(path: Path, data: dict) -> None:
     for room, points in data["temps"].items():
         for t, v in points:
             by_time.setdefault(t, {})[room] = v
-    hours = {t: (temp, rh) for t, temp, rh in data["outdoor"]}
+    out_times = [t for t, _, _ in data["outdoor"]]
     with path.open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["time (America/New_York)", *[f"{r} °F" for r in rooms], "outdoor °F", "outdoor RH %"])
         for t in sorted(by_time):
-            # Open-Meteo is hourly; each row takes its hour's value.
-            temp, rh = hours.get(t - t % 3600, ("", ""))
+            # Each row takes the latest reading before it.
+            i = bisect.bisect_right(out_times, t) - 1
+            _, temp, rh = data["outdoor"][i] if i >= 0 else (t, "", "")
+            rh = "" if rh is None else rh
             local = datetime.fromtimestamp(t, TZ).strftime("%Y-%m-%d %H:%M")
             w.writerow([local, *[_fmt(by_time[t].get(r)) for r in rooms], temp, rh])
 
@@ -214,13 +249,13 @@ def write_pdf(path: Path, data: dict, start: datetime, end: datetime) -> None:
 
         out_t = [local(t) for t, _, _ in data["outdoor"]]
         out_f = [f for _, f, _ in data["outdoor"]]
-        out_rh = [rh for _, _, rh in data["outdoor"]]
+        out_rh = [float("nan") if rh is None else rh for _, _, rh in data["outdoor"]]
         for unit in UNITS:
             fig, (ax, ax_rh) = plt.subplots(2, 1, figsize=(11, 8.5), sharex=True,
                                             gridspec_kw={"height_ratios": [4, 1]})
             fig.suptitle(f"Outdoor unit {unit.model} · serial {unit.serial} · {unit.refrigerant}",
                          fontsize=14, weight="bold")
-            ax.plot(out_t, out_f, color="0.55", lw=1.2, ls="--", label="Outdoor (Open-Meteo)")
+            ax.plot(out_t, out_f, color="0.55", lw=1.2, ls="--", label="Outdoor (KFSO, Highgate airport)")
             missing = []
             for room in unit.rooms:
                 points = data["temps"].get(room.name)

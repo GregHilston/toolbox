@@ -1,0 +1,308 @@
+#!/usr/bin/env -S uv run
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["matplotlib"]
+# ///
+"""Chart room temperatures over a few hours, with events marked, as a PNG.
+
+For a short window you want to point at ("I turned the heads on here, then the
+heat stopped"). The rooms, sensors and outdoor units come from heat-pump-report.py,
+so both stay on one map. Each room gets its own panel on one shared °F scale, so a
+small change is not drawn as a big one. The bottom strip shows when each boiler
+zone called for heat, and a thermostat's setpoint is drawn on its own room's panel.
+
+Usage:
+    room-temps.py --list
+    room-temps.py guest dining basement --since 6am
+    room-temps.py basement --since 6:00 --until 11:00 --mark "7:40=Basement head on"
+    room-temps.py guest --since "2026-10-27 06:00" --mark "~7:33=Head on" --plain --out /tmp/a.png
+
+A mark whose time starts with "~" is an estimate, drawn dotted and labelled "about".
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import re
+import sys
+from dataclasses import dataclass
+from datetime import date, datetime, time, timedelta
+from pathlib import Path
+from urllib.error import URLError
+
+
+def _load_report():
+    path = Path(__file__).resolve().parent / "heat-pump-report.py"
+    spec = importlib.util.spec_from_file_location("_heat_pump_report", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+report = _load_report()
+TZ = report.TZ
+
+ZONES = {
+    "climate.1st_floor_thermostat": "1st floor zone",
+    "climate.2nd_floor_thermostat": "2nd floor zone",
+}
+# Categorical slots, keyed to the room so its color never changes between charts.
+COLORS = {
+    "Guest room": "#2a78d6", "Dining room": "#eb6834", "Basement": "#1baf7a",
+    "Children's room": "#eda100", "Master bedroom": "#e87ba4", "Living room": "#6250d6",
+}
+INK, MUTED, GRID = "#222222", "#666666", "#dddddd"
+
+
+@dataclass(frozen=True)
+class Mark:
+    at: datetime
+    label: str
+    estimated: bool = False
+
+
+def rooms() -> list:
+    return [room for unit in report.UNITS for room in unit.rooms]
+
+
+def pick_rooms(names: list[str]) -> list:
+    """Match each name to one room by case-insensitive substring."""
+    known = [r for r in rooms() if r.temp_query]
+    if not names:
+        return known
+    picked = []
+    for name in names:
+        hits = [r for r in known if name.lower() in r.name.lower()]
+        if len(hits) != 1:
+            choices = ", ".join(r.name for r in known)
+            raise ValueError(f"'{name}' matches {len(hits)} rooms with data; choose from: {choices}")
+        picked.append(hits[0])
+    return picked
+
+
+CLOCK = re.compile(r"^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$", re.I)
+
+
+def parse_when(s: str, day: date) -> datetime:
+    """A clock time (7:10, 07:10, 7am, 7:10pm) falls on `day`; else an ISO datetime."""
+    m = CLOCK.match(s.strip())
+    if m and (m[2] or m[3]):
+        hour, minute = int(m[1]), int(m[2] or 0)
+        if m[3]:
+            hour = hour % 12 + (12 if m[3].lower() == "pm" else 0)
+        return datetime.combine(day, time(hour, minute), TZ)
+    try:
+        return datetime.fromisoformat(s.strip()).replace(tzinfo=TZ)
+    except ValueError:
+        raise ValueError(f"can't read time '{s}'; use 7:10, 7am, 7:10pm or 'YYYY-MM-DD HH:MM'") from None
+
+
+def parse_mark(s: str, start: datetime) -> Mark:
+    """A clock time is the first such time at or after `start`."""
+    when, sep, label = s.partition("=")
+    if not sep or not label.strip():
+        raise ValueError(f"--mark wants TIME=LABEL, got '{s}'")
+    when = when.strip()
+    estimated = when.startswith("~")
+    at = parse_when(when.lstrip("~"), start.date())
+    if at < start and CLOCK.match(when.lstrip("~")):
+        at += timedelta(days=1)
+    return Mark(at, label.strip(), estimated)
+
+
+def window(since: str | None, until: str | None, now: datetime) -> tuple[datetime, datetime]:
+    end = parse_when(until, now.date()) if until else now
+    start = parse_when(since, end.date()) if since else end - timedelta(hours=6)
+    if start > end and since and CLOCK.match(since.strip()):
+        start -= timedelta(days=1)
+    if start >= end:
+        raise ValueError(f"start {start:%Y-%m-%d %H:%M} is not before end {end:%Y-%m-%d %H:%M}")
+    return start, end
+
+
+def setpoint_changes(points: list[tuple[float, float]]) -> list[tuple[float, float, float]]:
+    """(time, old °F, new °F) for each change in a setpoint series."""
+    return [(t, a, b) for (_, a), (t, b) in zip(points, points[1:]) if round(a) != round(b)]
+
+
+def summary(points: list[tuple[float, float]]) -> str:
+    """Low, peak and latest, so the shape is said in words."""
+    lo_t, lo = min(points, key=lambda p: p[1])
+    hi_t, hi = max(points, key=lambda p: p[1])
+    fmt = lambda t: f"{datetime.fromtimestamp(t, TZ):%-I:%M}"
+    text = f"low {lo:.1f} at {fmt(lo_t)}, peak {hi:.1f} at {fmt(hi_t)}, now {points[-1][1]:.1f} °F"
+    return text if hi_t > lo_t else f"now {points[-1][1]:.1f} °F, peak {hi:.1f} at {fmt(hi_t)}"
+
+
+def collect(picked: list, start: datetime, end: datetime) -> dict:
+    step = report.step_seconds(start, end)
+    f = lambda pts: [(t, report.c_to_f(v)) for t, v in pts]
+    temps = {r.name: f(report.query_range(r.temp_query, start, end)) for r in picked}
+    targets, zones = {}, {}
+    for entity, label in ZONES.items():
+        calls = report.query_range(f'hass_climate_action{{entity="{entity}",action="heating"}}', start, end)
+        targets[entity] = f(report.query_range(f'hass_climate_target_temperature_celsius{{entity="{entity}"}}', start, end))
+        zones[label] = {"spans": report.heating_spans(calls, step), "setpoints": setpoint_changes(targets[entity])}
+    try:
+        outdoor = report.outdoor(start, end)
+    except (URLError, KeyError, ValueError):
+        outdoor = []
+    return {"temps": temps, "targets": targets, "zones": zones, "outdoor": outdoor}
+
+
+def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: datetime,
+         plain: bool, out: Path, setpoints: dict[str, float] | None = None, boiler: bool = True,
+         outdoor: bool = True) -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.dates as mdates
+    import matplotlib.pyplot as plt
+
+    def local(ts: float) -> datetime:
+        return datetime.fromtimestamp(ts, TZ)
+
+    setpoints = setpoints or {}
+    zones = list(data["zones"].items()) if boiler else []
+    # Mark labels get their own strip so they never cover data.
+    lead = 1 if marks else 0
+    heights = [0.3 * len(marks)] * lead + [3] * len(picked) + ([0.6 * len(zones)] if zones else [])
+    fig, axs = plt.subplots(len(heights), 1, figsize=(8, 1.15 * sum(heights) + 1.4), sharex=True,
+                            gridspec_kw={"height_ratios": heights}, squeeze=False)
+    axs = axs[:, 0]
+    room_axs = axs[lead:lead + len(picked)]
+
+    values = [v for pts in data["temps"].values() for _, v in pts]
+    values += [setpoints[r.name] for r in picked if r.name in setpoints]
+    lo, hi = min(values, default=60), max(values, default=70)
+    for ax, room in zip(room_axs, picked):
+        pts = data["temps"][room.name]
+        title = room.name if plain else f"{room.name} ({room.source})"
+        ax.set_ylim(lo - 0.7, hi + 0.9)
+        ax.set_ylabel("°F", color=MUTED)
+        ax.grid(axis="y", color=GRID, lw=0.6)
+        if room.name in setpoints:
+            ax.axhline(setpoints[room.name], color=INK, lw=1.2, ls=(0, (6, 3)))
+            ax.annotate(f"head set to {setpoints[room.name]:.0f} °F", (1, setpoints[room.name]),
+                        xycoords=("axes fraction", "data"), xytext=(-4, 4), textcoords="offset points",
+                        ha="right", fontsize=10, color=INK)
+        if not pts:
+            ax.set_title(title, loc="left", fontsize=12, color=INK)
+            ax.text(0.5, 0.5, "no data", transform=ax.transAxes, ha="center", color=MUTED)
+            continue
+        ax.set_title(f"{title}  ·  {summary(pts)}", loc="left", fontsize=12, color=INK)
+        ax.plot([local(t) for t, _ in pts], [v for _, v in pts], color=COLORS.get(room.name, "#2a78d6"), lw=2)
+        target = data["targets"].get(room.call_entity or "", []) if boiler else []
+        if target:
+            ax.step([local(t) for t, _ in target], [v for _, v in target], where="post",
+                    color=MUTED, lw=1, ls=(0, (2, 2)))
+            ax.annotate("boiler thermostat setpoint", (local(target[-1][0]), target[-1][1]), xytext=(-4, 4),
+                        textcoords="offset points", ha="right", fontsize=9, color=MUTED)
+
+    if zones:
+        zax = axs[-1]
+        for row, (label, z) in enumerate(zones):
+            y0, y1 = 1 - (row + 1) / len(zones), 1 - row / len(zones)
+            for a, b in z["spans"]:
+                zax.axvspan(local(a), local(b), ymin=y0 + 0.15 / len(zones), ymax=y1 - 0.15 / len(zones),
+                            color="#c0392b", lw=0)
+            for t, a, b in z["setpoints"]:
+                zax.axvline(local(t), ymin=y0, ymax=y1, color=INK, lw=1)
+                zax.annotate(f"setpoint {a:.0f}→{b:.0f} °F", (local(t), len(zones) - row - 0.5), xytext=(4, 0),
+                             textcoords="offset points", va="center", fontsize=10, color=INK)
+            if not z["spans"]:
+                zax.text(0.01, len(zones) - row - 0.5, "did not fire", transform=zax.get_yaxis_transform(),
+                         va="center", fontsize=10, color=MUTED)
+        zax.set_ylim(0, len(zones))
+        zax.set_yticks([len(zones) - r - 0.5 for r in range(len(zones))], [l for l, _ in zones], fontsize=10)
+        zax.set_title("Oil boiler firing (red)", loc="left", fontsize=12, color=INK)
+        zax.tick_params(axis="y", length=0)
+
+    for i, m in enumerate(marks):
+        style = (0, (1, 2)) if m.estimated else (0, (5, 3))
+        for ax in axs[lead:]:
+            ax.axvline(m.at, color=INK, lw=1.2, ls=style)
+        text = f"{'about ' if m.estimated else ''}{m.at:%-I:%M} {m.label}"
+        axs[0].plot([m.at, m.at], [0, len(marks) - i - 0.5], color=INK, lw=1.2, ls=style)
+        axs[0].annotate(text, (m.at, len(marks) - i - 0.5), xytext=(4, 0), textcoords="offset points",
+                        va="center", fontsize=10, color=INK)
+
+    for ax in axs:
+        for side in ("top", "right"):
+            ax.spines[side].set_visible(False)
+    if lead:
+        axs[0].set_ylim(0, len(marks))
+        axs[0].axis("off")
+    axs[-1].set_xlim(start, end)
+    axs[-1].xaxis.set_major_formatter(mdates.DateFormatter("%-I:%M %p", tz=TZ))
+    title = f"{start:%a %b %-d, %-I:%M %p} to {end:%-I:%M %p} (Eastern)"
+    fig.suptitle(f"{title}\n{outdoor_line(data['outdoor'])}" if outdoor else title,
+                 x=0.02, ha="left", fontsize=12, color=INK)
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    fig.savefig(out, dpi=130)
+    plt.close(fig)
+
+
+def outdoor_line(rows: list[tuple[float, float, float]]) -> str:
+    if not rows:
+        return "Outdoor: unavailable"
+    temps = [f for _, f, _ in rows]
+    return f"Outdoor {min(temps):.0f}–{max(temps):.0f} °F, measured at Highgate airport (KFSO), 6 mi away"
+
+
+def parse_setpoint(s: str) -> tuple[str, float]:
+    name, sep, value = s.partition("=")
+    try:
+        return pick_rooms([name.strip()])[0].name, float(value)
+    except ValueError:
+        raise ValueError(f"--setpoint wants ROOM=°F, got '{s}'") from None
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("rooms", nargs="*", help="room names or parts of them (default: every room with data)")
+    p.add_argument("--since", help="start: 6am, 6:00 or 'YYYY-MM-DD HH:MM' (default 6 hours before --until)")
+    p.add_argument("--until", help="end, same forms (default now)")
+    p.add_argument("--mark", action="append", default=[], help='an event line, "TIME=LABEL"; "~TIME" for an estimate')
+    p.add_argument("--setpoint", action="append", default=[], help='a head\'s setpoint, "ROOM=°F"; repeatable')
+    p.add_argument("--no-boiler", action="store_true", help="leave out the boiler strip and thermostat setpoints")
+    p.add_argument("--no-outdoor", action="store_true", help="leave out the outdoor temperature line")
+    p.add_argument("--plain", action="store_true", help="room names only, no sensor types (for sharing)")
+    p.add_argument("--out", type=Path, default=Path("room-temps.png"), help="PNG path (default ./room-temps.png)")
+    p.add_argument("--list", action="store_true", help="list rooms, their sensors and outdoor units, then exit")
+    return p.parse_args(argv)
+
+
+def main(argv: list[str]) -> int:
+    args = parse_args(argv)
+    if args.list:
+        for unit in report.UNITS:
+            for r in unit.rooms:
+                print(f"{r.name:<16} {r.source:<34} {unit.model} {unit.serial}{'' if r.temp_query else '  (no data)'}")
+        return 0
+    try:
+        picked = pick_rooms(args.rooms)
+        start, end = window(args.since, args.until, datetime.now(TZ))
+        marks = [parse_mark(m, start) for m in args.mark]
+        setpoints = dict(parse_setpoint(s) for s in args.setpoint)
+    except ValueError as e:
+        print(f"room-temps: {e}", file=sys.stderr)
+        return 2
+    for m in marks:
+        if not start <= m.at <= end:
+            print(f"room-temps: mark '{m.label}' at {m.at:%Y-%m-%d %H:%M} is outside the window", file=sys.stderr)
+    try:
+        data = collect(picked, start, end)
+    except (URLError, RuntimeError) as e:
+        print(f"room-temps: could not fetch data: {e}", file=sys.stderr)
+        return 1
+    plot(data, picked, marks, start, end, args.plain, args.out, setpoints, not args.no_boiler,
+         not args.no_outdoor)
+    print(args.out.resolve())
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
