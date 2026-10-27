@@ -91,6 +91,10 @@ tail -f ~/Library/Logs/strata.log
 curl -s -H "Authorization: Bearer $KEY" http://100.115.155.85:8080/v1/models   # status: loaded or unloaded
 ```
 
+The venv runs Homebrew's `python@3.15` through `/opt/homebrew/opt`, so patch upgrades are
+safe. If brew ever removes that formula, the agent dies at start: delete `~/Git/strata/.venv`
+and run `just strata-setup`.
+
 ## Rolling back to Swift-27B on oMLX
 
 Swift's weights are still in oMLX's model folder. Put
