@@ -53,10 +53,6 @@
           {
             "type": "command",
             "command": "rtk hook claude"
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/risk-classify.py"
           }
         ]
       }
