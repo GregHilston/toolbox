@@ -173,12 +173,13 @@ def collect(picked: list, start: datetime, end: datetime) -> dict:
 
 def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: datetime,
          plain: bool, out: Path, setpoints: dict[str, float] | None = None, boiler: bool = True,
-         outdoor: bool = True) -> None:
+         outdoor: bool = True, overlay: bool = False) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.dates as mdates
     import matplotlib.pyplot as plt
+    from matplotlib.ticker import MultipleLocator
 
     def local(ts: float) -> datetime:
         return datetime.fromtimestamp(ts, TZ)
@@ -199,7 +200,10 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
     shared = [m for m in marks if not m.rooms]
     # Shared mark labels get their own strip so they never cover data.
     lead = 1 if shared else 0
-    show_out = outdoor and bool(data["outdoor"])
+    out_x = [local(t) for t, _, _ in data["outdoor"]]
+    out_f = [f for _, f, _ in data["outdoor"]]
+    overlay = overlay and outdoor and bool(out_f)
+    show_out = outdoor and bool(out_f) and not overlay
     heights = ([0.3 * len(shared)] * lead + [3] * len(picked) + [1.4] * show_out
                + ([0.6 * len(zones)] if zones else []))
     fig, axs = plt.subplots(len(heights), 1, figsize=(8, 1.15 * sum(heights) + 1.2), sharex=True,
@@ -209,6 +213,7 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
 
     values = [v for pts in data["temps"].values() for _, v in pts]
     values += [setpoints[r.name] for r in picked if r.name in setpoints]
+    values += out_f if overlay else []
     lo, hi = min(values, default=60), max(values, default=70)
     # Headroom for room mark labels above the data.
     per_room = max((sum(r.name in m.rooms for m in marks) for r in picked), default=0)
@@ -233,8 +238,16 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
             ax.set_title(title, loc="left", fontsize=12, color=INK)
             ax.text(0.5, 0.5, "no data", transform=ax.transAxes, ha="center", color=MUTED)
             continue
-        ax.set_title(f"{title}  ·  {summary(pts)}", loc="left", fontsize=12, color=INK)
+        ax.set_title(title if plain else f"{title}  ·  {summary(pts)}", loc="left", fontsize=12, color=INK)
         ax.plot([local(t) for t, _ in pts], [v for _, v in pts], color=COLORS.get(room.name, "#2a78d6"), lw=2)
+        if overlay:
+            # The range is wide, so step every 5 °F.
+            ax.yaxis.set_major_locator(MultipleLocator(5))
+            ax.plot(out_x, out_f, color="#888888", lw=1.5, marker="o", ms=3)
+            ax.annotate(room.name, (local(pts[-1][0]), pts[-1][1]), xytext=(-4, -12), textcoords="offset points",
+                        ha="right", fontsize=10, color=INK)
+            ax.annotate("Outdoor", (out_x[-1], out_f[-1]), xytext=(-4, 8), textcoords="offset points",
+                        ha="right", fontsize=10, color=MUTED)
         target = data["targets"].get(room.call_entity or "", []) if boiler else []
         if target:
             ax.step([local(t) for t, _ in target], [v for _, v in target], where="post",
@@ -244,8 +257,8 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
 
     if show_out:
         out_ax = axs[lead + len(picked)]
-        temps = [f for _, f, _ in data["outdoor"]]
-        out_ax.plot([local(t) for t, _, _ in data["outdoor"]], temps, color="#888888", lw=1.5, marker="o", ms=3)
+        temps = out_f
+        out_ax.plot(out_x, temps, color="#888888", lw=1.5, marker="o", ms=3)
         mid = (min(temps) + max(temps)) / 2
         out_ax.set_ylim(min(min(temps), mid - 3) - 0.5, max(max(temps), mid + 3) + 0.5)
         out_ax.set_ylabel("°F", color=MUTED)
@@ -309,8 +322,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--mark", action="append", default=[], help='an event line, "TIME=LABEL"; "ROOM@TIME=..." for one panel; "~TIME" for an estimate')
     p.add_argument("--setpoint", action="append", default=[], help='a head\'s setpoint, "ROOM=°F"; repeatable')
     p.add_argument("--no-boiler", action="store_true", help="leave out the boiler strip and thermostat setpoints")
+    p.add_argument("--outdoor-on-chart", action="store_true", help="draw outdoor on each room's panel, not its own")
     p.add_argument("--no-outdoor", action="store_true", help="leave out the outdoor panel")
-    p.add_argument("--plain", action="store_true", help="room names only, no sensor types (for sharing)")
+    p.add_argument("--plain", action="store_true", help="room names only: no sensor types or summary (for sharing)")
     p.add_argument("--out", type=Path, default=Path("room-temps.png"), help="PNG path (default ./room-temps.png)")
     p.add_argument("--list", action="store_true", help="list rooms, their sensors and outdoor units, then exit")
     return p.parse_args(argv)
@@ -340,7 +354,7 @@ def main(argv: list[str]) -> int:
         print(f"room-temps: could not fetch data: {e}", file=sys.stderr)
         return 1
     plot(data, picked, marks, start, end, args.plain, args.out, setpoints, not args.no_boiler,
-         not args.no_outdoor)
+         not args.no_outdoor, args.outdoor_on_chart)
     print(args.out.resolve())
     return 0
 

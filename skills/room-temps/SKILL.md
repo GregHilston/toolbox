@@ -36,7 +36,8 @@ with an absolute path.
   is the clearest sign of a head that stopped heating.
 - **`--plain`** for anything going to the installer: room names only, no
   sensor types. Add `--no-boiler` when no room shown is on a boiler zone
-  (the basement isn't), and `--no-outdoor` to drop the outdoor panel.
+  (the basement isn't). `--outdoor-on-chart` draws outdoor on the room's own
+  graph, which Greg prefers for a one-room chart; `--no-outdoor` drops it.
 - **Show the decline.** If a room is still rising at the end, say so, and offer
   to re-run later with a later `--until`.
 
