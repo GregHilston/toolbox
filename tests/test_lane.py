@@ -256,6 +256,15 @@ class StatusTest(LaneCase):
                                      "cache_creation_input_tokens": 997}}}) + "\n")
             self.assertEqual(lane.status(self.repo).splitlines()[-1], "orchestrator context 253k (cap 150k) OVER: hand off and /clear")
 
+    def test_context_line_honours_the_cap_env_var(self) -> None:
+        self.make_clone()
+        folder = self.root / "projects" / lane.re.sub(r"[^A-Za-z0-9]", "-", str(self.repo))
+        write(folder / "s.jsonl", json.dumps({"type": "assistant", "message": {
+            "id": "a", "usage": {"input_tokens": 253000}}}) + "\n")
+        with mock.patch.object(lane.session_ctx, "PROJECTS", self.root / "projects"), \
+                mock.patch.dict("os.environ", {"SESSION_CTX_CAP": "300000"}):
+            self.assertEqual(lane.context_line(self.repo), "orchestrator context 253k (cap 300k)")
+
     def test_hand_started_lane_is_unknown(self) -> None:
         self.make_clone()
         self.assertEqual(lane.lane_row(self.root / "proj-b", "b"), ["b", "unknown", "-", "-", "-", ""])

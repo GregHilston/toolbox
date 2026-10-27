@@ -14,17 +14,19 @@ holds the final usage.
     session-ctx.py [transcript.jsonl] [--cap N]
 
 With no path, reads the newest transcript for the current directory under
-~/.claude/projects/. Prints OVER and exits 1 above the cap (default 150000).
+~/.claude/projects/. Prints OVER and exits 1 above the cap (default $SESSION_CTX_CAP, else 150000).
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
 
+DEFAULT_CAP = 150000
 PROJECTS = Path.home() / ".claude" / "projects"
 USAGE_KEYS = ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
 
@@ -58,6 +60,11 @@ def context_tokens(transcript: Path) -> int | None:
     return last[order[-1]] if order else None
 
 
+def cap() -> int:
+    """The cap in tokens: $SESSION_CTX_CAP, else the default."""
+    return int(os.environ.get("SESSION_CTX_CAP") or DEFAULT_CAP)
+
+
 def short(tokens: int) -> str:
     """253000 as 253k."""
     return f"{round(tokens / 1000)}k"
@@ -66,7 +73,7 @@ def short(tokens: int) -> str:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("transcript", nargs="?", type=Path, help="default: newest for the current directory")
-    p.add_argument("--cap", type=int, default=150000, help="tokens past which it prints OVER and exits 1")
+    p.add_argument("--cap", type=int, default=cap(), help="tokens past which it prints OVER and exits 1")
     args = p.parse_args(argv)
     path = args.transcript or newest_transcript(Path.cwd())
     tokens = context_tokens(path) if path else None

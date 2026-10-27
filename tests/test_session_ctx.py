@@ -48,6 +48,12 @@ class SessionCtx(unittest.TestCase):
         self.assertEqual(self.run_main(str(self.fixture)), (0, "100003 tokens (cap 150000)\n"))
         self.assertEqual(self.run_main(str(self.fixture), "--cap", "100000"), (1, "100003 tokens (cap 100000) OVER\n"))
 
+    def test_env_var_sets_the_cap(self) -> None:
+        with mock.patch.dict("os.environ", {"SESSION_CTX_CAP": "300000"}):
+            self.assertEqual(ctx.cap(), 300000)
+        with mock.patch.dict("os.environ", {}, clear=True):
+            self.assertEqual(ctx.cap(), 150000)
+
     def test_newest_transcript_for_the_cwd(self) -> None:
         folder = self.dir / "projects" / "-work-proj"
         folder.mkdir(parents=True)
