@@ -16,6 +16,7 @@ Usage:
     room-temps.py guest dining basement --since 6am
     room-temps.py basement --since 6:00 --until 11:00 --mark "7:40=Basement head on"
     room-temps.py guest --since "2026-10-27 06:00" --mark "~7:33=Head on" --plain --out /tmp/a.png
+    room-temps.py basement --since 6:30am --share --stall --setpoint basement=70 --out /tmp/phil.png
 
 A mark whose time starts with "~" is an estimate, drawn dotted and labelled "about".
 """
@@ -63,6 +64,7 @@ class Mark:
     estimated: bool = False
     # Empty means every panel.
     rooms: tuple[str, ...] = ()
+    until: datetime | None = None
 
 
 def rooms() -> list:
@@ -116,6 +118,29 @@ def parse_mark(s: str, start: datetime) -> Mark:
     return Mark(at, label.strip(), estimated, rooms)
 
 
+def parse_span(s: str, start: datetime) -> Mark:
+    """FROM-TO=LABEL, shaded on every room panel."""
+    times, sep, label = s.partition("=")
+    a, dash, b = times.partition("-")
+    if not (sep and dash and label.strip()):
+        raise ValueError(f"--span wants FROM-TO=LABEL, got '{s}'")
+    first = parse_mark(f"{a}=x", start)
+    return Mark(first.at, label.strip(), first.estimated, until=parse_mark(f"{b}=x", first.at).at)
+
+
+def stall_spans(temps: dict[str, list[tuple[float, float]]]) -> list[Mark]:
+    """Each room's biggest fall, as an estimated span of no heat."""
+    spans = []
+    for name, pts in temps.items():
+        drop = biggest_fall(pts) if pts else None
+        if drop:
+            (a, _), (b, _) = drop
+            a, b = datetime.fromtimestamp(a, TZ), datetime.fromtimestamp(b, TZ)
+            minutes = round((b - a).total_seconds() / 300) * 5
+            spans.append(Mark(a, f"No heat about {a:%-I:%M}–{b:%-I:%M}\n({minutes} min)", True, (name,), b))
+    return spans
+
+
 def window(since: str | None, until: str | None, now: datetime) -> tuple[datetime, datetime]:
     end = parse_when(until, now.date()) if until else now
     start = parse_when(since, end.date()) if since else end - timedelta(hours=6)
@@ -144,14 +169,23 @@ def summary(points: list[tuple[float, float]]) -> str:
     return ", ".join(parts)
 
 
-def biggest_fall(points: list[tuple[float, float]], at_least: float = 1.0):
-    """The largest drop from a peak to a later low, if at least `at_least` °F."""
-    best, peak = None, points[0]
+def biggest_fall(points: list[tuple[float, float]], at_least: float = 1.0, minutes: int = 20):
+    """The largest drop from a peak to a later low, at least `at_least` °F over `minutes`.
+
+    A drop of `at_least` within 5 minutes of leaving the peak is a head's
+    warm burst on a thermostat, not a room cooling, so that peak is skipped.
+    """
+    best, peak, left, burst = None, points[0], points[0][0], False
     for p in points:
         if p[1] > peak[1]:
-            peak = p
-        elif peak[1] - p[1] >= at_least and (best is None or peak[1] - p[1] > best[0][1] - best[1][1]):
-            best = (peak, p)
+            peak, left, burst = p, p[0], False
+        elif p[1] == peak[1]:
+            left = p[0]
+        elif peak[1] - p[1] >= at_least:
+            burst = burst or p[0] - left < 5 * 60
+            if (not burst and p[0] - peak[0] >= minutes * 60
+                    and (best is None or peak[1] - p[1] > best[0][1] - best[1][1])):
+                best = (peak, p)
     return best
 
 
@@ -173,7 +207,7 @@ def collect(picked: list, start: datetime, end: datetime) -> dict:
 
 def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: datetime,
          plain: bool, out: Path, setpoints: dict[str, float] | None = None, boiler: bool = True,
-         outdoor: bool = True, overlay: bool = False) -> None:
+         outdoor: bool = True, overlay: bool = False, spans: list[Mark] | None = None) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
@@ -204,7 +238,7 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
     out_f = [f for _, f, _ in data["outdoor"]]
     overlay = overlay and outdoor and bool(out_f)
     show_out = outdoor and bool(out_f) and not overlay
-    heights = ([0.3 * len(shared)] * lead + [3] * len(picked) + [1.4] * show_out
+    heights = ([0.3 * len(shared)] * lead + [6 if overlay else 3] * len(picked) + [1.4] * show_out
                + ([0.6 * len(zones)] if zones else []))
     fig, axs = plt.subplots(len(heights), 1, figsize=(8, 1.15 * sum(heights) + 1.2), sharex=True,
                             gridspec_kw={"height_ratios": heights}, squeeze=False)
@@ -238,11 +272,10 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
             ax.set_title(title, loc="left", fontsize=12, color=INK)
             ax.text(0.5, 0.5, "no data", transform=ax.transAxes, ha="center", color=MUTED)
             continue
-        ax.set_title(title if plain else f"{title}  ·  {summary(pts)}", loc="left", fontsize=12, color=INK)
+        ax.set_title(title if plain else f"{title}\n{summary(pts)}", loc="left", fontsize=12, color=INK)
         ax.plot([local(t) for t, _ in pts], [v for _, v in pts], color=COLORS.get(room.name, "#2a78d6"), lw=2)
         if overlay:
-            # The range is wide, so step every 5 °F.
-            ax.yaxis.set_major_locator(MultipleLocator(5))
+            ax.yaxis.set_major_locator(MultipleLocator(2))
             ax.plot(out_x, out_f, color="#888888", lw=1.5, marker="o", ms=3)
             ax.annotate(room.name, (local(pts[-1][0]), pts[-1][1]), xytext=(-4, -12), textcoords="offset points",
                         ha="right", fontsize=10, color=INK)
@@ -285,6 +318,14 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
         zax.set_title("Oil boiler firing (red)", loc="left", fontsize=12, color=INK)
         zax.tick_params(axis="y", length=0)
 
+    for sp in spans or []:
+        for ax, room in zip(room_axs, picked):
+            if sp.rooms and room.name not in sp.rooms:
+                continue
+            ax.axvspan(sp.at, sp.until, color="#c0392b", alpha=0.12, lw=0)
+            ax.annotate(sp.label, ((sp.at + (sp.until - sp.at) / 2), 0.5), xycoords=("data", "axes fraction"),
+                        ha="center", va="center", fontsize=11, color="#8e2a1f")
+
     for i, m in enumerate(shared):
         style = draw_mark(axs[0], m, len(shared) - i - 0.5, "data")
         axs[0].plot([m.at, m.at], [0, len(shared) - i - 0.5], color=INK, lw=1.2, ls=style)
@@ -324,6 +365,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--no-boiler", action="store_true", help="leave out the boiler strip and thermostat setpoints")
     p.add_argument("--outdoor-on-chart", action="store_true", help="draw outdoor on each room's panel, not its own")
     p.add_argument("--no-outdoor", action="store_true", help="leave out the outdoor panel")
+    p.add_argument("--span", action="append", default=[], help='a shaded stretch, "FROM-TO=LABEL"; repeatable')
+    p.add_argument("--stall", action="store_true",
+                   help="shade each room's biggest fall (1 °F or more) as an estimated stretch of no heat")
+    p.add_argument("--share", action="store_true",
+                   help="for the installer: --plain, --outdoor-on-chart and --no-boiler together")
     p.add_argument("--plain", action="store_true", help="room names only: no sensor types or summary (for sharing)")
     p.add_argument("--out", type=Path, default=Path("room-temps.png"), help="PNG path (default ./room-temps.png)")
     p.add_argument("--list", action="store_true", help="list rooms, their sensors and outdoor units, then exit")
@@ -332,6 +378,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
+    if args.share:
+        args.plain = args.outdoor_on_chart = args.no_boiler = True
     if args.list:
         for unit in report.UNITS:
             for r in unit.rooms:
@@ -342,6 +390,7 @@ def main(argv: list[str]) -> int:
         start, end = window(args.since, args.until, datetime.now(TZ))
         marks = [parse_mark(m, start) for m in args.mark]
         setpoints = dict(parse_setpoint(s) for s in args.setpoint)
+        spans = [parse_span(s, start) for s in args.span]
     except ValueError as e:
         print(f"room-temps: {e}", file=sys.stderr)
         return 2
@@ -353,8 +402,10 @@ def main(argv: list[str]) -> int:
     except (URLError, RuntimeError) as e:
         print(f"room-temps: could not fetch data: {e}", file=sys.stderr)
         return 1
+    if args.stall:
+        spans += stall_spans(data["temps"])
     plot(data, picked, marks, start, end, args.plain, args.out, setpoints, not args.no_boiler,
-         not args.no_outdoor, args.outdoor_on_chart)
+         not args.no_outdoor, args.outdoor_on_chart, spans)
     print(args.out.resolve())
     return 0
 

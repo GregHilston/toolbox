@@ -75,6 +75,12 @@ class MarkTest(unittest.TestCase):
         self.assertTrue(m.estimated)
         self.assertEqual(rt.parse_mark("7:09=x", self.START).rooms, ())
 
+    def test_span_has_both_ends(self):
+        sp = rt.parse_span("8:08-9:34=No heat", self.START)
+        self.assertEqual((sp.at.hour, sp.until.hour, sp.until.minute, sp.label), (8, 9, 34, "No heat"))
+        with self.assertRaises(ValueError):
+            rt.parse_span("8:08=No heat", self.START)
+
     def test_tilde_is_an_estimate(self):
         m = rt.parse_mark("~23:10=Head on", self.START)
         self.assertTrue(m.estimated)
@@ -87,9 +93,21 @@ class SummaryTest(unittest.TestCase):
         pts = [(t0, 61.0), (t0 + 3600, 65.5), (t0 + 7200, 64.0), (t0 + 10800, 69.0)]
         self.assertEqual(rt.summary(pts), "low 61.0 at 7:00, fell 65.5→64.0 from 8:00 to 9:00, now 69.0 °F")
 
+    def test_a_short_burst_is_not_a_fall(self):
+        t0 = datetime(2026, 10, 27, 7, 0, tzinfo=rt.TZ).timestamp()
+        self.assertIsNone(rt.biggest_fall([(t0, 66.0), (t0 + 60, 68.0), (t0 + 360, 68.0), (t0 + 420, 66.0), (t0 + 3600, 66.0)]))
+
     def test_small_wobbles_are_not_a_fall(self):
         t0 = datetime(2026, 10, 27, 7, 0, tzinfo=rt.TZ).timestamp()
         self.assertEqual(rt.summary([(t0, 64.0), (t0 + 60, 64.5), (t0 + 120, 64.0)]), "low 64.0 at 7:00, now 64.0 °F")
+
+
+class StallTest(unittest.TestCase):
+    def test_biggest_fall_becomes_an_estimated_span_for_its_room(self):
+        t0 = datetime(2026, 10, 27, 8, 0, tzinfo=rt.TZ).timestamp()
+        temps = {"Basement": [(t0, 65.5), (t0 + 85 * 60, 63.9), (t0 + 120 * 60, 69.0)], "Guest room": []}
+        [sp] = rt.stall_spans(temps)
+        self.assertEqual((sp.label, sp.rooms, sp.estimated), ("No heat about 8:00–9:25\n(85 min)", ("Basement",), True))
 
 
 class PlotTest(unittest.TestCase):
