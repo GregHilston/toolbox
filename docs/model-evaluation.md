@@ -45,7 +45,7 @@ only after an oMLX upgrade, a harness change, or if a candidate's numbers look o
 |---|---|---|---|---|---|---|---|---|
 | light, moria | `Qwen3.6-35B-A3B-4bit` (temp 0.6, thinking on) | 1 of 3 | 0 of 3 | 3.4 min | 112 tok/s | 1,162 / 756 tok/s | 21 GB | 0 |
 | light, dungeon | `Qwen3.6-35B-A3B-4bit:lab` (thinking off) | 0 of 2 (both 15/16) | 0 of 2 | 3.6 min | 53 tok/s | not measured | 21 GB | flat under heavier load since the hot cache went off (+0.9 GB in one turn before) |
-| heavy, moria | Qwen3.8-Flash-Next `GSQ-RCO-IQ3_S` on **Strata**, not oMLX (temp 1.0, effort medium; measured 2026-10-26) | 3 of 3 | 3 of 3 | 1.7 min | 41–43 tok/s | 287 / 240 tok/s | ~73 GB (55 GB mapped) | 0 |
+| heavy, moria | Qwen3.8-Flash-Next `GSQ-RCO-IQ3_S` on **Strata**, not oMLX (temp 1.0, effort medium; measured 2026-10-26) | 3 of 3 | 3 of 3 | 1.7 min | 41–43 tok/s (60 on a quiet machine) | 287 / 240 tok/s (317 / 287 quiet) | ~73 GB (55 GB mapped) | 0 |
 
 dungeon swapped during that eval: 1.0 → 1.9 GB in one turn, with its 56 containers up. Turning
 oMLX's 2 GB hot cache off fixed it. Two concurrent 6.9k-token prompts with 2,500-token

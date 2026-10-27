@@ -30,6 +30,26 @@ It listens on moria's tailnet address, port 8080, and takes oMLX's API key, read
 - **64K context**, set by Strata's wizard. A 64K prompt takes ~4.4 min to first token.
 - **Text only.** The vision encoder is off (`--vision no`).
 
+## Mac caveats (v0.2.6)
+
+Checked against Strata's issues on 2026-10-27; re-check each on an upgrade.
+
+- **Sampling does nothing on a Mac.** The Metal engine decodes greedily whatever a request
+  sends: temperature, top_p, top_k, seed, penalties, `logit_bias` (issue #3006; fix in PR
+  #4126, unmerged). Every measurement here was greedy, and loop guards that rely on sampling
+  cannot help. Strata's `repeat_stop_tokens` (256) is the guard that works.
+- **One request at a time.** `"parallel"` or `--batch` exits the Metal engine (#3981), so the
+  server queues requests. Never set them, and expect a second pi lane to wait.
+- **Keep `--expert-cache` at setup's 64.** Higher kills the Metal engine on short prompts
+  (#2671).
+- **No conversation parking on a Mac** (#4144): switching between two conversations re-reads
+  the whole prompt.
+- **Memory pressure halves decode.** The model file is mapped, not wired, so under swap macOS
+  evicts pages and decode stalls re-reading them: 35.6 tok/s on 2026-10-26 with 35 GB of swap
+  right after setup, 59.7 on a quiet machine the next night, same config.
+- **Prefill is a quarter of the author's M5 Max** (~300 against 1,140–1,320 tok/s) on any
+  machine state. Untested guess: the M5's GPU matrix units, which the M4 lacks.
+
 ## Upgrading
 
 The pin is `REF` in `bin/strata-setup.sh`: a release's commit, never a branch, because

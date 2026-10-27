@@ -61,6 +61,10 @@ medium`, 16384 thinking budget), since Strata defaults to temperature 0.
 - Fits beside the A3B, unlike both oMLX Flash-Next builds, but loading pushed 24 GB of other
   apps to swap (9 → 33.5 GB). Tool calls 3 of 3 well formed.
 - Build needs Apple's clang: nix-darwin's `cc` (14.4 SDK) fails the Metal build.
+- **The speed rows ran with 35 GB of swap**, straight after setup's download. Re-run 2026-10-27
+  on a quiet machine, same config: `bench.py` 59.7 tok/s (code 68.7), prefill 287–317 tok/s
+  flat to 64K. The mapped model file is evicted under pressure. The CRUD correctness is
+  unaffected: the Mac engine decodes greedily (`docs/strata.md`, Mac caveats).
 - Speed results: `bench/crud/results/strata-iq3s-speed/`. Write-up, reproduction and
   recommendation: notes `llm/strata-vs-omlx-on-moria.md`.
 
