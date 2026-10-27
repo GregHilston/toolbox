@@ -1,0 +1,28 @@
+{
+  "Qwen3.6-35B-A3B-4bit": {
+    "code": {
+      "decode_tps": 102.41422328880712,
+      "e2e_tps": 84.35873573532511,
+      "ttft": 0.13927150005474687,
+      "prefill_tps": 3288.540726709791,
+      "completion_tokens": 200,
+      "prompt_tokens": 458
+    },
+    "prose": {
+      "decode_tps": 92.54456902892663,
+      "e2e_tps": 89.39965062610692,
+      "ttft": 0.1113390838727355,
+      "prefill_tps": 1634.6461069145532,
+      "completion_tokens": 200,
+      "prompt_tokens": 182
+    },
+    "qa": {
+      "decode_tps": 97.74138990874326,
+      "e2e_tps": 94.37102215044774,
+      "ttft": 0.11656075017526746,
+      "prefill_tps": 1535.6798899358944,
+      "completion_tokens": 200,
+      "prompt_tokens": 179
+    }
+  }
+}

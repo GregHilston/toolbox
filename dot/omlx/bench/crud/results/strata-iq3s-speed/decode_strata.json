@@ -1,0 +1,28 @@
+{
+  "qwen3.8-flash-next-iq3_s": {
+    "code": {
+      "decode_tps": 37.61688595287628,
+      "e2e_tps": 36.738628377808304,
+      "ttft": 0.1271001670975238,
+      "prefill_tps": 3933.9051349661136,
+      "completion_tokens": 200,
+      "prompt_tokens": 500
+    },
+    "prose": {
+      "decode_tps": 34.06000447169075,
+      "e2e_tps": 32.51144116425001,
+      "ttft": 0.12616374995559454,
+      "prefill_tps": 1775.4703714723173,
+      "completion_tokens": 200,
+      "prompt_tokens": 224
+    },
+    "qa": {
+      "decode_tps": 35.0155808071904,
+      "e2e_tps": 32.69115264071458,
+      "ttft": 0.12582866684533656,
+      "prefill_tps": 1756.3565246355518,
+      "completion_tokens": 200,
+      "prompt_tokens": 221
+    }
+  }
+}

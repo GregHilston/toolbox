@@ -41,6 +41,31 @@ unchanged.
 
 ---
 
+## 2026-10-26: Strata, Qwen3.8-Flash-Next IQ3_S — candidate heavy model
+
+Not oMLX: [Strata](https://github.com/Niko1221/Strata) at `4b9e05a2`, a llama.cpp/ggml fork
+with its own Metal engine, serving its wizard's 128 GB pick (`GSQ-RCO-IQ3_S`, 54.8 GB mapped,
+18 GB peak footprint) on port 8080. The A3B 4-bit ran beside it on oMLX as the baseline. Same
+CRUD eval, sampling sent per request (temp 1.0, top_p 0.95, top_k 20, `reasoning_effort:
+medium`, 16384 thinking budget), since Strata defaults to temperature 0.
+
+| arm | 16/16 at the end | no hints | wall per run | out tokens | decode tok/s | prefill 2K / 64K |
+|---|---|---|---|---|---|---|
+| `strata-iq3s-r1..3` | 3 of 3 | 3 of 3 | 1.7 min | ~4,300 | 41–43 (`bench.py` 35.6) | 485 / 240 |
+| `a3b-vs-strata-r1..3` | 1 of 3 | 1 of 3 | 2.9–7.8 min | ~12,000 per round | 64–78 (`bench.py` 97.6) | 1,144 / 756 |
+
+- Every Strata run used `node:sqlite` and skipped the `better-sqlite3` trap. Fewer tokens is why
+  it finished first despite a third of the decode.
+- Strata's M5 Max claim (74–120 tok/s, Q2_0) did not hold on this M4 Max with IQ3_S: 33–43,
+  80–95% drafts accepted, every expert resident. Prefill is 75–95% of oMLX's Flash-Next.
+- Fits beside the A3B, unlike both oMLX Flash-Next builds, but loading pushed 24 GB of other
+  apps to swap (9 → 33.5 GB). Tool calls 3 of 3 well formed.
+- Build needs Apple's clang: nix-darwin's `cc` (14.4 SDK) fails the Metal build.
+- Speed results: `bench/crud/results/strata-iq3s-speed/`. Write-up, reproduction and
+  recommendation: notes `llm/strata-vs-omlx-on-moria.md`.
+
+---
+
 ## 2026-10-04: Swift 1.5 Qwen3.8-Flash-Next oQ3.5e — rejected
 
 oMLX 0.7.0, moria, the CRUD eval unchanged. Candidate:
