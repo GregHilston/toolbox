@@ -51,8 +51,12 @@ There are also `model_profiles.json` (named presets per model) and `global_templ
 dense `Qwen3.8-27B-4bit`'s **23.0** — 5.7× — while scoring 9/10 vs 8/10 on a 10-task
 executable coding eval. Faster *and* not worse.
 
-**Specialist: `Swift-1.5-Qwen3.8-27b-oQ4e-mtp`, with `mtp_enabled`** (dense 27B, 16 GB;
-replaced `Qwen3.8-27B-4bit` on 2026-10-02). On a one-table CRUD app eval graded by running
+**The heavy model is no longer on oMLX.** Since 2026-10-27 it is Qwen3.8-Flash-Next on
+Strata, port 8080, behind the gateway's `local-big` (`docs/strata.md`). What follows is the
+oMLX specialist it replaced, kept on disk for a rollback.
+
+**Former specialist: `Swift-1.5-Qwen3.8-27b-oQ4e-mtp`, with `mtp_enabled`** (dense 27B, 16 GB;
+replaced `Qwen3.8-27B-4bit` on 2026-10-02, replaced by Strata on 2026-10-27). On a one-table CRUD app eval graded by running
 the app, the dense 27B finished correct in 10 of 10 runs and the A3B in 2 of 5. MTP doubles
 its decode (18.6 → 37.3 t/s) and kept quality (3 of 3). Reach for it on multi-file builds
 where a wrong answer costs more than a few minutes. Its cost is prefill: ~150 t/s against

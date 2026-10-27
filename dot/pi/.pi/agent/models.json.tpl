@@ -27,10 +27,10 @@
         },
         {
           "id": "local-big",
-          "name": "local-big: Qwen 3.8 27B, moria only (fails when away)",
+          "name": "local-big: Qwen 3.8 Flash-Next on Strata, moria only (fails when away)",
           "contextWindow": 65536,
           "maxTokens": 32768,
-          "input": ["text", "image"],
+          "input": ["text"],
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {

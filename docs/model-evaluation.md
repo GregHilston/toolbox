@@ -45,14 +45,19 @@ only after an oMLX upgrade, a harness change, or if a candidate's numbers look o
 |---|---|---|---|---|---|---|---|---|
 | light, moria | `Qwen3.6-35B-A3B-4bit` (temp 0.6, thinking on) | 1 of 3 | 0 of 3 | 3.4 min | 112 tok/s | 1,162 / 756 tok/s | 21 GB | 0 |
 | light, dungeon | `Qwen3.6-35B-A3B-4bit:lab` (thinking off) | 0 of 2 (both 15/16) | 0 of 2 | 3.6 min | 53 tok/s | not measured | 21 GB | flat under heavier load since the hot cache went off (+0.9 GB in one turn before) |
-| heavy, moria | `Swift-1.5-Qwen3.8-27b-oQ4e-mtp`, `mtp_enabled` (temp 1.0, effort medium) | 3 of 3 | 2 of 3 | 3.4 min | 38 tok/s | 183 / 129 tok/s | 16 GB | 0 |
+| heavy, moria | Qwen3.8-Flash-Next `GSQ-RCO-IQ3_S` on **Strata**, not oMLX (temp 1.0, effort medium; measured 2026-10-26) | 3 of 3 | 3 of 3 | 1.7 min | 41–43 tok/s | 287 / 240 tok/s | ~73 GB (55 GB mapped) | 0 |
 
 dungeon swapped during that eval: 1.0 → 1.9 GB in one turn, with its 56 containers up. Turning
 oMLX's 2 GB hot cache off fixed it. Two concurrent 6.9k-token prompts with 2,500-token
 replies swapped out 190 MB before and 8 MB after, at the same speed. It fits with little to
 spare; home-lab `docs/local-llms.md` → "Memory" has the budget and the next levers.
 
-The thinking budgets differ: 8192 tokens for the A3B, 16384 for Swift. Equalise them
+The heavy model is the one incumbent not on oMLX: Strata (`docs/strata.md`) runs a
+Flash-Next build that fits beside the A3B, which neither oMLX build did. It replaced
+`Swift-1.5-Qwen3.8-27b-oQ4e-mtp` (3 of 3, 2 with no hints, 3.4 min, 16 GB) on 2026-10-27;
+Swift's weights stay on disk, undeclared, for a rollback.
+
+The thinking budgets differ: 8192 tokens for the A3B, 16384 for the heavy model. Equalise them
 (the `thinking_budget_tokens` entry) when a comparison hinges on it.
 
 ## Rejected (do not re-test without a reason)

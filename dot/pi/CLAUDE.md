@@ -12,7 +12,7 @@ gateway's aliases, never an oMLX model, and the gateway decides where each runs:
 | --- | --- | --- |
 | `local-small` | moria's oMLX when awake, else dungeon's | the default |
 | `local-lab` | dungeon only | automation that must not wake moria |
-| `local-big` | moria only; fails in ~7 s when moria is away | harder work while moria is up |
+| `local-big` | moria's Strata, Qwen3.8-Flash-Next; fails in ~7 s when moria is away | harder work while moria is up; text only, slow to first token |
 | `cloud` | DeepSeek's API (Flash) | metered; never a fallback |
 
 The `local-` prefix means the prompt stays on the tailnet; `cloud` leaves the

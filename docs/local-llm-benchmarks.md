@@ -41,7 +41,7 @@ unchanged.
 
 ---
 
-## 2026-10-26: Strata, Qwen3.8-Flash-Next IQ3_S — candidate heavy model
+## 2026-10-26: Strata, Qwen3.8-Flash-Next IQ3_S — adopted as the heavy model
 
 Not oMLX: [Strata](https://github.com/Niko1221/Strata) at `4b9e05a2`, a llama.cpp/ggml fork
 with its own Metal engine, serving its wizard's 128 GB pick (`GSQ-RCO-IQ3_S`, 54.8 GB mapped,
@@ -696,8 +696,10 @@ luck, not as this box's drift, and re-read the control every time.
 - **Default:** `Qwen3.6-35B-A3B-4bit` — temp 0.6 / top_p 0.95 / top_k 20 / min_p 0.0, with an
   8192-token thinking budget as its only runaway guard (no `reasoning_effort` knob exists in
   Qwen3.6).
-- **Specialist:** `Swift-1.5-Qwen3.8-27b-oQ4e-mtp` with `mtp_enabled` since 2026-10-02 (it
-  replaced `Qwen3.8-27B-4bit`) — temp 1.0 / top_p 0.95 / top_k 20 / min_p 0.0,
+- **Heavy, since 2026-10-27:** Qwen3.8-Flash-Next IQ3_S on Strata, not oMLX
+  (`docs/strata.md`, 2026-10-26 section). Same sampling and budget as below.
+- **Former specialist:** `Swift-1.5-Qwen3.8-27b-oQ4e-mtp` with `mtp_enabled` from 2026-10-02
+  to 2026-10-27 (it replaced `Qwen3.8-27B-4bit`) — temp 1.0 / top_p 0.95 / top_k 20 / min_p 0.0,
   `reasoning_effort: medium`, 16384-token budget. See the 2026-10-02 section.
 - **Quality-leaning alternative, on disk, nothing uses it:** `Qwen3.6-35B-A3B-4bit-DWQ`
   (10/10, and ~10% slower — not the 21% long quoted here).

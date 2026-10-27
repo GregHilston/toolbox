@@ -239,6 +239,10 @@ pi-web-setup:
 comfyui-setup:
   {{justfile_directory()}}/../bin/comfyui-setup.sh
 
+# Install or upgrade Strata, the heavy local model, at its pinned commit.
+strata-setup:
+  {{justfile_directory()}}/../bin/strata-setup.sh
+
 # Show post-deploy checklist for Darwin/macOS setup
 # Usage: `just checklist`
 checklist:

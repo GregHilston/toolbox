@@ -26,6 +26,8 @@ in {
     ../../../modules/darwin/hermes-desktop.nix
     # ComfyUI — image generation on this GPU, behind comfy.grehg2.xyz.
     ../../../modules/darwin/comfyui.nix
+    # Strata — the heavy local model, Qwen3.8-Flash-Next, on :8080.
+    ../../../modules/darwin/strata.nix
   ];
 
   networking.hostName = "moria";
@@ -102,8 +104,6 @@ in {
   services.omlxDeploy = {
     enable = true;
     cacheSize = "32GB";
-    # The heavy specialist, beside lightModel; docs/model-evaluation.md.
-    models."Swift-1.5-Qwen3.8-27b-oQ4e-mtp" = "yottle/Swift-1.5-Qwen3.8-27b-oQ4e-mtp";
   };
 
   services.fluidvoice.enable = true;
@@ -158,6 +158,10 @@ in {
 
   # Installed once with `just comfyui-setup`. Why: docs/image-models.md.
   custom.services.comfyui.enable = true;
+
+  # The heavy model, beside oMLX's light one. Installed once with
+  # `just strata-setup`. Why: docs/model-evaluation.md.
+  custom.services.strata.enable = true;
 
   # 128 GB box serving two models at once. macOS would cap the GPU at 96 GB
   # (its 75% default) while oMLX budgets against ~107 GB, so the kernel wall is
