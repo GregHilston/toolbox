@@ -3,6 +3,10 @@
   "env": {
     "CLAUDE_CODE_FORCE_SESSION_PERSISTENCE": "1"
   },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Bash(find:*)",
@@ -31,6 +35,7 @@
       "Bash(pnpm test *)"
     ]
   },
+  "model": "opus",
   "hooks": {
     "SessionStart": [
       {
@@ -89,9 +94,5 @@
   "agentPushNotifEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754006348784
-  },
-  "attribution": {
-    "commit": "",
-    "pr": ""
   }
 }
