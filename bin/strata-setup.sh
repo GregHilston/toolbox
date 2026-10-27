@@ -12,7 +12,8 @@ set -euo pipefail
 IFS=$'\n\t'
 
 DIR="${STRATA_DIR:-$HOME/Git/strata}"
-# A commit, not a branch: releases land daily and 2.x broke LAN auth.
+# v0.2.6. A release commit, not a branch: releases land daily, and 2.x broke
+# LAN auth. How to move it: docs/strata.md, Upgrading.
 REF="${STRATA_REF:-4b9e05a2a806a3fe24f7b2560d98626c37dade35}"
 AGENT="gui/$(id -u)/org.nixos.strata"
 
