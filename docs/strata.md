@@ -23,7 +23,8 @@ It listens on moria's tailnet address, port 8080, and takes oMLX's API key, read
 
 - **Lazy.** The agent starts with the model unloaded (~220 MB). The first request loads it
   in 20–70 s, depending on page cache; it unloads after 30 minutes idle (`idle_unload_s`). Loaded, it maps a
-  54.8 GB file and peaks at 18 GB of its own, beside oMLX's A3B.
+  54.8 GB file and peaks at 18 GB of its own, beside oMLX's A3B (~21 GB, unloaded after 30
+  minutes idle since 2026-10-27).
 - **Defaults** (`bin/strata-setup.sh` adds them after every setup run, which rewrites the
   config): `reasoning_effort: medium`, a 16384-token thinking budget. Strata's own sampling
   defaults for thinking requests are the model card's (temp 1.0, top_p 0.95, top_k 20).

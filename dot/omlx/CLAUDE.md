@@ -102,6 +102,13 @@ taken and refuses the 20 GB model.
 
 **citadel loads Qwen on demand and unloads it after 30 min idle.** Its balanced tier refused the 20 GB model with only 18 GB reclaimable beside Firefox, Slack and FluidVoice (2026-10-05), so it pins `memoryCeilingGB = 28`. A fixed ceiling never evicts for other apps' memory, only for oMLX's own (90% of the ceiling), so `idleTimeoutSeconds = 1800` hands the memory back instead of letting macOS swap. The ceiling counts the whole process, hence `cacheSize = "2GB"`: 20 + 2 stays under the 25.2 GB eviction line.
 
+**moria unloads idle models after 30 min too** (`idleTimeoutSeconds = 1800`, 2026-10-27).
+Strata's Qwen3.8-Flash-Next is memory-mapped, not wired, so every GB an idle A3B holds is a
+GB macOS can take from it (`docs/strata.md`). The A3B reloads in ~8–13 s on the next
+request. It only goes idle because nothing polls it anymore: the gateway's health check now
+GETs `/health` (home-lab `docs/llm-gateway.md`), and the risk-classify hook is off. A client
+that sends a completion every few minutes would keep it loaded again.
+
 **`chunked_prefill` is on everywhere.** Without it, a short request waited out a
 65k-token prefill in full: 85 s on moria (2026-10-03). Upstream measured 9.9 s → 2.4 s
 worst time to first token with it on (jundot/omlx#4226); not yet re-measured here. The

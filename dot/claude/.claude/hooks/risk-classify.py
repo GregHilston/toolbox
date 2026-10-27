@@ -4,6 +4,10 @@
 Never blocks and prints nothing. Safe commands are logged by rule; the rest go
 to the LLM gateway from a detached child, so Claude never waits. Runs only on
 moria, so it never loads dungeon. Decisions land in ~/.claude/logs/risk-classify.jsonl.
+
+Not wired into settings.json since 2026-10-27. Nothing read its log (20,927 rows
+in six days, most "deny"s false alarms), and its call per command kept moria's
+A3B loaded. Re-add it under PreToolUse/Bash to resume the experiment.
 """
 
 from __future__ import annotations
