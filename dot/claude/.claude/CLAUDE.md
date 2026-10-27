@@ -69,6 +69,7 @@ End every handoff with the exact message I paste to start the next chat, in a co
 - I often chat from my phone while you work: keep status updates to short bullets, lead with what changed, and give me decisions as `AskUserQuestion` picks with a recommended option first.
 - Answer a message I send mid-task in your very next reply, even if it's a short "got it, doing X after Y". I shouldn't have to repeat myself.
 - When I ask "are we good?" or for status, say plainly what's done, what's still running, and what needs me.
+- During a run over an hour, send a one-line status about hourly, even when nothing needs me; on 2026-10-27 I had to ask after two silent hours.
 - Put steps I must act on in the last message of a turn. A table written mid-turn, between tool calls, is easy to miss on my phone; I missed one on 2026-10-22.
 - Before any change to the network (router, DHCP, DNS, Omada), write down the current value, the new one, and a rollback I can follow with the internet down, in the notes ledger and a home-lab runbook.
 - When I report a playtest bug, ask what I saw on screen and which build I ran before theorising; on 2026-10-25 two theories were wrong because nobody asked. While I sleep, send one Pushover per finding, and a correcting one when a finding turns out wrong. Prove each playtest bug with a test that fails first.
