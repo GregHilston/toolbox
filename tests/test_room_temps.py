@@ -76,10 +76,14 @@ class MarkTest(unittest.TestCase):
 
 
 class SummaryTest(unittest.TestCase):
-    def test_rise_then_fall_names_low_peak_and_now(self):
+    def test_a_stall_is_named_even_after_recovery(self):
         t0 = datetime(2026, 10, 27, 7, 0, tzinfo=rt.TZ).timestamp()
-        text = rt.summary([(t0, 61.0), (t0 + 3600, 65.5), (t0 + 7200, 64.6)])
-        self.assertEqual(text, "low 61.0 at 7:00, peak 65.5 at 8:00, now 64.6 °F")
+        pts = [(t0, 61.0), (t0 + 3600, 65.5), (t0 + 7200, 64.0), (t0 + 10800, 69.0)]
+        self.assertEqual(rt.summary(pts), "low 61.0 at 7:00, fell 65.5→64.0 from 8:00 to 9:00, now 69.0 °F")
+
+    def test_small_wobbles_are_not_a_fall(self):
+        t0 = datetime(2026, 10, 27, 7, 0, tzinfo=rt.TZ).timestamp()
+        self.assertEqual(rt.summary([(t0, 64.0), (t0 + 60, 64.5), (t0 + 120, 64.0)]), "low 64.0 at 7:00, now 64.0 °F")
 
 
 class PlotTest(unittest.TestCase):

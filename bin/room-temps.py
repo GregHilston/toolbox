@@ -128,12 +128,27 @@ def setpoint_changes(points: list[tuple[float, float]]) -> list[tuple[float, flo
 
 
 def summary(points: list[tuple[float, float]]) -> str:
-    """Low, peak and latest, so the shape is said in words."""
-    lo_t, lo = min(points, key=lambda p: p[1])
-    hi_t, hi = max(points, key=lambda p: p[1])
+    """Low, the biggest fall, and latest, so the shape is said in words."""
     fmt = lambda t: f"{datetime.fromtimestamp(t, TZ):%-I:%M}"
-    text = f"low {lo:.1f} at {fmt(lo_t)}, peak {hi:.1f} at {fmt(hi_t)}, now {points[-1][1]:.1f} °F"
-    return text if hi_t > lo_t else f"now {points[-1][1]:.1f} °F, peak {hi:.1f} at {fmt(hi_t)}"
+    lo_t, lo = min(points, key=lambda p: p[1])
+    parts = [f"low {lo:.1f} at {fmt(lo_t)}"]
+    drop = biggest_fall(points)
+    if drop:
+        (a_t, a), (b_t, b) = drop
+        parts.append(f"fell {a:.1f}→{b:.1f} from {fmt(a_t)} to {fmt(b_t)}")
+    parts.append(f"now {points[-1][1]:.1f} °F")
+    return ", ".join(parts)
+
+
+def biggest_fall(points: list[tuple[float, float]], at_least: float = 1.0):
+    """The largest drop from a peak to a later low, if at least `at_least` °F."""
+    best, peak = None, points[0]
+    for p in points:
+        if p[1] > peak[1]:
+            peak = p
+        elif peak[1] - p[1] >= at_least and (best is None or peak[1] - p[1] > best[0][1] - best[1][1]):
+            best = (peak, p)
+    return best
 
 
 def collect(picked: list, start: datetime, end: datetime) -> dict:
@@ -227,7 +242,7 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
         text = f"{'about ' if m.estimated else ''}{m.at:%-I:%M} {m.label}"
         axs[0].plot([m.at, m.at], [0, len(marks) - i - 0.5], color=INK, lw=1.2, ls=style)
         # Labels near the right edge go left of their line.
-        right = (m.at - start) / (end - start) > 0.6
+        right = (m.at - start) / (end - start) > 0.75
         axs[0].annotate(text, (m.at, len(marks) - i - 0.5), xytext=(-4 if right else 4, 0),
                         textcoords="offset points", ha="right" if right else "left",
                         va="center", fontsize=10, color=INK)
