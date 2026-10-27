@@ -87,8 +87,8 @@ same activation as `~/.claude` so it stays writable — run `ccstatusline` bare 
 its TUI, then commit or discard the diff.
 
 Version pin and the `~/.npm-global` install live in `nixos/modules/programs/tui/claude.nix`
-(`ccstatuslineVersion`); bump there. It needs `node` on `$PATH`, hence `nodejs_22` in
-`nixos/config/base-packages.nix`.
+(`ccstatuslineVersion`); bump there. It needs `node` on `$PATH`: Homebrew's on the Macs,
+`nodejs_22` in `nixos/modules/home/default.nix` on NixOS.
 
 **Widget choices, and why:**
 
@@ -132,7 +132,7 @@ On moria and citadel, [FluidVoice](https://github.com/altic-dev/FluidVoice) dict
 F18. Shift plus Caps Lock (F19) starts Command Mode, an LLM agent that runs shell commands;
 Option plus Caps Lock (F20) starts Write Mode, which writes or rewrites the selected text.
 All three work the same way: a tap toggles hands-free, a hold is push-to-talk. NixOS
-dictates with [Handy](https://handy.computer/), which the Macs keep installed but dormant.
+dictates with [Handy](https://handy.computer/).
 A new terminal on a Mac with FluidVoice prints a one-line key reminder, beside zellij's
 (top of `dot/zsh/.zshrc`); `touch ~/.hide-fv-motd` silences it.
 

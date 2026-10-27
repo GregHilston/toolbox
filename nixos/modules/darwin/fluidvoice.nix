@@ -82,7 +82,6 @@
     export HOME=/Users/${user}
     export DOMAIN=com.FluidApp.app
     export APP=/Applications/FluidVoice.app
-    export HANDY_STORE="/Users/${user}/Library/Application Support/com.pais.handy/settings_store.json"
     export OMLX_SETTINGS=/Users/${user}/.omlx/settings.json
     export SEED_DICTATION=${lib.escapeShellArg dictation}
     export SEED_DICTATION_LEGACY=${lib.escapeShellArg dictationLegacy}
@@ -122,8 +121,8 @@ in {
 
   options.services.fluidvoice.enable = lib.mkEnableOption ''
     FluidVoice on this Darwin host: the cask, a one-time hotkey seed, its
-    model routing (Fluid-1 dictation, oMLX for Write and Command Mode), taking
-    F18 and launch-at-login from Handy, an `open -a` login agent, and
+    model routing (Fluid-1 dictation, oMLX for Write and Command Mode), an
+    `open -a` login agent, and
     fluidvoice-ax, which lets Write Mode read selections in Electron apps
   '';
 

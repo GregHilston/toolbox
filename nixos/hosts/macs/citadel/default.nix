@@ -197,9 +197,6 @@
       gitleaks
     ];
 
-    # Disable modules not needed on this host
-    custom.programs.opencode.enable = lib.mkForce false;
-
     # Disable mflux activation
     home.activation.install-mflux = lib.mkForce "";
 

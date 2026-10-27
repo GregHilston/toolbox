@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# FluidVoice activation: hotkey seed, dictionary, managed settings, Handy, fluidvoice-ax.
+# FluidVoice activation: hotkey seed, dictionary, managed settings, fluidvoice-ax.
 #
 # Runs as the user from postActivation; fluidvoice.nix passes every value in the
 # environment, so tests/test_fluidvoice_activate.py can run it against a scratch
 # defaults domain. Rationale for each step: nixos/CLAUDE.md → "FluidVoice".
 set -eu
 
-: "${DOMAIN:?}" "${APP:?}" "${HANDY_STORE:?}" "${OMLX_SETTINGS:?}"
+: "${DOMAIN:?}" "${APP:?}" "${OMLX_SETTINGS:?}"
 : "${SEED_DICTATION:?}" "${SEED_DICTATION_LEGACY:?}" "${SEED_COMMAND:?}" "${SEED_WRITE:?}"
 : "${DICTIONARY:?}" "${PROVIDER:?}" "${STRINGS:?}"
 AX_SOURCE="${AX_SOURCE:-}"
@@ -176,23 +176,6 @@ if [ "$(defaults read "$DOMAIN" OnboardingCompleted 2>/dev/null || echo 0)" != 1
   echo "fluidvoice: onboarding unfinished; managed settings apply on the next deploy"
 elif drifted; then
   apply_settings || echo "fluidvoice: managed settings skipped; nothing written" >&2
-fi
-
-# Best effort. `if` disables set -e here.
-if [ -f "$HANDY_STORE" ] && ! (
-  UPDATED="$(jq '
-    .settings.autostart_enabled = false
-    | .settings.bindings.transcribe |=
-        (if (.current_binding // "" | test("f18")) then .current_binding = .default_binding else . end)
-  ' "$HANDY_STORE")" || exit 1
-  CURRENT="$(jq . "$HANDY_STORE")" || exit 1
-  [ "$UPDATED" != "$CURRENT" ] || exit 0
-  echo "fluidvoice: taking F18 and launch-at-login from Handy"
-  # Handy rewrites its store on quit.
-  quit_app Handy handy || exit 1
-  printf '%s\n' "$UPDATED" > "$HANDY_STORE" || exit 1
-); then
-  echo "fluidvoice: could not update Handy's settings; it may still own F18" >&2
 fi
 
 # Rebuild only when the source changes.

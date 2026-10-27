@@ -61,7 +61,6 @@ class TestFluidVoiceActivate(unittest.TestCase):
             "HOME": os.environ["HOME"],
             "DOMAIN": self.domain,
             "APP": str(self.tmp / "FluidVoice.app"),
-            "HANDY_STORE": str(self.tmp / "no-handy.json"),
             "OMLX_SETTINGS": str(self.tmp / "settings.json"),
             "SEED_DICTATION": "[]",
             "SEED_DICTATION_LEGACY": "{}",

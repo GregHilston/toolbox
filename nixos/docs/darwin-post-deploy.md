@@ -193,10 +193,6 @@ dungeon (Karabiner only), do them over VNC. Background and per-host caveats:
       will now say the browser "is being managed by your organization"; that is this policy.
       Why, and why not the simpler `AXEnhancedUserInterface`: `nixos/CLAUDE.md` → "Write
       Mode in Firefox".
-- [ ] **Handy** (moria, citadel) - after the first login following the deploy, quit it from
-      the menu bar once. Its login item is still registered until that launch, which reads
-      the `autostart_enabled = false` nix wrote and unregisters it. Until you quit it, it
-      holds Option+Space (its default binding, which nix moved it back to).
 - [ ] Smoke test, in order: holding Caps Lock shows FluidVoice's overlay and speaking
       inserts text at the cursor; a tap starts hands-free recording and another tap stops
       it; Shift + Caps Lock starts Command Mode (a tap keeps listening until a second

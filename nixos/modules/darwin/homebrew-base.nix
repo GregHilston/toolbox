@@ -83,12 +83,9 @@
       # Voice input: Caps Lock is the dictation key. Karabiner remaps it to F18
       # (dot/karabiner/). Casks rather than nixpkgs on purpose: macOS TCC
       # permissions key on the binary path, so a nix-store app re-prompts for
-      # Microphone/Accessibility on every rebuild. Handy stays installed but
-      # dormant on citadel and moria, where ./fluidvoice.nix takes over F18.
-      # NixOS still dictates with Handy: nixos/modules/common/keyd.nix (the
-      # remap) and the GUI block in nixos/modules/home/default.nix.
+      # Microphone/Accessibility on every rebuild. ./fluidvoice.nix dictates
+      # on F18; NixOS uses Handy instead (nixos/modules/common/keyd.nix).
       "karabiner-elements"
-      "handy"
 
       # Productivity
       "obsidian"

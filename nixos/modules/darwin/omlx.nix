@@ -70,7 +70,7 @@ in {
         default = "Qwen3.6-35B-A3B-4bit";
         description = ''
           The everyday model every oMLX host gets, as its directory name and so
-          its oMLX model id. pi and opencode default to it. Change it here when
+          its oMLX model id. pi defaults to it. Change it here when
           an evaluation picks a new one; every host follows on its next deploy.
         '';
       };

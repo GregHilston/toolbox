@@ -45,7 +45,6 @@
 
       # AI
       "claude"
-      "draw-things"
 
       # Other
       "flux-app"

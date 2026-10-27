@@ -41,6 +41,8 @@ in {
     # native self-updating installer in tui/claude.nix instead; that module's
     # installer guard (`! command -v claude`) no-ops here once this is on PATH.
     [pkgs.claude-code]
+    # The Macs get node from Homebrew.
+    ++ [pkgs.nodejs_22]
     ++ lib.optionals enableGui (with pkgs; [
       # GUI applications (only on non-WSL systems)
       chromium

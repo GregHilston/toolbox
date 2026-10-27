@@ -49,10 +49,10 @@ that needs them:
 | --- | --- | --- | --- |
 | identity | `modules/home/common.nix` | every host, transitively | username, home dir, stateVersion, `programs.home-manager.enable` — nothing else |
 | workstation | `modules/home/workstation.nix` | NixOS + Darwin | the shared CLI/dev baseline: `modules/programs/tui`, `basePackages.homePackages`, nh, yazi, searxngr stow |
-| platform | `modules/home/default.nix` (NixOS)<br>`modules/darwin/home.nix` (macOS) | one platform each | only what is genuinely platform-specific (NixOS: `claude-code` + the GUI block; macOS: fonts, mflux, open-webui-desktop, pi/opencode) |
+| platform | `modules/home/default.nix` (NixOS)<br>`modules/darwin/home.nix` (macOS) | one platform each | only what is genuinely platform-specific (NixOS: `claude-code` + the GUI block; macOS: fonts, mflux, pi) |
 
 rohan deliberately stops at the identity layer and cherry-picks TUI modules by
-hand — the workstation baseline (ollama, go, duckdb, ffmpeg…) has no business on a
+hand — the workstation baseline (go, duckdb, ffmpeg…) has no business on a
 writerdeck.
 
 Home-manager *wiring* (`useGlobalPkgs`, `useUserPackages`, `backupFileExtension`,
@@ -171,7 +171,7 @@ that runs shell commands, asking first) and Option+Caps Lock into F20 (Write Mod
 seeded activation mode is "automatic", and it covers all three keys: a tap toggles
 hands-free recording, a hold is push-to-talk. A hands-free Command or Write capture ends on
 the same chord; a plain Caps Lock tap switches it to dictation instead. Escape cancels.
-Handy stays installed but no longer starts at login or owns F18; Linux hosts keep Handy.
+Linux hosts dictate with Handy.
 
 What it does, all from `postActivation` as the user (the Vorssaint shape, same reasons).
 The logic is `modules/darwin/fluidvoice-activate.sh`, a plain bash file; `fluidvoice.nix`
@@ -190,9 +190,6 @@ real script against a scratch defaults domain with `pgrep`/`osascript`/`pkill` s
   a single shortcut, so each gets the form measured on moria: `fn+F19`, but bare F20 — F20
   arrives without fn. Rebind in the app if one never fires; a listen-only `CGEventTap`
   printing `keyboardEventKeycode` and `flags` shows what a chord really sends.
-- **Takes F18 and launch-at-login from Handy** by editing its `settings_store.json`,
-  quitting Handy first because it writes the store back on quit. Handy applies
-  `autostart_enabled` on its own next launch, so its login item unregisters itself then.
 - **Launches silently at login, unless onboarding is unfinished.** FluidVoice reveals and
   focuses its window on any launch it does not see as a login item, `-g` notwithstanding.
   The agent's script passes `--env FLUID_SIMULATE_LOGIN_LAUNCH=1` and the seed sets
@@ -209,7 +206,7 @@ real script against a scratch defaults domain with `pgrep`/`osascript`/`pkill` s
   SIGTERM. A plain `quit app` waited out AppleScript's default 120 s on a FluidVoice wedged
   after a Command Mode run (hotkeys arrived, recording never started) and the deploy applied
   nothing. If it survives even SIGTERM, only the step that needed the quit is skipped, with a
-  warning; Handy, `fluidvoice-ax` and the relaunch still run.
+  warning; `fluidvoice-ax` and the relaunch still run.
 - **Turns AI streaming off** (`EnableAIStreaming`, no UI toggle in v1.6.9). FluidVoice's
   streaming chat-completions parser keeps only `toolCalls.first` and concatenates every
   call's arguments regardless of `index`, so when Qwen makes two tool calls at once
@@ -250,8 +247,6 @@ real script against a scratch defaults domain with `pgrep`/`osascript`/`pkill` s
 - **Adds Custom Dictionary entries** on every activation, add-only by replacement, for
   jargon both models mangle ("quinn" → Qwen, "o mlx" → oMLX). Plain regex on the
   transcript, before any model.
-- **Handy is best-effort and runs after the seed**, so a corrupt Handy store or a Handy that
-  won't quit prints a warning and never blocks FluidVoice.
 
 What stays manual: permissions, and downloading Parakeet and Fluid-1, both from the app
 (`docs/darwin-post-deploy.md`).

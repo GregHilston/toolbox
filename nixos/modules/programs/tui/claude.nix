@@ -87,8 +87,8 @@ in {
   #
   # Pinned rather than `npx ccstatusline@latest`: npx re-resolves the package on
   # every status line refresh. The installed launcher is a plain
-  # `#!/usr/bin/env node` script, which is why nodejs_22 is in
-  # config/base-packages.nix — node has to be on $PATH when Claude renders.
+  # `#!/usr/bin/env node` script, so node has to be on $PATH when Claude
+  # renders: Homebrew's on the Macs, nodejs_22 in ../../home/default.nix on NixOS.
   #
   # Idempotent + non-fatal: compares the installed package.json version against
   # the pin, so bumping ccstatuslineVersion actually reinstalls, and a dead

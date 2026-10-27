@@ -45,12 +45,10 @@ pkgs: {
   # systemPackages: system-wide for root/services, and in the user profile.
   homePackages = with pkgs; [
     ncdu
-    ollama
     ripgrep
     hugo
     go
     duckdb
-    opencode
     yt-dlp
     ffmpeg # yt-dlp needs it to merge best-quality video+audio streams
     uv
@@ -61,11 +59,6 @@ pkgs: {
     # without it for months. moria's hand-installed Homebrew copy shadows this
     # one because /opt/homebrew/bin sorts first on PATH; that is fine.
     rtk
-    # Node runtime for npm-installed CLIs. The Macs already get node from
-    # Homebrew (and /opt/homebrew/bin sorts ahead of the nix profiles on PATH,
-    # so this does not displace it); NixOS hosts had none, which broke
-    # ccstatusline — see modules/programs/tui/claude.nix.
-    nodejs_22
     git
     (python3.withPackages (ps:
       with ps; [

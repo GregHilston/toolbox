@@ -118,7 +118,7 @@
 
   # Home-manager — cherry-pick only writing-relevant TUI modules, and take the
   # identity layer (username/homeDirectory/stateVersion) without
-  # modules/home/workstation.nix, whose package baseline (ollama, go, duckdb,
+  # modules/home/workstation.nix, whose package baseline (go, duckdb,
   # ffmpeg…) has no place on this machine.
   # useGlobalPkgs/useUserPackages/backupFileExtension/extraSpecialArgs come from
   # the shared homeManagerModule in flake-modules/hosts.nix.

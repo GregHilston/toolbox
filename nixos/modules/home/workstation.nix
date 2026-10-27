@@ -2,7 +2,7 @@
 #
 # rohan (the writerdeck) deliberately does NOT import this: it cherry-picks a
 # few TUI modules and a short package list instead, so it stays clear of the
-# heavier tools in basePackages.homePackages (ollama, go, duckdb, ffmpeg…) that
+# heavier tools in basePackages.homePackages (go, duckdb, ffmpeg…) that
 # have no business on a 2010 ThinkPad. That's why the identity layer lives in
 # ./common.nix — rohan takes that and stops there.
 {
