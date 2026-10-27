@@ -49,6 +49,12 @@ setup-claude:
         echo "WARNING: npm not found — skipping ccstatusline install; the status line will be blank." >&2
     fi
 
+# Install the git hooks, rooted so `nix store gc` cannot delete them.
+# Re-run after a flake.lock bump; a hook failing with
+# "pre-commit: No such file or directory" means this was skipped.
+hooks:
+    cd nixos && nix develop --profile "$(git rev-parse --path-format=absolute --git-common-dir)/devshell-profile" --command true
+
 # Run both test suites: the pi extensions (TypeScript, node --test) and the
 # bin/ scripts (Python, stdlib unittest). Neither needs a build step or a
 # dependency install.

@@ -43,8 +43,8 @@ See [.devcontainer/README.md](.devcontainer/README.md) for more details.
 ### Git Hooks
 
 Git hooks are managed declaratively via [git-hooks.nix](https://github.com/cachix/git-hooks.nix)
-(see [flake-modules/dev.nix](flake-modules/dev.nix)) and installed automatically when you
-enter the dev shell (`nix develop` from `nixos/`):
+(see [flake-modules/dev.nix](flake-modules/dev.nix)). Install them with `just hooks` from
+the repo root, which roots them so a `nix store gc` cannot break them:
 
 - **pre-commit**: Runs `treefmt` (alejandra + statix + deadnix) on staged `.nix` files
 - **pre-push**: Runs `nix flake check`

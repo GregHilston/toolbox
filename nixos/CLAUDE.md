@@ -855,6 +855,14 @@ bash -n /tmp/pa.sh   # syntax check
 *user* agent instead — see `launchd.user.agents.home-lab-sync` in `hosts/macs/dungeon` and
 `bin/home-lab-sync.sh`.
 
+## Git hooks break after `nix store gc`
+
+The installed hooks exec `pre-commit` by store path, and a plain `nix develop` roots
+nothing, so a GC deletes it. Every commit and push then fails with
+`.../bin/pre-commit: No such file or directory` (2026-10-26). Install them with
+`just hooks` from the repo root instead: it enters the shell with `--profile`, a GC
+root in `.git/`. Re-run it after a `flake.lock` bump, which moves the paths.
+
 ## Git hooks do not run in a `git worktree` — silently
 
 `nix develop` installs the hooks in `flake-modules/dev.nix` (treefmt on commit,
