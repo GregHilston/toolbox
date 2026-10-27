@@ -226,7 +226,10 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
             ax.axvline(m.at, color=INK, lw=1.2, ls=style)
         text = f"{'about ' if m.estimated else ''}{m.at:%-I:%M} {m.label}"
         axs[0].plot([m.at, m.at], [0, len(marks) - i - 0.5], color=INK, lw=1.2, ls=style)
-        axs[0].annotate(text, (m.at, len(marks) - i - 0.5), xytext=(4, 0), textcoords="offset points",
+        # Labels near the right edge go left of their line.
+        right = (m.at - start) / (end - start) > 0.6
+        axs[0].annotate(text, (m.at, len(marks) - i - 0.5), xytext=(-4 if right else 4, 0),
+                        textcoords="offset points", ha="right" if right else "left",
                         va="center", fontsize=10, color=INK)
 
     for ax in axs:
