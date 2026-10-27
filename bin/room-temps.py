@@ -61,6 +61,8 @@ class Mark:
     at: datetime
     label: str
     estimated: bool = False
+    # Empty means every panel.
+    rooms: tuple[str, ...] = ()
 
 
 def rooms() -> list:
@@ -100,16 +102,18 @@ def parse_when(s: str, day: date) -> datetime:
 
 
 def parse_mark(s: str, start: datetime) -> Mark:
-    """A clock time is the first such time at or after `start`."""
+    """[ROOM,ROOM@]TIME=LABEL. A clock time is the first at or after `start`."""
     when, sep, label = s.partition("=")
     if not sep or not label.strip():
-        raise ValueError(f"--mark wants TIME=LABEL, got '{s}'")
+        raise ValueError(f"--mark wants [ROOM@]TIME=LABEL, got '{s}'")
+    names, _, when = when.rpartition("@")
+    rooms = tuple(r.name for r in pick_rooms([n.strip() for n in names.split(",")])) if names else ()
     when = when.strip()
     estimated = when.startswith("~")
     at = parse_when(when.lstrip("~"), start.date())
     if at < start and CLOCK.match(when.lstrip("~")):
         at += timedelta(days=1)
-    return Mark(at, label.strip(), estimated)
+    return Mark(at, label.strip(), estimated, rooms)
 
 
 def window(since: str | None, until: str | None, now: datetime) -> tuple[datetime, datetime]:
@@ -179,12 +183,26 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
     def local(ts: float) -> datetime:
         return datetime.fromtimestamp(ts, TZ)
 
+    def draw_mark(ax, m: Mark, y: float, coords: str) -> None:
+        """A line on `ax` and its label at height `y`."""
+        style = (0, (1, 2)) if m.estimated else (0, (5, 3))
+        text = f"{'about ' if m.estimated else ''}{m.at:%-I:%M} {m.label}"
+        # Labels near the right edge go left of their line.
+        right = (m.at - start) / (end - start) > 0.75
+        ax.annotate(text, (m.at, y), xycoords=("data", coords), xytext=(-4 if right else 4, 0),
+                    textcoords="offset points", ha="right" if right else "left",
+                    va="center", fontsize=10, color=INK)
+        return style
+
     setpoints = setpoints or {}
     zones = list(data["zones"].items()) if boiler else []
-    # Mark labels get their own strip so they never cover data.
-    lead = 1 if marks else 0
-    heights = [0.3 * len(marks)] * lead + [3] * len(picked) + ([0.6 * len(zones)] if zones else [])
-    fig, axs = plt.subplots(len(heights), 1, figsize=(8, 1.15 * sum(heights) + 1.4), sharex=True,
+    shared = [m for m in marks if not m.rooms]
+    # Shared mark labels get their own strip so they never cover data.
+    lead = 1 if shared else 0
+    show_out = outdoor and bool(data["outdoor"])
+    heights = ([0.3 * len(shared)] * lead + [3] * len(picked) + [1.4] * show_out
+               + ([0.6 * len(zones)] if zones else []))
+    fig, axs = plt.subplots(len(heights), 1, figsize=(8, 1.15 * sum(heights) + 1.2), sharex=True,
                             gridspec_kw={"height_ratios": heights}, squeeze=False)
     axs = axs[:, 0]
     room_axs = axs[lead:lead + len(picked)]
@@ -192,10 +210,13 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
     values = [v for pts in data["temps"].values() for _, v in pts]
     values += [setpoints[r.name] for r in picked if r.name in setpoints]
     lo, hi = min(values, default=60), max(values, default=70)
+    # Headroom for room mark labels above the data.
+    per_room = max((sum(r.name in m.rooms for m in marks) for r in picked), default=0)
+    top = hi + 0.9 + 0.9 * per_room
     for ax, room in zip(room_axs, picked):
         pts = data["temps"][room.name]
         title = room.name if plain else f"{room.name} ({room.source})"
-        ax.set_ylim(lo - 0.7, hi + 0.9)
+        ax.set_ylim(lo - 0.7, top)
         ax.set_ylabel("°F", color=MUTED)
         ax.grid(axis="y", color=GRID, lw=0.6)
         if room.name in setpoints:
@@ -203,6 +224,11 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
             ax.annotate(f"head set to {setpoints[room.name]:.0f} °F", (1, setpoints[room.name]),
                         xycoords=("axes fraction", "data"), xytext=(-4, 4), textcoords="offset points",
                         ha="right", fontsize=10, color=INK)
+        own = [m for m in marks if room.name in m.rooms]
+        for i, m in enumerate(own):
+            y = top - 0.45 - 0.9 * i
+            style = draw_mark(ax, m, y, "data")
+            ax.axvline(m.at, color=INK, lw=1.2, ls=style)
         if not pts:
             ax.set_title(title, loc="left", fontsize=12, color=INK)
             ax.text(0.5, 0.5, "no data", transform=ax.transAxes, ha="center", color=MUTED)
@@ -215,6 +241,17 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
                     color=MUTED, lw=1, ls=(0, (2, 2)))
             ax.annotate("boiler thermostat setpoint", (local(target[-1][0]), target[-1][1]), xytext=(-4, 4),
                         textcoords="offset points", ha="right", fontsize=9, color=MUTED)
+
+    if show_out:
+        out_ax = axs[lead + len(picked)]
+        temps = [f for _, f, _ in data["outdoor"]]
+        out_ax.plot([local(t) for t, _, _ in data["outdoor"]], temps, color="#888888", lw=1.5, marker="o", ms=3)
+        mid = (min(temps) + max(temps)) / 2
+        out_ax.set_ylim(min(min(temps), mid - 3) - 0.5, max(max(temps), mid + 3) + 0.5)
+        out_ax.set_ylabel("°F", color=MUTED)
+        out_ax.grid(axis="y", color=GRID, lw=0.6)
+        name = "Outdoor" if plain else "Outdoor (KFSO, Highgate airport, 6 mi away)"
+        out_ax.set_title(f"{name}  ·  {min(temps):.0f}–{max(temps):.0f} °F", loc="left", fontsize=12, color=INK)
 
     if zones:
         zax = axs[-1]
@@ -235,39 +272,25 @@ def plot(data: dict, picked: list, marks: list[Mark], start: datetime, end: date
         zax.set_title("Oil boiler firing (red)", loc="left", fontsize=12, color=INK)
         zax.tick_params(axis="y", length=0)
 
-    for i, m in enumerate(marks):
-        style = (0, (1, 2)) if m.estimated else (0, (5, 3))
+    for i, m in enumerate(shared):
+        style = draw_mark(axs[0], m, len(shared) - i - 0.5, "data")
+        axs[0].plot([m.at, m.at], [0, len(shared) - i - 0.5], color=INK, lw=1.2, ls=style)
         for ax in axs[lead:]:
             ax.axvline(m.at, color=INK, lw=1.2, ls=style)
-        text = f"{'about ' if m.estimated else ''}{m.at:%-I:%M} {m.label}"
-        axs[0].plot([m.at, m.at], [0, len(marks) - i - 0.5], color=INK, lw=1.2, ls=style)
-        # Labels near the right edge go left of their line.
-        right = (m.at - start) / (end - start) > 0.75
-        axs[0].annotate(text, (m.at, len(marks) - i - 0.5), xytext=(-4 if right else 4, 0),
-                        textcoords="offset points", ha="right" if right else "left",
-                        va="center", fontsize=10, color=INK)
 
     for ax in axs:
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
     if lead:
-        axs[0].set_ylim(0, len(marks))
+        axs[0].set_ylim(0, len(shared))
         axs[0].axis("off")
     axs[-1].set_xlim(start, end)
     axs[-1].xaxis.set_major_formatter(mdates.DateFormatter("%-I:%M %p", tz=TZ))
-    title = f"{start:%a %b %-d, %-I:%M %p} to {end:%-I:%M %p} (Eastern)"
-    fig.suptitle(f"{title}\n{outdoor_line(data['outdoor'])}" if outdoor else title,
+    fig.suptitle(f"{start:%a %b %-d, %-I:%M %p} to {end:%-I:%M %p} (Eastern)",
                  x=0.02, ha="left", fontsize=12, color=INK)
-    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    fig.tight_layout(rect=(0, 0, 1, 0.98))
     fig.savefig(out, dpi=130)
     plt.close(fig)
-
-
-def outdoor_line(rows: list[tuple[float, float, float]]) -> str:
-    if not rows:
-        return "Outdoor: unavailable"
-    temps = [f for _, f, _ in rows]
-    return f"Outdoor {min(temps):.0f}–{max(temps):.0f} °F, measured at Highgate airport (KFSO), 6 mi away"
 
 
 def parse_setpoint(s: str) -> tuple[str, float]:
@@ -283,10 +306,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("rooms", nargs="*", help="room names or parts of them (default: every room with data)")
     p.add_argument("--since", help="start: 6am, 6:00 or 'YYYY-MM-DD HH:MM' (default 6 hours before --until)")
     p.add_argument("--until", help="end, same forms (default now)")
-    p.add_argument("--mark", action="append", default=[], help='an event line, "TIME=LABEL"; "~TIME" for an estimate')
+    p.add_argument("--mark", action="append", default=[], help='an event line, "TIME=LABEL"; "ROOM@TIME=..." for one panel; "~TIME" for an estimate')
     p.add_argument("--setpoint", action="append", default=[], help='a head\'s setpoint, "ROOM=°F"; repeatable')
     p.add_argument("--no-boiler", action="store_true", help="leave out the boiler strip and thermostat setpoints")
-    p.add_argument("--no-outdoor", action="store_true", help="leave out the outdoor temperature line")
+    p.add_argument("--no-outdoor", action="store_true", help="leave out the outdoor panel")
     p.add_argument("--plain", action="store_true", help="room names only, no sensor types (for sharing)")
     p.add_argument("--out", type=Path, default=Path("room-temps.png"), help="PNG path (default ./room-temps.png)")
     p.add_argument("--list", action="store_true", help="list rooms, their sensors and outdoor units, then exit")

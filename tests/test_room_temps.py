@@ -69,6 +69,12 @@ class MarkTest(unittest.TestCase):
     def test_clock_mark_after_midnight_rolls_forward(self):
         self.assertEqual(rt.parse_mark("1:00=x", self.START).at.day, 27)
 
+    def test_rooms_before_at_limit_a_mark(self):
+        m = rt.parse_mark("guest,dining@~7:09=Head on", self.START)
+        self.assertEqual(m.rooms, ("Guest room", "Dining room"))
+        self.assertTrue(m.estimated)
+        self.assertEqual(rt.parse_mark("7:09=x", self.START).rooms, ())
+
     def test_tilde_is_an_estimate(self):
         m = rt.parse_mark("~23:10=Head on", self.START)
         self.assertTrue(m.estimated)
@@ -102,7 +108,7 @@ class PlotTest(unittest.TestCase):
                       "2nd floor zone": {"spans": [], "setpoints": []}},
             "outdoor": [],
         }
-        marks = [rt.Mark(start, "on"), rt.Mark(start, "guess", estimated=True)]
+        marks = [rt.Mark(start, "on"), rt.Mark(start, "guess", estimated=True), rt.Mark(start, "here", rooms=("Guest room",))]
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "c.png"
             rt.plot(data, picked, marks, start, end, True, out)

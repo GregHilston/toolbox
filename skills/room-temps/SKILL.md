@@ -28,13 +28,15 @@ with an absolute path.
   `--since 6am`. Without `--since` the chart covers the last 6 hours.
 - **`--mark "TIME=LABEL"`** draws an event line. Ask Greg when he did something;
   if you read a time off the chart instead, put `~` before it (`~7:35=...`), so
-  it is drawn dotted and labelled "about".
+  it is drawn dotted and labelled "about". Put rooms first to draw it on
+  their panels only: `--mark "guest,dining@7:09=Head on"`. Use that when the
+  event concerns some rooms, so others' panels stay clean.
 - **`--setpoint "basement=70"`** draws what a head is set to. Ask Greg; HA
   can't read the heads. A room that peaks below its setpoint and then falls
   is the clearest sign of a head that stopped heating.
 - **`--plain`** for anything going to the installer: room names only, no
   sensor types. Add `--no-boiler` when no room shown is on a boiler zone
-  (the basement isn't), and `--no-outdoor` to drop the outdoor line.
+  (the basement isn't), and `--no-outdoor` to drop the outdoor panel.
 - **Show the decline.** If a room is still rising at the end, say so, and offer
   to re-run later with a later `--until`.
 
