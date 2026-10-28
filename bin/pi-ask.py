@@ -173,7 +173,8 @@ def pump(proc: subprocess.Popen, log: Path, narrator, tally: Tally, args) -> str
 def prune_logs() -> None:
     """Delete logs and locks untouched for KEEP_LOGS_DAYS. Keep .dir: pi keeps the session."""
     cutoff = time.time() - KEEP_LOGS_DAYS * 86400
-    for path in [*LOG_DIR.glob("*.jsonl"), *LOG_DIR.glob("*.log"), *LOG_DIR.glob("*.lock")]:
+    for path in [*LOG_DIR.glob("*.jsonl"), *LOG_DIR.glob("*.log"), *LOG_DIR.glob("*.lock"),
+                 *LOG_DIR.glob("*.answered")]:
         try:
             if path.stat().st_mtime < cutoff:
                 path.unlink()
@@ -257,6 +258,7 @@ def main() -> int:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     prune_logs()
     # Two runs at once fork pi's session and mix their logs.
+    (LOG_DIR / f"{args.session}.answered").unlink(missing_ok=True)
     lock = (LOG_DIR / f"{args.session}.lock").open("w")
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -323,7 +325,18 @@ def main() -> int:
     code = proc.wait()
     narrator.finish()
 
+    if cut_short == "stalled" and not os.environ.get("PI_ASK_RETRIED"):
+        # A permission prompt or lost stream often clears on a second go.
+        retry = ["--session", args.session, "--dir", str(workdir), "--model", args.model,
+                 "--idle", str(args.idle), "--max-cost", str(args.max_cost), "--max-turns", str(args.max_turns),
+                 "Your last attempt stalled with no answer. Carry on from where you stopped, "
+                 "and write your answer now.\n\n" + prompt]
+        print(f"pi-ask: {args.session} stalled; retrying once", flush=True)
+        os.execve(sys.executable, [sys.executable, str(Path(__file__).resolve()), *retry],
+                  dict(os.environ, PI_ASK_RETRIED="1"))
     text, error = tally.text, tally.error
+    if text and not error and not cut_short:
+        (LOG_DIR / f"{args.session}.answered").write_text(f"{datetime.now(timezone.utc).isoformat()}\n")
     print(f"\n=== answer ({args.session}: ${tally.cost:.4f} at DeepSeek's prices; "
           f"the gateway's daily cap counts ${tally.gateway_cost:.4f}) ===")
     print(text or "(no answer)")

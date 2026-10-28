@@ -41,6 +41,10 @@ FAKE_PI = textwrap.dedent('''\
     for i in range(int(env("FAKE_PI_TURNS", "0"))):
         say({"type": "turn_start"})
         say(message(f"filler {i}"))
+    once = env("FAKE_PI_STALL_ONCE")
+    if once and not os.path.exists(once):
+        open(once, "w").close()
+        time.sleep(60)
     if env("FAKE_PI_SLEEP") or env("FAKE_PI_ORPHAN"):
         sleeper = ["sh", "-c", "trap '' TERM; exec sleep 120"] if env("FAKE_PI_ORPHAN") else ["sleep", "120"]
         child = subprocess.Popen(sleeper, stdout=subprocess.DEVNULL)
@@ -126,6 +130,19 @@ class TestPiAsk(unittest.TestCase):
         out = self.ask("--session", "t4", "--dir", self.tmp.name, "hi", FAKE_PI_STOP="error")
         self.assertEqual(out.returncode, 1, out.stdout)
         self.assertIn("provider said no", out.stdout)
+
+    def test_a_stalled_run_is_retried_once_and_marked_answered(self):
+        flag = Path(self.tmp.name) / "stalled-once"
+        out = self.ask("--session", "t6", "--dir", self.tmp.name, "--idle", "1", "hello", FAKE_PI_STALL_ONCE=str(flag))
+        self.assertEqual(out.returncode, 0, out.stdout)
+        self.assertIn("stalled; retrying once", out.stdout)
+        self.assertIn("the answer, given Your last attempt stalled", out.stdout)
+        self.assertTrue((Path(self.tmp.name) / ".cache" / "pi-ask" / "t6.answered").exists())
+
+    def test_a_run_with_no_answer_is_not_marked_answered(self):
+        out = self.ask("--session", "t7", "--dir", self.tmp.name, "hi", FAKE_PI_EMPTY="1")
+        self.assertEqual(out.returncode, 1, out.stdout)
+        self.assertFalse((Path(self.tmp.name) / ".cache" / "pi-ask" / "t7.answered").exists())
 
     def test_rejects_a_session_name_pi_would_refuse(self):
         out = self.ask("--session", "a/b", "--dir", self.tmp.name, "hi")
