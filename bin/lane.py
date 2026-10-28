@@ -54,6 +54,9 @@ class LaneError(Exception):
     """A failure whose message already says what broke."""
 
 
+PI_ASK_DIR = Path.home() / ".cache" / "pi-ask"
+
+
 def run(*cmd: str, cwd: Path | str | None = None, check: bool = True) -> str:
     """Run one command and return stripped stdout; the seam for git, gh and verify.sh."""
     try:
@@ -383,6 +386,19 @@ def fetch(repo: Path, lane: str, branch: str | None, force: bool = False) -> str
     return f"{warning}worktree {wt}\nbranch {local} (from {branch})\ncommits {count}\n{state}"
 
 
+def require_second_opinion(session: str | None, skip_reason: str | None) -> str:
+    """The landing's second-opinion line; refuse a landing with neither an answer nor a stated reason."""
+    if skip_reason:
+        return f"second opinion: skipped ({skip_reason})"
+    if not session:
+        raise LaneError("no second opinion: pass --second-opinion <pi-ask session>, "
+                        "or --no-second-opinion <why> for a data-only or test-only branch")
+    if not (PI_ASK_DIR / f"{session}.answered").exists():
+        raise LaneError(f"pi-ask session {session} has no answer; rerun it and check its output file, "
+                        "or pass --no-second-opinion <why>")
+    return f"second opinion: pi-ask {session}"
+
+
 def land(repo: Path, wt: Path, no_verify: bool, force: bool = False) -> str:
     """Verify the worktree, fast-forward the default branch, raise the baseline, close issues."""
     wt = wt.resolve()
@@ -482,6 +498,8 @@ def parser() -> argparse.ArgumentParser:
     land_p.add_argument("worktree", type=Path)
     land_p.add_argument("--no-verify", action="store_true")
     land_p.add_argument("--force", action="store_true", help="even while the lane's loop runs")
+    land_p.add_argument("--second-opinion", metavar="SESSION", help="the pi-ask session that reviewed this branch")
+    land_p.add_argument("--no-second-opinion", metavar="WHY", help="skip it, saying why (data-only, test-only)")
     sub.add_parser("stop", help="ask a lane to stop after its current issue").add_argument("lane")
     return p
 
@@ -503,7 +521,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd == "fetch":
             msg = fetch(repo, args.lane, args.branch, args.force)
         elif args.cmd == "land":
-            msg = land(repo, args.worktree, args.no_verify, args.force)
+            opinion = require_second_opinion(args.second_opinion, args.no_second_opinion)
+            msg = opinion + "\n" + land(repo, args.worktree, args.no_verify, args.force)
         else:
             msg = stop(repo, args.lane)
     except LaneError as e:

@@ -333,6 +333,24 @@ class FetchTest(LaneCase):
         self.assertTrue((self.root / "proj-wt-b").is_dir())
 
 
+class SecondOpinionTest(unittest.TestCase):
+    def test_refuses_a_landing_with_no_second_opinion(self) -> None:
+        with self.assertRaises(lane.LaneError) as cm:
+            lane.require_second_opinion(None, None)
+        self.assertIn("--no-second-opinion", str(cm.exception))
+
+    def test_refuses_a_session_that_never_answered(self) -> None:
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(lane, "PI_ASK_DIR", Path(d)):
+            with self.assertRaises(lane.LaneError):
+                lane.require_second_opinion("gk-1", None)
+
+    def test_accepts_an_answered_session_or_a_stated_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(lane, "PI_ASK_DIR", Path(d)):
+            (Path(d) / "gk-1.answered").write_text("now\n")
+            self.assertEqual(lane.require_second_opinion("gk-1", None), "second opinion: pi-ask gk-1")
+        self.assertIn("test-only", lane.require_second_opinion(None, "test-only"))
+
+
 class LandTest(LaneCase):
     def fetched(self, subject: str = "feat(x): a (#7)") -> Path:
         clone = self.make_clone()
