@@ -61,8 +61,8 @@ For every finished branch:
 
 1. `lane.py fetch`. If it stops on conflicts, a Sonnet subagent resolves them in that worktree, keeping both sides' behaviour.
 2. A Sonnet subagent reviews it against each issue's _Done when_ and runs the gate. If the change is visible, it also runs the repo's capture scripts on the Mac's display and reads the PNGs.
-3. Ask DeepSeek for a second opinion on every branch with real logic in it, and always on large or risky ones (architecture, networking, auth, data): `pi-ask.py --session review-<x> --dir <a separate detached worktree> @prompt.md`. A different model family catches different bugs: its review of a 20-commit refactor found four real bugs that Sonnet passed.
-4. Fix small leftovers yourself; ticket the rest. Then `lane.py land`.
+3. Get a DeepSeek second opinion on every branch with real logic in it, and always on large or risky ones (architecture, networking, auth, data): `pi-ask.py --session review-<x> --dir <a separate detached worktree> @prompt.md`. A different model family catches different bugs: its review of a 20-commit refactor found four real bugs that Sonnet passed. `pi-ask.py` retries a stalled run once itself; if there is still no answer, rerun it, never skip it.
+4. Fix small leftovers yourself; ticket the rest. Then land with the second-opinion line: `lane.py land <worktree> --second-opinion review-<x>`. It refuses unless that session answered. A data-only or test-only branch passes `--no-second-opinion "<why>"` instead.
 
 ## Throughput: what kept a 20-lane night moving
 
@@ -111,7 +111,17 @@ A handoff that suggests the next `/swarm` gives the prompt in a code block that 
 ## Lessons that cost a night to learn
 
 - The DeepSeek balance is the only true cost: read it before and after a run. Each lane's `Real:` line sums that run's own phase costs from DeepSeek's price table; the gateway's counter is shared by every lane, so never add it across lanes (on 2026-10-26 `pi-usage.py` and the old `Real:` lines summed several times the $2.54 the balance actually fell).
-- The orchestrator's own context is the biggest Claude cost: on 2026-10-26 it was about 77% of it, grown to 370k and never cleared. `lane.py status` prints it and `session-ctx.py` says OVER past 150k; hand off and start a new session then, even mid-run.
+- The orchestrator's own context is the biggest Claude cost: on 2026-10-26 it was about 77% of it, grown to 370k and never cleared. `lane.py status` prints it and `session-ctx.py` says OVER past the cap (`SESSION_CTX_CAP`, default 150k); hand off then, even mid-run.
+
+## Handing off past the context cap
+
+Check `lane.py status` at the end of each round and after each landing. When it says OVER, stop taking new work and:
+
+1. Write the handoff (Greg's "Ending a chat" rules in `~/.claude/CLAUDE.md`): lane state, what is parked, what Greg must do. Let it end with the exact first message for the next chat in a fenced code block; `orch-next.py` sends that block, the last one in the file, and refuses a handoff with none. The message starts `/swarm ` and says to resume from the handoff.
+2. Run `orch-next.py <handoff> --repo <repo>`. It starts `claude -p` detached with that message and logs to `~/.cache/orch-next/`. The new session has no context: it reads lane state from `lane.py status`, `.git/land/` and the handoff. Check the repo's lanes and watcher survive (they are separate processes) and re-arm the watcher in the new session.
+3. Stop. Do not start more lanes or reviews in the old session. `orch-next.py` refuses while an earlier successor still runs.
+
+Claude Code has no hook that starts a session; a scheduled task runs in the cloud, away from the lane clones. So the old session starts its successor itself.
 - About 8 lanes saturate a 16-core gate machine. Past that, add no lanes or subagents; `lane.py start` refuses past 10 or a high load.
 - Every monitor line wakes the orchestrator for a full turn, which costs more than most lanes. Alert only on stops, parks, landings and real failures, never on routine tool failures or lane ticket changes.
 - A decision recorded in one session can be reversed in the next. When Greg reverses one, close the ticket as not planned, keep the lane's commits for it off main, and say so in the handoff.
