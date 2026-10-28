@@ -53,6 +53,7 @@ The gate is the one shared bottleneck: each `./verify.sh` runs 4 to 5 CPU-bound 
 - `lane.py` and `overnight-loop.py` take a slot from `bin/gateslot.py` (flock files in `~/.cache/gate-slots/`) around every gate; a dead holder frees its slot, and the wait doesn't count against `--verify-minutes`.
 - `GATE_SLOTS` is the gate count (default 2, `0` turns the queue off); `lane.py land` also gets one reserved slot. Tune it by `uptime`: keep the 1-minute load under the core count. Set it in the shell that starts the lanes.
 - Workers iterate with the repo's one-suite test script and gate once, at the end. Run a hand gate as `gateslot.py [--land] -- ./verify.sh`.
+- Tell subagents to run the gate in the foreground (a 10-minute tool timeout covers it). One that backgrounds it stops with "waiting on background work", and every such stop and leftover timer wakes the orchestrator for nothing.
 - Before many lanes, check RAM (a Godot process is a few hundred MB), that tests use free ports and per-process temp folders, and that a gate's own ports can't collide.
 
 ## 4. Review and land
@@ -62,7 +63,8 @@ For every finished branch:
 1. `lane.py fetch`. If it stops on conflicts, a Sonnet subagent resolves them in that worktree, keeping both sides' behaviour.
 2. A Sonnet subagent reviews it against each issue's _Done when_ and runs the gate. If the change is visible, it also runs the repo's capture scripts on the Mac's display and reads the PNGs.
 3. Get a DeepSeek second opinion on every branch with real logic in it, and always on large or risky ones (architecture, networking, auth, data): `pi-ask.py --session review-<x> --dir <a separate detached worktree> @prompt.md`. A different model family catches different bugs: its review of a 20-commit refactor found four real bugs that Sonnet passed. `pi-ask.py` retries a stalled run once itself; if there is still no answer, rerun it, never skip it.
-4. Fix small leftovers yourself; ticket the rest. Then land with the second-opinion line: `lane.py land <worktree> --second-opinion review-<x>`. It refuses unless that session answered. A data-only or test-only branch passes `--no-second-opinion "<why>"` instead.
+4. Read every test diff the branch carries: a deleted assertion is a weakened test even when the report calls it a new one, and "the suite passes" must name the command that ran the whole suite (both slipped through on 2026-10-28).
+5. Fix small leftovers yourself; ticket the rest. Then land with the second-opinion line: `lane.py land <worktree> --second-opinion review-<x>`. It refuses unless that session answered. A data-only or test-only branch passes `--no-second-opinion "<why>"` instead.
 
 ## Throughput: what kept a 20-lane night moving
 
