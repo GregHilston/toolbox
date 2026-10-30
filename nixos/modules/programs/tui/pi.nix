@@ -75,13 +75,13 @@ in {
 
     # DeepSeek needs NO models.json entry: pi ships it as a built-in provider
     # (docs/providers.md -> DEEPSEEK_API_KEY / `deepseek`), and
-    # `pi --list-models deepseek` lists deepseek-v4-pro and deepseek-v4-flash
+    # `pi --list-models deepseek` lists deepseek-v4-pro and deepseek-flash
     # the moment the env var is present. Declaring a `deepseek` provider by hand
     # — as api-docs.deepseek.com still instructs — SHADOWS that catalog and
     # leaves us owning contextWindow/maxTokens/cost forever. Don't.
     #
     # It stays direct beside the gateway's `cloud` alias, which serves
-    # Flash only: /orchestrate-pi workers run deepseek-v4-pro, and
+    # Flash only: /orchestrate-pi workers run deepseek-flash, and
     # deepseek-preflight.py checks the balance of this very key.
     #
     # The key comes from nixos/secrets/.env (op inject -> .zshrc), so this
@@ -263,7 +263,7 @@ in {
         # Local Qwen models have no reasoning flag, so pi sends no level.
         defaultThinkingLevel = "off";
         modelThinkingLevels = lib.optionalAttrs cfg.deepseek ({
-            "deepseek/deepseek-v4-flash" = "low";
+            "deepseek/deepseek-flash" = "low";
             "deepseek/deepseek-v4-pro" = "high";
           }
           // lib.optionalAttrs cfg.gateway {"litellm/cloud" = "low";});

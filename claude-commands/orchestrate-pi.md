@@ -399,7 +399,7 @@ quietly. Same lesson as `gh issue create --body-file`.
 set -o pipefail
 cd /abs/path/to/worktrees/issue-16 && \
   PI_STATUS_FILE=/abs/path/to/worktrees/issue-16/.pi/status.json pi \
-  --provider deepseek --model deepseek-v4-flash --thinking high \
+  --provider deepseek --model deepseek-flash --thinking high \
   --approve \
   --session-id issue-16 \
   --mode json \
@@ -508,7 +508,7 @@ scripts, and the other agents' issue numbers.
 Three additions specific to pi:
 
 - **State the model and that thinking is on.** A worker that does not know it has a
-  thinking budget will not use it. Say `deepseek-v4-flash` when that is what it
+  thinking budget will not use it. Say `deepseek-flash` when that is what it
   is — a prompt that claims Pro while Flash is running is a small lie that makes
   the transcript useless as evidence for the Flash-versus-Pro question.
 - **Include the plan, and say what it is worth.** Paste the planning agent's brief
@@ -549,10 +549,10 @@ turns.
 
 ### A pi worker cannot see, and will try anyway — say so in the prompt
 
-`pi --list-models deepseek` reports **`images: no`** for both `deepseek-v4-pro`
-and `deepseek-v4-flash`. That is a hard capability fact, not a preference: the
-model cannot be shown a PNG. Only `deepseek-v4-flash-vision-exp` can, and it is
-not what these runs use.
+`pi --list-models deepseek` reports `images: no` for `deepseek-v4-pro` and, since
+V4.1-Flash-1017, **`images: yes`** for `deepseek-flash` (checked 2026-10-30). Nobody
+has tested an image in a Flash worker yet, so the advice below still stands until
+someone does; it was written when no worker model could see.
 
 **Left unsaid, a worker will try to read the image anyway**, and it is expensive.
 In one run a worker faced a screenshot diff it could not explain and spent about
@@ -728,7 +728,7 @@ discovering it. Writing to `/tmp` worked; globbing it did not.
 ### Do not change model mid-session — it collapses the cache
 
 `--continue` resumes a warm session, but **the cache is keyed on the model.**
-Resuming a Pro session with `--model deepseek-v4-flash` re-sends the entire
+Resuming a Pro session with `--model deepseek-flash` re-sends the entire
 context as fresh input: measured on a resumed worker, turn 2 showed a **1% cache
 hit rate and a $0.049 cold read** of its ~200k context, against the ~99% it had
 been running at.
@@ -769,7 +769,7 @@ pi-rpc.py run --dir /abs/path/to/worktrees/issue-16 --label issue-16 \
   --prompt-file /abs/path/to/.claude/pi-prompts/issue-16.md \
   --raw /abs/path/to/.claude/pi-logs/issue-16.jsonl \
   --alerts /abs/path/to/.claude/pi-logs/alerts.log \
-  -- --provider deepseek --model deepseek-v4-flash --thinking high --approve
+  -- --provider deepseek --model deepseek-flash --thinking high --approve
 ```
 
 Narration and lifecycle are identical — it still runs backgrounded, still exits

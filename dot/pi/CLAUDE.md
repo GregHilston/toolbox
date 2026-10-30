@@ -62,8 +62,8 @@ balance.
 **It needs no `models.json` entry.** pi ships `deepseek` as a *built-in*
 provider — `docs/providers.md` maps `DEEPSEEK_API_KEY` to it — so the moment the
 env var exists, `pi --list-models deepseek` reports `deepseek-v4-pro` and
-`deepseek-v4-flash` (1M context, 384K output, thinking, no images). Verified with
-a dummy key on pi 0.84.2.
+`deepseek-flash` (1M context, 384K output, thinking; images on Flash only).
+Checked 2026-10-30.
 
 `api-docs.deepseek.com/quick_start/agent_integrations/pi_mono/` still tells you
 to write a `providers.deepseek` block into `models.json`. **Do not.** A
@@ -106,7 +106,7 @@ cost lever, not a footnote.
 | | Shift+Tab cycles |
 | --- | --- |
 | **V4 Pro** | `off → high → max` |
-| **V4 Flash** | `off → low → high → max` |
+| **V4.1 Flash** | `off → low → high → max` |
 
 `--thinking <level>` sets the *starting* level for a session; Shift+Tab still
 cycles from there. pi-powerline-footer reserves that key
@@ -166,8 +166,9 @@ Official rates, per 1M tokens
 | **Flash** off-peak | $0.003 | $0.15 | $0.60 |
 | **Flash** peak | $0.006 | $0.30 | $1.20 |
 
-Checked 2026-10-14. `deepseek-v4-flash` is a legacy name: DeepSeek now serves it
-with V4.1-Flash (`deepseek-flash`) at the Flash price.
+Checked 2026-10-30. `deepseek-flash` serves DeepSeek-V4.1-Flash-1017; the API has
+no name that pins a version. `deepseek-v4-flash` is a legacy name for the same
+model, and pi warns it is a custom model id, so use `deepseek-flash`.
 
 What pi still believes: Pro `$0.435 / $0.87 / $0.003625`, Flash
 `$0.14 / $0.28 / $0.0028`. The worst error is the **cache hit, 6x cheaper in
