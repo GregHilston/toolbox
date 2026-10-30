@@ -90,6 +90,7 @@
   "skipDangerousModePermissionPrompt": true,
   "theme": "auto",
   "autoCompactEnabled": false,
+  "idleCompaction": false,
   "remoteControlAtStartup": true,
   "agentPushNotifEnabled": true,
   "feedbackSurveyState": {
