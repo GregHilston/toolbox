@@ -251,7 +251,7 @@ in {
         enabledModels =
           if cfg.gateway
           then
-            map (m: "litellm/${m.id}") (builtins.filter (m: m.id != "cloud") modelsTemplate.providers.litellm.models)
+            map (m: "litellm/${m.id}") (builtins.filter (m: !lib.hasPrefix "cloud" m.id) modelsTemplate.providers.litellm.models)
             ++ lib.optionals (cfg.localModel != null) (
               ["omlx/${cfg.localModel}"]
               # 262k profile: the way round a down gateway.

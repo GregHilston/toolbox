@@ -13,6 +13,7 @@
       "*": "allow",
       "*.env": "deny",
       "~/.ssh/*": "deny",
+      "~/.config/op/*": "deny",
       "~/.config/pi-reddit-research/*": "deny"
     },
     "write": {

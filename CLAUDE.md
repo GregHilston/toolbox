@@ -336,6 +336,10 @@ the real files via `op inject`. Generated files are gitignored.
 cd nixos && just secrets    # generates dot/omlx settings.json, dot/pi models.json, secrets/.env
 ```
 
+Never search this repo with `grep -r` or `rtk grep -r`: they read gitignored files, and on
+2026-10-30 one printed `DEEPSEEK_API_KEY` from `nixos/secrets/.env` into a transcript. `rg`
+skips them.
+
 Never commit plaintext secrets. If a new secret is needed, add it to 1Password and reference
 it in the appropriate `.tpl` file.
 
@@ -348,12 +352,30 @@ it in the appropriate `.tpl` file.
 integration on, because the terminal may not read 1Password's shared data. Fix: System
 Settings → Privacy & Security → Files & Folders → your terminal (Ghostty) → turn on
 "Data shared by 1Password", then ⌘Q and reopen the terminal. Never answer `Y` to
-`op`'s "add an account manually": that is a separate password login, not this fix.
+`op`'s "add an account manually": that is a separate password login, not this fix. To turn
+it on, click the small `>` beside Ghostty; the row itself does nothing. `authorization timeout`
+means 1Password wants a prompt approved, so it stalls while Greg is away from the Mac.
 
-On **headless dungeon** that integration is GUI-gated, so `op inject` fails with
-`authorization timeout`. Put a 1Password **service account token** (Business/Teams
-plan) at `~/.config/op/service-account-token`, mode `600` — `just secrets` picks it up
-and needs no GUI. Without one, VNC in and unlock 1Password first.
+**moria and dungeon use a service account token instead,** so `op` works with nobody at the
+Mac. It reads vault Infra and can't write. It lives at `~/.config/op/service-account-token`,
+mode `600`, and `just secrets` in both repos picks it up. Keep it in that file, not the
+environment, because everything an agent starts inherits its environment. For a one-off read:
+`OP_SERVICE_ACCOUNT_TOKEN=$(cat ~/.config/op/service-account-token) op read ...`
+
+Any process running as Greg can read that file, and so all of Infra. pi's file tools deny the
+path; pi's bash isn't path-checked.
+
+To rotate or change access, make a new service account (my.1password.com → Developer →
+Directory → Other; access can't be edited later), copy the token, then on moria:
+
+```bash
+umask 077; pbpaste | tr -d '[:space:]' > ~/.config/op/service-account-token; pbcopy < /dev/null
+ssh dungeon 'umask 077; cat > ~/.config/op/service-account-token' < ~/.config/op/service-account-token
+```
+
+Then delete the old account. The personal plan allows 1,000 requests a day
+([limits](https://www.1password.dev/service-accounts/rate-limits/)); home-lab's `just secrets`
+resolves about 133 references.
 
 ## Before a pi run — deepseek-preflight
 
@@ -362,6 +384,9 @@ is the key funded (default floor $2), and is DeepSeek in a peak window (double
 rate, 01:00–04:00 and 06:00–10:00 UTC Mon–Fri — which is 21:00–00:00 Eastern
 Sun–Thu, exactly when an overnight run gets started). Exit 0 clear, 1 needs a
 human, 2 could not tell.
+
+It also prints OpenCode Go's quota, without affecting the exit code: the gateway's `cloud`
+uses Go first and overflows to DeepSeek by itself.
 
 Both checks exist because a run died on a `402` mid-flight and three workers
 were killed with their work uncommitted, while still reporting completion.

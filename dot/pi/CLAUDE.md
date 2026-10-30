@@ -13,7 +13,8 @@ gateway's aliases, never an oMLX model, and the gateway decides where each runs:
 | `local-small` | moria's oMLX when awake, else dungeon's | the default |
 | `local-lab` | dungeon only | automation that must not wake moria |
 | `local-big` | moria's Strata, Qwen3.8-Flash-Next; fails in ~7 s when moria is away | harder work while moria is up; text only, slow to first token |
-| `cloud` | DeepSeek's API (Flash) | metered; never a fallback |
+| `cloud` | OpenCode Go (Flash), then DeepSeek's API when Go refuses | flat fee, then metered; never a fallback for a `local-` alias |
+| `cloud-deepseek` | DeepSeek's API (Flash) | metered; `cloud`'s overflow |
 
 The `local-` prefix means the prompt stays on the tailnet; `cloud` leaves the
 house, and names the job rather than the vendor behind it.
@@ -54,7 +55,8 @@ re-read before every request — so refreshing it needs no rebuild, no
 
 The default stays free: a bare `pi` is the gateway's `local-small`. DeepSeek is the
 opt-in alternative, reachable two ways. The gateway's `cloud` alias serves
-Flash on the gateway's key, which tracks the spend. The direct built-in provider
+Flash through OpenCode Go until Go refuses, then on the gateway's DeepSeek key, which tracks the spend
+(home-lab `docs/llm-gateway.md` → OpenCode Go). The direct built-in provider
 below serves Flash and Pro on `DEEPSEEK_API_KEY`, and stays because
 `/orchestrate-pi` workers run Pro and `deepseek-preflight.py` reads that key's
 balance.
@@ -488,7 +490,7 @@ can `edit` existing files but not `write` a new one, and it surfaces as the mode
 improvising around a denial mid-task. Fix per worktree with
 `<worktree>/.pi/extensions/pi-permission-system/config.json` containing
 `{ "yoloMode": true }`. Yolo is an ask→allow rewrite only — the `*.env`,
-`~/.ssh/*` and reddit-cookie **denies survive it**, which is the whole reason to
+`~/.ssh/*`, `~/.config/op/*` and reddit-cookie **denies survive it**, which is the whole reason to
 prefer it over `--no-extensions`.
 
 **That config needs `--approve` to load at all.** Non-interactive modes never

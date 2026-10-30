@@ -53,7 +53,7 @@ When I say I'm ending the chat, or ask for a handoff, first reflect: what did we
 Then answer two questions with this session's numbers, not guesses:
 
 - **How could the next chat go faster?** Where did work wait: gates, lanes stuck or parked, my answers, setup steps redone by hand, a tool that failed silently.
-- **How could it use fewer tokens?** Cover both meters: DeepSeek dollars (`pi-usage.py`, lane `Real:` lines, `pi-ask` costs) and Claude subscription use (orchestrator turns, especially wake-ups for routine events; subagent runs and their models; duplicated reviews). Name the biggest spender on each meter and one change that would cut it.
+- **How could it use fewer tokens?** Cover both meters: DeepSeek dollars (`gridkeep/.claude/pi-usage.py`, lane `Real:` lines, `pi-ask` costs) and Claude subscription use (orchestrator turns, especially wake-ups for routine events; subagent runs and their models; duplicated reviews). Name the biggest spender on each meter and one change that would cut it.
 
 Write each lesson where it will be read next time, then write the handoff and list what you changed:
 
@@ -125,10 +125,29 @@ The shell is zsh: an unquoted `$var` doesn't word-split, so
 or use `${=p}`.
 A word starting with `=` is a command lookup, so `echo ====` fails with
 `=== not found` and ends a `&&` chain. Quote it (2026-10-26).
+`ask` is an alias here, so `ask() { … }` is a parse error (2026-10-30). Put helpers in a bash script.
+`cmd 2>&1 >/dev/null | x` still pipes stdout, because zsh's multios writes to both; on 2026-10-30 it
+printed an API key. Near a secret, send output to a file and read its length.
 
 ## File Inspection
 
 Prefer the `Read`, `Grep`, and `Glob` tools over shelling out to `cat`/`head`/`tail`/`sed`/`grep` for inspecting files — they return cleaner, line-numbered, structured output and fail less. Reserve Bash for things that genuinely need it (running builds/tests, `git`, `nix`, etc.).
+
+## 1Password from any repo
+
+moria and dungeon hold a service account token that reads vault Infra with no prompt and
+nobody at the Mac. Use it from any repo, one command at a time:
+
+```bash
+OP_SERVICE_ACCOUNT_TOKEN=$(cat ~/.config/op/service-account-token) op read 'op://Infra/<item>/<field>'
+```
+
+- Never export it, or put it in `.zshrc` or a session env: everything an agent starts inherits that.
+- Don't let a secret reach output. Send it to a file or the program that needs it, and check only its length.
+- It can't write. Creating or editing an item goes through the desktop app, which needs Greg to approve a prompt.
+- It sees Infra only, not Private or the Mozilla account.
+
+`just secrets` in toolbox and home-lab already reads the file. Rotation is in `~/Git/toolbox/CLAUDE.md` → Secret Management.
 
 ## Toolbox
 

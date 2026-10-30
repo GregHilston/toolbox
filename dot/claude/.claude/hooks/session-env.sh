@@ -25,5 +25,5 @@ secrets="$toolbox/nixos/secrets/.env"
 cat >> "$CLAUDE_ENV_FILE" <<EOF
 $marker
 export PATH="\$PATH:$dirs"
-[ -f '$secrets' ] && eval "\$(sed -nE 's/^(export )?((LITELLM|DEEPSEEK)_API_KEY=)/export \2/p' '$secrets')"
+[ -f '$secrets' ] && eval "\$(sed -nE 's/^(export )?((LITELLM|DEEPSEEK|OPENCODE)_API_KEY=)/export \2/p' '$secrets')"
 EOF

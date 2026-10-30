@@ -20,6 +20,9 @@ to avoid rather than a discount to chase - and the trap is that those windows
 land on a US Eastern evening, which is exactly when someone kicks off an
 overnight run. 01:00 UTC Monday is 21:00 Eastern on *Sunday*.
 
+It also prints OpenCode Go's quota, which never changes the exit code: the gateway's
+`cloud` overflows to DeepSeek by itself when Go runs out.
+
 Exit codes: 0 clear, 1 something wants a human's attention, 2 could not tell
 (no key, network down). 1 and 2 are deliberately different: "you are nearly out
 of money" and "I could not reach the API" call for different reactions.
@@ -36,6 +39,8 @@ import urllib.error
 import urllib.request
 
 BALANCE_URL = "https://api.deepseek.com/user/balance"
+# Undocumented; anomalyco/opencode#43983 names it.
+GO_USAGE_URL = "https://opencode.ai/zen/go/v1/usage"
 
 # (start_hour, end_hour) in UTC, Monday-Friday only. End is exclusive.
 PEAK_WINDOWS_UTC = ((1, 4), (6, 10))
@@ -104,6 +109,27 @@ def fetch_balance(key: str, timeout: float = 10.0) -> tuple[float, str]:
         raise ValueError("no balance_infos in the response")
     info = infos[0]
     return float(info["total_balance"]), str(info.get("currency", "USD"))
+
+
+def fetch_go_usage(key: str, timeout: float = 10.0) -> dict:
+    """Return Go's rolling, weekly and monthly windows. Raises on transport or shape trouble."""
+    req = urllib.request.Request(
+        GO_USAGE_URL,
+        # Cloudflare answers 403 to urllib's default agent.
+        headers={"Authorization": f"Bearer {key}", "Accept": "application/json", "User-Agent": "toolbox-preflight/1.0"},
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.load(resp)["usage"]
+
+
+def go_summary(usage: dict) -> str:
+    """One line per window's percent used, naming any window that is not ok."""
+    parts = []
+    for name in ("rolling", "weekly", "monthly"):
+        window = usage[name]
+        status = window.get("status", "ok")
+        parts.append(f"{name} {window['percent']:g}%" + ("" if status == "ok" else f" ({status})"))
+    return ", ".join(parts)
 
 
 def _eastern(when: dt.datetime) -> str:
@@ -181,9 +207,21 @@ def main() -> int:
             except Exception as exc:  # noqa: BLE001 - any failure means "cannot tell"
                 unreachable = f"could not reach the balance endpoint: {exc}"
 
+    go: str | None = None
+    if not args.skip_balance:
+        go_key = os.environ.get("OPENCODE_API_KEY")
+        if not go_key:
+            go = "unknown - OPENCODE_API_KEY is not set"
+        else:
+            try:
+                go = go_summary(fetch_go_usage(go_key))
+            except Exception as exc:  # noqa: BLE001 - it never decides the verdict
+                go = f"unknown - {exc}"
+
     verdict = evaluate(balance, now, args.min_balance, args.warn_minutes)
     verdict["currency"] = currency
     verdict["unreachable"] = unreachable
+    verdict["go"] = go
 
     if args.json:
         print(json.dumps(verdict, indent=2))
@@ -200,6 +238,8 @@ def main() -> int:
             print(f"  balance  unknown - {unreachable}")
         else:
             print(f"  balance  ${balance:.2f} {currency}   (floor ${args.min_balance:.2f})")
+        if go:
+            print(f"  go       {go}")
         print()
         if verdict["problems"]:
             for p in verdict["problems"]:

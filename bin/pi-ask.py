@@ -95,7 +95,7 @@ class Tally:
 
     def __init__(self) -> None:
         self.text, self.error = "", None
-        self.cost = self.gateway_cost = 0.0
+        self.cost = 0.0
         self.turns = 0
 
     def feed(self, event: dict) -> None:
@@ -107,8 +107,6 @@ class Tally:
         usage = message.get("usage") or {}
         when = datetime.fromtimestamp(message.get("timestamp", time.time() * 1000) / 1000, timezone.utc)
         self.cost += preflight.turn_cost(message.get("model"), usage, when)
-        # pi prices it from models.json, as the gateway does.
-        self.gateway_cost += float((usage.get("cost") or {}).get("total") or 0)
         parts = [b.get("text", "") for b in message.get("content", []) if b.get("type") == "text"]
         if any(parts):
             self.text = "".join(parts)
@@ -337,8 +335,7 @@ def main() -> int:
     text, error = tally.text, tally.error
     if text and not error and not cut_short:
         (LOG_DIR / f"{args.session}.answered").write_text(f"{datetime.now(timezone.utc).isoformat()}\n")
-    print(f"\n=== answer ({args.session}: ${tally.cost:.4f} at DeepSeek's prices; "
-          f"the gateway's daily cap counts ${tally.gateway_cost:.4f}) ===")
+    print(f"\n=== answer ({args.session}: ${tally.cost:.4f} at DeepSeek's prices) ===")
     print(text or "(no answer)")
     if error:
         print(f"=== the last turn failed: {error} ===")

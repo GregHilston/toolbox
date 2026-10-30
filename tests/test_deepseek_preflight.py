@@ -144,5 +144,17 @@ class TestTurnCost(unittest.TestCase):
         self.assertEqual(pf.turn_cost("cloud", self.USAGE, saturday),
                          pf.turn_cost("deepseek-flash", self.USAGE, saturday))
 
+class TestGoSummary(unittest.TestCase):
+    def test_says_how_much_of_each_window_is_used(self):
+        usage = {name: {"status": "ok", "percent": pct}
+                 for name, pct in (("rolling", 12.5), ("weekly", 3), ("monthly", 0))}
+        self.assertEqual(pf.go_summary(usage), "rolling 12.5%, weekly 3%, monthly 0%")
+
+    def test_names_a_window_that_is_not_ok(self):
+        usage = {"rolling": {"status": "rate-limited", "percent": 100},
+                 "weekly": {"status": "ok", "percent": 50}, "monthly": {"status": "ok", "percent": 25}}
+        self.assertIn("rolling 100% (rate-limited)", pf.go_summary(usage))
+
+
 if __name__ == "__main__":
     unittest.main()

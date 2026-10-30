@@ -185,8 +185,8 @@ secrets:
     *) strip="/^LITELLM_API_KEY=/d;" ;;
   esac
   if [ "$(hostname -s)" = "citadel" ]; then
-    echo "==> citadel: withholding DEEPSEEK_API_KEY"
-    strip="$strip/^DEEPSEEK_API_KEY=/d;"
+    echo "==> citadel: withholding DEEPSEEK_API_KEY and OPENCODE_API_KEY"
+    strip="$strip/^DEEPSEEK_API_KEY=/d;/^OPENCODE_API_KEY=/d;"
   fi
   sed "$strip" secrets/.env.tpl | op inject -f -o secrets/.env
   echo "Secrets generated. Run 'just dr <host>' to deploy."

@@ -29,7 +29,7 @@ FAKE_PI = textwrap.dedent('''\
         print(json.dumps(event), flush=True)
 
     def message(text, stop="stop"):
-        # 1M cache-miss tokens: $0.15 at DeepSeek's off-peak Flash price, $0.30 at the gateway's.
+        # 1M cache-miss tokens: $0.15 at DeepSeek's off-peak Flash price.
         usage = {"input": 1000000, "cacheRead": 0, "output": 0, "cost": {"total": 0.3}}
         return {"type": "message_end", "message": {
             "role": "assistant", "model": "cloud", "timestamp": 1792238400000, "usage": usage,
@@ -303,10 +303,6 @@ class TestPiAsk(unittest.TestCase):
         out = self.ask("--session", "t12", "--dir", self.tmp.name, "--max-turns", "2", "hi", FAKE_PI_TURNS="5")
         self.assertEqual(out.returncode, 4, out.stdout)
         self.assertIn("over --max-turns 2", out.stdout)
-
-    def test_reports_the_gateways_figure_too(self):
-        out = self.ask("--session", "t13", "--dir", self.tmp.name, "hi")
-        self.assertIn("daily cap counts $0.3000", out.stdout)
 
     def test_narration_goes_to_a_file_and_stdout_gets_only_alerts_and_the_answer(self):
         out = self.ask("--session", "t14", "--dir", self.tmp.name, "hi", FAKE_PI_STDERR="pi said something odd")

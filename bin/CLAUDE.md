@@ -46,7 +46,7 @@ Without it, the shell interprets the Python code as shell commands.
 Secrets from 1Password are auto-loaded into every shell session via `.zshrc`
 (sourced from `nixos/secrets/.env`). Scripts can read them with `os.environ.get()`
 or `$VAR` — no manual sourcing needed. Claude Code's Bash tool gets only
-`LITELLM_API_KEY` and `DEEPSEEK_API_KEY`, from `session-env.sh`: everything it starts,
+`LITELLM_API_KEY`, `DEEPSEEK_API_KEY` and `OPENCODE_API_KEY`, from `session-env.sh`: everything it starts,
 including workers that read untrusted pages, inherits them.
 
 If a secret is missing, the user needs to run `just secrets` in `nixos/` and open

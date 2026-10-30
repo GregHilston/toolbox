@@ -35,7 +35,37 @@
         },
         {
           "id": "cloud",
-          "name": "cloud: DeepSeek Flash via the gateway (metered)",
+          "name": "cloud: Flash via OpenCode Go, overflowing to DeepSeek",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "minimal": null,
+            "low": "low",
+            "medium": null,
+            "high": "high",
+            "max": "max"
+          },
+          "contextWindow": 1000000,
+          "maxTokens": 384000,
+          "input": ["text", "image"],
+          "cost": { "input": 0.3, "output": 1.2, "cacheRead": 0.006, "cacheWrite": 0 },
+          "compat": {
+            "supportsStore": false,
+            "supportsDeveloperRole": false,
+            "maxTokensField": "max_tokens",
+            "requiresReasoningContentOnAssistantMessages": true,
+            "thinkingFormat": "deepseek",
+            "supportsStrictMode": true,
+            "supportsReasoningEffort": true
+          },
+          "inputLimits": {
+            "images": {
+              "resize": { "maxWidth": 2000, "maxHeight": 2000, "maxBytes": 4718592, "jpegQuality": 80 }
+            }
+          }
+        },
+        {
+          "id": "cloud-deepseek",
+          "name": "cloud-deepseek: Flash on DeepSeek directly (metered)",
           "reasoning": true,
           "thinkingLevelMap": {
             "minimal": null,

@@ -15,7 +15,8 @@ overnight:parked. Each issue appends to progress.md, which the next worker reads
 pi workers use the LiteLLM gateway's `cloud` model unless --model names another,
 and --budget stops starting issues once this run has spent that much there. The
 gateway's own daily cap on `cloud` is the hard limit underneath: past it, every
-request gets a 429.
+request gets a 429. `cloud` is OpenCode Go until Go refuses, then DeepSeek; only
+DeepSeek counts, so --budget and the cap cover the overflow, not Go's flat fee.
 
 Claude's cost figures are list-price estimates, since a subscription bills none
 of it. The `Real:` line sums this run's own pi phases, priced from DeepSeek's table;
@@ -733,7 +734,7 @@ def main() -> None:
     p.add_argument("--max-cost", type=float, default=60,
                    help="stop past this total (default 60): claude at list price, pi from DeepSeek's table")
     p.add_argument("--budget", type=float,
-                   help="dollars this run may spend on the gateway's `cloud` model (a claude harness spends it "
+                   help="dollars this run may spend on `cloud`'s DeepSeek overflow; Go is a flat fee (a claude harness spends it "
                         "only on classifier retries)")
     p.add_argument("--off-peak", action="store_true",
                    help="work only in DeepSeek's off-peak hours, waiting through peak; weekends are all off-peak")

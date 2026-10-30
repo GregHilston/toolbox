@@ -46,7 +46,9 @@ pi workers use the LiteLLM gateway's `cloud` model unless `--model` names
 another. When Greg names a spend ("at most $3"), pass it as `--budget`: the
 loop stops starting issues once this run has spent that much on the gateway.
 The gateway's daily cap on `cloud` is the hard limit underneath: past it,
-every request is refused. `--max-cost` (default $60) still applies alongside.
+every request is refused. `cloud` is OpenCode Go until Go refuses, then DeepSeek,
+and `--budget` and the cap count only DeepSeek. `--max-cost` (default $60)
+still applies alongside, at DeepSeek's prices.
 A direct `deepseek/` model needs `DEEPSEEK_API_KEY`, and the loop refuses to
 start when that key's balance is under $2.
 
