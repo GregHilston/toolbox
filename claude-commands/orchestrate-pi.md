@@ -24,6 +24,16 @@ a subagent. Two copies of the preflight would drift within a month.
 `low` exists on Flash only — Pro's ring is `off → high → max`. See the model table
 in `~/Git/toolbox/dot/pi/CLAUDE.md`.
 
+### Where workers run
+
+Flash workers call the gateway's `cloud`: OpenCode Go, then DeepSeek's API when Go
+refuses. The gateway has no Pro alias, so `--model pro` stays direct, with
+`--provider deepseek --model deepseek-v4-pro`, and bills the DeepSeek key. Overflow
+bills it too, so the balance check below still matters. A worker's reported cost is
+DeepSeek's list price, not what Go charges.
+
+Leaving Go changes nothing here: home-lab `docs/llm-gateway.md` → Switching off Go.
+
 ### Flash is the default. Escalating to Pro is a decision you have to justify
 
 Measured on one nine-issue run: the same tokens cost **$1.59 on Flash against
@@ -204,7 +214,7 @@ What you actually have protecting an overnight run: the surviving `deny` list, t
 worktree limiting accidental blast radius, and the repo being one you trust. What
 you do not have: protection from prompt injection via repo content, or from a
 worker deciding to run something destructive. `DEEPSEEK_API_KEY` is in that
-process's environment.
+process's environment, and the gateway's master key is in `~/.pi/agent/models.json`.
 
 **Tell the user this before the first overnight run**, once, and let them decide.
 Do not bury it in the closing report.
@@ -399,7 +409,7 @@ quietly. Same lesson as `gh issue create --body-file`.
 set -o pipefail
 cd /abs/path/to/worktrees/issue-16 && \
   PI_STATUS_FILE=/abs/path/to/worktrees/issue-16/.pi/status.json pi \
-  --provider deepseek --model deepseek-flash --thinking high \
+  --provider litellm --model cloud --thinking high \
   --approve \
   --session-id issue-16 \
   --mode json \
@@ -769,7 +779,7 @@ pi-rpc.py run --dir /abs/path/to/worktrees/issue-16 --label issue-16 \
   --prompt-file /abs/path/to/.claude/pi-prompts/issue-16.md \
   --raw /abs/path/to/.claude/pi-logs/issue-16.jsonl \
   --alerts /abs/path/to/.claude/pi-logs/alerts.log \
-  -- --provider deepseek --model deepseek-flash --thinking high --approve
+  -- --provider litellm --model cloud --thinking high --approve
 ```
 
 Narration and lifecycle are identical — it still runs backgrounded, still exits

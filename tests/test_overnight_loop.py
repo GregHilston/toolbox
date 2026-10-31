@@ -919,7 +919,7 @@ class TestCostLabels(LoopTest):
         # Two lanes share one counter; each reads all of it.
         args = argparse.Namespace(gateway_used=True, spend=mock.Mock(total=27.97, gaps=0))
         self.assertEqual(loop.money_line(args, 15.7, 2.24),
-                         "Real: ~$2.24 DeepSeek, summed from this run's own phases. "
+                         "Real: ~$2.24 at DeepSeek's list price, summed from this run's own phases. "
                          "Claude: subscription, $15.70 at list price.")
 
     def test_a_run_keeps_its_whole_text(self):

@@ -697,7 +697,7 @@ def tally(runs: list[tuple[str, Run]]) -> tuple[list[str], float, float]:
 
 def money_line(args, claude_list: float, estimate: float) -> str:
     """Real money apart from list price, which a subscription never bills."""
-    real = f"~${estimate:.2f} DeepSeek, summed from this run's own phases" if estimate else "$0.00"
+    real = f"~${estimate:.2f} at DeepSeek's list price, summed from this run's own phases" if estimate else "$0.00"
     claude = f" Claude: subscription, ${claude_list:.2f} at list price." if claude_list else ""
     return f"Real: {real}.{claude}"
 

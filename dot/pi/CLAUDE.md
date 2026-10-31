@@ -58,8 +58,8 @@ opt-in alternative, reachable two ways. The gateway's `cloud` alias serves
 Flash through OpenCode Go until Go refuses, then on the gateway's DeepSeek key, which tracks the spend
 (home-lab `docs/llm-gateway.md` → OpenCode Go). The direct built-in provider
 below serves Flash and Pro on `DEEPSEEK_API_KEY`, and stays because
-`/orchestrate-pi` workers run Pro and `deepseek-preflight.py` reads that key's
-balance.
+`/orchestrate-pi --model pro` runs on it and `deepseek-preflight.py` reads that key's
+balance. `/orchestrate-pi`'s Flash workers use `cloud`.
 
 **It needs no `models.json` entry.** pi ships `deepseek` as a *built-in*
 provider — `docs/providers.md` maps `DEEPSEEK_API_KEY` to it — so the moment the
@@ -529,7 +529,7 @@ Write the prompt file in one call, spawn `pi` in the next as a bare invocation w
 nothing else on the line. The diagnostic that settles it in seconds:
 
 ```bash
-for p in $(pgrep -f "pi --provider deepseek"); do
+for p in $(pgrep -f "pi --provider"); do
   echo "pid $p  cwd: $(lsof -a -p $p -d cwd -Fn 2>/dev/null | grep '^n' | cut -c2-)"
 done
 ```
