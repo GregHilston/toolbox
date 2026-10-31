@@ -186,7 +186,7 @@ table above and takes `--peak`.
 #### Peak hours, in UTC and in Eastern
 
 **Peak is 01:00–04:00 and 06:00–10:00 UTC, Monday–Friday.** Everything else —
-including all of Saturday and Sunday — is off-peak at half price. That is 35 of
+including all of Saturday and Sunday — is off-peak at half price. Chinese public holidays are off-peak all day too ([pricing](https://api-docs.deepseek.com/quick_start/pricing)). That is 35 of
 168 hours, so most work is off-peak by default and this is a **trap to avoid
 rather than a discount to chase**.
 
