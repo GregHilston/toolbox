@@ -182,6 +182,8 @@ Run `bin/deepseek-preflight.py` before starting DeepSeek work: key funded, peak 
 OpenCode Go quota. Exit 0 clear, 1 needs a human, 2 could not tell. The docstring and
 `dot/pi/CLAUDE.md` → "Pricing" carry the reasons and numbers.
 
+`bin/usage-mark.py start|report <name>` shows Claude, DeepSeek API and Go token and cost use since a mark, as a small table; the docstring has the sources.
+
 ## pi's heavy tools are off until you ask — `/enable`, `pi-subagents`
 
 A fresh pi session omits `reddit_*` and `subagent_*` to halve the cold start. `/enable reddit`
