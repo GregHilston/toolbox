@@ -913,7 +913,7 @@ class TestCostLabels(LoopTest):
         out = self.run_loop("--harness", "pi", "--reviewer", "claude")
         costs = [float(c) for c in re.findall(r"pi/cloud \$([\d.]+)", out.stdout)]
         self.assertEqual(len(costs), 2, out.stdout + out.stderr)
-        self.assertIn(f"Real: ~${sum(costs):.2f} DeepSeek", out.stdout)
+        self.assertIn(f"Real: ~${sum(costs):.2f} at DeepSeek's list price", out.stdout)
 
     def test_the_shared_gateway_counter_is_not_the_real_cost(self):
         # Two lanes share one counter; each reads all of it.
@@ -949,7 +949,7 @@ class TestClassifierBlock(LoopTest):
         self.assertIn("blocked: classifier", self.comments(1)[-1])
         self.assertIn("retry pi/cloud", out.stdout)
         retry = float(re.search(r"retry pi/cloud \$([\d.]+)", out.stdout).group(1))
-        self.assertIn(f"Real: ~${retry:.2f} DeepSeek", out.stdout)
+        self.assertIn(f"Real: ~${retry:.2f} at DeepSeek's list price", out.stdout)
 
     def test_the_retrys_cost_counts_toward_max_cost(self):
         self.issues({1: "First", 2: "Second"})

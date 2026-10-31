@@ -529,7 +529,7 @@ Write the prompt file in one call, spawn `pi` in the next as a bare invocation w
 nothing else on the line. The diagnostic that settles it in seconds:
 
 ```bash
-for p in $(pgrep -f "pi --provider"); do
+for p in $(pgrep -x pi); do
   echo "pid $p  cwd: $(lsof -a -p $p -d cwd -Fn 2>/dev/null | grep '^n' | cut -c2-)"
 done
 ```
