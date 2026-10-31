@@ -1,8 +1,7 @@
-"""orch-next.py starts a successor only from a handoff that holds its first message."""
+"""orch-next.py starts one openable successor per repo, from a handoff that holds its first message."""
 
 from __future__ import annotations
 
-import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -38,40 +37,66 @@ class OrchNext(unittest.TestCase):
         with self.assertRaises(nxt.HandoffError):
             nxt.start(self.dir / "nope.md", self.dir)
 
-    def test_the_prompt_names_the_handoff_and_carries_the_message(self) -> None:
-        cmd = nxt.command(self.handoff, "go")
-        self.assertEqual(cmd[:2], ["claude", "-p"])
-        self.assertIn(str(self.handoff), cmd[2])
-        self.assertTrue(cmd[2].endswith("go"))
-        self.assertIn("lane.py status", cmd[2])
+    def test_the_command_is_a_named_remote_background_session(self) -> None:
+        cmd = nxt.command(self.handoff, "go", "orch-x")
+        self.assertEqual(cmd[:4], ["claude", "--bg", "--remote-control", "orch-x"])
+        self.assertNotIn("-p", cmd)
+        self.assertIn(str(self.handoff), cmd[-1])
+        self.assertTrue(cmd[-1].endswith("go"))
+        self.assertIn("lane.py status", cmd[-1])
 
     def test_dry_run_starts_nothing(self) -> None:
-        with mock.patch.object(nxt.subprocess, "Popen") as popen:
+        with mock.patch.object(nxt.subprocess, "run") as run:
             self.assertIn("would run", nxt.start(self.handoff, self.dir, dry_run=True))
-        popen.assert_not_called()
+        run.assert_not_called()
 
-    def test_start_launches_detached_and_records_the_pid(self) -> None:
-        with mock.patch.object(nxt.subprocess, "Popen") as popen:
-            popen.return_value.pid = os.getpid()
-            self.assertIn("started pid", nxt.start(self.handoff, self.dir))
-        self.assertTrue(popen.call_args.kwargs["start_new_session"])
-        self.assertEqual(popen.call_args.kwargs["cwd"], self.dir)
+    def _launch(self, out: str = "backgrounded \u00b7 abc123\n") -> mock.MagicMock:
+        return mock.MagicMock(returncode=0, stdout=out, stderr="")
 
-    def test_a_live_earlier_successor_blocks_a_second_start(self) -> None:
+    def test_start_reports_id_url_and_how_to_stop(self) -> None:
+        with (
+            mock.patch.object(nxt.subprocess, "run", return_value=self._launch()) as run,
+            mock.patch.object(nxt, "session_url", return_value="https://claude.ai/code/session_X"),
+        ):
+            msg = nxt.start(self.handoff, self.dir)
+        self.assertEqual(run.call_args.kwargs["cwd"], self.dir)
+        for want in ("abc123", "https://claude.ai/code/session_X", "claude attach abc123", "claude stop abc123"):
+            self.assertIn(want, msg)
+        self.assertEqual((self.dir / "state" / f"{self.dir.name}.id").read_text().strip(), "abc123")
+
+    def test_a_live_earlier_orchestrator_blocks_a_second_start_and_is_named(self) -> None:
         (self.dir / "state").mkdir()
-        (self.dir / "state" / "pid").write_text(f"{os.getpid()}\n")
-        with mock.patch.object(nxt.subprocess, "Popen") as popen:
+        (self.dir / "state" / f"{self.dir.name}.id").write_text("abc123\n")
+        with (
+            mock.patch.object(nxt, "live_ids", return_value={"abc123"}),
+            mock.patch.object(nxt.subprocess, "run") as run,
+        ):
+            with self.assertRaises(nxt.HandoffError) as cm:
+                nxt.start(self.handoff, self.dir)
+        self.assertIn("abc123", str(cm.exception))
+        self.assertIn("claude stop abc123", str(cm.exception))
+        run.assert_not_called()
+
+    def test_a_stopped_earlier_orchestrator_does_not_block(self) -> None:
+        (self.dir / "state").mkdir()
+        (self.dir / "state" / f"{self.dir.name}.id").write_text("old111\n")
+        with (
+            mock.patch.object(nxt, "live_ids", return_value=set()),
+            mock.patch.object(nxt.subprocess, "run", return_value=self._launch()),
+            mock.patch.object(nxt, "session_url", return_value=None),
+        ):
+            self.assertIn("URL not up yet", nxt.start(self.handoff, self.dir))
+
+    def test_a_failed_launch_is_an_error(self) -> None:
+        bad = mock.MagicMock(returncode=1, stdout="", stderr="Workspace not trusted")
+        with mock.patch.object(nxt.subprocess, "run", return_value=bad):
             with self.assertRaises(nxt.HandoffError):
                 nxt.start(self.handoff, self.dir)
-        popen.assert_not_called()
 
-    def test_a_dead_pid_does_not_block(self) -> None:
-        (self.dir / "state").mkdir()
-        (self.dir / "state" / "pid").write_text("999999999\n")
-        with mock.patch.object(nxt.subprocess, "Popen") as popen:
-            popen.return_value.pid = 4242
-            nxt.start(self.handoff, self.dir)
-        popen.assert_called_once()
+    def test_the_url_is_found_in_noisy_terminal_output(self) -> None:
+        noisy = mock.MagicMock(stdout="\x1b[2Jis active \u00b7 at https://claude.ai/code/session_011yAbC9\x1b[39m")
+        with mock.patch.object(nxt.subprocess, "run", return_value=noisy):
+            self.assertEqual(nxt.session_url("abc123", wait=0), "https://claude.ai/code/session_011yAbC9")
 
 
 if __name__ == "__main__":
