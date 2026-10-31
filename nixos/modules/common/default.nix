@@ -75,6 +75,7 @@ in {
         python3
         pandoc
         gh
+        herdr
         ngrok # nix stand-in for the macOS `ngrok` Homebrew cask
       ]);
 

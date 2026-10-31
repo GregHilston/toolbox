@@ -142,9 +142,11 @@ def start(repo: Path, lane: str, label: str | None, extra: list[str], force: boo
         with exclude.open("a") as f:
             f.write(".overnight/\n")
     log = clone / ".overnight" / "lane.log"
+    # A lane outlives its pane; workers must not report to it.
+    env = {k: v for k, v in os.environ.items() if not k.startswith("HERDR_")}
     with log.open("ab") as out:
         proc = subprocess.Popen([loop, "--label", label or lane, *extra], cwd=clone, stdin=subprocess.DEVNULL,
-                                stdout=out, stderr=subprocess.STDOUT, start_new_session=True)
+                                stdout=out, stderr=subprocess.STDOUT, start_new_session=True, env=env)
     pid_file.write_text(f"{proc.pid}\n")
     (clone / ".overnight" / "lane.label").write_text(f"{label or lane}\n")
     return f"started lane {lane} (label {label or lane}), pid {proc.pid}, log {log}"

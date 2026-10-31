@@ -49,6 +49,7 @@
       "just"
       "pandoc"
       "gh"
+      "herdr"
 
       # AI / LLM
       "jundot/omlx/omlx"

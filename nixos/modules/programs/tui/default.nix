@@ -5,6 +5,7 @@
     ./eza
     ./fzf
     ./git
+    ./herdr
     ./neovim
     ./pi.nix
     ./tmux

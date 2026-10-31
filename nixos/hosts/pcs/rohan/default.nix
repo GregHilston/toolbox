@@ -100,6 +100,7 @@
       curl
       fastfetch
       git
+      herdr
       htop
       jq
       just
@@ -132,6 +133,7 @@
         ../../../modules/programs/tui/eza
         ../../../modules/programs/tui/fzf
         ../../../modules/programs/tui/git
+        ../../../modules/programs/tui/herdr
         ../../../modules/programs/tui/neovim
         ../../../modules/programs/tui/pi.nix
         ../../../modules/programs/tui/tmux

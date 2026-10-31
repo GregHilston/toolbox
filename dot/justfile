@@ -38,7 +38,7 @@ target := env("HOME")
 # repo on first stow) and IS fixed: the home-manager activation in
 # nixos/modules/programs/tui/zellij/default.nix passes --no-folding for it. This
 # manual recipe does not, so prefer `stow --no-folding zellij` on a fresh host too.
-packages := "aerospace karabiner pi searxngr-config tmux zellij zsh"
+packages := "aerospace herdr karabiner pi searxngr-config tmux zellij zsh"
 
 # Stow a single package
 # Usage: just stow aerospace

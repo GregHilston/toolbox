@@ -1,0 +1,14 @@
+onboarding = false
+
+[keys]
+prefix = ["alt+a", "ctrl+backslash"]
+
+[ui.sidebar.agents]
+rows = [
+  ["state_icon", "workspace", "agent"],
+  ["tab"],
+]
+
+[update]
+version_check = false
+manifest_check = false

@@ -52,8 +52,8 @@ class LaneCase(unittest.TestCase):
               '  if [ -f "$f" ]; then cat "$f"; else echo \'{"state":"OPEN","labels":[{"name":"b"}]}\'; fi\n'
               '  exit 0\nfi\necho "$@" >> "$FAKE_GH"\n', stat.S_IXUSR)
         (self.root / "view").mkdir()
-        write(stubs / "overnight-loop.py", '#!/bin/sh\necho "$@" > "$PWD/.overnight/args"\nexec sleep 30\n',
-              stat.S_IXUSR)
+        write(stubs / "overnight-loop.py", '#!/bin/sh\nenv > "$PWD/.overnight/env"\necho "$@" > "$PWD/.overnight/args"\n'
+              'exec sleep 30\n', stat.S_IXUSR)
         self.gh_log = self.root / "gh.log"
         env.update(PATH=f"{stubs}:{os.environ['PATH']}", FAKE_GH=str(self.gh_log), FAKE_VIEW=str(self.root / "view"))
         patcher = mock.patch.dict(os.environ, env)
@@ -128,6 +128,20 @@ class StartTest(LaneCase):
         self.assertEqual((clone / ".overnight" / "args").read_text().strip(), "--label b --harness claude")
         with self.assertRaises(lane.LaneError):
             lane.start(self.repo, "b", None, [])
+
+    def test_lane_does_not_inherit_the_herdr_pane(self) -> None:
+        with mock.patch.dict(os.environ, {"HERDR_ENV": "1", "HERDR_PANE_ID": "w1:p1", "KEEP_ME": "yes"}):
+            lane.start(self.repo, "b", None, [])
+        clone = self.root / "proj-b"
+        pid = int((clone / ".overnight" / "lane.pid").read_text())
+        self.addCleanup(lambda: os.kill(pid, 9))
+        for _ in range(50):
+            if (clone / ".overnight" / "args").exists():
+                break
+            subprocess.run(["sleep", "0.1"])
+        env = (clone / ".overnight" / "env").read_text()
+        self.assertNotIn("HERDR_", env, f"lane env holds Herdr's pane: {env}")
+        self.assertIn("KEEP_ME=yes", env)
 
 
 class LimitTest(LaneCase):
