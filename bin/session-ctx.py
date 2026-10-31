@@ -14,7 +14,7 @@ holds the final usage.
     session-ctx.py [transcript.jsonl] [--cap N]
 
 With no path, reads the newest transcript for the current directory under
-~/.claude/projects/. Prints OVER and exits 1 above the cap (default $SESSION_CTX_CAP, else 150000).
+~/.claude/projects/. Prints OVER and exits 1 above the cap (default $SESSION_CTX_CAP, else 350000).
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ import re
 import sys
 from pathlib import Path
 
-DEFAULT_CAP = 150000
+DEFAULT_CAP = 350000
 PROJECTS = Path.home() / ".claude" / "projects"
 USAGE_KEYS = ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
 

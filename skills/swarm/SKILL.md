@@ -115,7 +115,7 @@ A handoff that suggests the next `/swarm` gives the prompt in a code block that 
 ## Lessons that cost a night to learn
 
 - Go's quota and the DeepSeek balance are the true costs: `deepseek-preflight.py` prints both, so read it before and after a run. Each lane's `Real:` line sums that run's own phase costs from DeepSeek's price table; the gateway's counter is shared by every lane, so never add it across lanes (on 2026-10-26 `pi-usage.py` and the old `Real:` lines summed several times the $2.54 the balance actually fell).
-- The orchestrator's own context is the biggest Claude cost: on 2026-10-26 it was about 77% of it, grown to 370k and never cleared. `lane.py status` prints it and `session-ctx.py` says OVER past the cap (`SESSION_CTX_CAP`, default 150k); hand off then, even mid-run.
+- The orchestrator's own context is the biggest Claude cost: on 2026-10-26 it was about 77% of it, grown to 370k and never cleared. `lane.py status` prints it and `session-ctx.py` says OVER past the cap (`SESSION_CTX_CAP`, default 350k); hand off then, even mid-run.
 
 ## Handing off past the context cap
 
