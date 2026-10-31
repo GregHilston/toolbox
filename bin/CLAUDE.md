@@ -100,3 +100,24 @@ Two things there are worth copying if you write a script with moving parts:
 ## Subdirectories
 
 Subdirectories group related scripts and are added to `$PATH` automatically via the recursive glob in `.zshenv` — no manual PATH update needed when adding a new subdirectory. Explore `bin/` to see what's available.
+
+## Thread fetchers
+
+`reddit-search.py "<query>"` finds threads; `fetch-thread.py <url>` prints a Reddit or
+Hacker News thread as markdown (`--format json` for JSON); `-h` has the full reference.
+The `reddit` skill is the agent-facing entry.
+
+- **Reddit needs no login.** Both go through `fetch_reddit.py`, which reads Reddit's
+  `/svc/shreddit/` HTML partials; its docstring says why.
+- A thread's post text comes from RSS, which is tightly rate-limited, so a busy run can
+  return comments with the post text missing, and says so.
+- `tests/test_fetch_reddit_live.py` (opt-in, `REDDIT_LIVE=1`) is the check that Reddit
+  changed something.
+- `reddit-cookie-sync.sh` now serves only pi's `reddit_*` tools.
+
+## Diff viewers
+
+`dhtml`, `dhtmls`, `dhtmlside` (diff2html), `difit` (PR-like UI) and `gpr` (the current
+branch as a PR diff) are Mac-only; flags are in the root `README.md`. Our `difit.sh`
+defaults a missing target to `.` (all uncommitted changes), where upstream would show the
+last commit.
