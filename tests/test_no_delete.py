@@ -40,6 +40,7 @@ BLOCKED = [
     "printf 'rm -rf x' | sh -s",
     "echo $(rm x)",
     "echo `rm x`",
+    "cat <<E\n$(rm x)\nE",
     'echo "$(rm x)"',
     "(rm x)",
     "find . -delete",
@@ -64,6 +65,8 @@ BLOCKED = [
 
 ALLOWED = [
     "ls -la",
+    "cat > a.md <<'E'\nafter a stray `rm -rf /dev/null` here\nE\ngh issue list",
+    "git commit -m 'never run `rm x` or $(rm y)'",
     'grep "rm -rf" install.sh',
     "rg 'rm -rf' .",
     "echo 'a; rm -rf /'",

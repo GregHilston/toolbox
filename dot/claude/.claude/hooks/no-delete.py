@@ -25,6 +25,8 @@ SHELLS = {"bash", "sh", "zsh", "dash", "fish", "eval"}
 SEPARATORS = {";", "&", "&&", "|", "||", "|&", "(", ")", ";;", "\n"}
 GIT_VALUE_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
 HEREDOC = re.compile(r"<<-?\s*(['\"]?)(\w+)\1[^\n]*\n.*?\n[ \t]*\2[ \t]*(?:\n|$)", re.S)
+QUOTED_HEREDOC = re.compile(r"<<-?\s*(['\"])(\w+)\1[^\n]*\n.*?\n[ \t]*\2[ \t]*(?:\n|$)", re.S)
+SINGLE_QUOTED = re.compile(r"'[^']*'")
 SUBSTITUTION = re.compile(r"\$\(([^()]*)\)|`([^`]*)`")
 DELETE_WORD = re.compile(r"\b(rm|rmdir|unlink|shred)\b")
 
@@ -101,7 +103,9 @@ def _simple_command(words, piped_text=""):
 
 def refusal(command):
     """The deletion `command` would run, or None."""
-    for match in SUBSTITUTION.finditer(command):
+    # Quoted heredocs and single quotes don't substitute.
+    live = SINGLE_QUOTED.sub("''", QUOTED_HEREDOC.sub("\n", command))
+    for match in SUBSTITUTION.finditer(live):
         found = refusal(match.group(1) or match.group(2) or "")
         if found:
             return found
