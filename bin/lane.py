@@ -112,6 +112,20 @@ def load_line(repo: Path) -> str:
     return f"load {os.getloadavg()[0]:.1f}, {running_count(repo)} lanes running"
 
 
+def claim_start_time() -> float:
+    """The next free turn to start, LANE_STAGGER seconds after the last lane's."""
+    gap = float(os.environ.get("LANE_STAGGER", "60"))
+    stamp = gateslot.DIR / "last-lane-start"
+    try:
+        last = float(stamp.read_text())
+    except (OSError, ValueError):
+        last = 0.0
+    at = max(time.time(), last + gap)
+    stamp.parent.mkdir(parents=True, exist_ok=True)
+    stamp.write_text(str(at))
+    return at
+
+
 def start(repo: Path, lane: str, label: str | None, extra: list[str], force: bool = False,
           max_lanes: int = MAX_LANES, max_load: float | None = None) -> str:
     """Clone if missing, bring it to the default branch, start the loop detached."""
@@ -144,6 +158,7 @@ def start(repo: Path, lane: str, label: str | None, extra: list[str], force: boo
     log = clone / ".overnight" / "lane.log"
     # A lane outlives its pane; workers must not report to it.
     env = {k: v for k, v in os.environ.items() if not k.startswith("HERDR_")}
+    env["LANE_START_AT"] = str(claim_start_time())
     with log.open("ab") as out:
         proc = subprocess.Popen([loop, "--label", label or lane, *extra], cwd=clone, stdin=subprocess.DEVNULL,
                                 stdout=out, stderr=subprocess.STDOUT, start_new_session=True, env=env)

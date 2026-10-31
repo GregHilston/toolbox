@@ -706,6 +706,17 @@ def interrupt(signum, frame) -> None:
     raise KeyboardInterrupt
 
 
+def wait_for_turn(start_at: float, max_load: float) -> None:
+    """Hold a staggered lane until its turn, then until the machine has room."""
+    delay = start_at - time.time()
+    if delay > 0:
+        print(f"Staggered start: waiting {delay:.0f} s.", flush=True)
+        time.sleep(delay)
+    while os.getloadavg()[0] > max_load:
+        print(f"Load {os.getloadavg()[0]:.0f} is over {max_load:.0f}: waiting.", flush=True)
+        time.sleep(60)
+
+
 def main() -> None:
     # Workers run in sessions of their own, so a terminal's signal reaches only
     # this process; run_group then takes the worker down with it.
@@ -748,6 +759,7 @@ def main() -> None:
     phases = [(args.harness, args.model)] + ([(args.reviewer, args.reviewer_model)] if args.reviewer != "none" else [])
     # A claude worker the classifier blocks retries on the gateway's pi.
     args.gateway_used = args.harness == "claude" or any(h == "pi" and m in CLOUD for h, m in phases)
+    wait_for_turn(float(os.environ.get("LANE_START_AT", "0")), 2.0 * (os.cpu_count() or 1))
     begun = time.time()
 
     if not os.access("verify.sh", os.X_OK):
@@ -828,7 +840,9 @@ def main() -> None:
             board(args)
             before = args.spend.read() if args.spend else 0.0
             names = frozenset(lab["name"] for lab in issue["labels"])
+            ticket_began = time.time()
             outcome, labels, listed, estimated, broke = work_issue(args, n, title, branch, names)
+            gateslot.record(kind="ticket", cwd=os.getcwd(), issue=n, started=ticket_began, ended=time.time())
             current = None
             claude_list, estimate = claude_list + listed, estimate + estimated
             if outcome is None:

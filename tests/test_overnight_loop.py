@@ -292,6 +292,22 @@ def alive(pid: int) -> bool:
     return True
 
 
+class WaitForTurnTest(unittest.TestCase):
+    def test_sleeps_to_its_turn_then_until_the_load_falls(self):
+        with mock.patch.object(loop.time, "time", return_value=100.0), \
+                mock.patch.object(loop.time, "sleep") as sleep, \
+                mock.patch.object(loop.os, "getloadavg", side_effect=[(40.0,), (40.0,), (5.0,)]):
+            loop.wait_for_turn(130.0, 32.0)
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [30.0, 60])
+
+    def test_a_turn_already_past_does_not_sleep(self):
+        with mock.patch.object(loop.time, "time", return_value=100.0), \
+                mock.patch.object(loop.time, "sleep") as sleep, \
+                mock.patch.object(loop.os, "getloadavg", return_value=(1.0,)):
+            loop.wait_for_turn(50.0, 32.0)
+        sleep.assert_not_called()
+
+
 class LoopTest(unittest.TestCase):
     """A scratch repo on main, two ready issues, and the fakes first on PATH."""
 

@@ -59,6 +59,11 @@ class LaneCase(unittest.TestCase):
         patcher = mock.patch.dict(os.environ, env)
         patcher.start()
         self.addCleanup(patcher.stop)
+        slots = self.root / "gate-slots"
+        for name, value in (("DIR", slots), ("PASSED", slots / "passed"), ("LOG", slots / "log.jsonl")):
+            patcher = mock.patch.object(lane.gateslot, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         load = mock.patch.object(lane.os, "getloadavg", return_value=(0.5, 0.5, 0.5))
         self.getload = load.start()
         self.addCleanup(load.stop)
@@ -128,6 +133,28 @@ class StartTest(LaneCase):
         self.assertEqual((clone / ".overnight" / "args").read_text().strip(), "--label b --harness claude")
         with self.assertRaises(lane.LaneError):
             lane.start(self.repo, "b", None, [])
+
+    def test_lanes_started_together_get_turns_a_stagger_apart(self) -> None:
+        with mock.patch.dict(os.environ, {"LANE_STAGGER": "60"}), mock.patch.object(lane.time, "time", return_value=1000.0):
+            turns = [lane.claim_start_time() for _ in range(3)]
+        self.assertEqual(turns, [1000.0, 1060.0, 1120.0], f"turns {turns}")
+
+    def test_a_lane_after_a_quiet_spell_starts_at_once(self) -> None:
+        with mock.patch.dict(os.environ, {"LANE_STAGGER": "60"}), mock.patch.object(lane.time, "time", return_value=1000.0):
+            lane.claim_start_time()
+        with mock.patch.dict(os.environ, {"LANE_STAGGER": "60"}), mock.patch.object(lane.time, "time", return_value=5000.0):
+            self.assertEqual(lane.claim_start_time(), 5000.0)
+
+    def test_the_loop_is_told_its_turn(self) -> None:
+        lane.start(self.repo, "b", None, ["--harness", "claude"])
+        clone = self.root / "proj-b"
+        pid = int((clone / ".overnight" / "lane.pid").read_text())
+        self.addCleanup(lambda: os.kill(pid, 9))
+        for _ in range(50):
+            if (clone / ".overnight" / "args").exists():
+                break
+            subprocess.run(["sleep", "0.1"])
+        self.assertIn("LANE_START_AT=", (clone / ".overnight" / "env").read_text())
 
     def test_lane_does_not_inherit_the_herdr_pane(self) -> None:
         with mock.patch.dict(os.environ, {"HERDR_ENV": "1", "HERDR_PANE_ID": "w1:p1", "KEEP_ME": "yes"}):
@@ -262,7 +289,8 @@ class StatusTest(LaneCase):
 
     def test_ends_with_the_context_line_only_when_a_transcript_exists(self) -> None:
         self.make_clone()
-        with mock.patch.object(lane.session_ctx, "PROJECTS", self.root / "projects"):
+        with mock.patch.object(lane.session_ctx, "PROJECTS", self.root / "projects"), \
+                mock.patch.dict(os.environ, {"SESSION_CTX_CAP": "150000"}):
             self.assertNotIn("orchestrator context", lane.status(self.repo))
             folder = self.root / "projects" / lane.re.sub(r"[^A-Za-z0-9]", "-", str(self.repo))
             write(folder / "s.jsonl", json.dumps({"type": "assistant", "message": {
