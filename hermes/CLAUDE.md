@@ -118,3 +118,11 @@ script without recording consent.
   worker still exits 0. Use `provider: "custom"` with `base_url` and `api_key`.
 
 `~/Git/notes/ref-hermes-run-log.md` has the run history and every finding.
+
+This repo used to carry a 3,000-line harness around Hermes (a container, a Telegram bot, a
+run loop, a scorer), nearly all of which reimplemented features Hermes ships. It was
+deleted; the run log records what those runs taught. The operator guide is `~/Git/hermes.md`.
+
+Two things here are ours because Hermes has no equivalent: `hooks/require-green.sh` refuses
+a handoff whose tree would not install for anyone else, and `bin/installs-from-clean.sh`
+answers the same question about any directory, with no container and no agent involved.

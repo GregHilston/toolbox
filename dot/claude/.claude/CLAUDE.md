@@ -95,43 +95,26 @@ End every handoff with the exact message I paste to start the next chat, in a co
 - **Opus** only when I ask for it.
 - **Point a delegated task at the repo's own rules for it** (a command, skill or `CLAUDE.md` section) rather than restating them in the prompt. On 2026-10-21 a Haiku agent filed vault clips from my hand-written spec, never saw `.claude/commands/triage.md`, and made a string of mistakes Greg had to catch. Clip writing is Sonnet work.
 - **DeepSeek** (`pi-ask.py`, `--harness pi` lanes) for every second-opinion review of a branch with logic in it, for bulk reading, and for small test-checkable tickets. Use it from the start of a session, not as an afterthought.
-- **DeepSeek half price** is everything except its peak hours: 01:00–04:00 and 06:00–10:00 UTC, Monday to Friday. Weekends and Chinese public holidays are off-peak all day ([pricing](https://api-docs.deepseek.com/quick_start/pricing)). In Eastern time that is Sun–Thu 21:00–00:00 and Mon–Fri 02:00–06:00 under EDT, one hour earlier under EST (from the first Sunday of November).
 - Run `deepseek-preflight.py` before starting DeepSeek work: it prints the rate now, minutes to the next peak, and the balance. Start long `pi` lanes with `--off-peak`, so they wait out peak hours. A review costs cents, so run it even at peak price.
 
 ## Bash working directory — use absolute paths
 
-**The Bash tool's cwd persists between calls, and it is almost never where you
-assume.** A `cd` in one call silently changes the meaning of every relative path
-in later calls, including calls made much later in the conversation.
+The Bash tool's cwd persists between calls and is rarely where you assume. Use an absolute
+path, or lead with `cd /abs/path &&`, wherever a wrong cwd gives a wrong answer, not an error:
 
-Use an absolute path — or lead with `cd /abs/path &&` — for anything where being
-in the wrong directory produces a *wrong answer* rather than an error:
+- `git worktree add worktrees/foo` nests the worktree inside a subdirectory cwd.
+- `git merge <branch>` from inside that branch's own worktree says "Already up to date".
+- `git status --porcelain <bad path>` exits 0 with no output, so a `&& echo CLEAN` check passes
+  for a directory it never looked at.
+- An error naming a doubled or missing path prefix is a cwd problem first.
+- Commit only your own paths with `git commit -- <paths>`: a bare commit sweeps in files
+  another session staged (2026-10-26).
 
-- `git worktree add worktrees/foo` creates the worktree relative to cwd. Run
-  from a subdirectory, it silently nests one inside your project.
-- `git merge <branch>` run from inside that branch's own worktree reports
-  "Already up to date" and merges nothing.
-- `git status --porcelain <path>` with a path that does not exist from cwd
-  prints a warning to stderr and **exits 0 with no output**, so a check like
-  `git status --porcelain x/ && echo CLEAN` reports success for a directory it
-  never looked at. Verification commands are the worst place for this, because
-  the failure mode is a false pass.
-
-The tell is an error naming a path with a doubled or missing prefix
-(`api-backend/tests/goldens/`, `can't open file ROADMAP.md`). Treat that as a
-cwd problem first, not a missing-file problem.
-
-Commit only your own paths: `git commit -- <paths>`. Another session may have
-left files staged, and a bare `git commit` sweeps them in (two lessons, 2026-10-26).
-
-The shell is zsh: an unquoted `$var` doesn't word-split, so
-`for p in "515 01"; do set -- $p` passes one argument. Write the values out,
-or use `${=p}`.
-A word starting with `=` is a command lookup, so `echo ====` fails with
-`=== not found` and ends a `&&` chain. Quote it (2026-10-26).
-`ask` is an alias here, so `ask() { … }` is a parse error (2026-10-30). Put helpers in a bash script.
-`cmd 2>&1 >/dev/null | x` still pipes stdout, because zsh's multios writes to both; on 2026-10-30 it
-printed an API key. Near a secret, send output to a file and read its length.
+zsh traps: an unquoted `$var` doesn't word-split (write the values out, or use `${=p}`); a
+word starting with `=` is a command lookup, so quote `echo "===="` (2026-10-26); `ask` is an
+alias, so `ask() {…}` fails to parse and helpers go in a bash script (2026-10-30);
+`cmd 2>&1 >/dev/null | x` still pipes stdout through multios, and printed an API key on
+2026-10-30, so near a secret write output to a file and read its length.
 
 ## File Inspection
 
@@ -151,7 +134,7 @@ OP_SERVICE_ACCOUNT_TOKEN=$(cat ~/.config/op/service-account-token) op read 'op:/
 - It can't write. Creating or editing an item goes through the desktop app, which needs Greg to approve a prompt.
 - It sees Infra only, not Private or the Mozilla account.
 
-`just secrets` in toolbox and home-lab already reads the file. Rotation is in `~/Git/toolbox/CLAUDE.md` → Secret Management.
+`just secrets` in toolbox and home-lab already reads the file. Rotation is in `~/Git/toolbox/nixos/docs/secrets.md`.
 
 ## Toolbox
 
@@ -164,27 +147,13 @@ Notes an LLM writes for `~/Git/notes` go in its `llm/` folder, filed with
 
 ## Researching Reddit
 
-Two steps, both in `~/Git/toolbox/bin`:
+Use the `reddit` skill (`reddit-search.py`, then `fetch-thread.py <url>`); no login needed.
+**A 403 on moria is often only moria's IP being blocked:** run the same command through
+`ssh dungeon '…'` before debugging (worked all day on 2026-10-22).
 
-1. **`reddit-search.py "<query>"`** — finds threads (`-r <sub>` repeatable to scope,
-   `-s`/`-t` for sort and time window, `--format json`).
-2. **`fetch-thread.py <url>`** — prints one thread's post + threaded comments.
-   Works for Hacker News too.
-
-No login, cookie or key: both go through Reddit's own `/svc/shreddit/` HTML
-partials, because old.reddit.com redirects to a login page and `.json` answers 403.
-`bin/fetch_reddit.py` explains the details. If they break,
-`REDDIT_LIVE=1 python3 -m unittest test_fetch_reddit_live` in `toolbox/tests/`
-says what Reddit changed. pi's `reddit_*` tools use the old endpoints and are
-unreliable. **A 403 on moria is often only moria's IP being blocked:** run the same
-command through `ssh dungeon '…'` before debugging (worked all day on 2026-10-22).
-
-**Don't reach for `searxngr` to find Reddit threads.** It was the old workaround and
-it no longer earns its place — the self-hosted instance's egress IP is blocked by
-every engine that indexes Reddit deeply (DuckDuckGo and Startpage CAPTCHA, Brave
-rate-limits, Google and Mojeek return nothing). For general web search it still works:
-Bing and Yahoo answer, and on 2026-10-18 it beat DeepSeek Search on dev queries
-(`~/Git/home-lab/docs/llm-gateway.md`). `WebSearch` is the fallback.
+**Don't reach for `searxngr` to find Reddit threads:** its egress IP is blocked by every
+engine that indexes Reddit deeply. It still works for general web search; `WebSearch` is the
+fallback.
 
 ## Agent skills
 

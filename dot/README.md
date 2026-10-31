@@ -56,6 +56,20 @@ just dry-run aerospace # Preview what stow would do
 just dry-run-all       # Preview what stow-all would do
 ```
 
+> **Trap:** always pass `-t $HOME` (or use `just stow`). Bare `stow <pkg>` from `dot/`
+> targets the parent directory, the repo root, and silently creates junk symlinks there
+> instead of in your home directory. In nix activation scripts, use
+> `stow -d "$HOME/Git/toolbox/dot" -t "$HOME" <pkg>`, since the working directory may not be `dot/`.
+
+> **Docs inside a package:** stow's default ignore list skips `README.*`, so a `README.md`
+> in a package is not linked into `$HOME`. A package with its own `.stow-local-ignore`
+> replaces those defaults and must list its docs itself (`dot/pi/` does for `CLAUDE.md`).
+
+> **nix-darwin:** `lib.hm.dag.entryAfter` works in NixOS home-manager modules
+> (`modules/home/default.nix`) but **not** in nix-darwin's `home-manager.users.<name>` block
+> (`modules/darwin/home.nix`). On Darwin, use declarative options such as `xdg.configFile`
+> instead of activation scripts.
+
 > **Note:** Stow won't overwrite existing regular files. If a target file already exists (not as a symlink), remove it first, then stow.
 
 ## Packages

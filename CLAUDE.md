@@ -39,111 +39,30 @@ They read a repo's glossary from `GLOSSARY.md` (formerly `CONTEXT.md`).
 
 ### How they reach each host
 
-**Nix-managed hosts** (NixOS / nix-darwin): automatic. The home-manager module at
-`nixos/modules/programs/tui/claude.nix` creates the symlinks during `home-manager`
-activation when you run `just fr <host>` or `just dr <host>`. It now manages five
-targets, all symlinked into this repo (so they're version-controlled and deploy to
-every host that imports `programs/tui`):
+Nix hosts get `commands`, `skills`, the global `CLAUDE.md`, `settings.json`, `hooks` and the
+ccstatusline config as symlinks into this repo, from `nixos/modules/programs/tui/claude.nix`
+on `just fr/dr <host>`. Non-Nix hosts run `just setup-claude` once. Full list and the
+RTK hook: `nixos/CLAUDE.md` → "Claude Code on each host".
 
-- `~/.claude/commands`     → `claude-commands/`
-- `~/.claude/skills`       → `skills/`
-- `~/.claude/CLAUDE.md`    → `dot/claude/.claude/CLAUDE.md`   (global, cross-repo memory)
-- `~/.claude/settings.json`→ `dot/claude/.claude/settings.json` (permissions, hooks, plugins)
-- `~/.config/ccstatusline/settings.json` → `dot/ccstatusline/…` (status line layout)
-
-The global gitignore ignores `.claude/`, so a new file under `dot/claude/.claude/`
-(a hook script) needs `git add -f`. Check `git show --stat` after committing one.
-
-The RTK hook is the command `rtk hook claude` in `settings.json`, not a script:
-the script `rtk init` used to generate treated rtk's "rewrite, advisory" exit
-code as "no rewrite", so `git status`, `pytest`, `docker ps` and most other
-commands went through unfiltered while `rtk gain` still read 74% saved. `rtk`
-itself owns the hook now; `rtk gain` warns when it is outdated again.
-
-`settings.json` sets `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE=1`. Claude Code marks
-every shell it spawns with `CLAUDE_CODE_CHILD_SESSION=1` and saves no transcript for a
-`claude` started under that marker. The marker leaks: a terminal app relaunched from a
-Claude Bash call hands it to every tab, so ordinary sessions silently lost their
-transcripts. The cost is that `claude -p` runs spawned by an agent save one too.
-
-The symlinks are **writable** (they point into the repo, not `/nix/store`) so Claude's
-own runtime writes to `settings.json` still work — those just show up as git diffs to
-commit or discard.
-
-**Clobber guard:** the activation's `link_repo` helper refuses to overwrite a *real*
-file. If a host already has, say, a hand-written `~/.claude/settings.json`, activation
-prints a `WARNING` and leaves it untouched. To bring it under management: move that file
-into `dot/claude/.claude/`, delete the original, then re-run home-manager.
-
-**Non-Nix hosts**: run `just setup-claude` once after cloning. Since everything is a
-symlink into the repo, pulling new commits picks up changes without re-running setup.
+- **Clobber guard:** `link_repo` refuses to overwrite a *real* file and only warns. Move the
+  file into `dot/claude/.claude/`, delete the original, re-run home-manager.
+- The global gitignore ignores `.claude/`, so a new file under `dot/claude/.claude/` needs
+  `git add -f`. Check `git show --stat`.
+- `settings.json` sets `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE=1`: Claude Code's
+  `CLAUDE_CODE_CHILD_SESSION=1` marker leaks into relaunched terminals and silently drops
+  transcripts. Cost: `claude -p` runs spawned by an agent save one too.
 
 ### Status Line — ccstatusline
 
-[ccstatusline](https://github.com/sirmalloc/ccstatusline) renders the status line
-(context used/window/%, weekly quota, git state). Wired up by `statusLine` in
-`dot/claude/.claude/settings.json`; layout in `dot/ccstatusline/`, symlinked by the
-same activation as `~/.claude` so it stays writable — run `ccstatusline` bare to open
-its TUI, then commit or discard the diff.
-
-Version pin and the `~/.npm-global` install live in `nixos/modules/programs/tui/claude.nix`
-(`ccstatuslineVersion`); bump there. It needs `node` on `$PATH`: Homebrew's on the Macs,
-`nodejs_22` in `nixos/modules/home/default.nix` on NixOS.
-
-**Widget choices, and why:**
-
-- `context-bar` alone, not `context-length` + `context-window` + `context-percentage`
-  beside it. The bar already renders `342k/1.0M (34%)`, so the other three only repeat it.
-- The plain `Context %` widget, never the "usable" variant — that one assumes an
-  auto-compact cutoff, and we run `autoCompactEnabled: false`.
-- `current-working-dir` (segments: 1) and `git-worktree`, so a glance identifies *which*
-  session you're typing into. With many concurrent sessions the git widgets alone show
-  `master` almost everywhere, and a worktree is indistinguishable from the main checkout.
-- A `custom-command` widget on **a line of its own**, running
-  `pi-workers.py --from-statusline --oneline`, so an `/orchestrate-pi` run is
-  visible without asking Claude: `pi 5w 2▸ 1~ 1✓ $0.0912 ⚠1 stalled`.
-  The dedicated line is not cosmetic — ccstatusline does **not** drop a
-  separator adjacent to a widget that renders nothing, so putting it inline left
-  either a dangling `|` when idle or no gap when active. On its own line the
-  whole row disappears when the script prints nothing, which is every session
-  that is not orchestrating. Verified by rendering both states, per the advice
-  at the end of this section. The script must also never exit non-zero in this
-  mode: ccstatusline renders `[Exit: N]` in the bar if it does.
-- `weekly-usage` (the `weekly_all` quota) and `session-usage` (the 5-hour block).
-  **Not** `weekly-opus-usage` / `weekly-sonnet-usage`: ccstatusline reads
-  `https://api.anthropic.com/api/oauth/usage`, which now returns `seven_day_opus: null`
-  and `seven_day_sonnet: null` — there is one combined weekly limit, no per-model split.
-  ccstatusline maps a null bucket to `0` rather than "absent", so those two widgets sit
-  at a permanent `0.0%` instead of hiding. Curl that endpoint with the OAuth token from
-  the `Claude Code-credentials` keychain item to see what your plan actually reports.
-
-Deliberately **not** enabled: powerline mode needs a Nerd Font present on every host
-(NixOS, darwin, Termux), which is a poor trade for a repo whose point is uniform deploys.
-To audit the other ~80 widgets, render them against a real session rather than guessing —
-pipe a Claude Code status payload into `ccstatusline` with `HOME` pointed at a throwaway
-config dir, so your live line is untouched.
+Layout in `dot/ccstatusline/`, wired by `statusLine` in `settings.json`; widget choices and
+their reasons are in `dot/ccstatusline/README.md`. The version pin is `ccstatuslineVersion`
+in `nixos/modules/programs/tui/claude.nix`.
 
 ## Voice Input — Hold Caps Lock to Dictate
 
-Caps Lock sends F18, held for as long as the key is. Karabiner-Elements does this on macOS
-(`dot/karabiner/`), `services.keyd` on NixOS GUI hosts. Escape stays on its own key.
-
-On moria and citadel, [FluidVoice](https://github.com/altic-dev/FluidVoice) dictates on
-F18. Shift plus Caps Lock (F19) starts Command Mode, an LLM agent that runs shell commands;
-Option plus Caps Lock (F20) starts Write Mode, which writes or rewrites the selected text.
-All three work the same way: a tap toggles hands-free, a hold is push-to-talk. NixOS
-dictates with [Handy](https://handy.computer/).
-A new terminal on a Mac with FluidVoice prints a one-line key reminder, beside zellij's
-(top of `dot/zsh/.zshrc`); `touch ~/.hide-fv-motd` silences it.
-
-Launching, permissions, and why the app's own "launch at login" stays off are all in
-`nixos/CLAUDE.md` → "Launching GUI apps at login", which owns this.
-
-Nix owns FluidVoice's model routing: Fluid-1 polishes dictation, oMLX serves Write and
-Command Mode. Write Mode can read a selection only through macOS Accessibility, which
-Electron apps and Firefox keep switched off: `fluidvoice-ax` turns it on in Slack, Obsidian
-and VS Code, and a Firefox policy does it for Firefox. All of it, with the reasons, is in
-`nixos/CLAUDE.md` → "FluidVoice".
+Caps Lock sends F18 (Shift: F19 Command Mode, Option: F20 Write Mode); FluidVoice on moria
+and citadel, Handy on NixOS. Keys, launching, model routing and `touch ~/.hide-fv-motd`:
+`nixos/CLAUDE.md` → "FluidVoice" and "Launching GUI apps at login".
 
 ## Menu Bar — no manager
 
@@ -154,38 +73,12 @@ Thaw, Ice's successor, only has it in an alpha.
 
 ## Mac Utilities — Vorssaint
 
-[Vorssaint](https://github.com/vorssaint/vorssaint-utils) is a PowerToys-shaped menu bar
-suite: per-app volume and output, keep-awake with the lid closed, a better screenshot and
-text-from-screen, ⌘X/⌘V in Finder, quit-on-close, system stats, a file shelf. Every Mac
-gets it from `modules/darwin/common.nix`. dungeon stays awake through its own
-`caffeinate` and `pmset disablesleep`, not Vorssaint's Keep Awake.
-
-`nixos/modules/darwin/vorssaint.nix` owns it and explains itself at length. The two things
-worth knowing from here:
-
-- **There is no config file.** The Features hub is GUI-only and its settings export goes
-  through a save panel. What it does have is a plain UserDefaults domain
-  (`com.vorssaint.utils`), one bool per feature, so the module seeds the whole set with
-  `defaults write` during activation, after Homebrew has installed the cask and before
-  anyone has opened the app. (Not from the launchd agent: agents activate *before*
-  Homebrew, so that version raced the cask and then raced the human — and lost.) It is a
-  **one-time** seed gated on the app's own `hasOnboarded` marker, not a rebuild-time
-  rewrite — editing the feature list does nothing to a Mac already set up until you quit
-  Vorssaint, `defaults delete com.vorssaint.utils hasOnboarded` and `just dr <host>`.
-- **It overlaps things already deployed here**, and the list only dodges some of
-  them on purpose. Out for good: `superKey` (Karabiner owns Caps Lock — two event taps
-  on one key is broken, not just redundant) and `scrollInverter` (it would double-invert
-  against `com.apple.swipescrolldirection = false` in `modules/darwin/common.nix`).
-  Deliberately in, despite overlapping: the app switcher and Dock previews (AeroSpace).
-  Vorssaint also stands in for Raycast (command bar, clipboard history), `stats` and
-  Amphetamine, so none of those are installed.
-- **Quit-on-close spares apps whose job outlives their window** — FluidVoice, the mines VM
-  in Fusion, OrbStack, 1Password, the VPN, music, chat. Unlike the features, that list
-  (`autoQuitExceptions`) is merged in on every `just dr`, add-only, so one added in
-  Vorssaint stays. Menu-bar apps are exempt upstream already.
-
-Permissions are still manual — TCC is outside nix's reach. See
-`nixos/docs/darwin-post-deploy.md`.
+Menu bar suite on every Mac; `nixos/modules/darwin/vorssaint.nix` owns it and explains
+itself, with the overlaps in `nixos/CLAUDE.md` → "Launching GUI apps at login". It has no
+config file, so the module seeds `defaults` **once**, gated on the app's own `hasOnboarded`
+marker. Editing the feature list does nothing to a Mac already set up until you quit
+Vorssaint, `defaults delete com.vorssaint.utils hasOnboarded` and `just dr <host>`.
+Permissions stay manual: `nixos/docs/darwin-post-deploy.md`.
 
 ## Dotfiles
 
@@ -205,108 +98,48 @@ just stow-all           # symlink all packages
 
 ### Stow gotchas
 
-- **Always pass `-t $HOME`** (or use `just stow`). Bare `stow <pkg>` from `~/Git/toolbox/dot/`
-  targets the parent directory (`~/Git/toolbox/`), not `$HOME`. This silently creates junk
-  symlinks inside the repo instead of in your home directory.
-- In nix activation scripts, use `stow -d "$HOME/Git/toolbox/dot" -t "$HOME" <pkg>` since
-  the working directory may not be the dot dir.
-- `lib.hm.dag.entryAfter` is available in NixOS home-manager modules (`modules/home/default.nix`)
-  but **not** in nix-darwin's `home-manager.users.<name>` block (`modules/darwin/home.nix`).
-  For Darwin, use declarative options like `xdg.configFile` instead of activation scripts.
+- **Always pass `-t $HOME`** (or use `just stow`). Bare `stow <pkg>` from `dot/` targets the
+  repo root and silently creates junk symlinks inside the repo.
+- Everything else (nix activation form, `lib.hm.dag.entryAfter` on Darwin, docs inside a
+  package): `dot/README.md`.
 
 ## Zellij — named sessions, and staying usable inside vim
 
-Installed everywhere tmux is; tmux is still the default multiplexer. Config is
-stow-managed at `dot/zellij/`, keybinds deliberately shaped like our tmux ones, and
-`dot/zellij/.config/zellij/config.kdl`'s header comment owns the details.
+Config in `dot/zellij/`; sessions, autolock, clipboard and keys are in
+`dot/zellij/README.md`.
 
-**Learning the keys:** the bottom row is zellij's stock status-bar, listing what
-the current mode accepts (press `Ctrl-b` to see the Tmux-mode keys), and
-`Ctrl-b ?` opens zellij-forgot, a searchable list of every binding.
-
-**Named sessions:** `zj <name>` (a zsh function in `dot/zsh/.zshrc`) attaches to that
-session or creates it, from inside a session or out. It is the one verb for tmux's
-`new -s` / `a -t` pair, and it tolerates that syntax — `zj a -t foo` works. Bare `zj`
-lists, `zjk <name>` kills. Native equivalents: `zellij -s <name>` only creates and
-errors if the name exists; `zellij attach -c <name>` is the attach-or-create; from
-*inside* a session neither works, because zellij refuses to nest — that needs
-`zellij action switch-session <name>`.
-
-**Inside vim:** the autolock plugin puts zellij in Locked mode whenever the focused
-pane runs `nvim|vim|git|fzf|zoxide|atuin`, so those tools keep `Ctrl-h/j/k/l`. Locked
-mode passes every unbound key to the pane, so a locked pane used to have no way to
-change tab. `Ctrl-b` (and `Alt-<hjkl>`/`Alt-<arrows>`) is bound in Locked mode too, on
-the grounds that tmux's prefix is never swallowed either.
-
-**Clipboard:** a plain drag copies. zellij captures the mouse, so the selection is
-its own rather than Ghostty's, and its `copy_on_select` goes out over OSC 52 — which
-did not reach the clipboard here. `copy_command` bypasses that and pipes to
-`bin/clipboard-copy.sh`, which picks the tool per host because this file is stowed to
-macOS, NixOS and Termux alike.
-
-That wrapper writes OSC 52 to `$SSH_TTY` when it sees one, rather than copying on the
-far end where a headless box has no clipboard at all. So a selection made in a zellij
-on dungeon rides the connection back and lands on moria's clipboard — what zellij does
-for itself when `copy_command` is unset. `Shift`-drag still works everywhere too, and
-is Ghostty's own way past a mouse-capturing app.
-
-**Nested in tmux, `Ctrl-b` never arrives.** tmux's prefix is `Ctrl-b` too, so it eats
-the key and zellij looks frozen — no detach, no tab switching, no way out. `Ctrl-b
-Ctrl-b` sends one through (tmux's `send-prefix`), `Ctrl-q` quits zellij outright, and
-from any other pane `zellij --session <name> action detach` frees it without losing
-the session.
-
-`Ctrl-g` is **not** a force-unlock: autolock re-locks within `reaction_seconds`
-(0.3s) because the pane still runs a trigger command. `Alt-z` is — it disables the
-plugin first; `Alt-z` again hands control back. Config changes need a detach and
-reattach if the running session does not pick them up.
+**Nested in tmux, `Ctrl-b` never arrives.** tmux's prefix is `Ctrl-b` too, so it eats the
+key and zellij looks frozen. `Ctrl-b Ctrl-b` sends one through, `Ctrl-q` quits zellij, and
+`zellij --session <name> action detach` from another pane frees it.
 
 ## Searxngr — Privacy-Focused Search
 
-CLI for dungeon's self-hosted SearXNG instance. Config managed via stow (`dot/searxngr-config/`), binary installed via `uv tool install`. See `/searxngr-search` skill for Claude Code integration.
+CLI for dungeon's SearXNG; config in `dot/searxngr-config/`, binary via `uv tool install`. See the `/searxngr-search` skill.
 
 ## oMLX
 
-Local LLM inference (Apple Silicon), launchd service `org.nixos.omlx` on port 8000.
-Per-host settings are generated by `nixos/modules/darwin/omlx.nix`, not stowed.
-
-`dot/omlx/CLAUDE.md` owns per-model settings, model variants, and restart
-troubleshooting. Note its merge base `dot/omlx/.omlx/settings.json` is **generated,
-not committed** — run `just secrets` in `nixos/` before the first activation on a new
-host, or the merge has nothing to read.
+Launchd service `org.nixos.omlx` on port 8000, settings generated by
+`nixos/modules/darwin/omlx.nix`. `dot/omlx/CLAUDE.md` owns the rest. Its base
+`dot/omlx/.omlx/settings.json` is **generated, not committed**: run `just secrets` in
+`nixos/` before the first activation on a new host.
 
 ## PI WEB — supervise pi sessions from a browser
 
-[PI WEB](https://pi-web.dev/) keeps pi coding-agent sessions alive in real
-workspaces, so they can be driven from a phone or tablet instead of a terminal.
-**moria only** — it is the 128GB box and already runs oMLX, so sessions and
-inference stay together. Reachable at `https://pi.grehg2.xyz` over Tailscale.
-
-Config in `dot/pi-web/`; the nix module is
-`nixos/modules/darwin/pi-web.nix`. Installed once per host with
-`just pi-web-setup` in `nixos/` — nix deliberately does not own its launchd
-agents, and `nixos/CLAUDE.md` explains why.
-
-PI WEB has **no authentication**. The tailnet is the only thing keeping it
-private.
+moria only, at `https://pi.grehg2.xyz` over Tailscale; config in `dot/pi-web/`, module
+`nixos/modules/darwin/pi-web.nix`, `just pi-web-setup` once per host. Why nix does not own
+its launchd agents: `nixos/CLAUDE.md` → "PI WEB is the exception to the launchd rule above".
+PI WEB has **no authentication**. The tailnet is the only thing keeping it private.
 
 ## ComfyUI — image generation on moria
 
-ComfyUI with FLUX.2 klein 4B runs on moria's GPU at `https://comfy.grehg2.xyz`,
-about 15 s per 1024² image. `just comfyui-setup` installs it; `nixos/CLAUDE.md` →
-"ComfyUI on moria" runs it, and `docs/image-models.md` says why this model and why
-moria (it throttles hard under sustained load). No authentication; tailnet only.
-
-Claude Code and pi draw with it through `skills/image-generate` (`bin/comfy-image.py`);
-the agent writes the prompt, and a follow-up edits it and keeps the seed. Hermes does
-not use the skill: its local model kept faking the shell route, so it calls its native
-`image_generate` tool on a ComfyUI backend instead (home-lab `hermes/README.md` → Images).
+FLUX.2 klein on moria's GPU at `https://comfy.grehg2.xyz`, no authentication, tailnet only.
+`nixos/CLAUDE.md` → "ComfyUI on moria" runs it; `docs/image-models.md` says why. Agents draw
+through `skills/image-generate`; Hermes uses its native `image_generate` tool instead.
 
 ## Claude Code in Docker
 
-`claude-docker` (a zsh function in `dot/zsh/.zshrc`) runs Claude Code in a container
-that bind-mounts your real `~/.claude` and `~/Git`, so credentials and sessions are
-shared. See `claude-code/CLAUDE.md`.
+`claude-docker` (zsh function in `dot/zsh/.zshrc`) bind-mounts your real `~/.claude` and
+`~/Git`. See `claude-code/CLAUDE.md`.
 
 ## Herdr: agent state per pane
 
@@ -320,144 +153,57 @@ Herdr runs on every host: Homebrew on Macs, nix on NixOS, config in `dot/herdr/`
 
 ## Hermes — runs on dungeon, Desktop clients here
 
-[Hermes](https://hermes-agent.nousresearch.com/docs) runs only on dungeon, in Docker, from
-`~/Git/home-lab/hermes/` (config, bot profiles, Telegram). This repo holds what dungeon
-mounts — `hermes/hooks/`, `hermes/skills/`, `skills/`, `bin/` — plus the bench, and
-`modules/darwin/hermes-desktop.nix`, which points Hermes Desktop on moria and citadel at
-dungeon. See `hermes/CLAUDE.md`.
-
-Two things here are ours because Hermes has no equivalent:
-`hermes/hooks/require-green.sh` refuses a handoff whose tree would not install for anyone
-else, and `bin/installs-from-clean.sh` answers the same question about any directory, with
-no container and no agent involved.
-
-**This repo used to carry a 3,000-line harness around Hermes — a container, a Telegram bot,
-a run loop, a scorer — nearly all of which reimplemented features Hermes ships.** It was
-deleted; `~/Git/notes/ref-hermes-run-log.md` records what those runs taught, which is the
-part worth keeping. The operator guide is `~/Git/hermes.md`.
+Runs only on dungeon, from `~/Git/home-lab/hermes/`. This repo holds what dungeon mounts
+(`hermes/hooks/`, `hermes/skills/`, `skills/`, `bin/`) and
+`nixos/modules/darwin/hermes-desktop.nix`, plus the bench. See `hermes/CLAUDE.md`, which also records the
+retired harness and where its run log lives.
 
 ## Secret Management
 
-All secrets live in 1Password (vault: **Infra**). Committed `.tpl` template files contain
-`{{ op://Infra/Item/field }}` references. Run `just secrets` from `nixos/` to generate
-the real files via `op inject`. Generated files are gitignored.
-
-```bash
-cd nixos && just secrets    # generates dot/omlx settings.json, dot/pi models.json, secrets/.env
-```
+All secrets live in 1Password (vault **Infra**). Committed `.tpl` files hold
+`{{ op://Infra/Item/field }}` references; `cd nixos && just secrets` renders the gitignored
+real files. Never commit plaintext; add the secret to 1Password and reference it.
 
 Never search this repo with `grep -r` or `rtk grep -r`: they read gitignored files, and on
 2026-10-30 one printed `DEEPSEEK_API_KEY` from `nixos/secrets/.env` into a transcript. `rg`
 skips them.
 
-Never commit plaintext secrets. If a new secret is needed, add it to 1Password and reference
-it in the appropriate `.tpl` file.
-
 ### Prerequisites
 
-`op` needs the 1Password desktop integration enabled per machine (Settings → Developer
-→ "Integrate with 1Password CLI").
-
-**macOS 27 blocks it anyway.** `op` then says "No accounts configured", even with the
-integration on, because the terminal may not read 1Password's shared data. Fix: System
-Settings → Privacy & Security → Files & Folders → your terminal (Ghostty) → turn on
-"Data shared by 1Password", then ⌘Q and reopen the terminal. Never answer `Y` to
-`op`'s "add an account manually": that is a separate password login, not this fix. To turn
-it on, click the small `>` beside Ghostty; the row itself does nothing. `authorization timeout`
-means 1Password wants a prompt approved, so it stalls while Greg is away from the Mac.
-
-**moria and dungeon use a service account token instead,** so `op` works with nobody at the
-Mac. It reads vault Infra and can't write. It lives at `~/.config/op/service-account-token`,
-mode `600`, and `just secrets` in both repos picks it up. Keep it in that file, not the
-environment, because everything an agent starts inherits its environment. For a one-off read:
-`OP_SERVICE_ACCOUNT_TOKEN=$(cat ~/.config/op/service-account-token) op read ...`
-
-Any process running as Greg can read that file, and so all of Infra. pi's file tools deny the
-path; pi's bash isn't path-checked.
-
-To rotate or change access, make a new service account (my.1password.com → Developer →
-Directory → Other; access can't be edited later), copy the token, then on moria:
-
-```bash
-umask 077; pbpaste | tr -d '[:space:]' > ~/.config/op/service-account-token; pbcopy < /dev/null
-ssh dungeon 'umask 077; cat > ~/.config/op/service-account-token' < ~/.config/op/service-account-token
-```
-
-Then delete the old account. The personal plan allows 1,000 requests a day
-([limits](https://www.1password.dev/service-accounts/rate-limits/)); home-lab's `just secrets`
-resolves about 133 references.
+`op` needs the desktop integration per machine; macOS 27 needs an extra grant. moria and
+dungeon use a service account token at `~/.config/op/service-account-token` (mode `600`,
+reads Infra, can't write). Keep it in that file, never in the environment, because
+everything an agent starts inherits the environment. Any process running as Greg can read it.
+macOS 27 fix, token rotation and limits: `nixos/docs/secrets.md`.
 
 ## Before a pi run — deepseek-preflight
 
-`bin/deepseek-preflight.py` answers "is it a good moment to start" in one call:
-is the key funded (default floor $2), and is DeepSeek in a peak window (double
-rate, 01:00–04:00 and 06:00–10:00 UTC Mon–Fri — which is 21:00–00:00 Eastern
-Sun–Thu, exactly when an overnight run gets started). Exit 0 clear, 1 needs a
-human, 2 could not tell.
-
-It also prints OpenCode Go's quota, without affecting the exit code: the gateway's `cloud`
-uses Go first and overflows to DeepSeek by itself.
-
-Both checks exist because a run died on a `402` mid-flight and three workers
-were killed with their work uncommitted, while still reporting completion.
-`dot/pi/CLAUDE.md` → "Pricing" carries the numbers.
+Run `bin/deepseek-preflight.py` before starting DeepSeek work: key funded, peak window,
+OpenCode Go quota. Exit 0 clear, 1 needs a human, 2 could not tell. The docstring and
+`dot/pi/CLAUDE.md` → "Pricing" carry the reasons and numbers.
 
 ## pi's heavy tools are off until you ask — `/enable`, `pi-subagents`
 
-A fresh pi session starts without the `reddit_*` tools and without the
-`subagent_*` tools. That more than halves the cold start (9,843 → 4,328 tokens
-on every request, measured after deploy), because every active tool's schema
-is re-sent to oMLX each turn and those two groups were 44% of it, for tools an
-interactive session almost never wants.
-
-- `/enable reddit` inside a session turns the Reddit tools on for that session
-  (`/disable reddit` reverses it). `PI_ENABLE_TOOLS=reddit pi …` does it for a
-  worker from its first turn.
-- `pi-subagents` (zsh alias) starts a session with the subagent tools loaded.
-  They cannot be toggled inside a session; the reason is in the doc below.
-- Decide at the **start** of a session. Enabling later changes the front of
-  the prompt, so oMLX re-prefills the whole conversation once — seconds early
-  on, minutes deep in.
-
-It is manual rather than model-triggered on purpose: a local model is not
-reliable at noticing it needs a tool it cannot see. `dot/pi/CLAUDE.md` →
-"Lazy tools" has the mechanism, the measurements, and why subagents are the
-exception; the extension is `dot/pi/.pi/agent/extensions/lazy-tools.ts`.
+A fresh pi session omits `reddit_*` and `subagent_*` to halve the cold start. `/enable reddit`
+or `PI_ENABLE_TOOLS=reddit` turns Reddit on; the `pi-subagents` alias loads subagents. Decide
+at session start: enabling later re-prefills the conversation. `dot/pi/CLAUDE.md` →
+"Lazy tools" has the mechanism.
 
 ## Watching pi Workers — pi-narrate, pi-workers, pi-rpc
 
-`bin/pi-narrate.py` (pi's JSON event stream → one readable line per event),
-`bin/pi-workers.py` (every worker's status file → a table, a status-bar line, or
-JSON) and `bin/pi-rpc.py` (steer a worker that is still running). Together they
-are why an `/orchestrate-pi` run is no longer a black box; `-h` documents each.
-
-`dot/pi/CLAUDE.md` → "Seeing what an unattended worker is doing" owns the design
-and the reasoning. The short version: workers were spawned with their stdout
-redirected to a file, Claude Code captures background output from a PTY, and so
-the TUI reported "no output available" for entire runs while pi was emitting a
-detailed event stream the whole time.
+`bin/pi-narrate.py`, `bin/pi-workers.py` and `bin/pi-rpc.py` make an `/orchestrate-pi` run
+visible and steerable; `-h` documents each. Design: `dot/pi/CLAUDE.md` → "Seeing what an
+unattended worker is doing".
 
 ## Thread Fetchers — Search & Convert HN & Reddit to Markdown/JSON
 
-`reddit-search.py "<query>"` finds threads; `fetch-thread.py <url>` prints a Reddit
-or Hacker News thread as markdown (`--format json` for JSON). `-h` has the full
-reference for both.
-
-**Reddit needs no login.** Both go through `bin/fetch_reddit.py`, which reads
-Reddit's `/svc/shreddit/` HTML partials; its docstring says why. The thread's post
-text comes from RSS, which is tightly rate-limited, so a busy run can
-return comments with the post text missing, and says so.
-`tests/test_fetch_reddit_live.py` (opt-in, `REDDIT_LIVE=1`) is the check that
-Reddit has changed something. `reddit-cookie-sync.sh` now serves only pi's
-`reddit_*` tools.
+`reddit-search.py` and `fetch-thread.py`, no login needed; see the `reddit` skill and
+`bin/CLAUDE.md` → "Thread fetchers".
 
 ## Local Diff & PR Viewers — diff2html & difit
 
-`dhtml`/`dhtmls`/`dhtmlside` (diff2html), `difit` (PR-like UI), `gpr` (current branch
-as a PR diff). Mac-only; flags are in the root `README.md`.
+`dhtml`, `difit`, `gpr`: Mac-only, flags in the root `README.md`, notes in `bin/CLAUDE.md`.
 
-One divergence worth knowing: our `difit.sh` defaults a missing target to `.` (all
-uncommitted changes) where upstream would show the last commit.
 
 ## This repo is public
 
