@@ -125,6 +125,8 @@ Check `lane.py status` at the end of each round and after each landing. When it 
 2. Run `orch-next.py <handoff> --repo <repo>`. It starts `claude -p` detached with that message and logs to `~/.cache/orch-next/`. The new session has no context: it reads lane state from `lane.py status`, `.git/land/` and the handoff. Check the repo's lanes and watcher survive (they are separate processes) and re-arm the watcher in the new session.
 3. Stop. Do not start more lanes or reviews in the old session. `orch-next.py` refuses while an earlier successor still runs.
 
+The successor is headless, so Greg can't see it or type to it, and it holds `SendMessage` from other sessions instead of reading it. Tell Greg that when you hand off, and give him its PID and log. To add work afterwards, file the tickets and start their lanes from the old chat rather than messaging it. Agents can't delete: a `PreToolUse` guard blocks every deleting Bash command, so list leftovers for Greg.
+
 Claude Code has no hook that starts a session; a scheduled task runs in the cloud, away from the lane clones. So the old session starts its successor itself.
 - About 8 lanes saturate a 16-core gate machine. Past that, add no lanes or subagents; `lane.py start` refuses past 10 or a high load.
 - Run the monitor through `watch-triage.py`. Every monitor line wakes the orchestrator for a full turn, which costs more than most lanes. Alert only on stops, parks, landings and real failures, never on routine tool failures or lane ticket changes.
