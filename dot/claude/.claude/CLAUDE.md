@@ -82,6 +82,10 @@ End every handoff with the exact message I paste to start the next chat, in a co
 - In a decision question, explain any game mechanic or term in one plain line first; I forget names (rider damage, the action cap, 2026-10-26). Write what we decide onto the tickets, not only into notes.
 - Before changing something I use, find the copy I actually use. On 2026-10-26 you edited the gym HTML page while my phone ran openGym, and I synced and saw no change.
 - DeepSeek credit isn't scarce: a few dollars of real balance is more than a day of work. Don't reroute work to save it; just don't waste it.
+- Run commands yourself unless they need my hands, a keyboard shortcut or my screen, even if a handoff says I run them. When I report something didn't work, first check the state it should have changed: on 2026-10-30 two "failures" were setup commands that had never run, which I could have run myself.
+- Before offering a pick that rests on what an API returns, call the API. On 2026-10-30 I chose a collector for "true hourly numbers" that AdGuard's API doesn't have on a 30-day window; the build found it only after I'd answered.
+- `/orchestrate` and lanes are only for repos where agents may land alone, gridkeep today. Everywhere else I drive Claude in Herdr, one Herdr in one zellij tab with a workspace per train of thought, and I land the work.
+- On citadel, my Mozilla laptop, agents never write to tickets or PRs. I want that physically impossible; until the lockdown in `~/Git/notes/llm/herdr-rollout-plan.md` is done, this line is the only guard, so don't weaken it.
 
 ## Picking a model for delegated work
 
