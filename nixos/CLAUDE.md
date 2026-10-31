@@ -133,6 +133,15 @@ launchd user agent:
   runs before the cask exists and then has to race whoever opens the app first — a race it
   lost on moria's first deploy, permanently, because the app's wizard sets the same
   "already set up" marker the seed is gated on. Its header has the full reasoning.
+  Vorssaint is a PowerToys-shaped menu bar suite (per-app volume and output, keep-awake with
+  the lid closed, a better screenshot and text-from-screen, ⌘X/⌘V in Finder, quit-on-close,
+  system stats, a file shelf). It also stands in for Raycast (command
+  bar, clipboard history), `stats` and Amphetamine, so none of those are installed. dungeon
+  stays awake through its own `caffeinate` and `pmset disablesleep`, not Vorssaint's Keep
+  Awake. Quit-on-close spares apps whose job outlives their window (FluidVoice, the mines
+  VM in Fusion, OrbStack, 1Password, the VPN, music, chat). That list
+  (`autoQuitExceptions`) is merged in on every `just dr`, add-only, so one added in
+  Vorssaint stays. Permissions stay manual: `docs/darwin-post-deploy.md`.
 
 The Linux equivalent is a home-manager `systemd.user.services.*` unit bound to
 `graphical-session.target` — see handy in `modules/home/default.nix` (Linux still dictates
@@ -172,6 +181,10 @@ seeded activation mode is "automatic", and it covers all three keys: a tap toggl
 hands-free recording, a hold is push-to-talk. A hands-free Command or Write capture ends on
 the same chord; a plain Caps Lock tap switches it to dictation instead. Escape cancels.
 Linux hosts dictate with Handy.
+Caps Lock sends F18 for as long as it is held: Karabiner-Elements does that on macOS
+(`dot/karabiner/`), `services.keyd` on NixOS GUI hosts. Escape keeps its own key.
+A new terminal on a Mac with FluidVoice prints a one-line key reminder beside zellij's
+(top of `dot/zsh/.zshrc`); `touch ~/.hide-fv-motd` silences it.
 
 What it does, all from `postActivation` as the user (the Vorssaint shape, same reasons).
 The logic is `modules/darwin/fluidvoice-activate.sh`, a plain bash file; `fluidvoice.nix`
@@ -444,6 +457,11 @@ same as running it under VoiceOver.
 
 ## PI WEB is the exception to the launchd rule above
 
+[PI WEB](https://pi-web.dev/) keeps pi sessions alive in real workspaces, so a phone or tablet
+can drive them. It runs on moria only: moria is the 128 GB box and already runs oMLX, so
+sessions and inference stay together. Reachable at `https://pi.grehg2.xyz` over Tailscale,
+with no authentication; the tailnet keeps it private.
+
 Every other long-running user service here gets a nix-declared
 `launchd.user.agents.*`. **PI WEB does not, on purpose.**
 
@@ -485,6 +503,12 @@ clones ComfyUI to `~/ComfyUI`, builds its venv and fetches FLUX.2 klein 4B. home
 Caddy serves it as `comfy.grehg2.xyz`. Why this model and this layout, with the
 measurements: `docs/image-models.md`.
 
+Takes about 15 s per 1024² image. Claude Code and pi draw with it through
+`skills/image-generate` (`bin/comfy-image.py`): the agent writes the prompt, and a follow-up
+edits it and keeps the seed. Hermes does not use the skill, because its local model kept faking
+the shell route; it calls its native `image_generate` tool on a ComfyUI backend instead
+(home-lab `hermes/README.md` → Images).
+
 - **Setup is not activation**, the usual reason: it needs the network. Until it has
   run, the agent fails every 30 s (`ThrottleInterval`) with a missing `.venv` in
   `~/Library/Logs/comfyui.log`. That is expected on a fresh host.
@@ -508,6 +532,38 @@ measurements: `docs/image-models.md`.
 - **Big models are not worth adding here.** moria throttles to about a third of its GPU
   after two minutes, so a 20+ step model takes minutes per image. Prefer few-step
   distilled models; see `docs/image-models.md` → "Re-evaluating".
+
+## Claude Code on each host
+
+`modules/programs/tui/claude.nix` links six targets into this repo during home-manager
+activation (`just fr <host>` or `just dr <host>`), on every host that imports
+`programs/tui`:
+
+- `~/.claude/commands` -> `claude-commands/`
+- `~/.claude/skills` -> `skills/`
+- `~/.claude/CLAUDE.md` -> `dot/claude/.claude/CLAUDE.md` (global, cross-repo memory)
+- `~/.claude/settings.json` -> `dot/claude/.claude/settings.json` (permissions, hooks, plugins)
+- `~/.claude/hooks` -> `dot/claude/.claude/hooks`
+- `~/.config/ccstatusline/settings.json` -> `dot/ccstatusline/…` (status line layout)
+
+- The symlinks are **writable** (they point into the repo, not `/nix/store`), so Claude's own
+  writes to `settings.json` work and show up as git diffs to commit or discard.
+- **Clobber guard:** the `link_repo` helper refuses to overwrite a *real* file. A host with a
+  hand-written `~/.claude/settings.json` gets a `WARNING` and keeps it. To bring it under
+  management, move it into `dot/claude/.claude/`, delete the original, re-run home-manager.
+- **Non-Nix hosts:** run `just setup-claude` once after cloning. Everything is a symlink into
+  the repo, so a pull picks up changes.
+- The global gitignore ignores `.claude/`, so a new file under `dot/claude/.claude/` (a hook
+  script) needs `git add -f`. Check `git show --stat` after committing one.
+- The RTK hook is the command `rtk hook claude` in `settings.json`, not a script. The script
+  `rtk init` used to generate treated rtk's "rewrite, advisory" exit code as "no rewrite", so
+  `git status`, `pytest`, `docker ps` and most other commands went through unfiltered while
+  `rtk gain` still read 74% saved. `rtk` owns the hook now; `rtk gain` warns when it is outdated.
+- `settings.json` sets `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE=1`. Claude Code marks every shell
+  it spawns with `CLAUDE_CODE_CHILD_SESSION=1` and saves no transcript for a `claude` started
+  under that marker. The marker leaks: a terminal app relaunched from a Claude Bash call hands
+  it to every tab, so ordinary sessions silently lost their transcripts. The cost is that
+  `claude -p` runs spawned by an agent save one too.
 
 ## Common Mistakes to Avoid
 
@@ -928,7 +984,8 @@ doesn't fit the otherwise declarative activation flow.
 **Note:** headless dungeon does *not* require the VNC dance — a 1Password service
 account token at `~/.config/op/service-account-token` (mode 600) is the preferred
 path and `just secrets` picks it up automatically (`nixos/justfile`). VNC is the
-fallback when no token exists. See the root `CLAUDE.md` → Secret Management.
+fallback when no token exists. See the root `CLAUDE.md` → Secret Management and
+`docs/secrets.md`.
 
 **Decision: defer.** 1Password stays the source of truth. The manual headless `just secrets`
 step is tolerable while dungeon is the only headless Darwin host. **Revisit (lean agenix)**
