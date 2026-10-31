@@ -21,6 +21,8 @@ Read the repo's `CLAUDE.md`, its design and ADR docs, its glossary, `docs/orches
 
 Tickets labelled `next-session` were queued by the last session for you: start there, relabelling each into a lane.
 
+Run `usage-mark.py start <run-name>` as soon as the interview ends (sandbox off: it writes `~/.cache/usage-mark/`). Paste the table from `usage-mark.py report <run-name>` into every status update and the final report: Greg wants Claude, DeepSeek API and Go tokens and cost each time.
+
 After that, work autonomously. Don't ask again; make the call, note it, and put anything needing his hands, ears or judgement in a `manual` + `attended` ticket that no loop picks up.
 
 ## 2. Tickets

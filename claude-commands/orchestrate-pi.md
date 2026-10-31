@@ -11,6 +11,8 @@ trailers, filing agent findings, the closing report: all of it applies unchanged
 This file covers only what differs when the worker is a `pi` subprocess instead of
 a subagent. Two copies of the preflight would drift within a month.
 
+**Report usage.** Run `usage-mark.py start <run-name>` right after Step 1's questions, and paste the table from `usage-mark.py report <run-name>` into every status update and the final report (sandbox off: it writes `~/.cache/usage-mark/`).
+
 ## Usage
 
 ```

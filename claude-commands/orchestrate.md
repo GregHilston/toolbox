@@ -37,6 +37,8 @@ Only put something there if it is genuinely about pi: the balance and peak-hour
 preflight, the status file, the guardrails, `--continue` instead of SendMessage.
 Two copies of the shared half would drift within a month.
 
+**Report usage.** Run `usage-mark.py start <run-name>` right after Step 1's questions, and paste the table from `usage-mark.py report <run-name>` into every status update and the final report (sandbox off: it writes `~/.cache/usage-mark/`).
+
 ## `gh` and the sandbox
 
 Every `gh` call needs `dangerouslyDisableSandbox: true`. Sandboxed, the filtering
