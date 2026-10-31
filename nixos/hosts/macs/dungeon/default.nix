@@ -375,6 +375,20 @@ in {
     };
   };
 
+  # AdGuard's query volume and filter lists → node_exporter textfile (home-lab scripts/adguard-stats.sh).
+  launchd.user.agents.adguard-stats = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/adguard-stats.sh"
+      ];
+      RunAtLoad = true;
+      StartInterval = 300;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/adguard-stats.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/adguard-stats.log";
+    };
+  };
+
   # Detect & auto-heal a gluetun tunnel that is broken while Docker insists it is healthy.
   #
   # Incident 2026-08-14: a mains blip took the WAN down; gluetun rode it out by cycling
