@@ -53,6 +53,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "~/.claude/hooks/no-delete.py"
+          },
+          {
+            "type": "command",
             "command": "~/.claude/hooks/no-ai-attribution.py"
           },
           {
