@@ -618,7 +618,7 @@ is still spending; kill it`, and an orphan always `needsAttention` even when its
 row looks healthy. Check by hand with:
 
 ```bash
-for p in $(pgrep -f "pi --approve"); do
+for p in $(pgrep -x pi); do
   ps -o pid=,ppid=,etime= -p $p
   lsof -a -p $p -d cwd -Fn 2>/dev/null | grep '^n' | cut -c2-
 done
