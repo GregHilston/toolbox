@@ -75,8 +75,8 @@ def session_url(sid: str, wait: float = 20.0) -> str | None:
 
 
 def command(handoff: Path, message: str, name: str) -> list[str]:
-    """The claude invocation; the handoff path is named so the new session reads it."""
-    prompt = f"{PREAMBLE}Handoff: {handoff}\n\n{message}"
+    """The claude invocation; a slash command only runs from the prompt's first characters."""
+    prompt = f"{message}\n\n{PREAMBLE}Handoff: {handoff}"
     return ["claude", "--bg", "--remote-control", name, "-n", name, "--permission-mode", "auto", prompt]
 
 
@@ -86,7 +86,7 @@ def start(handoff: Path, repo: Path, dry_run: bool = False) -> str:
     name = f"orchestrator-{repo.name}-{time.strftime('%m%d-%H%M')}"
     cmd = command(handoff, first_message(handoff), name)
     if dry_run:
-        return f"would run in {repo}: {' '.join(cmd[:7])} <prompt of {len(cmd[7])} chars>"
+        return f"would run in {repo}: {' '.join(cmd[:8])} <prompt of {len(cmd[8])} chars>"
     STATE.mkdir(parents=True, exist_ok=True)
     id_file = STATE / f"{repo.name}.id"
     if id_file.exists() and (old := id_file.read_text().strip()) in live_ids(repo):

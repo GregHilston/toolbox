@@ -45,6 +45,11 @@ class OrchNext(unittest.TestCase):
         self.assertTrue(cmd[-1].endswith("go"))
         self.assertIn("lane.py status", cmd[-1])
 
+    def test_a_slash_command_stays_first_in_the_prompt(self) -> None:
+        cmd = orch.command(Path("h.md"), "/swarm Resume.", "orch-x")
+        self.assertTrue(cmd[-1].startswith("/swarm Resume."), f"prompt starts {cmd[-1][:40]!r}")
+        self.assertIn("h.md", cmd[-1], "the prompt names the handoff")
+
     def test_dry_run_starts_nothing(self) -> None:
         with mock.patch.object(nxt.subprocess, "run") as run:
             self.assertIn("would run", nxt.start(self.handoff, self.dir, dry_run=True))
