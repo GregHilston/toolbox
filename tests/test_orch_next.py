@@ -42,11 +42,11 @@ class OrchNext(unittest.TestCase):
         self.assertEqual(cmd[:4], ["claude", "--bg", "--remote-control", "orch-x"])
         self.assertNotIn("-p", cmd)
         self.assertIn(str(self.handoff), cmd[-1])
-        self.assertTrue(cmd[-1].endswith("go"))
+        self.assertTrue(cmd[-1].startswith("go"))
         self.assertIn("lane.py status", cmd[-1])
 
     def test_a_slash_command_stays_first_in_the_prompt(self) -> None:
-        cmd = orch.command(Path("h.md"), "/swarm Resume.", "orch-x")
+        cmd = nxt.command(Path("h.md"), "/swarm Resume.", "orch-x")
         self.assertTrue(cmd[-1].startswith("/swarm Resume."), f"prompt starts {cmd[-1][:40]!r}")
         self.assertIn("h.md", cmd[-1], "the prompt names the handoff")
 
