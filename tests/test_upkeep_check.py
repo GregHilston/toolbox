@@ -110,6 +110,36 @@ class TestPins(unittest.TestCase):
         self.assertFalse(uk.pin_is_behind({"2.2.33"}, "2.2.33"))
 
 
+class TestFailuresAreNotClean(unittest.TestCase):
+    def test_an_audit_that_hit_a_network_error_failed(self):
+        self.assertTrue(uk.audit_failed({"message": "request failed", "error": {"code": "ENOTFOUND"}}))
+
+    def test_a_real_audit_did_not_fail(self):
+        self.assertFalse(uk.audit_failed({"metadata": {"vulnerabilities": {"total": 0}}}))
+
+    def test_paused_security_updates_are_off(self):
+        self.assertFalse(uk.security_updates_on({"enabled": True, "paused": True}))
+        self.assertTrue(uk.security_updates_on({"enabled": True, "paused": False}))
+
+    def test_a_check_that_raises_becomes_could_not_tell(self):
+        report = uk.Report()
+
+        def broken(_report):
+            raise KeyError("data")
+
+        uk.guarded(report, broken)
+        self.assertEqual(report.unknown, 1)
+
+
+class TestCiRuns(unittest.TestCase):
+    def test_a_running_newest_run_hides_the_older_green_one(self):
+        runs = [
+            {"workflowName": "Tests", "status": "in_progress", "conclusion": ""},
+            {"workflowName": "Tests", "status": "completed", "conclusion": "success"},
+        ]
+        self.assertEqual(uk.newest_runs(runs)["Tests"]["status"], "in_progress")
+
+
 class TestExit(unittest.TestCase):
     def test_could_not_tell_outranks_all_clear(self):
         self.assertEqual(uk.exit_code(attention=0, unknown=1), 2)

@@ -1,24 +1,24 @@
 ---
 name: upkeep
-description: Bring the toolbox repo's dependencies up to date in one reviewed PR, covering Dependabot PRs and alerts, npm audits, the flake lock, pinned versions, and test and CI health. Use for /upkeep, or when Greg asks to update or upgrade the toolbox.
+description: Bring the toolbox repo's dependencies up to date in one reviewed PR, covering Dependabot PRs and alerts, npm audits, the flake lock, pinned versions, and test and CI health. Use for /upkeep.
 disable-model-invocation: true
 ---
 
 # Upkeep
 
-One run produces one reviewed PR on `~/Git/toolbox`, with deploy commands. Greg merges and deploys, because `just dr` needs his `sudo`.
+One run produces one reviewed PR on `~/Git/toolbox`, with deploy commands. Greg merges and deploys, because `cd nixos && just dr <host>` needs his `sudo`.
 
 Every claim in the PR comes from something you ran. A green check you didn't run goes under **Not tested**.
 
 ## 1. Survey
 
-Run this in your shell (the `terminal` tool in Hermes, Bash in Claude Code, `bash` in pi):
+Run this in your shell (the `terminal` tool in Hermes, Bash in Claude Code, `bash` in pi). Start from this report and not Dependabot's alert page, which missed all 8 flagged packages on 2026-11-02:
 
 ```bash
 upkeep-check.py
 ```
 
-It is read-only. Exit 0 means nothing to do, 1 means lines marked `LOOK`, 2 means lines marked `????` it could not check.
+It is read-only. Exit 0 means no high-severity findings or failures, 1 means lines marked `LOOK`, 2 means lines marked `????` it could not check. Lines marked `note` still count as findings for step 3.
 
 Then run `hostname -s` and pick where heavy work goes:
 
@@ -27,11 +27,11 @@ Then run `hostname -s` and pick where heavy work goes:
 
 Branch from `origin/main`. Run `just test` before changing anything, so failures you find later have a baseline.
 
-**Done when** every `LOOK` and `????` line has a planned action or a stated reason to leave it.
+**Done when** every `LOOK`, `note` and `????` line has a planned action or a stated reason to leave it.
 
 ## 2. Dependabot
 
-- **PRs:** fold each open PR's bumps into your branch, at the latest version `npm view` shows. List the PRs you replace in the description. Read the changelog of every major bump against our config, starting with `dot/pi/.pi/agent/extensions/pi-permission-system/`.
+- **PRs:** fold each open PR's bumps into your branch, at the latest version: `npm view` for npm packages, release tags for GitHub Actions. List the PRs you replace in the description. Read the changelog of every major bump against our config, starting with `dot/pi/.pi/agent/extensions/pi-permission-system/`.
 - **Alerts:** treat each open alert as an audit finding in step 3.
 - **Zero manifests:** a dependency graph with 0 manifests can't raise alerts. Report it, and point Greg at <https://github.com/GregHilston/toolbox/settings/security_analysis>.
 
@@ -58,10 +58,21 @@ Read the advisory before calling something exposed or safe.
 
 One commit per item, so each can be reverted alone.
 
-- **Flake lock:** `cd nixos && nix flake update`. Follow `nixos/CLAUDE.md` → "Flake lock bumps": evaluate every host, then build one for real. Evaluation misses build failures, and `--dry-run` misses them too.
-- **Build failures:** read the log before retrying. `atuin`'s tests time out at high load, so a failure saying `timed out waiting for session` needs a quieter host, and dungeon's build proves the package itself.
-- **ccstatusline:** bump all three pins that `upkeep-check.py` reads. Render old and new against a scratch copy of the config, because `--config` rewrites the file it reads. If the new version migrates the schema, set the new version in the tracked file by hand and confirm a rerun changes nothing.
-- **pi packages:** run `npm ci` in a scratch clone, then load them with `pi -ne -e <path>`. Without `-ne`, they conflict with the installed copies. Give `pi` `</dev/null`, or it reads your script from stdin.
+**Flake lock.** Follow `nixos/CLAUDE.md` → "Flake lock bumps": evaluate every host, then build one for real, because evaluation and `--dry-run` both miss build failures.
+
+```bash
+cd nixos && nix flake update
+```
+
+**Build failures.** Read the log before retrying. `atuin`'s tests time out at high load, so a failure saying `timed out waiting for session` needs a quieter host. With Greg's say-so, a build on dungeon proves the package itself.
+
+**ccstatusline.** Bump all three pins that `upkeep-check.py` reads. Render old and new against a scratch copy of the config, because `--config` rewrites the file it reads. If the new version migrates the schema, set the new version in the tracked file by hand and confirm a rerun changes nothing.
+
+**pi packages.** Run `npm ci` in a scratch clone, then load them in isolation. `-ne` avoids conflicts with the installed copies, and `</dev/null` keeps `pi` from reading your script from stdin:
+
+```bash
+pi -ne -e <package-path> --mode json -p 'Reply with exactly: OK' </dev/null
+```
 
 **Done when** every host evaluates and one real build passes, or the PR says what stopped it.
 
@@ -90,7 +101,7 @@ Write the description to a file, then pass it with `--body-file`. It holds:
 
 Write the run's findings to `~/Git/notes/llm/`, following that vault's `CLAUDE.md`, with `topics: ["[[toolbox]]"]`. Start from the newest `toolbox-*` note there, because it lists what earlier runs left alone on purpose.
 
-After Greg deploys, run `upkeep-check.py` again. Its `Hosts` section shows which Macs reached the lock.
+After Greg deploys, run `upkeep-check.py` again. Its `Hosts` section shows whether dungeon and moria reached the lock. Check other hosts by hand.
 
 **Done when** the note is written and the final report lists what still needs Greg.
 

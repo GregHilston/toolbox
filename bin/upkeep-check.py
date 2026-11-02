@@ -9,9 +9,9 @@ Dependabot's silence proves little: on 2026-11-02 it had zero alerts while
 `npm audit` flagged 8 packages, so this checks the lockfiles itself. Homebrew
 pi bundles its own dependencies, which no lockfile here covers.
 
-A host counts as on the lock when its system was built from the locked
-nix-darwin rev. Comparing the full store path would need a slow eval, so this
-misses a config-only change.
+Only dungeon and moria are checked. A host counts as on the lock when its
+system was built from the locked nix-darwin rev. Comparing the full store path
+would need a slow eval, so this misses a config-only change.
 
 Exit codes: 0 nothing to do, 1 something wants attention, 2 could not tell.
 """
@@ -36,6 +36,22 @@ HOST_PROBE = (
     "uptime; echo ---; readlink /run/current-system; echo ---; "
     "pgrep -fl 'darwin-rebuil[d]|nix buil[d]|nixos-rebuil[d]' || true"
 )
+
+
+def audit_failed(report: dict) -> bool:
+    # A network failure is valid JSON, without metadata.
+    return "vulnerabilities" not in report.get("metadata", {})
+
+
+def security_updates_on(settings: dict) -> bool:
+    return bool(settings.get("enabled")) and not settings.get("paused")
+
+
+def newest_runs(runs: list[dict]) -> dict[str, dict]:
+    newest: dict[str, dict] = {}
+    for entry in runs:
+        newest.setdefault(entry["workflowName"], entry)
+    return newest
 
 
 def audit_needs_attention(report: dict) -> bool:
@@ -120,8 +136,18 @@ class Report:
         self.unknown += 1
         print(f"  ????  {text}")
 
+    def note(self, text: str) -> None:
+        print(f"  note  {text}")
+
     def verdict(self, needs_attention: bool, text: str) -> None:
         (self.flag if needs_attention else self.ok)(text)
+
+
+def guarded(report: Report, check, *args) -> None:
+    try:
+        check(report, *args)
+    except (OSError, KeyError, ValueError, TypeError, AttributeError) as err:
+        report.cannot_tell(f"{check.__name__} broke: {type(err).__name__}: {err}")
 
 
 def run(cmd: list[str], cwd: Path = REPO, timeout: int = 60) -> str | None:
@@ -161,7 +187,7 @@ def check_hosts(report: Report, lock: dict) -> None:
         report.verdict(not on_lock(probe["system"], rev), f"{host}: system {probe['system'][-30:]}, lock has {rev[:7]}")
         busy = f", {len(probe['builds'])} build(s) running" if probe["builds"] else ""
         print(f"        load {probe['load']}{busy}")
-    print("  note  other hosts aren't checked; deploy them by hand")
+    report.note("citadel and the NixOS hosts aren't checked; deploy them by hand")
 
 
 def check_dependabot(report: Report) -> None:
@@ -176,14 +202,10 @@ def check_dependabot(report: Report) -> None:
         report.ok("no open PRs")
 
     flake_prs = run_json(["gh", "pr", "list", "--state", "open", "--head", "update_flake_lock_action", "--json", "number"])
+    if flake_prs is None:
+        report.cannot_tell("could not list flake lock PRs")
     for pr in flake_prs or []:
         report.flag(f"flake lock PR #{pr['number']}: read its bot verdict")
-
-    alerts = run_json(["gh", "api", f"repos/{OWNER_REPO}/dependabot/alerts?state=open&per_page=100"])
-    if alerts is None:
-        report.cannot_tell("could not read alerts")
-    else:
-        report.verdict(bool(alerts), f"{len(alerts)} open alerts")
 
     query = (
         '{repository(owner:"GregHilston",name:"toolbox")'
@@ -192,25 +214,35 @@ def check_dependabot(report: Report) -> None:
     graph = run_json([
         "gh", "api", "graphql", "-H", "Accept: application/vnd.github.hawkgirl-preview+json", "-f", f"query={query}",
     ])
-    if graph is None:
+    manifests = graph["data"]["repository"]["dependencyGraphManifests"]["totalCount"] if graph else None
+    if manifests is None:
         report.cannot_tell("could not read the dependency graph")
+    elif not manifests:
+        report.flag("dependency graph sees 0 manifests, so alerts can't fire")
     else:
-        manifests = graph["data"]["repository"]["dependencyGraphManifests"]["totalCount"]
-        report.verdict(not manifests, f"dependency graph sees {manifests} manifests; 0 means alerts can't fire")
+        report.ok(f"dependency graph sees {manifests} manifests")
+
+    alerts = run_json(["gh", "api", f"repos/{OWNER_REPO}/dependabot/alerts?state=open&per_page=100"])
+    if alerts is None:
+        report.cannot_tell("could not read alerts")
+    elif manifests:
+        report.verdict(bool(alerts), f"{len(alerts)} open alerts")
+    else:
+        report.cannot_tell(f"{len(alerts)} open alerts, which proves nothing without a dependency graph")
 
     settings = run_json(["gh", "api", f"repos/{OWNER_REPO}/automated-security-fixes"])
     if settings is None:
         report.cannot_tell("could not read the security updates setting")
     else:
-        report.verdict(not settings.get("enabled"), f"security updates enabled: {settings.get('enabled')}")
+        report.verdict(not security_updates_on(settings), f"security updates: {settings}")
 
 
 def check_audits(report: Report) -> None:
     report.section("npm audit")
-    locks = (run(["git", "ls-files", "*package-lock.json"]) or "").split()
-    if not locks:
-        report.cannot_tell("found no lockfiles")
-    for lock in locks:
+    listed = run(["git", "ls-files", "*package-lock.json"])
+    if not listed:
+        report.cannot_tell("could not list lockfiles")
+    for lock in (listed or "").split():
         where = str(Path(lock).parent)
         # npm audit exits 1 when it finds anything, so run() can't be used.
         try:
@@ -222,7 +254,14 @@ def check_audits(report: Report) -> None:
         except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
             report.cannot_tell(f"{where}: audit failed")
             continue
-        report.verdict(audit_needs_attention(audit), audit_line(where, audit))
+        if audit_failed(audit):
+            report.cannot_tell(f"{where}: audit failed: {audit.get('message', 'no metadata')[:80]}")
+        elif audit_needs_attention(audit):
+            report.flag(audit_line(where, audit))
+        elif audit["metadata"]["vulnerabilities"].get("total"):
+            report.note(audit_line(where, audit))
+        else:
+            report.ok(audit_line(where, audit))
 
 
 def check_bundled_pi(report: Report) -> None:
@@ -245,15 +284,13 @@ def check_versions(report: Report, lock: dict) -> None:
     age = lock_age_days(lock, time.time())
     report.verdict(age > STALE_LOCK_DAYS, f"nixpkgs lock is {age} days old")
 
-    pins = set()
-    nix = (REPO / "nixos/modules/programs/tui/claude.nix").read_text()
-    pins.update(re.findall(r'ccstatuslineVersion = "([^"]+)"', nix))
-    pins.update(re.findall(r'ccstatusline_version="([^"]+)"', (REPO / "justfile").read_text()))
+    nix = re.findall(r'ccstatuslineVersion = "([^"]+)"', (REPO / "nixos/modules/programs/tui/claude.nix").read_text())
+    just = re.findall(r'ccstatusline_version="([^"]+)"', (REPO / "justfile").read_text())
     settings = json.loads((REPO / "dot/ccstatusline/.config/ccstatusline/settings.json").read_text())
-    pins.add(settings["installation"]["installedVersion"])
+    pins = {*nix, *just, settings["installation"]["installedVersion"]}
     latest = npm_latest("ccstatusline")
-    if latest is None:
-        report.cannot_tell("could not read ccstatusline's latest version")
+    if latest is None or not nix or not just:
+        report.cannot_tell("could not read ccstatusline's pins and latest version")
     else:
         report.verdict(pin_is_behind(pins, latest), f"ccstatusline pins {sorted(pins)}, latest {latest}")
 
@@ -277,25 +314,29 @@ def check_ci(report: Report) -> None:
     if runs is None:
         report.cannot_tell("could not list runs")
         return
-    newest: dict[str, dict] = {}
-    for entry in runs:
-        if entry["status"] == "completed":
-            newest.setdefault(entry["workflowName"], entry)
+    newest = newest_runs(runs)
     if "Tests" not in newest:
-        report.cannot_tell("no completed Tests run in the last 30")
+        report.cannot_tell("no Tests run in the last 30")
     for name, entry in sorted(newest.items()):
-        report.verdict(entry["conclusion"] != "success", f"{name}: {entry['conclusion']} ({entry['event']})")
+        if entry["status"] != "completed":
+            report.cannot_tell(f"{name}: still {entry['status']} ({entry['event']})")
+        else:
+            report.verdict(entry["conclusion"] != "success", f"{name}: {entry['conclusion']} ({entry['event']})")
 
 
 def main() -> int:
     report = Report()
-    lock = json.loads((REPO / "nixos/flake.lock").read_text())
-    check_hosts(report, lock)
-    check_dependabot(report)
-    check_audits(report)
-    check_bundled_pi(report)
-    check_versions(report, lock)
-    check_ci(report)
+    try:
+        lock = json.loads((REPO / "nixos/flake.lock").read_text())
+    except (OSError, ValueError) as err:
+        print(f"could not read nixos/flake.lock: {err}", file=sys.stderr)
+        return 2
+    guarded(report, check_hosts, lock)
+    guarded(report, check_dependabot)
+    guarded(report, check_audits)
+    guarded(report, check_bundled_pi)
+    guarded(report, check_versions, lock)
+    guarded(report, check_ci)
     print(f"\n{report.attention} to look at, {report.unknown} could not tell")
     return exit_code(report.attention, report.unknown)
 

@@ -179,8 +179,8 @@ macOS 27 fix, token rotation and limits: `nixos/docs/secrets.md`.
 ## Upgrading this repo — /upkeep
 
 `/upkeep` (`skills/upkeep/`) takes Dependabot, audits, the flake lock and pins to one
-reviewed PR. `upkeep-check.py` is its read-only report, and also shows which Macs reached
-the lock after a deploy.
+reviewed PR. `upkeep-check.py` is its read-only report, and also shows whether dungeon and
+moria reached the lock after a deploy.
 
 ## Before a pi run — deepseek-preflight
 
