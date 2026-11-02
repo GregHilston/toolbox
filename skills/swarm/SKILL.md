@@ -21,6 +21,8 @@ Read the repo's `CLAUDE.md`, its design and ADR docs, its glossary, `docs/orches
 
 Tickets labelled `next-session` were queued by the last session for you: start there, relabelling each into a lane.
 
+Before any other work, read the last run's throughput numbers (`gateslot.py --report`, and `run-report.py` once it exists), name the biggest waits, hypothesise a fix for each, and ticket it first. Throughput decides how much gets done, and disk is cheap: if a question about a run can't be answered from the logs, the fix is more logging (Greg, 2026-11-02).
+
 Run `usage-mark.py start <run-name>` as soon as the interview ends (sandbox off: it writes `~/.cache/usage-mark/`). Paste the table from `usage-mark.py report <run-name>` into every status update and the final report: Greg wants Claude, DeepSeek API and Go tokens and cost each time.
 
 After that, work autonomously. Don't ask again; make the call, note it, and put anything needing his hands, ears or judgement in a `manual` + `attended` ticket that no loop picks up.
@@ -94,6 +96,7 @@ The gate is the bottleneck, not coding. Spend gates only where they buy safety.
 - **Rescue work parked by a loaded gate.** A gate under load dies with exit 124 (shard timeout) or 134 (gdUnit crashes handling a test timeout) after about half the suite, and the lane parks a finished ticket whose own worker gate passed. The park comment names the commit ("committed as `1b11f32`"); the commit is dangling in the lane's clone. Branch it there, fetch it into the landing worktree, cherry-pick, and land with the full gate.
 - **One ticket per lane, and about 8 at once.** A lane lands only after its last ticket: on 2026-11-01, 3 of 18 finished tickets had landed after three hours, and 17 lanes ran 3.7 tickets an hour against 7.5 with 8. Gates are the limit, so a ninth lane mostly waits. Start a same-files ticket's lane after the previous one lands.
 - **Script lane stop, fresh review, gate and landing, and wake only for a decision:** one attention file for blockers, removed test lines, conflicts and parks. That was five wakes in three hours. A `pi-ask` reviewer can fix but can't commit, so the script commits after its own checks.
+- **Read a review's body when it says LAND, and compare branches with `origin/main...HEAD`.** On 2026-11-01 a LAND named a real bug and a HOLD named another ticket; two-dot diffs raised false "removes test lines" alarms after every landing. A review out of turns answers in 2 minutes when asked to finish.
 - **Keep every suite under a minute.** A shard is killed at 600 s, so one 3-minute suite plus load timed out whole shards, and workers couldn't run it through `tools/test.sh`'s 120 s limit. Split a slow suite by screen with a shared fixture as soon as it passes a minute.
 - **Cap DeepSeek reviews:** add "Answer in under 40 tool calls" to the prompt; an uncapped review hit `--max-turns 100` with no answer. Start a review only after the worktree's conflicts are resolved; `dsreview.sh` reviews whatever HEAD is.
 - **Land on the gate's words, not a piped exit code.** `gate | tail -n 2 && merge` merges on `tail`'s exit status; capture the output and grep it for `PASS` before merging.
