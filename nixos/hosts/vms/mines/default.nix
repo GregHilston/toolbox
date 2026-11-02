@@ -17,9 +17,7 @@
   # back via osConfig).
   custom.desktop.enable = true;
 
-  # Plasma 6.8 is Wayland-only: no VMware clipboard.
-
-  # VMWare Tools
+  # Wayland-only Plasma: vmware-user clipboard likely dead.
   virtualisation.vmware.guest.enable = true;
 
   # Setup qemu so we can run x86_64 binaries on aarch64
@@ -120,14 +118,6 @@
     # integration silently fails on aarch64 (Apple Silicon).
     # Reference: Mitchell Hashimoto's vm-shared.nix configuration.
     gtkmm3
-
-    # xrandr-auto: fallback that forces the guest display to refit the Fusion
-    # window. On X11 with vmware-user running, KDE's kscreen usually auto-resizes;
-    # this is here for when the udev/RandR event isn't honored. Verify the output
-    # name with `xrandr` if it stops working (vmwgfx names it Virtual-1).
-    (writeShellScriptBin "xrandr-auto" ''
-      exec ${xorg.xrandr}/bin/xrandr --output Virtual-1 --auto
-    '')
   ];
 
   # Disable NixOS-managed VS Code on this VM
