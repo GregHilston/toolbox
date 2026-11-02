@@ -100,6 +100,12 @@ The gate is the bottleneck, not coding. Spend gates only where they buy safety.
 - **Keep every suite under a minute.** A shard is killed at 600 s, so one 3-minute suite plus load timed out whole shards, and workers couldn't run it through `tools/test.sh`'s 120 s limit. Split a slow suite by screen with a shared fixture as soon as it passes a minute.
 - **Cap DeepSeek reviews:** add "Answer in under 40 tool calls" to the prompt; an uncapped review hit `--max-turns 100` with no answer. Start a review only after the worktree's conflicts are resolved; `dsreview.sh` reviews whatever HEAD is.
 - **Land on the gate's words, not a piped exit code.** `gate | tail -n 2 && merge` merges on `tail`'s exit status; capture the output and grep it for `PASS` before merging.
+- **Before tuning lanes or slots, read `run-report.py <run>`.** On 2026-11-02 gate slots waited 0 s at 3 slots; worker time and a finished lane's wait for review and landing set the rate. Profile a shard before tuning it: one test held 95 s of a 180 s shard.
+- **Measure CPU, not wall, before parallelising a check.** A parallel self-test saved 18 s and doubled its CPU. Unslotted test runs drive load; slot them.
+- **Send a review that names a defect straight to a fix round, and recover parked-but-finished work with a script.** Waking the orchestrator for each cost more than the fixes.
+- **Never start a second pilot.** A process check through a wrapped `ps` can print nothing; check with `/bin/ps` or `ps -p <pid>`. To swap, use the stop file and wait for the PID.
+- **Mark a branch ready only on a captured pass, and grep for conflict markers after every resolution.**
+- **Run a screenshot pass of current `main` while lanes run.** It found the night's one playtest blocker; an audit of old shots had missed it.
 - **Re-measure a win when its conditions change.** A suite queue beat fixed shards only while shard weights were stale; with fresh weights it lost on both time and CPU, and was reverted.
 - **When main goes red, stop queued landings** (by their own PIDs): every full gate behind it fails on the same test and wastes its slot.
 - **Red CI is red main, even when every local gate passes.** On 2026-10-21 gridkeep's CI failed for 20 hours unseen: the runner lacked `rg`, and `rg ... && fail` read "command not found" as "no match". After each push to main, check that commit's CI run and hold landings on red; put failed runs in the watcher. A check whose tool is missing or crashes must fail, not pass.
