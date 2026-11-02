@@ -209,8 +209,7 @@ def context_line(repo: Path) -> str:
     tokens = session_ctx.context_tokens(path) if path else None
     if tokens is None:
         return ""
-    cap = session_ctx.cap()
-    return f"orchestrator context {session_ctx.short(tokens)} (cap {session_ctx.short(cap)})" + (" OVER: hand off and /clear" if tokens > cap else "")
+    return f"orchestrator context {session_ctx.short(tokens)}"
 
 
 def status(repo: Path) -> str:

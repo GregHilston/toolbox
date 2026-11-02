@@ -5,7 +5,7 @@
 # ///
 """Start a fresh orchestrator session from a handoff file, in a session Greg can open.
 
-An orchestrator past its context cap writes a handoff whose last fenced code
+An orchestrator asked to hand off writes a handoff whose last fenced code
 block is the exact first message for the next chat, then runs:
 
     orch-next.py HANDOFF.md [--repo DIR] [--dry-run]
@@ -31,7 +31,7 @@ STATE = Path.home() / ".cache" / "orch-next"
 URL_RE = re.compile(r"https://claude\.ai/code/session_\w+")
 ID_RE = re.compile(r"backgrounded\s*\W+\s*(\w+)")
 PREAMBLE = (
-    "You are the orchestrator's successor. The previous session hit its context cap and handed off. "
+    "You are the orchestrator's successor. The previous session handed off. "
     "Lane state is on disk: run `lane.py status` and read the handoff before acting. "
     "Never stash, delete, or kill processes by name.\n\n"
 )

@@ -44,15 +44,8 @@ class SessionCtx(unittest.TestCase):
     def test_size_is_the_last_chunk_of_the_last_message(self) -> None:
         self.assertEqual(ctx.context_tokens(self.fixture), 100003)
 
-    def test_exit_code_follows_the_cap(self) -> None:
-        self.assertEqual(self.run_main(str(self.fixture)), (0, "100003 tokens (cap 150000)\n"))
-        self.assertEqual(self.run_main(str(self.fixture), "--cap", "100000"), (1, "100003 tokens (cap 100000) OVER\n"))
-
-    def test_env_var_sets_the_cap(self) -> None:
-        with mock.patch.dict("os.environ", {"SESSION_CTX_CAP": "300000"}):
-            self.assertEqual(ctx.cap(), 300000)
-        with mock.patch.dict("os.environ", {}, clear=True):
-            self.assertEqual(ctx.cap(), 150000)
+    def test_prints_the_size_and_exits_zero(self) -> None:
+        self.assertEqual(self.run_main(str(self.fixture)), (0, "100003 tokens\n"))
 
     def test_newest_transcript_for_the_cwd(self) -> None:
         folder = self.dir / "projects" / "-work-proj"

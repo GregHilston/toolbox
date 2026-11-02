@@ -3,30 +3,27 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Print the context size of a Claude Code session, and exit 1 past a cap.
+"""Print the context size of a Claude Code session.
 
-Every turn re-reads the whole context, so an orchestrator that grows to 370k
-tokens costs several times one held under 150k. The size is input plus cache
+The size is input plus cache
 read plus cache creation tokens on the last assistant message. Claude Code
 streams a message as several transcript lines sharing one id; the last chunk
 holds the final usage.
 
-    session-ctx.py [transcript.jsonl] [--cap N]
+    session-ctx.py [transcript.jsonl]
 
 With no path, reads the newest transcript for the current directory under
-~/.claude/projects/. Prints OVER and exits 1 above the cap (default $SESSION_CTX_CAP, else 350000).
+~/.claude/projects/.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 from pathlib import Path
 
-DEFAULT_CAP = 350000
 PROJECTS = Path.home() / ".claude" / "projects"
 USAGE_KEYS = ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
 
@@ -60,11 +57,6 @@ def context_tokens(transcript: Path) -> int | None:
     return last[order[-1]] if order else None
 
 
-def cap() -> int:
-    """The cap in tokens: $SESSION_CTX_CAP, else the default."""
-    return int(os.environ.get("SESSION_CTX_CAP") or DEFAULT_CAP)
-
-
 def short(tokens: int) -> str:
     """253000 as 253k."""
     return f"{round(tokens / 1000)}k"
@@ -73,16 +65,14 @@ def short(tokens: int) -> str:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("transcript", nargs="?", type=Path, help="default: newest for the current directory")
-    p.add_argument("--cap", type=int, default=cap(), help="tokens past which it prints OVER and exits 1")
     args = p.parse_args(argv)
     path = args.transcript or newest_transcript(Path.cwd())
     tokens = context_tokens(path) if path else None
     if tokens is None:
         print("session-ctx.py: no transcript with an assistant message found", file=sys.stderr)
         return 2
-    over = tokens > args.cap
-    print(f"{tokens} tokens (cap {args.cap})" + (" OVER" if over else ""))
-    return 1 if over else 0
+    print(f"{tokens} tokens")
+    return 0
 
 
 if __name__ == "__main__":

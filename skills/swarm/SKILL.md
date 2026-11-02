@@ -92,6 +92,8 @@ The gate is the bottleneck, not coding. Spend gates only where they buy safety.
 - **Batch landings: one gate for many branches.** Once several reviewed branches wait, make one integration worktree from main, cherry-pick each branch's `main..HEAD` in turn (resolve `progress.md` and `shard_weights` by union), run one full gate, then land it as one branch and close each issue by hand. Nine branches landed behind one 15-minute gate instead of nine in a row. Leave out a branch whose conflict needs real merging (two branches reworking one function); rebase it onto the batch and gate it alone. If the batch gate fails, the failing test names the branch to drop.
 - **A script holding a `flock` passes the lock's descriptor to everything it starts.** A main gate or lane started from the landing script kept the lock for its whole run and stalled every landing behind it. Close it on the child: `nohup ... 9>&- &`. `lsof <lockfile>` shows who holds it.
 - **Rescue work parked by a loaded gate.** A gate under load dies with exit 124 (shard timeout) or 134 (gdUnit crashes handling a test timeout) after about half the suite, and the lane parks a finished ticket whose own worker gate passed. The park comment names the commit ("committed as `1b11f32`"); the commit is dangling in the lane's clone. Branch it there, fetch it into the landing worktree, cherry-pick, and land with the full gate.
+- **One ticket per lane, and about 8 at once.** A lane lands only after its last ticket: on 2026-11-01, 3 of 18 finished tickets had landed after three hours, and 17 lanes ran 3.7 tickets an hour against 7.5 with 8. Gates are the limit, so a ninth lane mostly waits. Start a same-files ticket's lane after the previous one lands.
+- **Script lane stop, fresh review, gate and landing, and wake only for a decision:** one attention file for blockers, removed test lines, conflicts and parks. That was five wakes in three hours. A `pi-ask` reviewer can fix but can't commit, so the script commits after its own checks.
 - **Keep every suite under a minute.** A shard is killed at 600 s, so one 3-minute suite plus load timed out whole shards, and workers couldn't run it through `tools/test.sh`'s 120 s limit. Split a slow suite by screen with a shared fixture as soon as it passes a minute.
 - **Cap DeepSeek reviews:** add "Answer in under 40 tool calls" to the prompt; an uncapped review hit `--max-turns 100` with no answer. Start a review only after the worktree's conflicts are resolved; `dsreview.sh` reviews whatever HEAD is.
 - **Land on the gate's words, not a piped exit code.** `gate | tail -n 2 && merge` merges on `tail`'s exit status; capture the output and grep it for `PASS` before merging.
@@ -116,11 +118,11 @@ A handoff that suggests the next `/swarm` gives the prompt in a code block that 
 ## Lessons that cost a night to learn
 
 - Go's quota and the DeepSeek balance are the true costs: `deepseek-preflight.py` prints both, so read it before and after a run. Each lane's `Real:` line sums that run's own phase costs from DeepSeek's price table; the gateway's counter is shared by every lane, so never add it across lanes (on 2026-10-26 `pi-usage.py` and the old `Real:` lines summed several times the $2.54 the balance actually fell).
-- The orchestrator's own context is the biggest Claude cost: on 2026-10-26 it was about 77% of it, grown to 370k and never cleared. `lane.py status` prints it and `session-ctx.py` says OVER past the cap (`SESSION_CTX_CAP`, default 350k); hand off then, even mid-run.
+- The orchestrator's own context is the biggest Claude cost: on 2026-10-26 it was about 77% of it. `lane.py status` prints its size. There is no cap to hand off at (Greg removed it on 2026-11-01), so keep working; cut wakes instead.
 
-## Handing off past the context cap
+## Handing off when Greg asks
 
-Check `lane.py status` at the end of each round and after each landing. When it says OVER, stop taking new work and:
+Hand off only when Greg asks. Then stop taking new work and:
 
 1. Write the handoff (Greg's "Ending a chat" rules in `~/.claude/CLAUDE.md`): lane state, what is parked, what Greg must do. Let it end with the exact first message for the next chat in a fenced code block; `orch-next.py` sends that block, the last one in the file, and refuses a handoff with none. The message starts `/swarm ` and says to resume from the handoff.
 2. Run `orch-next.py <handoff> --repo <repo>`. It starts the session below with that message. The new session has no context: it reads lane state from `lane.py status`, `.git/land/` and the handoff. Check the repo's lanes and watcher survive (they are separate processes) and re-arm the watcher in the new session.

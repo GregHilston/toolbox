@@ -114,8 +114,9 @@ path, or lead with `cd /abs/path &&`, wherever a wrong cwd gives a wrong answer,
 - Commit only your own paths with `git commit -- <paths>`: a bare commit sweeps in files
   another session staged (2026-10-26).
 
-zsh traps: an unquoted `$var` doesn't word-split (write the values out, or use `${=p}`); a
-word starting with `=` is a command lookup, so quote `echo "===="` (2026-10-26); `ask` is an
+zsh traps: an unquoted `$var` doesn't word-split, even in `set -- $p` (write the values out,
+use `${=p}`, or loop in `bash -c`); on 2026-11-01 that named eight lanes `pt-first 3` and so on,
+so read a start command's output back; a word starting with `=` is a command lookup, so quote `echo "===="` (2026-10-26); `ask` is an
 alias, so `ask() {…}` fails to parse and helpers go in a bash script (2026-10-30);
 `cmd 2>&1 >/dev/null | x` still pipes stdout through multios, and printed an API key on
 2026-10-30, so near a secret write output to a file and read its length.
