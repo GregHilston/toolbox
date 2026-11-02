@@ -12,7 +12,7 @@ To see it in context: `git show <sha>`
 
 | What | Path | Removed in | Why |
 | --- | --- | --- | --- |
-| Spoken countdown timer | `bin/timer.sh` | `8eccb90` | Nothing refers to it, and dungeon's shell history never ran it. |
+| Spoken countdown timer | `bin/timer.sh` | `8eccb90` | Nothing refers to it, and neither moria's nor dungeon's shell history ran it. |
 | vim-plug package | `nixos/config/base-packages.nix` | `82189cf` | Neovim runs LazyVim, and nothing reads vim-plug. |
 
 ## 2026-08-15 — repo cleanup
