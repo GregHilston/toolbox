@@ -17,14 +17,7 @@
   # back via osConfig).
   custom.desktop.enable = true;
 
-  # Pin the Plasma X11 session (Plasma 6 otherwise defaults to Wayland,
-  # defaultSession = "plasma"). VMware Fusion's host<->guest clipboard and
-  # drag-drop are driven by open-vm-tools' `vmware-user`, which the
-  # virtualisation.vmware.guest module launches ONLY in the X11 session (via
-  # services.xserver.displayManager.sessionCommands -> vmware-user-suid-wrapper).
-  # Under Wayland that daemon never starts and the clipboard is dead; open-vm-tools
-  # Wayland clipboard support is not there yet for KDE. X11 is the seamless path.
-  services.displayManager.defaultSession = "plasmax11";
+  # Plasma 6.8 is Wayland-only: no VMware clipboard.
 
   # VMWare Tools
   virtualisation.vmware.guest.enable = true;
