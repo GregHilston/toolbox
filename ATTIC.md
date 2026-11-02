@@ -8,6 +8,13 @@ important?" is a `git show` away instead of an archaeology session.
 To recover a file: `git show <sha>^:<path> > <path>`
 To see it in context: `git show <sha>`
 
+## 2026-11-02 — toolbox tidy
+
+| What | Path | Removed in | Why |
+| --- | --- | --- | --- |
+| Spoken countdown timer | `bin/timer.sh` | `8eccb90` | Nothing refers to it, and neither moria's nor dungeon's shell history ran it. |
+| vim-plug package | `nixos/config/base-packages.nix` | `82189cf` | Neovim runs LazyVim, and nothing reads vim-plug. |
+
 ## 2026-08-15 — repo cleanup
 
 The repo started in 2013 as general dotfiles and became a NixOS/nix-darwin config repo.

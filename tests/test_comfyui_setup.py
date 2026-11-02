@@ -9,7 +9,6 @@ The curl stub serves each model as FAKE_SIZE bytes, FAKE_CHUNK at a time, so a
 
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 import tempfile

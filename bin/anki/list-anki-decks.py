@@ -9,7 +9,6 @@
 # Lists all Anki decks with card counts in a hierarchical tree view.
 
 import logging
-import os
 import sys
 from pathlib import Path
 

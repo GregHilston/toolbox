@@ -30,8 +30,6 @@ backup
 
 .DS_Store
 
-dot/env/dyn.env
-
 # Karabiner-Elements writes into the stowed dir: rolling config backups, and
 # complex-modification rules imported through its UI
 dot/karabiner/.config/karabiner/automatic_backups/

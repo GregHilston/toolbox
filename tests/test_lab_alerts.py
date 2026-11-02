@@ -104,7 +104,9 @@ class TestFormat(unittest.TestCase):
 
     def test_open_line_names_its_log(self):
         i = la.pair([row(5, "backup-offsite", "alert", "failed")], NOW, 3)[0]
-        self.assertIn("log: ssh dungeon tail -n 50 ~/Library/Logs/backup-offsite.log", la.fmt_incident(i, NOW))
+        with mock.patch.object(la, "ON_HOST", False):
+            line = la.fmt_incident(i, NOW)
+        self.assertIn("log: ssh dungeon tail -n 50 ~/Library/Logs/backup-offsite.log", line)
 
     def test_closed_line_has_no_log(self):
         i = la.pair([row(5, "backup", "alert", "failed"), row(1, "backup", "clear", "failed")], NOW, 3)[0]
@@ -197,7 +199,7 @@ class TestLoadDeps(unittest.TestCase):
         self.assertIn("unreadable", warn)
 
     def test_bad_regex_warns(self):
-        roots, warn = la.load_deps(self.write('[[root]]\nid="x"\ndown={alert="(", }\n'))
+        roots, warn = la.load_deps(self.write('[[root]]\nid="x"\ndown={alert="("}\n'))
         self.assertEqual(roots, [])
         self.assertIn("invalid", warn)
 

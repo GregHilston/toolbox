@@ -10,7 +10,7 @@
 
   # Single source of truth for the ccstatusline pin (bump here to upgrade).
   # https://github.com/sirmalloc/ccstatusline
-  ccstatuslineVersion = "2.2.27";
+  ccstatuslineVersion = "2.2.33";
   # A user-owned npm prefix, NOT the default one. A bare `npm i -g` resolves its
   # prefix from whichever node wins $PATH: /opt/homebrew on the Macs (writable)
   # but a read-only /nix/store path on NixOS hosts. An explicit prefix behaves

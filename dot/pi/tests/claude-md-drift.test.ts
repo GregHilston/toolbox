@@ -31,6 +31,7 @@ const CLAUDE_ONLY = [
 	"File Inspection",
 	"Toolbox",
 	"LLM writing for the notes vault",
+	"1Password from any repo",
 ];
 
 test("every CLAUDE.md heading is ported or marked Claude-only", () => {

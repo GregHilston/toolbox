@@ -18,7 +18,6 @@ pkgs: {
     rsync
     tldr
     neovim
-    vimPlugins.vim-plug
     unzip
     wget
     curl

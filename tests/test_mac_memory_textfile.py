@@ -6,7 +6,6 @@ must not take them down with it.
 
 from __future__ import annotations
 
-import os
 import subprocess
 import tempfile
 import unittest

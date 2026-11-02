@@ -36,7 +36,7 @@ setup-claude:
 
     # Keep this pin in sync with ccstatuslineVersion in
     # nixos/modules/programs/tui/claude.nix (the source of truth for Nix hosts).
-    ccstatusline_version="2.2.27"
+    ccstatusline_version="2.2.33"
     npm_prefix="$HOME/.npm-global"
     if command -v npm >/dev/null 2>&1; then
         installed="$(jq -r .version "$npm_prefix/lib/node_modules/ccstatusline/package.json" 2>/dev/null || true)"
@@ -60,9 +60,10 @@ hooks:
 # dependency install.
 test:
     #!/usr/bin/env zsh
-    set -eu
-    repo="$(pwd)"
+    set -u
+    repo="$(pwd)"; rc=0
     echo "== pi extensions =="
-    ( cd "$repo/dot/pi" && node --test 'tests/*.test.ts' )
+    ( cd "$repo/dot/pi" && node --test 'tests/*.test.ts' ) || rc=1
     echo "== bin/ scripts =="
-    ( cd "$repo/tests" && python3 -m unittest discover -s . -p 'test_*.py' )
+    ( cd "$repo/tests" && python3 -m unittest discover -s . -p 'test_*.py' ) || rc=1
+    exit $rc

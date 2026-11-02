@@ -789,7 +789,8 @@ def main() -> None:
     phases = [(args.harness, args.model)] + ([(args.reviewer, args.reviewer_model)] if args.reviewer != "none" else [])
     # A claude worker the classifier blocks retries on the gateway's pi.
     args.gateway_used = args.harness == "claude" or any(h == "pi" and m in CLOUD for h, m in phases)
-    wait_for_turn(float(os.environ.get("LANE_START_AT", "0")), 2.0 * (os.cpu_count() or 1))
+    wait_for_turn(float(os.environ.get("LANE_START_AT", "0")),
+                  float(os.environ.get("LANE_MAX_LOAD") or 2.0 * (os.cpu_count() or 1)))
     begun = time.time()
 
     if not os.access("verify.sh", os.X_OK):

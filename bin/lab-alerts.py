@@ -25,7 +25,6 @@ import re
 import socket
 import subprocess
 import sys
-import time
 import tomllib
 import urllib.request
 from collections import Counter
