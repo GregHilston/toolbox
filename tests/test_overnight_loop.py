@@ -329,7 +329,7 @@ class LoopTest(unittest.TestCase):
         self.env = {k: v for k, v in os.environ.items() if not k.startswith(("DEEPSEEK", "LITELLM", "FAKE_"))}
         self.env |= {"PATH": f"{self.bin}:{os.environ['PATH']}", "HOME": str(root),
                      "FAKE_GH_STATE": str(self.state), "FAKE_LOG": str(self.agent_log),
-                     "FAKE_PIDS": str(self.pids), "LITELLM_URL": "http://127.0.0.1:9"}
+                     "FAKE_PIDS": str(self.pids), "LANE_MAX_LOAD": "1e9", "LITELLM_URL": "http://127.0.0.1:9"}
         self.git("init", "-q", "-b", "main")
         self.git("config", "user.name", "t")
         self.git("config", "user.email", "t@t")
