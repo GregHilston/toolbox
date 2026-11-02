@@ -5,9 +5,13 @@ on:
     branches: [master, main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Pi extensions and bin/ scripts
+    # These scripts run on Macs.
     runs-on: macos-latest
     steps:
       - name: Checkout repository
