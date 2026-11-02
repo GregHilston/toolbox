@@ -6,19 +6,7 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 
 ## What's In This Repo?
 
-```bash
-├── bin/                                    # Helper scripts. Added to $PATH (recursive) for user convenience.
-├── claude-code/                            # Dockerfile + docs for running Claude Code in a container.
-├── claude-commands/                        # Global Claude Code slash commands (→ ~/.claude/commands/).
-├── skills/                                 # Skills for Claude Code, pi and Hermes (→ ~/.claude/skills/).
-├── dot/                                    # Dotfiles to configure a slew of programs and environments.
-├── nixos/                                  # NixOS and nix-darwin configurations for all hosts.
-├── tests/                                  # Tests for bin/ scripts (`just test`). Not under bin/, which is on $PATH.
-├── windows/                                # Windows provisioning (autounattend.xml, scoop/winget lists).
-├── justfile                                # Root recipes (`just setup-claude`, `just test`).
-├── CLAUDE.md                               # Repo guide for Claude Code (and humans).
-├── README.md                               # This documentation.
-```
+Run `ls`: each top-level directory has one job. Start with `nixos/` for hosts, `dot/` for dotfiles, `bin/` for scripts on `$PATH`, and `skills/` for agent skills. `CLAUDE.md` is the repo guide, and `just --list` shows the root recipes.
 
 ## How Do I Use This Repo?
 
@@ -62,7 +50,7 @@ gpr --no-open --port 5000
 
 `gpr` auto-detects the base branch from `origin/HEAD` (falling back to `main`/`master`) and uses GitHub's 3-dot (`--merge-base`) semantics by default; set `GPR_MERGE_BASE=0` for a plain 2-dot diff.
 
-**Pinning / bumping difit:** the pinned version lives in one place — `DIFIT_VERSION` at the top of `bin/difit.sh` (currently `5.0.6`). Bump it by editing that default, or override per-run with `DIFIT_VERSION=5.1.0 difit …`. Pinning avoids `npx`'s stale-cache footgun and keeps runs reproducible.
+**Pinning / bumping difit:** the pinned version lives in one place — `DIFIT_VERSION` at the top of `bin/difit.sh`. Bump it by editing that default, or override per-run with `DIFIT_VERSION=<version> difit …`. Pinning avoids `npx`'s stale-cache footgun and keeps runs reproducible.
 
 ## Fonts
 
