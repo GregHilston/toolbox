@@ -30,18 +30,18 @@ class GatewayProvider(unittest.TestCase):
 
     def test_offers_exactly_the_gateway_aliases(self) -> None:
         ids = [m["id"] for m in self.gateway["models"]]
-        self.assertEqual(sorted(ids), ["cloud", "local-big", "local-lab", "local-small"])
+        self.assertEqual(sorted(ids), ["cloud", "cloud-deepseek", "local-big", "local-lab", "local-small"])
 
     def test_local_aliases_fit_the_lab_profile(self) -> None:
         # Past 65536 the oMLX :lab profile rejects the prompt.
         for m in self.gateway["models"]:
-            if m["id"] != "cloud":
+            if m["id"].startswith("local-"):
                 self.assertLessEqual(m["contextWindow"], 65536, m["id"])
 
-    def test_only_cloud_costs_money(self) -> None:
+    def test_only_cloud_aliases_cost_money(self) -> None:
         for m in self.gateway["models"]:
             paid = any(m["cost"].values())
-            self.assertEqual(paid, m["id"] == "cloud", m["id"])
+            self.assertEqual(paid, m["id"].startswith("cloud"), m["id"])
 
     def test_direct_omlx_provider_is_kept(self) -> None:
         self.assertEqual(self.providers["omlx"]["baseUrl"], "http://localhost:8000/v1")

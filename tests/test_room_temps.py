@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import unittest
 from datetime import date, datetime
 
@@ -111,6 +112,7 @@ class StallTest(unittest.TestCase):
 
 
 class PlotTest(unittest.TestCase):
+    @unittest.skipUnless(importlib.util.find_spec("matplotlib"), "needs matplotlib")
     def test_renders_with_empty_room_and_no_outdoor(self):
         import tempfile
         from pathlib import Path

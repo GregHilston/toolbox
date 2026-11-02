@@ -60,9 +60,10 @@ hooks:
 # dependency install.
 test:
     #!/usr/bin/env zsh
-    set -eu
-    repo="$(pwd)"
+    set -u
+    repo="$(pwd)"; rc=0
     echo "== pi extensions =="
-    ( cd "$repo/dot/pi" && node --test 'tests/*.test.ts' )
+    ( cd "$repo/dot/pi" && node --test 'tests/*.test.ts' ) || rc=1
     echo "== bin/ scripts =="
-    ( cd "$repo/tests" && python3 -m unittest discover -s . -p 'test_*.py' )
+    ( cd "$repo/tests" && python3 -m unittest discover -s . -p 'test_*.py' ) || rc=1
+    exit $rc
