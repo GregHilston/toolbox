@@ -45,6 +45,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gateslot  # noqa: E402
+import runlog  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 _spec = importlib.util.spec_from_file_location("preflight", HERE / "deepseek-preflight.py")
@@ -291,18 +292,22 @@ def scratch() -> Path:
     return path
 
 
-def verify(args, log: Path) -> tuple[bool, str]:
+def verify(args, log: Path, kind: str = "loop") -> tuple[bool, str]:
     out = scratch() / "verify.out"
-    with gateslot.slot(), out.open("w") as f:
+    runlog.emit("phase_start", phase="gate", gate_kind=kind)
+    began = time.time()
+    with out.open("w") as f, gateslot.slot(kind=kind) as gate:
         started = time.time()  # queue wait stays outside the limit
         code = run_group(["./verify.sh"], args.verify_minutes, signal.SIGKILL,
                          stdin=subprocess.DEVNULL, stdout=f, stderr=subprocess.STDOUT)
+        gate.code = code
     kill_leftovers(started)
     text = out.read_text(errors="replace")
     if code is None:
         text += f"\n./verify.sh timed out after {args.verify_minutes:g} min"
     with log.open("a") as f:
         f.write(f"\n--- verify.sh exit {code} ---\n{text}")
+    runlog.emit("phase_end", phase="gate", gate_kind=kind, seconds=round(time.time() - began, 3), exit=code)
     return code == 0, "\n".join(text.strip().splitlines()[-20:])
 
 
@@ -325,7 +330,7 @@ def check(args, base: str, branch: str, log: Path, gate_ok: bool = False) -> tup
     gate_base = getattr(args, "gate_base", None) or base
     if not gate_ok and (changed := sh("git", "diff", "--name-only", gate_base, "HEAD", "--", *GATE).split()):
         return False, f"the worker changed {', '.join(changed)}, which only a human may change"
-    return verify(args, log)
+    return verify(args, log, "worker")
 
 
 def unblocked(n: int, finished: set[int]) -> bool:
@@ -356,6 +361,7 @@ class Run:
     error: str = ""
     harness: str = ""
     model: str = ""
+    tokens: int = 0
 
     @property
     def priced(self) -> str:
@@ -389,12 +395,25 @@ def pi_result(out: str) -> Run:
         run.error = str(msg.get("errorMessage", "error")) if msg.get("stopReason") == "error" else ""
         when = datetime.fromtimestamp(msg.get("timestamp", time.time() * 1000) / 1000, timezone.utc)
         run.cost += preflight.turn_cost(msg.get("model"), msg.get("usage") or {}, when)
+        usage = msg.get("usage") or {}
+        run.tokens += int(usage.get("totalTokens") or sum(
+            int(usage.get(k) or 0) for k in ("input", "output", "cacheRead", "cacheWrite")))
     return run
 
 
 def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
-              read_only: bool = False, session: str | None = None, thinking: str | None = None, bash: bool = False) -> Run:
+              read_only: bool = False, session: str | None = None, thinking: str | None = None, bash: bool = False,
+              phase: str = "agent") -> Run:
     """session: a pi session id to create or resume, else none. bash: pi read-only runs may use it."""
+    runlog.emit("phase_start", phase=phase)
+    phase_began = time.time()
+
+    def ended(result: Run) -> Run:
+        runlog.emit("phase_end", phase=phase, seconds=round(time.time() - phase_began, 3),
+                    cost=round(result.cost, 4), tokens=result.tokens, harness=harness,
+                    model=shown, error=result.error[:200])
+        return result
+
     if harness == "claude":
         # A prompt nobody answers is denied at once, so claude stops retrying it.
         cmd = ["claude", "-p", "--output-format", "json", "--max-turns", "200",
@@ -449,9 +468,10 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         run = claude_result(out)
     run.harness, run.model = harness, shown
     if harness == "claude" and CLAUDE_LIMIT.search(run.error):
+        ended(run)
         wait_out_limit(log)
-        return run_agent(args, harness, model, prompt, log, read_only, session, thinking, bash)
-    return run
+        return run_agent(args, harness, model, prompt, log, read_only, session, thinking, bash, phase=phase)
+    return ended(run)
 
 
 def wait_out_limit(log: Path) -> None:
@@ -475,14 +495,18 @@ def claude_result(out: str) -> Run:
             continue
         if isinstance(result, dict) and result.get("type") == "result":
             text = str(result.get("result", ""))
-            return Run(text, float(result.get("total_cost_usd") or 0), text if result.get("is_error") else "")
+            usage = result.get("usage") or {}
+            tokens = sum(int(usage.get(k) or 0) for k in (
+                "input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
+            return Run(text, float(result.get("total_cost_usd") or 0), text if result.get("is_error") else "",
+                       tokens=tokens)
     return Run(out.strip(), error="claude printed no result")
 
 
 def smoke_test(args, harness: str, model: str | None) -> None:
     """One turn before touching anything, so a bad model or key fails here, not as a park per issue."""
     log = Path(".overnight/logs/startup.log")
-    run = run_agent(args, harness, model, PING, log, read_only=True)
+    run = run_agent(args, harness, model, PING, log, read_only=True, phase="smoke")
     if run.error or not run.text.strip():
         name = f"{harness} --model {model}" if model else harness
         sys.exit(f"{name} could not answer a one-line prompt: {run.error or 'no reply'}. See {log}.")
@@ -601,7 +625,8 @@ def work_issue(args, n: int, title: str, branch: str,
     gate_ok = args.gate_label in labels
     # A small issue is planned inline by its worker.
     if args.reviewer != "none" and "size:S" not in labels:
-        run = run_agent(args, args.reviewer, args.reviewer_model, PLAN.format(issue=issue), log, read_only=True)
+        run = run_agent(args, args.reviewer, args.reviewer_model, PLAN.format(issue=issue), log, read_only=True,
+                        phase="plan")
         plan = run.text
         runs.append(("plan", run))
         tidy(branch=branch)
@@ -611,7 +636,8 @@ def work_issue(args, n: int, title: str, branch: str,
     worker = WORKER.format(n=n, issue=issue)
     prompt = worker + (f"\nA planner suggests:\n\n{plan}\n" if plan else NO_PLAN)
     session = f"overnight-{branch.rpartition('/')[2]}-{n}"
-    run = run_agent(args, args.harness, args.model, prompt, log, session=session if args.harness == "pi" else None)
+    run = run_agent(args, args.harness, args.model, prompt, log, session=session if args.harness == "pi" else None,
+                    phase="worker")
     message = run.text[-1500:]
     runs.append(("worker", run))
     if run.broke:
@@ -624,7 +650,7 @@ def work_issue(args, n: int, title: str, branch: str,
             f.write(blocked + "\n")
         allow_pi_writes()
         run = run_agent(args, "pi", None, prompt + RETRY.format(base=base[:12], blocked=blocked), log,
-                        session=session)
+                        session=session, phase="retry")
         message = blocked + "\n\n" + run.text[-1500:]
         runs.append(("retry", run))
         if run.broke:
@@ -642,7 +668,7 @@ def work_issue(args, n: int, title: str, branch: str,
         prompt = REVIEW.format(n=n, issue=issue, diff=diff, calls=calls, tools=REVIEW_BASH if bash else REVIEW_READ,
                                gate=REVIEW_GATE if gate_ok else "")
         run = run_agent(args, args.reviewer, args.reviewer_model, prompt, log, read_only=True, bash=bash,
-                        thinking=args.reviewer_thinking if bash else None)
+                        thinking=args.reviewer_thinking if bash else None, phase="review")
         review = run.text
         runs.append(("review", run))
         back = tidy(green, branch)  # a reviewer's bash may have moved HEAD
@@ -660,9 +686,9 @@ def work_issue(args, n: int, title: str, branch: str,
             if args.harness == "pi":  # resume the worker's session; the full prompt stays in case it is missing
                 stat = sh("git", "diff", "--stat", f"{base}..HEAD")
                 run = run_agent(args, "pi", args.model, fix + f"\nWhat the branch changed so far:\n{stat}\n", log,
-                                session=session)
+                                session=session, phase="fix")
             else:
-                run = run_agent(args, args.harness, args.model, fix, log)
+                run = run_agent(args, args.harness, args.model, fix, log, phase="fix")
             runs.append(("fix", run))
             broke = run.broke
             tidy(branch=branch)
@@ -681,6 +707,8 @@ def work_issue(args, n: int, title: str, branch: str,
         note(n, title, "done", message)
     else:
         on_branch = tidy(base, branch)
+        why = (tail.strip().splitlines() or [message[:200]])[-1]
+        runlog.emit("ticket_parked", why=why[:300])
         sh("gh", "issue", "edit", str(n), "--add-label", PARKED, "--remove-label", WORKING)
         comment(n, f"Parked by the overnight run.\n\n{message}\n\n```\n{tail}\n```")
         if on_branch:  # a note elsewhere would land on the wrong branch
@@ -756,6 +784,7 @@ def main() -> None:
     args = p.parse_args()
     # The lander's gate still runs in full.
     os.environ["VERIFY_CACHE"] = "1"
+    os.environ.setdefault("RUN_LOG_LANE", Path.cwd().name)
     args.spend, args.unreviewed_from = None, None
     phases = [(args.harness, args.model)] + ([(args.reviewer, args.reviewer_model)] if args.reviewer != "none" else [])
     # A claude worker the classifier blocks retries on the gateway's pi.
@@ -787,8 +816,9 @@ def main() -> None:
         allow_pi_writes()
     if gateslot.already_passed():
         print("Baseline gate skipped: this tree already passed.", flush=True)
+        runlog.emit("gate_skipped", gate_kind="baseline")
     else:
-        ok, tail = verify(args, Path(".overnight/logs/baseline.log"))
+        ok, tail = verify(args, Path(".overnight/logs/baseline.log"), "baseline")
         if not ok:
             sys.exit(f"./verify.sh fails before any work, so nothing can be judged:\n{tail}")
         gateslot.mark_passed()
@@ -841,9 +871,14 @@ def main() -> None:
             board(args)
             before = args.spend.read() if args.spend else 0.0
             names = frozenset(lab["name"] for lab in issue["labels"])
+            os.environ["RUN_LOG_TICKET"] = str(n)
             ticket_began = time.time()
+            runlog.emit("ticket_start", title=title, branch=branch)
             outcome, labels, listed, estimated, broke = work_issue(args, n, title, branch, names)
             gateslot.record(kind="ticket", cwd=os.getcwd(), issue=n, started=ticket_began, ended=time.time())
+            if outcome == "done":
+                runlog.emit("ticket_done", seconds=round(time.time() - ticket_began, 3))
+            os.environ.pop("RUN_LOG_TICKET", None)
             current = None
             claude_list, estimate = claude_list + listed, estimate + estimated
             if outcome is None:
@@ -879,6 +914,8 @@ def summary(args, why: str, commits: str, claude_list: float, estimate: float,
     branch = commits.split("..")[1]
     if args.spend:
         args.spend.read()
+    runlog.emit("lane_stopped", why=why, done=len(done), parked=len(parked),
+                cost=round(claude_list + estimate, 4))
     print(f"\nStopped: {why}. Branch {branch}.")
     for heading, items in (("Done", done), ("Parked", parked)):
         if items:

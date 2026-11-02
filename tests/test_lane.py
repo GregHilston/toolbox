@@ -55,7 +55,8 @@ class LaneCase(unittest.TestCase):
         write(stubs / "overnight-loop.py", '#!/bin/sh\nenv > "$PWD/.overnight/env"\necho "$@" > "$PWD/.overnight/args"\n'
               'exec sleep 30\n', stat.S_IXUSR)
         self.gh_log = self.root / "gh.log"
-        env.update(PATH=f"{stubs}:{os.environ['PATH']}", FAKE_GH=str(self.gh_log), FAKE_VIEW=str(self.root / "view"))
+        env.update(PATH=f"{stubs}:{os.environ['PATH']}", FAKE_GH=str(self.gh_log), FAKE_VIEW=str(self.root / "view"),
+                   RUN_LOG_DIR=str(self.root / "run-log"))
         patcher = mock.patch.dict(os.environ, env)
         patcher.start()
         self.addCleanup(patcher.stop)

@@ -37,6 +37,15 @@ class ReportTest(unittest.TestCase):
         self.assertEqual(out, "no tickets in the log; 0 gates")
 
 
+class Python39Test(unittest.TestCase):
+    @unittest.skipUnless(Path("/usr/bin/python3").exists(), "no /usr/bin/python3")
+    def test_gateslot_imports_on_the_system_python(self) -> None:
+        out = subprocess.run(["/usr/bin/python3", "-c",
+                              "import sys; sys.path.insert(0, sys.argv[1]); import gateslot",
+                              str(Path(gateslot.__file__).parent)], capture_output=True, text=True)
+        self.assertEqual(out.returncode, 0, out.stderr)
+
+
 class SlotCase(unittest.TestCase):
     def setUp(self) -> None:
         tmp = tempfile.TemporaryDirectory()
@@ -46,7 +55,8 @@ class SlotCase(unittest.TestCase):
             patcher = mock.patch.object(gateslot, name, value)
             patcher.start()
             self.addCleanup(patcher.stop)
-        env = mock.patch.dict(os.environ, {"GATE_SLOTS": "1", "GIT_CONFIG_GLOBAL": os.devnull})
+        env = mock.patch.dict(os.environ, {"GATE_SLOTS": "1", "GIT_CONFIG_GLOBAL": os.devnull,
+                                            "RUN_LOG_DIR": str(self.root / "run-log")})
         env.start()
         self.addCleanup(env.stop)
 
@@ -57,6 +67,12 @@ class SlotCase(unittest.TestCase):
         self.assertEqual(event["kind"], "gate", f"event {event}")
         self.assertLessEqual(event["asked"], event["got"], f"event {event}")
         self.assertLessEqual(event["got"], event["ended"], f"event {event}")
+
+    def test_the_queue_being_off_writes_no_record(self) -> None:
+        with mock.patch.dict(os.environ, {"GATE_SLOTS": "0"}):
+            with gateslot.slot():
+                pass
+        self.assertFalse(gateslot.LOG.exists(), "GATE_SLOTS=0 still wrote a record")
 
     def repo(self) -> Path:
         repo = self.root / "repo"

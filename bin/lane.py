@@ -30,6 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gateslot  # noqa: E402
+import runlog  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("session_ctx", Path(__file__).resolve().parent / "session-ctx.py")
 session_ctx = importlib.util.module_from_spec(_spec)
@@ -159,11 +160,14 @@ def start(repo: Path, lane: str, label: str | None, extra: list[str], force: boo
     # A lane outlives its pane; workers must not report to it.
     env = {k: v for k, v in os.environ.items() if not k.startswith("HERDR_")}
     env["LANE_START_AT"] = str(claim_start_time())
+    env["RUN_LOG_LANE"] = lane
+    env.pop("RUN_LOG_TICKET", None)
     with log.open("ab") as out:
         proc = subprocess.Popen([loop, "--label", label or lane, *extra], cwd=clone, stdin=subprocess.DEVNULL,
                                 stdout=out, stderr=subprocess.STDOUT, start_new_session=True, env=env)
     pid_file.write_text(f"{proc.pid}\n")
     (clone / ".overnight" / "lane.label").write_text(f"{label or lane}\n")
+    runlog.emit("lane_start", lane=lane, label=label or lane, pid=proc.pid, branch=branch)
     return f"started lane {lane} (label {label or lane}), pid {proc.pid}, log {log}"
 
 
@@ -399,6 +403,8 @@ def fetch(repo: Path, lane: str, branch: str | None, force: bool = False) -> str
         state = "conflicts, rebase left stopped in the worktree:\n" + "\n".join(f"  {f}" for f in files)
     else:
         state = "clean"
+    runlog.emit("lane_fetch", lane=lane, branch=branch, local=local, commits=int(count),
+                clean=not rebase.returncode)
     return f"{warning}worktree {wt}\nbranch {local} (from {branch})\ncommits {count}\n{state}"
 
 
@@ -417,6 +423,19 @@ def require_second_opinion(session: str | None, skip_reason: str | None) -> str:
 
 def land(repo: Path, wt: Path, no_verify: bool, force: bool = False) -> str:
     """Verify the worktree, fast-forward the default branch, raise the baseline, close issues."""
+    lane = wt.resolve().name.removeprefix(f"{repo.name}-wt-")
+    runlog.emit("land_start", lane=lane)
+    began = time.time()
+    try:
+        out = _land(repo, wt, no_verify, force)
+    except Exception:
+        runlog.emit("land_done", lane=lane, seconds=round(time.time() - began, 3), ok=False)
+        raise
+    runlog.emit("land_done", lane=lane, seconds=round(time.time() - began, 3), ok=True)
+    return out
+
+
+def _land(repo: Path, wt: Path, no_verify: bool, force: bool = False) -> str:
     wt = wt.resolve()
     if not wt.is_dir():
         raise LaneError(f"worktree {wt} does not exist")
@@ -435,8 +454,9 @@ def land(repo: Path, wt: Path, no_verify: bool, force: bool = False) -> str:
         raise LaneError(f"{branch} is not a fast-forward of {base}; rebase it in {wt} first")
     passed = None
     if not no_verify:
-        with gateslot.slot(land=True):
+        with gateslot.slot(land=True, kind="landing") as gate:
             proc = subprocess.run(["./verify.sh"], cwd=wt, capture_output=True, text=True)
+            gate.code = proc.returncode
         lines = [x for x in (proc.stdout + proc.stderr).splitlines() if x.strip()]
         m = PASS_LINE.match(lines[-1]) if lines else None
         if proc.returncode or not m:
