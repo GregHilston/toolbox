@@ -81,11 +81,10 @@ Implement GitHub issue #{n} in this repository, then stop.
 2. Implement only this issue. Turn each checkable line under "Done when" into a
    test that ./verify.sh runs.
 3. Work cheaply: batch independent reads into one turn, read line ranges, and never
-   cat a whole large file. Iterate with the repo's one-suite test script, not the
-   full gate. When you think you are done, run
-   `gateslot.py -- ./verify.sh` (it queues for a machine-wide gate slot)
-   until it passes. Never edit verify.sh or the issue, and never
-   delete or weaken a test to make it pass.
+   cat a whole large file. Iterate with the repo's one-suite test script, and its
+   changed-suites form if it has one. Don't run the full gate: the loop runs it after
+   your last commit and tells you what failed. Never edit verify.sh or the issue, and
+   never delete or weaken a test to make it pass.
 4. Commit with a conventional commit message ending in "(#{n})", such as
    "feat(car): add handbrake (#{n})". Do not push and do not write to GitHub.
 
@@ -121,8 +120,8 @@ The diff:
 """
 REVIEW_READ = "You can read, grep, find and ls."
 REVIEW_BASH = ("You can also run bash: git diff, git show origin/main:<file>, the repo's one-suite test "
-               "script, or undo one \"Done when\" line's change to see its test fail. Run the full gate "
-               "only as `gateslot.py -- ./verify.sh`. The loop resets the tree afterwards.")
+               "script, or undo one \"Done when\" line's change to see its test fail. The loop has already "
+               "run the full gate on this branch, so don't. The loop resets the tree afterwards.")
 REVIEW_GATE = ("\nThis issue may change the gate (verify.sh and baseline_count): scrutinise those changes. "
                "Fail the review if they loosen a check.\n")
 FIX = """\
@@ -131,7 +130,7 @@ issue #{n}:
 
 {findings}
 
-Make them, run `gateslot.py -- ./verify.sh` until it passes, and commit.
+Make them, run the suites they touch, and commit. The loop runs the full gate after.
 """
 RETRY = """\
 
@@ -755,6 +754,8 @@ def main() -> None:
     p.add_argument("--yolo", action="store_true",
                    help="claude workers: bypassPermissions instead of auto; only inside a container or VM")
     args = p.parse_args()
+    # The lander's gate still runs in full.
+    os.environ["VERIFY_CACHE"] = "1"
     args.spend, args.unreviewed_from = None, None
     phases = [(args.harness, args.model)] + ([(args.reviewer, args.reviewer_model)] if args.reviewer != "none" else [])
     # A claude worker the classifier blocks retries on the gateway's pi.

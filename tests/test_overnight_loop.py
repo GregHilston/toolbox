@@ -622,9 +622,13 @@ class TestEfficiency(LoopTest):
         self.assertIn("could not get back", self.comments(1)[-1])
         self.assertNotIn("progress for #1", self.git("log", "--format=%s", "main"))
 
-    def test_the_reviewer_is_told_to_gate_through_gateslot(self):
-        self.assertIn("gateslot.py -- ./verify.sh", loop.REVIEW_BASH)
+    def test_the_reviewer_is_told_the_loop_already_gated(self) -> None:
+        self.assertIn("already", loop.REVIEW_BASH)
+        self.assertNotIn("./verify.sh", loop.REVIEW_BASH)
 
+    def test_worker_and_fixer_leave_the_full_gate_to_the_loop(self) -> None:
+        self.assertNotIn("gateslot.py", loop.WORKER)
+        self.assertNotIn("gateslot.py", loop.FIX)
     def test_a_claude_fix_pass_still_gets_the_full_prompt(self):
         self.issues({1: "First"})
         self.run_loop("--harness", "claude", "--reviewer", "claude", FAKE_REVIEW="Fix it.\nVERDICT: changes")
