@@ -207,6 +207,71 @@ class ReportTest(Case):
         self.assertEqual((shares["ready wait"], shares["landing"]), (100, 200), shares)
         self.assertLess(shares["unexplained"], 75, shares)
 
+    def test_a_recovered_ticket_is_not_painted_parked(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_parked", ticket="7"),
+            event(T0 + 300, "ticket_start", ticket="7"),
+            event(T0 + 300, "phase_start", ticket="7", phase="worker"),
+            event(T0 + 700, "phase_end", ticket="7", phase="worker"),
+            event(T0 + 700, "ticket_done", ticket="7"),
+        ]
+        shares = report.summarise(events)["shares"]
+        self.assertEqual((shares["parked"], shares["LLM"]), (200, 400), shares)
+        self.assertEqual(shares["unexplained"], 100, shares)
+
+    def test_an_untagged_landing_never_stretches_a_later_ticket(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_parked", ticket="7"),
+            event(T0 + 150, "ticket_start", ticket="8"),
+            event(T0 + 900, "land_start"),
+            event(T0 + 1000, "land_done"),
+            event(T0 + 1000, "ticket_done", ticket="8"),
+        ]
+        shares = report.summarise(events)["shares"]
+        self.assertEqual(shares["landing"], 0, shares)
+        self.assertEqual(shares["unexplained"], 950, shares)
+
+    def test_an_untagged_prep_needs_a_stopped_ticket(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_done", ticket="7"),
+            event(T0 + 150, "ticket_start", ticket="8"),
+            event(T0 + 200, "prep_start"),
+            event(T0 + 400, "ticket_done", ticket="8"),
+        ]
+        self.assertEqual(report.summarise(events)["shares"]["prep"], 0)
+
+    def test_an_untagged_park_does_not_close_a_later_ticket(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_done", ticket="7"),
+            event(T0 + 120, "ticket_parked"),
+            event(T0 + 150, "ticket_start", ticket="8"),
+            event(T0 + 500, "ticket_done", ticket="8"),
+        ]
+        self.assertEqual(report.summarise(events)["total"], 450)
+
+    def test_measured_gate_wait_outranks_the_ready_label(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 10, "ticket_done", ticket="7"),
+            event(T0 + 10, "ready", ticket="7"),
+            event(T0 + 20, "gate_queued", ticket="7", land=True),
+            event(T0 + 60, "gate_slot", ticket="7", land=True),
+            event(T0 + 100, "land_start", ticket="7"),
+            event(T0 + 110, "land_done", ticket="7"),
+        ]
+        shares = report.summarise(events)["shares"]
+        self.assertEqual((shares["gate wait"], shares["ready wait"]), (40, 50), shares)
+
+    def test_the_report_gives_unexplained_against_ticket_time_and_run_span(self) -> None:
+        self.write("r1")
+        out = self.printed("r1")
+        self.assertIn("hours unexplained", out)
+        self.assertIn("run span unexplained", out)
+
     def test_wakes_group_by_cause_not_by_lane(self) -> None:
         events = [event(T0, "wake", reason="a CONFLICT: see x"), event(T0 + 1, "wake", reason="b CONFLICT: y")]
         self.assertEqual(report.summarise(events)["wakes"], {"CONFLICT": 2})
