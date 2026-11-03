@@ -86,10 +86,11 @@ export default function webSearchExtension(pi: ExtensionAPI): void {
 		name: "web_search",
 		label: "Web Search",
 		description:
-			"Search the web through a private SearXNG metasearch instance. Returns ranked title/URL/snippet results. Use for documentation, current facts, error messages, and anything outside the codebase or conversation.",
+			"Search the web through a private SearXNG metasearch instance. Returns ranked title/URL/snippet results. Use for documentation, current facts, error messages, and anything outside the codebase or conversation. Never for weather: run `weather.py` in bash.",
 		promptSnippet: "Search the web via SearXNG",
 		promptGuidelines: [
 			"Use web_search when the answer is not in the codebase, the conversation, or your own knowledge — especially for current facts and library documentation.",
+			"Never search for weather or a forecast: run `weather.py` in bash (`--days 7`, `--place \"Town, ST\"`).",
 			"Keep queries short and specific. Do not wrap the whole query in quotes; SearXNG often returns nothing for quoted queries.",
 			"To read a result in full, fetch its URL with the bash tool afterwards.",
 		],

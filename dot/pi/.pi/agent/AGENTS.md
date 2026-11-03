@@ -53,6 +53,8 @@ sentence what it is for. Never list its files; they go stale.
 
 - Reddit: `reddit-search.py "<query>"` finds threads, `fetch-thread.py <url>` reads
   one (also Hacker News). No login. Do not use `searxngr` for Reddit.
+- Weather, today or any day: run `weather.py` (`--days 7`, `--place "Town, ST"`).
+  Never web search or fetch a weather site.
 - Notes written for `~/Git/notes` go in its `llm/` folder with a `topics:` property,
   never at the vault root.
 
@@ -71,7 +73,6 @@ down. Work read-only by default: diagnose, then propose a fix and ask before act
 - Runbooks live in `~/Git/home-lab/docs/runbooks/`; `README.md` there is the index.
   Read the matching runbook before you run anything. A named alert ("Exporter down")
   has one: read `~/Git/home-lab/docs/runbooks/<slug>.md` first, even when nothing is firing now.
-- Weather: run `weather.py` (the `weather` skill). Never web search for it.
 - Run `hostname` if unsure where you are. Watchdog and backup logs live on dungeon:
   on moria `ssh dungeon tail -n 50 ~/Library/Logs/<name>.log`; on dungeon run the
   commands directly, without `ssh dungeon`. Never put load on dungeon: no builds,
