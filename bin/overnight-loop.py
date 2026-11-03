@@ -497,7 +497,7 @@ def log_steps(out: str, log: Path) -> None:
             runlog.emit("llm_turn", seconds=step["seconds"])
         else:
             runlog.emit("worker_cmd", began=round(step["t"], 3), seconds=step["seconds"], exit=step["exit"],
-                        cat=step["cat"], cmd=step["cmd"])
+                        cat=step["cat"], cmd=step["cmd"], **({"hung": True} if step.get("hung") else {}))
 
 
 def wait_out_limit(log: Path) -> None:

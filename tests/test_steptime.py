@@ -125,6 +125,30 @@ class ReportSplitTest(unittest.TestCase):
         self.assertEqual(report.worker_block(report.worker_steps([])), "")
 
 
+class HungTest(unittest.TestCase):
+    STREAM = "\n".join(json.dumps(e) for e in [
+        {"type": "message_end", "message": {"role": "assistant", "timestamp": 1_000_000, "durationMs": 1000}},
+        {"type": "tool_execution_start", "toolCallId": "h", "toolName": "bash", "args": {"command": "godot --headless"}},
+        {"type": "tool_execution_end", "toolCallId": "h", "toolName": "bash", "isError": True, "durationMs": 2_400_000,
+         "result": {"content": [{"type": "text", "text": "Command timed out after 2400 seconds"}]}},
+        {"type": "tool_execution_start", "toolCallId": "f", "toolName": "bash", "args": {"command": "false"}},
+        {"type": "tool_execution_end", "toolCallId": "f", "toolName": "bash", "isError": True, "durationMs": 1000,
+         "result": {"content": [{"type": "text", "text": "nope"}]}},
+    ])
+
+    def test_only_a_tool_timeout_is_hung(self) -> None:
+        cmds = [s for s in steptime.steps(self.STREAM) if s["step"] == "cmd"]
+        self.assertEqual([bool(s.get("hung")) for s in cmds], [True, False], f"got {cmds}")
+
+    def test_the_report_names_the_hung_command_in_both_blocks(self) -> None:
+        by_ticket = report.worker_steps(report.log_events_text(self.STREAM, "7"))
+        self.assertIn("hung: 'godot --headless' 40m (#7)", report.worker_block(by_ticket))
+        rows = {"7": {"spent": {p: 0 for p in report.PHASES}, "dup_s": 0}}
+        ranked = report.ranked_waits(rows, hung=report.hung_lines(by_ticket))
+        self.assertIn("hung", ranked)
+        self.assertIn("40", ranked)
+
+
 class MissingRunTest(unittest.TestCase):
     def test_a_missing_log_names_the_run_the_events_went_to(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

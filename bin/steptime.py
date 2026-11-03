@@ -4,7 +4,8 @@
     steptime.py <log>     # print the steps one JSON line each
 
 A step is {"type": "step", "step": "llm"|"cmd", "seconds": s, "t": start,
-"cmd": ..., "exit": code, "cat": category}. `t` is epoch seconds and, for a
+"cmd": ..., "exit": code, "cat": category}, plus "hung": true when pi's tool timeout
+killed the command. `t` is epoch seconds and, for a
 command, the end of the turn that asked for it: pi stamps no tool events.
 """
 
@@ -20,6 +21,7 @@ CATEGORIES = [
     ("sweeps", re.compile(r"sweep\.py|tune\.py|balance_guard|golden_corpus|client_corpus|regen_goldens|sim\.sh|client_sim")),
     ("test runs", re.compile(r"pytest|tools/test\.sh|run_tests\.sh|gut|unittest|godot\b.*\btest|node --test")),
 ]
+TIMEOUT = re.compile(r"Command timed out after \d+ seconds")
 EXIT = re.compile(r'"exit_code":\s*(-?\d+)')
 
 
@@ -57,8 +59,11 @@ def steps(text: str) -> list[dict]:
             cmd, began = asked.pop(event["toolCallId"])
             found = EXIT.search(json.dumps(event.get("result")))
             code = int(found.group(1)) if found else (1 if event.get("isError") else 0)
-            out.append({"type": "step", "step": "cmd", "seconds": round(float(event.get("durationMs") or 0) / 1000, 3),
-                        "t": began, "cmd": cmd[:300], "exit": code, "cat": categorise(cmd)})
+            step = {"type": "step", "step": "cmd", "seconds": round(float(event.get("durationMs") or 0) / 1000, 3),
+                    "t": began, "cmd": cmd[:300], "exit": code, "cat": categorise(cmd)}
+            if event.get("isError") and TIMEOUT.search(json.dumps(event.get("result"))):
+                step["hung"] = True
+            out.append(step)
     return out
 
 

@@ -607,7 +607,7 @@ def gate_table(rows: dict[str, dict]) -> str:
                        table(["ticket", *kinds, "gate min", "slot wait min", "same-tree reruns"], body)])
 
 
-def ranked_waits(rows: dict[str, dict], top: int = 8) -> str:
+def ranked_waits(rows: dict[str, dict], top: int = 8, hung: list[str] | None = None) -> str:
     """The phases other than worker time, ranked by total minutes, each with where it hit and a fix."""
     totals: list[tuple[float, str, str]] = []
     for phase in PHASES:
@@ -621,6 +621,9 @@ def ranked_waits(rows: dict[str, dict], top: int = 8) -> str:
     dup = sum(r["dup_s"] for r in rows.values())
     if dup:
         totals.append((dup, "same-tree gate reruns", "a gate on a tree that already ran: skip it"))
+    for line in hung or []:
+        cmd, _, minutes = line.removeprefix("hung: ").rpartition("m (")[0].rpartition(" ")
+        totals.append((float(minutes) * 60, "hung", f"{cmd}; a tool timeout killed it: fix what it waits on"))
     totals.sort(reverse=True)
     body = [[str(i + 1), f"{sec / 60:.0f}", name, why] for i, (sec, name, why) in enumerate(totals[:top])]
     return "\n".join(["biggest waits, ticket-minutes (tickets overlap, so these exceed wall time)",
@@ -644,7 +647,8 @@ def lifecycle_report(events: list[dict]) -> str:
     if not rows:
         return ""
     return "\n\n".join(part for part in [phase_table(rows), concurrency(rows), gate_table(rows),
-                                         unattributed_gates(events), ranked_waits(rows)] if part)
+                                         unattributed_gates(events),
+                                         ranked_waits(rows, hung=hung_lines(worker_steps(events)))] if part)
 
 
 def pilot_log_events(path: Path, day: float) -> list[dict]:
@@ -694,8 +698,15 @@ def worker_steps(events: list[dict]) -> dict[str, list[dict]]:
             out[key].append({"step": "llm", "seconds": seconds})
         else:
             out[key].append({"step": "cmd", "seconds": seconds, "cmd": str(event.get("cmd", "")),
-                             "cat": str(event.get("cat") or steptime.categorise(str(event.get("cmd", ""))))})
+                             "cat": str(event.get("cat") or steptime.categorise(str(event.get("cmd", ""))))}
+                       | ({"hung": True} if event.get("hung") else {}))
     return out
+
+
+def hung_lines(by_ticket: dict[str, list[dict]]) -> list[str]:
+    """One `hung: <command> <minutes>` line per command a tool timeout killed."""
+    return [f"hung: {s['cmd'][:100]!r} {s['seconds'] / 60:.0f}m ({'#' + k if k.isdigit() else k})"
+            for k, found in sorted(by_ticket.items()) for s in found if s.get("hung")]
 
 
 def worker_block(by_ticket: dict[str, list[dict]]) -> str:
@@ -713,13 +724,18 @@ def worker_block(by_ticket: dict[str, list[dict]]) -> str:
         slow = sorted((s for s in found if s["step"] == "cmd"), key=lambda s: -s["seconds"])[:5]
         tops.append(f"top commands, {rows[-1][0]}:")
         tops.extend(f"  {human(s['seconds']):>5}  {s['cmd'][:100]!r}" for s in slow)
-    return "\n".join([table(["worker time", "total"] + WORKER_CATS, rows), "", *tops])
+    return "\n".join([table(["worker time", "total"] + WORKER_CATS, rows), "", *hung_lines(by_ticket), *tops])
 
 
 def log_events(path: Path) -> list[dict]:
     """A lane log's steps as run-log events, from step lines or an older raw pi stream."""
-    return [{"kind": "llm_turn" if s["step"] == "llm" else "worker_cmd", "ticket": path.stem, **s}
-            for s in steptime.steps(path.read_text(errors="replace"))]
+    return log_events_text(path.read_text(errors="replace"), path.stem)
+
+
+def log_events_text(text: str, ticket: str) -> list[dict]:
+    """log_events for a log already read."""
+    return [{"kind": "llm_turn" if s["step"] == "llm" else "worker_cmd", "ticket": ticket, **s}
+            for s in steptime.steps(text)]
 
 
 def option(argv: list[str], name: str) -> str | None:
