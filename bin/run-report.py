@@ -178,6 +178,32 @@ def human(seconds: float) -> str:
     return f"{seconds:.0f}s"
 
 
+def ticket_costs(events: list[dict]) -> dict[str, tuple[int, float, int]]:
+    """(tickets, list-price dollars, tokens) summed over each outcome's tickets.
+
+    Go quota is one shared weekly percentage, so per-ticket cost is the
+    phases' own list-price figures.
+    """
+    spent: dict[str, list[float]] = defaultdict(lambda: [0.0, 0])
+    landed, parked = set(), set()
+    for event in events:
+        ticket = ticket_of(event)
+        if ticket is None:
+            continue
+        if event["kind"] in ("phase_end", "lane_cost"):
+            spent[ticket][0] += float(event.get("cost") or 0)
+            spent[ticket][1] += int(event.get("tokens") or 0)
+        elif event["kind"] == "landed":
+            landed.add(ticket)
+        elif event["kind"] == "ticket_parked":
+            parked.add(ticket)
+    out = {}
+    for name, group in (("landed", landed), ("parked", parked - landed)):
+        rows = [spent[t] for t in group if t in spent]
+        out[name] = (len(group), round(sum(r[0] for r in rows), 4), int(sum(r[1] for r in rows)))
+    return out
+
+
 def summarise(events: list[dict]) -> dict:
     rows = tickets(events)
     totals = attribute(rows, segments(events))
@@ -208,7 +234,7 @@ def summarise(events: list[dict]) -> dict:
     return {"tickets": len(rows), "total": total, "shares": totals, "span": span,
             "gates": len(gates), "skipped": len(skipped), "preskipped": len(preskipped),
             "saved": sum(float(e.get("seconds") or 0) for e in skipped),
-            "wakes": wakes, "load": load, "waits": waits}
+            "wakes": wakes, "load": load, "waits": waits, "cost": ticket_costs(events)}
 
 
 def table(head: list[str], rows: list[list]) -> str:
@@ -219,6 +245,22 @@ def table(head: list[str], rows: list[list]) -> str:
     for row in body:
         lines.append("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)).rstrip())
     return "\n".join(lines)
+
+
+def compact(tokens: float) -> str:
+    return f"{tokens / 1e6:.1f}M" if tokens >= 1e6 else f"{tokens / 1e3:.1f}k"
+
+
+def cost_block(names: list[str], summaries: list[dict]) -> str:
+    if not any(c for s in summaries for _, c, _ in s["cost"].values()):
+        return ""
+    rows = []
+    for outcome in ("landed", "parked"):
+        stats = [s["cost"][outcome] for s in summaries]
+        rows.append([f"{outcome} tickets"] + [str(n) for n, _, _ in stats])
+        rows.append([f"list $/{outcome} ticket"] + [f"${c / n:.2f}" if n else "-" for n, c, _ in stats])
+        rows.append([f"tokens/{outcome} ticket"] + [compact(t / n) if n else "-" for n, _, t in stats])
+    return table([""] + names, rows)
 
 
 def report(names: list[str], summaries: list[dict]) -> str:
@@ -236,6 +278,8 @@ def report(names: list[str], summaries: list[dict]) -> str:
                                      for s in summaries])
     out.append(table([""] + names, rows))
     out.append("")
+    if block := cost_block(names, summaries):
+        out.extend([block, ""])
     rows = []
     for cat in CATS:
         cells = []

@@ -162,6 +162,29 @@ class ReportTest(Case):
         self.assertEqual(summary["span"], 60)
         self.assertEqual(summary["shares"]["unexplained"], 0)
 
+    def test_cost_per_landed_and_per_parked_ticket(self) -> None:
+        events = [
+            event(T0, "phase_end", ticket="1", phase="worker", cost=0.10, tokens=1000),
+            event(T0, "lane_cost", ticket="1", phase="fix", cost=0.05, tokens=500),
+            event(T0, "landed", ticket="1"),
+            event(T0, "phase_end", ticket="2", phase="worker", cost=0.30, tokens=3000),
+            event(T0, "phase_end", ticket="3", phase="worker", cost=0.50, tokens=5000),
+            event(T0, "ticket_parked", ticket="3", why="x"),
+            event(T0, "phase_end", ticket=None, phase="smoke", cost=0.99, tokens=9),
+        ]
+        cost = report.summarise(events)["cost"]
+        self.assertEqual(cost["landed"], (1, 0.15, 1500))
+        self.assertEqual(cost["parked"], (1, 0.5, 5000))
+        out = report.report(["r1"], [report.summarise(events)])
+        line = {x.split("  ")[0]: x for x in out.splitlines()}
+        self.assertIn("$0.15", line["list $/landed ticket"], out)
+        self.assertIn("$0.50", line["list $/parked ticket"], out)
+        self.assertIn("1.5k", line["tokens/landed ticket"], out)
+
+    def test_a_run_with_no_costs_prints_no_cost_rows(self) -> None:
+        self.write("r1")
+        self.assertNotIn("landed ticket", self.printed("r1"))
+
     def test_two_runs_share_one_table(self) -> None:
         self.write("r1")
         self.write("r2")
