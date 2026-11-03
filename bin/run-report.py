@@ -243,9 +243,10 @@ def summarise(events: list[dict]) -> dict:
     total = sum(int(end) - int(start) for _, _, start, end in rows)
     live = activity(events)
     span = live[-1]["t"] - live[0]["t"] if len(live) > 1 else 0.0
+    workers = {lane_of(e) for e in live if e["kind"] == "lane_start"}
     lane_times: dict[str, list[float]] = defaultdict(list)
     for event in live:
-        if lane_of(event):
+        if lane_of(event) in workers:
             lane_times[lane_of(event)].append(event["t"])
     lane_hours = sum(max(times) - min(times) for times in lane_times.values())
     gates = [e for e in events if e["kind"] == "gate_done"]

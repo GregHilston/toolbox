@@ -236,6 +236,7 @@ class ReportTest(Case):
 
     def test_a_recovery_after_another_ticket_does_not_overlap_it(self) -> None:
         events = [
+            event(T0, "lane_start"),
             event(T0, "ticket_start", ticket="7"),
             event(T0 + 100, "ticket_parked", ticket="7"),
             event(T0 + 150, "ticket_start", ticket="8"),
