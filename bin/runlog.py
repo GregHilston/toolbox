@@ -109,9 +109,9 @@ def _family(command: str) -> str:
     low = command.lower()
     if "godot" in low:
         return "godot"
-    if re.search(r"pytest|execnet|xdist|multiprocessing\.(spawn|forkserver)|uv run", low):
+    if re.search(r"pytest|execnet|xdist|exec\(eval\(sys\.stdin", low):
         return "pytest"
-    if re.search(r"(^|[\s/])pi(\s|$)|pi-coding-agent|bin/pi\b", command):
+    if re.search(r"(^|[\s/])pi(\s|$)|pi-coding-agent", command):
         return "pi"
     return "other"
 

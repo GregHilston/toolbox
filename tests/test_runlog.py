@@ -116,6 +116,9 @@ class EmitTest(Case):
 PS = """ 600.0 /usr/bin/python3 -c import execnet.gateway_base
  400.0 /x/.venv/bin/python -m pytest -n 8 tests
   50.0 uv run pytest tests
+  70.0 /usr/bin/python3 -u -c import sys;exec(eval(sys.stdin.readline()))
+  40.0 uv run build.py
+  15.0 /x/bin/python /h/toolbox/bin/pi-ask.py --session s
  200.0 /Applications/Godot.app/Contents/MacOS/Godot --headless
   30.0 node /x/bin/pi --print
   20.0 /usr/bin/ssh dungeon
@@ -134,16 +137,16 @@ class CpuTest(Case):
         top: dict[str, float] = {}
         with self.fake_ps():
             cpu = runlog.cpu_by_family(top)
-        self.assertEqual(cpu["pytest"], 1050.0, cpu)
+        self.assertEqual(cpu["pytest"], 1120.0, cpu)
         self.assertEqual(cpu["godot"], 200.0, cpu)
         self.assertEqual(cpu["pi"], 30.0, cpu)
-        self.assertEqual(cpu["other"], 36.0, cpu)
+        self.assertEqual(cpu["other"], 91.0, cpu)
 
     def test_the_sample_lists_the_top_three_commands_inside_other(self) -> None:
         with self.fake_ps():
             machine = runlog.machine()
-        self.assertEqual(list(machine["other_top"]), ["ssh", "zsh", "vim"], machine)
-        self.assertEqual(machine["other_top"]["ssh"], 30.0)
+        self.assertEqual(list(machine["other_top"]), ["uv", "ssh", "python"], machine)
+        self.assertEqual(machine["other_top"]["uv"], 40.0)
 
 
 class GateKindTest(Case):
