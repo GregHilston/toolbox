@@ -8,8 +8,9 @@ tests, landing), and whatever no interval covers is unexplained. "queue" is a
 work gate's wait for a slot; "gate wait" is a landing gate's. A run's last
 ticket extends to its lane's landing, so the landing is charged to it.
 "review" is the review queue plus the review run. "Hours in no ticket" is each
-lane's first-to-last event span minus the summed ticket time, so dropped
-seconds stay visible.
+lane's first-to-last event span, summed over worker lanes, minus the summed
+ticket time (never below zero), so dropped seconds stay visible. An untagged
+ticket_parked closes nothing.
 """
 
 from __future__ import annotations
@@ -101,10 +102,10 @@ def owned(events: list[dict]) -> list[tuple[dict, str | None]]:
         if kind == "ticket_start":
             current[lane] = ticket
             stopped.pop(lane, None)
-        elif kind in ("ticket_done", "ticket_parked"):
+        elif kind == "ticket_done" or (kind == "ticket_parked" and ticket):
             stopped[lane] = ticket or current.get(lane)
             current.pop(lane, None)
-        elif ticket is None and kind in AFTER_LANE:
+        elif ticket is None and kind in AFTER_LANE and kind != "ticket_parked":
             ticket = stopped.get(lane)
         out.append((event, ticket))
     return out
@@ -122,10 +123,12 @@ def tickets(events: list[dict]) -> list[list]:
             if lane in opened:
                 ticket, start = opened.pop(lane)
                 rows.append([lane, ticket, start, event["t"]])
+                lane_end[lane] = event["t"]
             ticket = ticket_of(event)
             opened[lane] = (ticket, max(parked.pop((lane, ticket), event["t"]), lane_end.get(lane, 0.0)))
         elif event["kind"] in ("ticket_done", "ticket_parked") and lane in opened:
-            if ticket_of(event) not in (None, opened[lane][0]):
+            if ticket_of(event) not in (None, opened[lane][0]) or (event["kind"] == "ticket_parked"
+                                                                    and not ticket_of(event)):
                 continue
             ticket, start = opened.pop(lane)
             rows.append([lane, ticket, start, event["t"]])
@@ -273,7 +276,7 @@ def summarise(events: list[dict]) -> dict:
     return {"tickets": len(rows), "total": total, "shares": totals, "span": span,
             "gates": len(gates), "skipped": len(skipped), "preskipped": len(preskipped),
             "saved": sum(float(e.get("seconds") or 0) for e in skipped),
-            "no_ticket": lane_hours - total, "wakes": wakes, "load": load, "waits": waits,
+            "no_ticket": max(lane_hours - total, 0.0) if workers else None, "wakes": wakes, "load": load, "waits": waits,
             "other": other_top(events)}
 
 
@@ -311,7 +314,8 @@ def report(names: list[str], summaries: list[dict]) -> str:
                                      for s in summaries])
     rows.append(["ticket hours (summed)"] + [f"{s['total'] / 3600:.1f}" for s in summaries])
     rows.append(["hours unexplained"] + [f"{s['shares']['unexplained'] / 3600:.1f}" for s in summaries])
-    rows.append(["hours in no ticket"] + [f"{s['no_ticket'] / 3600:.1f}" for s in summaries])
+    rows.append(["hours in no ticket"] + [f"{s['no_ticket'] / 3600:.1f}" if s["no_ticket"] is not None else "-"
+                                          for s in summaries])
     rows.append(["run span unexplained"] + [f"{s['shares']['unexplained'] / s['span']:.0%}" if s["span"] else "-"
                                               for s in summaries])
     rows.append(["top other CPU (summed)"] + [s["other"] or "-" for s in summaries])

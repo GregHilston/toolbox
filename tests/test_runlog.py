@@ -248,6 +248,32 @@ class ReportTest(Case):
         self.assertEqual(summary["total"], 550, summary)
         self.assertEqual(summary["no_ticket"], 50, summary)
 
+    def test_resuming_while_another_row_is_open_does_not_overlap(self) -> None:
+        events = [
+            event(T0, "lane_start"),
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_parked", ticket="7"),
+            event(T0 + 100, "ticket_start", ticket="8"),
+            event(T0 + 150, "ticket_start", ticket="9"),
+            event(T0 + 200, "ticket_start", ticket="7"),
+            event(T0 + 300, "ticket_done", ticket="7"),
+        ]
+        self.assertEqual(report.summarise(events)["total"], 300)
+
+    def test_a_stray_untagged_park_keeps_the_running_ticket_open(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="8"),
+            event(T0 + 200, "ticket_parked"),
+            event(T0 + 500, "ticket_done", ticket="8"),
+        ]
+        self.assertEqual(report.summarise(events)["total"], 500)
+
+    def test_hours_in_no_ticket_never_goes_negative_and_needs_a_worker_lane(self) -> None:
+        events = [event(T0, "ticket_start", ticket="1"), event(T0 + 100, "ticket_done", ticket="1")]
+        self.assertIsNone(report.summarise(events)["no_ticket"])
+        overlap = [event(T0, "lane_start"), *events]
+        self.assertEqual(report.summarise(overlap)["no_ticket"], 0)
+
     def test_an_untagged_prep_after_the_stop_counts_for_that_ticket(self) -> None:
         events = [
             event(T0, "ticket_start", ticket="7"),
