@@ -503,6 +503,34 @@ class TestGate(LoopTest):
         self.assertNotIn("exit 0", (self.repo / "verify.sh").read_text())
 
 
+class TestPoorLanes(LoopTest):
+    """A lane that cannot pass is parked at once, naming its check, and spends no more."""
+
+    def gate_that_names_its_check(self) -> None:
+        (self.repo / "verify.sh").write_text(
+            "#!/bin/sh\nif [ -e BROKEN ]; then echo 'ERROR api: 3 failed'; echo 'ERROR api: 3 failed'; exit 1; fi\n")
+        self.git("commit", "-qam", "gate that names its check")
+
+    def test_a_worker_failing_one_check_twice_is_parked_with_no_third_round(self):
+        self.issues({1: "First"})
+        self.gate_that_names_its_check()
+        out = self.run_loop("--harness", "pi", "--reviewer", "pi", FAKE_WORK_1="bad")
+        self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
+        self.assertEqual(self.roles().count("pi work"), 1, self.roles())
+        self.assertNotIn("pi fix", self.roles())
+        self.assertNotIn("pi review", self.roles())
+        self.assertIn("Failing check: `api`", self.comments(1)[-1])
+        self.assertEqual(self.comments(1)[-1].count("Failing check"), 1, "a repeated line names the check once")
+
+    def test_a_fix_round_with_no_diff_is_parked(self):
+        self.issues({1: "First"})
+        out = self.run_loop("--harness", "pi", "--reviewer", "pi", FAKE_FIX="nocommit",
+                            FAKE_REVIEW="Fix it.\nVERDICT: changes")
+        self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
+        self.assertIn("the fix round changed nothing", self.comments(1)[-1])
+        self.assertNotIn("overnight:done", self.labels(1))
+
+
 class TestEfficiency(LoopTest):
     def prompts(self) -> str:
         return Path(str(self.agent_log) + ".prompts").read_text()
