@@ -7,11 +7,16 @@ Each ticket's time is split by intervals (its phase_start/phase_end, gates,
 tests, landing), and whatever no interval covers is unexplained. "queue" is a
 work gate's wait for a slot; "gate wait" is a landing gate's. A run's last
 ticket extends to its lane's landing, so the landing is charged to it.
+"review" is the review queue plus the review run. "Hours in no ticket" is each
+lane's first-to-last event span, summed over worker lanes, minus the summed
+ticket time (never below zero), so dropped seconds stay visible. An untagged
+ticket_parked closes nothing.
 """
 
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -19,9 +24,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import runlog
 
-CATS = ["queue", "LLM", "own tests", "gate wait", "gate run", "review", "fix", "landing", "unexplained"]
-PRIORITY = {"LLM": 1, "fix": 2, "review": 3, "landing": 4, "queue": 5, "gate wait": 6,
-            "gate run": 7, "own tests": 8}
+CATS = ["queue", "parked", "prep", "LLM", "own tests", "gate wait", "gate run", "review", "fix", "ready wait",
+        "landing", "unexplained"]
+# Measured activity outranks the labels for waiting between steps.
+PRIORITY = {"prep": 1, "parked": 1, "ready wait": 1, "LLM": 2, "fix": 3, "review": 4, "landing": 5, "queue": 6,
+            "gate wait": 7, "gate run": 8, "own tests": 9}
+LIFE = {"ticket_parked": "parked", "prep_start": "prep", "review_start": "review", "fix_start": "fix",
+        "ready": "ready wait", "land_start": None}
+AFTER_LANE = set(LIFE) | {"land_done", "land_batch", "landed"}
+WAKE_KEYS = ["CONFLICT", "produced no commits", "parked", "did not land", "removes more assertions",
+             "ALL SETTLED", "waits:", "fix \\d+", "died", "stopped"]
 PHASE_CAT = {"plan": "LLM", "worker": "LLM", "retry": "LLM", "reviewer": "review",
              "review": "review", "fix": "fix"}
 
@@ -72,40 +84,69 @@ def activity(events: list[dict]) -> list[dict]:
     return [event for event in events if event["kind"] != "machine"] or events
 
 
+def owned(events: list[dict]) -> list[tuple[dict, str | None]]:
+    """Pair each event with its ticket; an untagged one after a lane's stop takes that stopped ticket.
+
+    So prep is the stopped ticket's wait before review, counted against it.
+    An untagged event once a later ticket has started has no owner and is
+    dropped, so its time stays unexplained or falls in "hours in no ticket".
+
+    A lane's stopped ticket clears at its next ticket_start, so an untagged
+    event can never land on a ticket that began after it.
+    """
+    current: dict[str, str | None] = {}
+    stopped: dict[str, str | None] = {}
+    out: list[tuple[dict, str | None]] = []
+    for event in events:
+        lane, kind, ticket = lane_of(event), event["kind"], ticket_of(event)
+        if kind == "ticket_start":
+            current[lane] = ticket
+            stopped.pop(lane, None)
+        elif kind == "ticket_done" or (kind == "ticket_parked" and ticket):
+            stopped[lane] = ticket or current.get(lane)
+            current.pop(lane, None)
+        elif ticket is None and kind in AFTER_LANE and kind != "ticket_parked":
+            ticket = stopped.get(lane)
+        out.append((event, ticket))
+    return out
+
+
 def tickets(events: list[dict]) -> list[list]:
     """One [lane, ticket, start, end] per ticket_start, extended to the lane's landing."""
     rows: list[list] = []
     opened: dict[str, tuple[str | None, float]] = {}
+    parked: dict[tuple[str, str | None], float] = {}
+    lane_end: dict[str, float] = {}
     for event in events:
         lane = lane_of(event)
         if event["kind"] == "ticket_start":
             if lane in opened:
                 ticket, start = opened.pop(lane)
                 rows.append([lane, ticket, start, event["t"]])
-            opened[lane] = (ticket_of(event), event["t"])
-        elif event["kind"] == "ticket_done" and lane in opened:
+                lane_end[lane] = event["t"]
+            ticket = ticket_of(event)
+            opened[lane] = (ticket, max(parked.pop((lane, ticket), event["t"]), lane_end.get(lane, 0.0)))
+        elif event["kind"] in ("ticket_done", "ticket_parked") and lane in opened:
+            if ticket_of(event) not in (None, opened[lane][0]) or (event["kind"] == "ticket_parked"
+                                                                    and not ticket_of(event)):
+                continue
             ticket, start = opened.pop(lane)
             rows.append([lane, ticket, start, event["t"]])
+            lane_end[lane] = event["t"]
+            if event["kind"] == "ticket_parked":
+                parked[(lane, ticket)] = event["t"]
     finish = activity(events)[-1]["t"] if events else 0.0
     for lane, (ticket, start) in opened.items():
         rows.append([lane, ticket, start, finish])
     rows.sort(key=lambda row: row[2])
     if not rows:
         return rows
-    lands: dict[str, tuple[float, float | None]] = {}
-    for event in events:
-        lane = lane_of(event)
-        if event["kind"] == "land_start":
-            lands[lane] = (event["t"], None)
-        elif event["kind"] == "land_done" and lane in lands:
-            lands[lane] = (lands[lane][0], event["t"])
-    last: dict[str, list] = {}
-    for row in rows:
-        last[row[0]] = row
-    for lane, row in last.items():
-        land = lands.get(lane)
-        if land and land[1] and land[0] >= row[3]:
-            row[3] = max(row[3], land[1])
+    for event, ticket in owned(events):
+        if event["kind"] in AFTER_LANE and ticket:
+            mine = [row for row in rows if row[0] == lane_of(event) and row[1] == ticket
+                    and row[2] <= event["t"]]
+            if mine:
+                mine[-1][3] = max(mine[-1][3], event["t"])
     return rows
 
 
@@ -115,9 +156,20 @@ def segments(events: list[dict]) -> list[tuple[float, float, str, str, str | Non
     phases: dict[tuple, float] = {}
     queued: dict[str, tuple[float, str | None]] = {}
     running: dict[str, float] = {}
-    lands: dict[str, float] = {}
-    for event in events:
-        lane, kind, ticket = lane_of(event), event["kind"], ticket_of(event)
+    lands: dict[str, tuple[float, str | None]] = {}
+    marks: dict[tuple, tuple[float, str | None]] = {}
+    for event, ticket in owned(events):
+        lane, kind = lane_of(event), event["kind"]
+        if kind == "ticket_start":
+            for key in [key for key in marks if key[0] == lane]:
+                begin, cat = marks.pop(key)
+                if cat:
+                    out.append((begin, event["t"], cat, lane, key[1]))
+        if kind in LIFE and ticket:
+            before = marks.get((lane, ticket))
+            if before and before[1]:
+                out.append((before[0], event["t"], before[1], lane, ticket))
+            marks[(lane, ticket)] = (event["t"], LIFE[kind])
         if kind == "phase_start":
             phases[(lane, ticket, event.get("phase"))] = event["t"]
         elif kind == "phase_end":
@@ -142,9 +194,11 @@ def segments(events: list[dict]) -> list[tuple[float, float, str, str, str | Non
                 end = float(event.get("ended") or event["t"])
                 out.append((end - seconds, end, "own tests", lane, ticket))
         elif kind == "land_start":
-            lands[lane] = event["t"]
+            lands[lane] = (event["t"], ticket)
         elif kind == "land_done" and lane in lands:
-            out.append((lands.pop(lane), event["t"], "landing", lane, None))
+            begin, owner = lands.pop(lane)
+            if owner:
+                out.append((begin, event["t"], "landing", lane, owner))
     return out
 
 
@@ -178,12 +232,26 @@ def human(seconds: float) -> str:
     return f"{seconds:.0f}s"
 
 
+def wake_reason(text: str) -> str:
+    """Group free-text attention lines by their cause, not their lane."""
+    for key in WAKE_KEYS:
+        if re.search(key, text):
+            return key.replace("\\d+", "N")
+    return text[:40]
+
+
 def summarise(events: list[dict]) -> dict:
     rows = tickets(events)
     totals = attribute(rows, segments(events))
     total = sum(int(end) - int(start) for _, _, start, end in rows)
     live = activity(events)
     span = live[-1]["t"] - live[0]["t"] if len(live) > 1 else 0.0
+    workers = {lane_of(e) for e in live if e["kind"] == "lane_start"}
+    lane_times: dict[str, list[float]] = defaultdict(list)
+    for event in live:
+        if lane_of(event) in workers:
+            lane_times[lane_of(event)].append(event["t"])
+    lane_hours = sum(max(times) - min(times) for times in lane_times.values())
     gates = [e for e in events if e["kind"] == "gate_done"]
     lane_gates = [e for e in events if e["kind"] == "gate_lane"]
     skipped = [e for e in lane_gates if cached(e)]
@@ -191,7 +259,7 @@ def summarise(events: list[dict]) -> dict:
     wakes = Counter()
     for event in events:
         if event["kind"] == "wake":
-            wakes[str(event.get("why") or event.get("reason") or "unknown")] += 1
+            wakes[wake_reason(str(event.get("why") or event.get("reason") or "unknown"))] += 1
     buckets: dict[int, list[dict]] = defaultdict(list)
     begin = events[0]["t"] if events else 0.0
     for event in events:
@@ -208,7 +276,17 @@ def summarise(events: list[dict]) -> dict:
     return {"tickets": len(rows), "total": total, "shares": totals, "span": span,
             "gates": len(gates), "skipped": len(skipped), "preskipped": len(preskipped),
             "saved": sum(float(e.get("seconds") or 0) for e in skipped),
-            "wakes": wakes, "load": load, "waits": waits}
+            "no_ticket": max(lane_hours - total, 0.0) if workers else None, "wakes": wakes, "load": load, "waits": waits,
+            "other": other_top(events)}
+
+
+def other_top(events: list[dict]) -> str:
+    """The commands that most often hold `other` CPU, from the machine samples."""
+    sums: Counter = Counter()
+    for event in events:
+        if event["kind"] == "machine":
+            sums.update(event.get("other_top") or {})
+    return ", ".join(name for name, _ in sums.most_common(3))
 
 
 def table(head: list[str], rows: list[list]) -> str:
@@ -234,6 +312,13 @@ def report(names: list[str], summaries: list[dict]) -> str:
     rows.append(["seconds saved"] + [human(s["saved"]) for s in summaries])
     rows.append(["biggest waits"] + ["; ".join(f"{cat} {human(sec)}" for cat, sec in s["waits"]) or "-"
                                      for s in summaries])
+    rows.append(["ticket hours (summed)"] + [f"{s['total'] / 3600:.1f}" for s in summaries])
+    rows.append(["hours unexplained"] + [f"{s['shares']['unexplained'] / 3600:.1f}" for s in summaries])
+    rows.append(["hours in no ticket"] + [f"{s['no_ticket'] / 3600:.1f}" if s["no_ticket"] is not None else "-"
+                                          for s in summaries])
+    rows.append(["run span unexplained"] + [f"{s['shares']['unexplained'] / s['span']:.0%}" if s["span"] else "-"
+                                              for s in summaries])
+    rows.append(["top other CPU (summed)"] + [s["other"] or "-" for s in summaries])
     out.append(table([""] + names, rows))
     out.append("")
     rows = []

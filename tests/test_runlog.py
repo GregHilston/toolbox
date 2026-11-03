@@ -113,6 +113,55 @@ class EmitTest(Case):
         self.assertIn("load1", lines[0])
 
 
+PS = """ 600.0 /usr/bin/python3 -c import execnet.gateway_base
+ 400.0 /x/.venv/bin/python -m pytest -n 8 tests
+  50.0 uv run pytest tests
+  70.0 /usr/bin/python3 -u -c import sys;exec(eval(sys.stdin.readline()))
+  25.0 python3 -c exec(eval(sys.stdin.read()))
+  40.0 uv run build.py
+  15.0 /x/bin/python /h/toolbox/bin/pi-ask.py --session s
+ 200.0 /Applications/Godot.app/Contents/MacOS/Godot --headless
+  30.0 node /x/bin/pi --print
+  20.0 /usr/bin/ssh dungeon
+  10.0 /usr/bin/ssh dungeon
+   5.0 /bin/zsh
+   1.0 vim x
+"""
+
+
+class CpuTest(Case):
+    def fake_ps(self) -> mock._patch:
+        done = subprocess.CompletedProcess([], 0, stdout=PS)
+        return mock.patch.object(runlog.subprocess, "run", return_value=done)
+
+    def test_pytest_workers_and_children_are_named_by_their_args(self) -> None:
+        top: dict[str, float] = {}
+        with self.fake_ps():
+            cpu = runlog.cpu_by_family(top)
+        self.assertEqual(cpu["pytest"], 1120.0, cpu)
+        self.assertEqual(cpu["godot"], 200.0, cpu)
+        self.assertEqual(cpu["pi"], 30.0, cpu)
+        self.assertEqual(cpu["other"], 116.0, cpu)
+
+    def test_the_sample_lists_the_top_three_commands_inside_other(self) -> None:
+        with self.fake_ps():
+            machine = runlog.machine()
+        self.assertEqual(list(machine["other_top"]), ["uv", "ssh", "python3"], machine)
+        self.assertEqual(machine["other_top"]["uv"], 40.0)
+
+
+class GateKindTest(Case):
+    def test_a_plain_gate_is_a_worker_gate_and_a_landing_gate_stays_landing(self) -> None:
+        gateslot = load("gateslot.py")
+        os.environ["GATE_SLOT_DIR"] = str(self.root / "slots")
+        runlog.start("kinds")
+        for land in (False, True):
+            with gateslot.slot(land=land):
+                pass
+        kinds = [e["gate_kind"] for e in self.lines("kinds") if e["kind"] == "gate_queued"]
+        self.assertEqual(kinds, ["worker", "landing"])
+
+
 class ReportTest(Case):
     def write(self, run: str) -> None:
         path = self.root / "logs" / "fakerepo" / f"{run}.jsonl"
@@ -136,6 +185,147 @@ class ReportTest(Case):
         self.assertIn("17%", out, out)   # 600 s landing
         unexplained = next(line for line in out.splitlines() if line.startswith("unexplained"))
         self.assertLess(float(unexplained.split()[1].rstrip("%")), 5, out)
+
+    def test_a_ticket_runs_through_its_landing_after_the_lane_stops(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0, "phase_start", ticket="7", phase="worker"),
+            event(T0 + 600, "phase_end", ticket="7", phase="worker"),
+            event(T0 + 600, "ticket_parked", ticket="7"),
+            event(T0 + 700, "prep_start", ticket=None),
+            event(T0 + 800, "review_start", ticket="7"),
+            event(T0 + 1000, "fix_start", ticket="7"),
+            event(T0 + 1200, "ready", ticket="7"),
+            event(T0 + 1300, "land_start", ticket="7"),
+            event(T0 + 1500, "land_done", ticket="7"),
+            event(T0 + 1500, "landed", ticket="7"),
+        ]
+        summary = report.summarise(events)
+        self.assertEqual(summary["total"], 1500, summary)
+        shares = summary["shares"]
+        self.assertEqual((shares["parked"], shares["prep"], shares["review"], shares["fix"]),
+                         (100, 100, 200, 200), shares)
+        self.assertEqual((shares["ready wait"], shares["landing"]), (100, 200), shares)
+        self.assertLess(shares["unexplained"], 75, shares)
+
+    def test_a_recovered_ticket_is_not_painted_parked(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_parked", ticket="7"),
+            event(T0 + 300, "ticket_start", ticket="7"),
+            event(T0 + 300, "phase_start", ticket="7", phase="worker"),
+            event(T0 + 700, "phase_end", ticket="7", phase="worker"),
+            event(T0 + 700, "ticket_done", ticket="7"),
+        ]
+        shares = report.summarise(events)["shares"]
+        self.assertEqual((shares["parked"], shares["LLM"]), (200, 400), shares)
+        self.assertEqual(shares["unexplained"], 100, shares)
+
+    def test_an_untagged_landing_never_stretches_a_later_ticket(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_parked", ticket="7"),
+            event(T0 + 150, "ticket_start", ticket="8"),
+            event(T0 + 900, "land_start"),
+            event(T0 + 1000, "land_done"),
+            event(T0 + 1000, "ticket_done", ticket="8"),
+        ]
+        shares = report.summarise(events)["shares"]
+        self.assertEqual(shares["landing"], 0, shares)
+        self.assertEqual(shares["unexplained"], 950, shares)
+
+    def test_a_recovery_after_another_ticket_does_not_overlap_it(self) -> None:
+        events = [
+            event(T0, "lane_start"),
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_parked", ticket="7"),
+            event(T0 + 150, "ticket_start", ticket="8"),
+            event(T0 + 400, "ticket_done", ticket="8"),
+            event(T0 + 450, "ticket_start", ticket="7"),
+            event(T0 + 600, "ticket_done", ticket="7"),
+        ]
+        summary = report.summarise(events)
+        self.assertEqual(summary["total"], 550, summary)
+        self.assertEqual(summary["no_ticket"], 50, summary)
+
+    def test_resuming_while_another_row_is_open_does_not_overlap(self) -> None:
+        events = [
+            event(T0, "lane_start"),
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_parked", ticket="7"),
+            event(T0 + 100, "ticket_start", ticket="8"),
+            event(T0 + 150, "ticket_start", ticket="9"),
+            event(T0 + 200, "ticket_start", ticket="7"),
+            event(T0 + 300, "ticket_done", ticket="7"),
+        ]
+        self.assertEqual(report.summarise(events)["total"], 300)
+
+    def test_a_stray_untagged_park_keeps_the_running_ticket_open(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="8"),
+            event(T0 + 200, "ticket_parked"),
+            event(T0 + 500, "ticket_done", ticket="8"),
+        ]
+        self.assertEqual(report.summarise(events)["total"], 500)
+
+    def test_hours_in_no_ticket_never_goes_negative_and_needs_a_worker_lane(self) -> None:
+        events = [event(T0, "ticket_start", ticket="1"), event(T0 + 100, "ticket_done", ticket="1")]
+        self.assertIsNone(report.summarise(events)["no_ticket"])
+        overlap = [event(T0, "lane_start"), *events]
+        self.assertEqual(report.summarise(overlap)["no_ticket"], 0)
+
+    def test_an_untagged_prep_after_the_stop_counts_for_that_ticket(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_done", ticket="7"),
+            event(T0 + 150, "prep_start"),
+            event(T0 + 250, "review_start", ticket="7"),
+            event(T0 + 300, "ready", ticket="7"),
+        ]
+        self.assertEqual(report.summarise(events)["shares"]["prep"], 100)
+
+    def test_an_untagged_prep_needs_a_stopped_ticket(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_done", ticket="7"),
+            event(T0 + 150, "ticket_start", ticket="8"),
+            event(T0 + 200, "prep_start"),
+            event(T0 + 400, "ticket_done", ticket="8"),
+        ]
+        self.assertEqual(report.summarise(events)["shares"]["prep"], 0)
+
+    def test_an_untagged_park_does_not_close_a_later_ticket(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_done", ticket="7"),
+            event(T0 + 120, "ticket_parked"),
+            event(T0 + 150, "ticket_start", ticket="8"),
+            event(T0 + 500, "ticket_done", ticket="8"),
+        ]
+        self.assertEqual(report.summarise(events)["total"], 450)
+
+    def test_measured_gate_wait_outranks_the_ready_label(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 10, "ticket_done", ticket="7"),
+            event(T0 + 10, "ready", ticket="7"),
+            event(T0 + 20, "gate_queued", ticket="7", land=True),
+            event(T0 + 60, "gate_slot", ticket="7", land=True),
+            event(T0 + 100, "land_start", ticket="7"),
+            event(T0 + 110, "land_done", ticket="7"),
+        ]
+        shares = report.summarise(events)["shares"]
+        self.assertEqual((shares["gate wait"], shares["ready wait"]), (40, 50), shares)
+
+    def test_the_report_gives_unexplained_against_ticket_time_and_run_span(self) -> None:
+        self.write("r1")
+        out = self.printed("r1")
+        self.assertIn("hours unexplained", out)
+        self.assertIn("run span unexplained", out)
+
+    def test_wakes_group_by_cause_not_by_lane(self) -> None:
+        events = [event(T0, "wake", reason="a CONFLICT: see x"), event(T0 + 1, "wake", reason="b CONFLICT: y")]
+        self.assertEqual(report.summarise(events)["wakes"], {"CONFLICT": 2})
 
     def test_the_summary_counts_gates_cache_wakes_and_skips(self) -> None:
         self.write("r1")
