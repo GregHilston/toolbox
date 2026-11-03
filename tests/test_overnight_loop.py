@@ -503,6 +503,55 @@ class TestGate(LoopTest):
         self.assertNotIn("exit 0", (self.repo / "verify.sh").read_text())
 
 
+class TestPoorLanes(LoopTest):
+    """A lane that cannot pass is parked at once, naming its check, and spends no more."""
+
+    def gate_that_names_its_check(self) -> None:
+        (self.repo / "verify.sh").write_text(
+            "#!/bin/sh\nif [ -e BROKEN ]; then echo 'ERROR api: 3 failed'; echo 'ERROR api: 3 failed'; exit 1; fi\n")
+        self.git("commit", "-qam", "gate that names its check")
+
+    def test_the_loop_has_no_second_round_so_a_failing_worker_gate_parks_at_once(self):
+        self.issues({1: "First"})
+        self.gate_that_names_its_check()
+        out = self.run_loop("--harness", "pi", "--reviewer", "pi", FAKE_WORK_1="bad")
+        self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
+        self.assertEqual(self.roles().count("pi work"), 1, self.roles())
+        self.assertNotIn("pi fix", self.roles())
+        self.assertNotIn("pi review", self.roles())
+        self.assertIn("Failing check: `api`", self.comments(1)[-1])
+        self.assertEqual(self.comments(1)[-1].count("Failing check"), 1, "a repeated line names the check once")
+
+    def test_a_fix_round_with_no_diff_is_parked(self):
+        self.issues({1: "First"})
+        out = self.run_loop("--harness", "pi", "--reviewer", "pi", FAKE_FIX="nocommit",
+                            FAKE_REVIEW="Fix it.\nVERDICT: changes")
+        self.assertIn("overnight:parked", self.labels(1), out.stdout + out.stderr)
+        self.assertIn("the fix round changed nothing", self.comments(1)[-1])
+        self.assertIn("could not finish", self.comments(1)[-1])
+        self.assertNotIn("overnight:done", self.labels(1))
+
+
+    def test_a_no_op_fix_round_burns_no_gate(self):
+        self.issues({1: "First"})
+        (self.repo / "verify.sh").write_text("#!/bin/sh\necho run >>/dev/null; echo x >>\"$GATE_COUNT\"\n")
+        self.git("commit", "-qam", "counting gate")
+        count = Path(self.tmp.name) / "gates"
+        self.run_loop("--harness", "pi", "--reviewer", "pi", FAKE_FIX="nocommit", GATE_COUNT=str(count),
+                      FAKE_REVIEW="Fix it.\nVERDICT: changes")
+        self.assertEqual(len(count.read_text().split()), 2, "baseline and worker gate only")
+
+    def test_a_check_that_scrolled_out_of_the_last_lines_is_still_named(self):
+        self.issues({1: "First"})
+        (self.repo / "verify.sh").write_text(
+            "#!/bin/sh\nif [ -e BROKEN ]; then echo 'ERROR api: 3 failed'; "
+            "for i in $(seq 40); do echo \"ERROR format: file$i\"; done; exit 1; fi\n")
+        self.git("commit", "-qam", "noisy gate")
+        self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="bad")
+        self.assertIn("Failing check: `api`", self.comments(1)[-1])
+        self.assertIn("Failing check: `format`", self.comments(1)[-1])
+
+
 class TestEfficiency(LoopTest):
     def prompts(self) -> str:
         return Path(str(self.agent_log) + ".prompts").read_text()
