@@ -127,6 +127,29 @@ def claim_start_time() -> float:
     return at
 
 
+IMPORT_TIMEOUT = 300
+
+
+def import_godot(clone: Path) -> None:
+    """Build godot-client/.godot, so headless Godot does not hang on a fresh clone; never fatal."""
+    if not (clone / "godot-client" / "project.godot").exists():
+        return
+    godot = os.environ.get("GODOT_BIN") or "godot"
+    began = time.time()
+    try:
+        proc = subprocess.run([godot, "--headless", "--path", "godot-client", "--import"], cwd=clone,
+                              capture_output=True, text=True, timeout=IMPORT_TIMEOUT)
+        failure = f"exit {proc.returncode}: {(proc.stderr or proc.stdout).strip()[-300:]}" if proc.returncode else ""
+    except (OSError, subprocess.TimeoutExpired) as e:
+        failure = f"{type(e).__name__}: {e}"
+    seconds = time.time() - began
+    if failure:
+        print(f"lane.py: WARNING godot import FAILED in {clone} after {seconds:.0f}s ({failure}); "
+              "workers may hang on a missing godot-client/.godot", file=sys.stderr)
+    else:
+        print(f"lane.py: godot import in {clone} took {seconds:.0f}s", file=sys.stderr)
+
+
 def start(repo: Path, lane: str, label: str | None, extra: list[str], force: bool = False,
           max_lanes: int = MAX_LANES, max_load: float | None = None) -> str:
     """Clone if missing, bring it to the default branch, start the loop detached."""
@@ -149,6 +172,7 @@ def start(repo: Path, lane: str, label: str | None, extra: list[str], force: boo
     run("git", "fetch", "-q", "origin", cwd=clone)
     run("git", "checkout", "-q", branch, cwd=clone)
     run("git", "pull", "-q", "--ff-only", cwd=clone)
+    import_godot(clone)
     (clone / ".overnight").mkdir(exist_ok=True)
     exclude = Path(run("git", "rev-parse", "--git-path", "info/exclude", cwd=clone))
     exclude = exclude if exclude.is_absolute() else clone / exclude

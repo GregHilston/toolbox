@@ -6,6 +6,8 @@ gh, overnight-loop.py and ./verify.sh are stand-ins that record or answer.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import stat
@@ -109,6 +111,31 @@ class LaneCase(unittest.TestCase):
 
 
 class StartTest(LaneCase):
+    def test_imports_godot_only_when_a_project_exists(self) -> None:
+        stub = self.root / "stubs" / "godot"
+        write(stub, '#!/bin/sh\necho "$PWD $@" >> "$GODOT_LOG"\n', stat.S_IXUSR)
+        os.environ["GODOT_LOG"] = str(self.root / "godot.log")
+        os.environ["GODOT_BIN"] = str(stub)
+        clone = self.make_clone("g")
+        lane.import_godot(clone)
+        self.assertFalse((self.root / "godot.log").exists(), "no project.godot, want no import")
+        write(clone / "godot-client" / "project.godot", "")
+        lane.import_godot(clone)
+        self.assertEqual((self.root / "godot.log").read_text().strip(),
+                         f"{clone} --headless --path godot-client --import")
+
+    def test_a_failed_godot_import_warns_and_does_not_raise(self) -> None:
+        stub = self.root / "stubs" / "godot"
+        write(stub, "#!/bin/sh\necho boom >&2\nexit 3\n", stat.S_IXUSR)
+        os.environ["GODOT_BIN"] = str(stub)
+        clone = self.make_clone("g")
+        write(clone / "godot-client" / "project.godot", "")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            lane.import_godot(clone)
+        self.assertIn("FAILED", err.getvalue())
+        self.assertIn("boom", err.getvalue())
+
     def test_refuses_a_running_lane(self) -> None:
         clone = self.make_clone()
         (clone / ".overnight" / "lane.pid").write_text(f"{os.getpid()}\n")
