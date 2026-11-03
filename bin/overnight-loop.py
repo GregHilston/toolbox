@@ -308,7 +308,11 @@ def verify(args, log: Path, kind: str = "loop") -> tuple[bool, str]:
     with log.open("a") as f:
         f.write(f"\n--- verify.sh exit {code} ---\n{text}")
     runlog.emit("phase_end", phase="gate", gate_kind=kind, seconds=round(time.time() - began, 3), exit=code)
-    return code == 0, "\n".join(text.strip().splitlines()[-20:])
+    lines = text.strip().splitlines()
+    seen = set(failing_checks("\n".join(lines[-20:])))
+    # An ERROR line per violation can push a check's own line out of the tail.
+    first = {c: x for x in reversed(lines[:-20]) if (c := (failing_checks(x) or [None])[0]) and c not in seen}
+    return code == 0, "\n".join([*first.values(), *lines[-20:]])
 
 
 def failing_checks(tail: str) -> list[str]:
@@ -700,6 +704,7 @@ def work_issue(args, n: int, title: str, branch: str,
             fixed, why = (False, "it ran out of money") if broke else check(args, green, branch, log, gate_ok)
             if not broke and sh("git", "rev-parse", "HEAD") == green:
                 ok, tail = False, "the fix round changed nothing"
+                message += "\n\nThe fix agent said:\n" + run.text[-500:]
             elif fixed:
                 message = run.text[-1500:] + "\n\nAfter review:\n" + review[-800:]
             else:
