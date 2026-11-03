@@ -27,6 +27,8 @@ Run `usage-mark.py start <run-name>` as soon as the interview ends (sandbox off:
 
 After that, work autonomously. Don't ask again; make the call, note it, and put anything needing his hands, ears or judgement in a `manual` + `attended` ticket that no loop picks up.
 
+**A question must never stop the run.** `AskUserQuestion` blocks the orchestrator until Greg answers, so while it's open nothing rescues a park or starts a lane; on 2026-11-02 an unanswered pick left the swarm idle for 1h 23m with tickets waiting. Before asking mid-run, queue every lane that doesn't depend on the answer, dependents included. A decision that can wait goes on its ticket as a `manual` question, not in a blocking pick. Greg may take as long as he likes to answer, so plan for that.
+
 ## 2. Tickets
 
 - One GitHub issue per change: _What to build_ (why, with file paths and glossary words) and _Done when_ (checkboxes a test, `./verify.sh` or a capture can check). Loop workers have no display, so their _Done when_ must be test-checkable; capture checks go to a subagent.
