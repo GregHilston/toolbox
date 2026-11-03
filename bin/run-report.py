@@ -7,6 +7,9 @@ Each ticket's time is split by intervals (its phase_start/phase_end, gates,
 tests, landing), and whatever no interval covers is unexplained. "queue" is a
 work gate's wait for a slot; "gate wait" is a landing gate's. A run's last
 ticket extends to its lane's landing, so the landing is charged to it.
+"review" is the review queue plus the review run. "Hours in no ticket" is each
+lane's first-to-last event span minus the summed ticket time, so dropped
+seconds stay visible.
 """
 
 from __future__ import annotations
@@ -83,6 +86,10 @@ def activity(events: list[dict]) -> list[dict]:
 def owned(events: list[dict]) -> list[tuple[dict, str | None]]:
     """Pair each event with its ticket; an untagged one after a lane's stop takes that stopped ticket.
 
+    So prep is the stopped ticket's wait before review, counted against it.
+    An untagged event once a later ticket has started has no owner and is
+    dropped, so its time stays unexplained or falls in "hours in no ticket".
+
     A lane's stopped ticket clears at its next ticket_start, so an untagged
     event can never land on a ticket that began after it.
     """
@@ -108,6 +115,7 @@ def tickets(events: list[dict]) -> list[list]:
     rows: list[list] = []
     opened: dict[str, tuple[str | None, float]] = {}
     parked: dict[tuple[str, str | None], float] = {}
+    lane_end: dict[str, float] = {}
     for event in events:
         lane = lane_of(event)
         if event["kind"] == "ticket_start":
@@ -115,12 +123,13 @@ def tickets(events: list[dict]) -> list[list]:
                 ticket, start = opened.pop(lane)
                 rows.append([lane, ticket, start, event["t"]])
             ticket = ticket_of(event)
-            opened[lane] = (ticket, parked.pop((lane, ticket), event["t"]))
+            opened[lane] = (ticket, max(parked.pop((lane, ticket), event["t"]), lane_end.get(lane, 0.0)))
         elif event["kind"] in ("ticket_done", "ticket_parked") and lane in opened:
             if ticket_of(event) not in (None, opened[lane][0]):
                 continue
             ticket, start = opened.pop(lane)
             rows.append([lane, ticket, start, event["t"]])
+            lane_end[lane] = event["t"]
             if event["kind"] == "ticket_parked":
                 parked[(lane, ticket)] = event["t"]
     finish = activity(events)[-1]["t"] if events else 0.0
@@ -234,6 +243,11 @@ def summarise(events: list[dict]) -> dict:
     total = sum(int(end) - int(start) for _, _, start, end in rows)
     live = activity(events)
     span = live[-1]["t"] - live[0]["t"] if len(live) > 1 else 0.0
+    lane_times: dict[str, list[float]] = defaultdict(list)
+    for event in live:
+        if lane_of(event):
+            lane_times[lane_of(event)].append(event["t"])
+    lane_hours = sum(max(times) - min(times) for times in lane_times.values())
     gates = [e for e in events if e["kind"] == "gate_done"]
     lane_gates = [e for e in events if e["kind"] == "gate_lane"]
     skipped = [e for e in lane_gates if cached(e)]
@@ -258,7 +272,8 @@ def summarise(events: list[dict]) -> dict:
     return {"tickets": len(rows), "total": total, "shares": totals, "span": span,
             "gates": len(gates), "skipped": len(skipped), "preskipped": len(preskipped),
             "saved": sum(float(e.get("seconds") or 0) for e in skipped),
-            "wakes": wakes, "load": load, "waits": waits, "other": other_top(events)}
+            "no_ticket": lane_hours - total, "wakes": wakes, "load": load, "waits": waits,
+            "other": other_top(events)}
 
 
 def other_top(events: list[dict]) -> str:
@@ -295,6 +310,7 @@ def report(names: list[str], summaries: list[dict]) -> str:
                                      for s in summaries])
     rows.append(["ticket hours (summed)"] + [f"{s['total'] / 3600:.1f}" for s in summaries])
     rows.append(["hours unexplained"] + [f"{s['shares']['unexplained'] / 3600:.1f}" for s in summaries])
+    rows.append(["hours in no ticket"] + [f"{s['no_ticket'] / 3600:.1f}" for s in summaries])
     rows.append(["run span unexplained"] + [f"{s['shares']['unexplained'] / s['span']:.0%}" if s["span"] else "-"
                                               for s in summaries])
     rows.append(["top other CPU (summed)"] + [s["other"] or "-" for s in summaries])

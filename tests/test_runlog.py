@@ -234,6 +234,29 @@ class ReportTest(Case):
         self.assertEqual(shares["landing"], 0, shares)
         self.assertEqual(shares["unexplained"], 950, shares)
 
+    def test_a_recovery_after_another_ticket_does_not_overlap_it(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_parked", ticket="7"),
+            event(T0 + 150, "ticket_start", ticket="8"),
+            event(T0 + 400, "ticket_done", ticket="8"),
+            event(T0 + 450, "ticket_start", ticket="7"),
+            event(T0 + 600, "ticket_done", ticket="7"),
+        ]
+        summary = report.summarise(events)
+        self.assertEqual(summary["total"], 550, summary)
+        self.assertEqual(summary["no_ticket"], 50, summary)
+
+    def test_an_untagged_prep_after_the_stop_counts_for_that_ticket(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0 + 100, "ticket_done", ticket="7"),
+            event(T0 + 150, "prep_start"),
+            event(T0 + 250, "review_start", ticket="7"),
+            event(T0 + 300, "ready", ticket="7"),
+        ]
+        self.assertEqual(report.summarise(events)["shares"]["prep"], 100)
+
     def test_an_untagged_prep_needs_a_stopped_ticket(self) -> None:
         events = [
             event(T0, "ticket_start", ticket="7"),
