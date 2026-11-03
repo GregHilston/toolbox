@@ -20,6 +20,7 @@ GATE_SLOTS sets the count (default 2); 0 turns the queue off. Callers set
 from __future__ import annotations
 
 import fcntl
+import hashlib
 import json
 import os
 import subprocess
@@ -39,6 +40,16 @@ LOG = DIR / "gate-wait.jsonl"
 def _tree(cwd=".") -> str:
     return subprocess.run(["git", "rev-parse", "HEAD^{tree}"], cwd=cwd, capture_output=True,
                           text=True, check=True).stdout.strip()
+
+
+def tree_id(cwd=".") -> str:
+    """The checked-out content: HEAD's tree plus any tracked edits, empty outside a repo."""
+    try:
+        diff = subprocess.run(["git", "diff", "HEAD"], cwd=cwd, capture_output=True, check=True).stdout
+        head = _tree(cwd)
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+    return head[:12] + (hashlib.sha1(diff).hexdigest()[:8] if diff else "")
 
 
 def mark_passed(cwd=".") -> None:
@@ -85,7 +96,7 @@ class Gate:
 
 
 @contextmanager
-def slot(land: bool = False, poll: float = 2.0, kind: str | None = None):
+def slot(land: bool = False, poll: float = 2.0, kind: str | None = None, full: bool | None = None):
     n = int(os.environ.get("GATE_SLOTS", "2"))
     gate = Gate(land, kind or ("landing" if land else "worker"))
     gate.asked = time.time()
@@ -105,6 +116,7 @@ def slot(land: bool = False, poll: float = 2.0, kind: str | None = None):
             else:
                 time.sleep(poll)
     gate.got = time.time()
+    tree = tree_id()
     runlog.emit("gate_slot", wait=round(gate.got - gate.asked, 3), land=land, gate_kind=gate.kind)
     try:
         yield gate
@@ -113,7 +125,11 @@ def slot(land: bool = False, poll: float = 2.0, kind: str | None = None):
             held.close()
         if n > 0:
             record(kind="gate", cwd=os.getcwd(), land=land, asked=gate.asked, got=gate.got, ended=time.time())
-        runlog.emit("gate_done", seconds=round(time.time() - gate.got, 3), exit=gate.code, gate_kind=gate.kind)
+        extra = {"tree": tree} if tree else {}
+        if full is not None:
+            extra["full"] = full
+        runlog.emit("gate_done", seconds=round(time.time() - gate.got, 3), exit=gate.code, gate_kind=gate.kind,
+                    **extra)
 
 
 def main(args: list[str]) -> int:
@@ -128,7 +144,7 @@ def main(args: list[str]) -> int:
     cmd = args[args.index("--") + 1:] if "--" in args else []
     if not cmd:
         sys.exit("usage: gateslot.py [--land] [--kind K] -- cmd... | gateslot.py --report [hours]")
-    with slot(land, kind=kind) as gate:
+    with slot(land, kind=kind, full=cmd == ["./verify.sh"]) as gate:
         gate.code = subprocess.run(cmd).returncode
         code = gate.code
     # A partial gate or dirty tree proves nothing about HEAD.

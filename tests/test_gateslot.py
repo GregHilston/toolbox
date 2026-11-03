@@ -101,6 +101,18 @@ class SlotCase(unittest.TestCase):
         gateslot.main(["--", "./verify.sh"])
         self.assertFalse(gateslot.already_passed(), "a dirty tree was marked")
 
+    def test_the_gate_event_carries_the_tree_and_whether_the_whole_gate_ran(self) -> None:
+        self.repo()
+        runlog = load("runlog.py")
+        runlog.start("tree")
+        gateslot.main(["--", "./verify.sh"])
+        gateslot.main(["--", "./verify.sh", "api"])
+        done = [json.loads(line) for line in runlog.log_path("tree").read_text().splitlines()
+                if '"gate_done"' in line]
+        self.assertEqual([e["full"] for e in done], [True, False], done)
+        self.assertEqual(done[0]["tree"], done[1]["tree"], done)
+        self.assertEqual(len(done[0]["tree"]), 12, done)
+
     def test_a_failed_gate_leaves_no_mark(self) -> None:
         repo = self.repo()
         (repo / "verify.sh").write_text("#!/bin/sh\nexit 1\n")

@@ -21,7 +21,7 @@ Read the repo's `CLAUDE.md`, its design and ADR docs, its glossary, `docs/orches
 
 Tickets labelled `next-session` were queued by the last session for you: start there, relabelling each into a lane.
 
-Before any other work, read the last run's throughput numbers (`gateslot.py --report`, and `run-report.py` once it exists), name the biggest waits, hypothesise a fix for each, and ticket it first. Throughput decides how much gets done, and disk is cheap: if a question about a run can't be answered from the logs, the fix is more logging (Greg, 2026-11-02).
+Before any other work, read the last run's throughput numbers (`gateslot.py --report`, and `run-report.py <run>`), name the biggest waits, hypothesise a fix for each, and ticket it first. Throughput decides how much gets done, and disk is cheap: if a question about a run can't be answered from the logs, the fix is more logging (Greg, 2026-11-02).
 
 Run `usage-mark.py start <run-name>` as soon as the interview ends (sandbox off: it writes `~/.cache/usage-mark/`). Paste the table from `usage-mark.py report <run-name>` into every status update and the final report: Greg wants Claude, DeepSeek API and Go tokens and cost each time.
 
@@ -135,6 +135,7 @@ A handoff that suggests the next `/swarm` gives the prompt in a code block that 
 
 Hand off only when Greg asks. Then stop taking new work and:
 
+0. Run `run-report.py <run>` (add `--since <epoch>` when the log is shared with an older run, `--pilot <pilot dir>` for a run whose pilot logged no queue times). Name the biggest waits from its ranked table with their minutes, and ticket a fix for each before the handoff. A question it cannot answer is a ticket for more logging.
 1. Write the handoff (Greg's "Ending a chat" rules in `~/.claude/CLAUDE.md`): lane state, what is parked, what Greg must do. Let it end with the exact first message for the next chat in a fenced code block; `orch-next.py` sends that block, the last one in the file, and refuses a handoff with none. The message starts `/swarm ` and says to resume from the handoff.
 2. Run `orch-next.py <handoff> --repo <repo>`. It starts the session below with that message. The new session has no context: it reads lane state from `lane.py status`, `.git/land/` and the handoff. Check the repo's lanes and watcher survive (they are separate processes) and re-arm the watcher in the new session.
 3. Stop. Do not start more lanes or reviews in the old session. `orch-next.py` refuses while an earlier successor still runs.

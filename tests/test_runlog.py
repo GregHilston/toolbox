@@ -162,6 +162,72 @@ class GateKindTest(Case):
         self.assertEqual(kinds, ["worker", "landing"])
 
 
+class LifecycleTest(unittest.TestCase):
+    """The per-ticket phase split, gate counts and ranked waits come from the run log alone."""
+
+    def events(self) -> list[dict]:
+        def ev(t: float, kind: str, **f) -> dict:
+            return {"t": T0 + t, "kind": kind, "lane": f.pop("lane", "a"), "ticket": f.pop("ticket", None),
+                    "worktree": f.pop("worktree", "/home/gridkeep-a"), **f}
+        return [
+            ev(0, "lane_queued", lane="b", ticket=None, after="a"),
+            ev(0, "lane_queued"),
+            ev(60, "lane_start"),
+            ev(60, "ticket_start", ticket="1"),
+            ev(600, "gate_done", ticket="1", gate_kind="worker", seconds=100, tree="t1", worktree="/h/gridkeep-a"),
+            ev(660, "ticket_done", ticket="1"),
+            ev(720, "review_start", ticket="1"),
+            ev(900, "fix_start", ticket="1"),
+            ev(1000, "ready", ticket="1"),
+            ev(1060, "land_start", ticket="1", batch="l-a-1", source="pilot"),
+            ev(1100, "gate_done", lane=None, gate_kind="landing", seconds=100, tree="t2",
+               worktree="/h/gridkeep-worktrees/l-a-1"),
+            ev(1160, "landed", ticket="1", ok=True),
+            ev(1170, "lane_start", lane="b"),
+            ev(1170, "ticket_start", lane="b", ticket="2"),
+            ev(1500, "ticket_parked", lane="b", ticket="2"),
+            ev(1600, "lane_state", lane="b", ticket="2", state="hold"),
+            ev(2000, "land_start", lane="b", ticket="2", batch="l-b-2", source="pilot"),
+            ev(2060, "gate_done", lane=None, gate_kind="landing", seconds=60, tree="t3",
+               worktree="/h/gridkeep-worktrees/l-b-2"),
+            ev(2100, "gate_done", lane=None, gate_kind="landing", seconds=60, tree="t3",
+               worktree="/h/gridkeep-worktrees/l-b-2"),
+            ev(2160, "landed", lane="b", ticket="2", ok=True),
+        ]
+
+    def test_each_ticket_splits_into_phases_that_sum_to_its_wall_time(self) -> None:
+        rows = report.lifecycle(self.events())
+        one = rows["1"]["spent"]
+        self.assertEqual((one["wait"], one["worker"], one["review"], one["fix"], one["ready"], one["landing"]),
+                         (60, 600, 240, 100, 60, 100), dict(one))
+        self.assertEqual(sum(one.values()), rows["1"]["end"] - rows["1"]["start"], dict(one))
+
+    def test_a_dependency_wait_is_split_from_a_slot_wait_and_hold_from_review(self) -> None:
+        two = report.lifecycle(self.events())["2"]["spent"]
+        self.assertEqual(two["dep"], 1160, dict(two))
+        self.assertEqual((two["hold"], two["landing"]), (400, 160), dict(two))
+
+    def test_gates_count_by_where_they_ran_and_a_repeated_tree_is_a_rerun(self) -> None:
+        rows = report.lifecycle(self.events())
+        self.assertEqual(dict(rows["1"]["gates"]), {"worker": 1, "landing": 1})
+        self.assertEqual((rows["2"]["dup"], rows["2"]["dup_s"]), (1, 60), rows["2"])
+
+    def test_the_ranked_waits_name_the_biggest_first_with_a_fix(self) -> None:
+        out = report.ranked_waits(report.lifecycle(self.events()))
+        first = out.splitlines()[2].split()
+        self.assertEqual(first[:3], ["1", "19", "dependency"], out)
+        self.assertIn("drop it unless", out)
+
+    def test_a_pilot_log_gives_queue_times_and_holds_for_an_old_run(self) -> None:
+        d = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: [f.unlink() for f in d.iterdir()] or d.rmdir())
+        (d / "pilot.log").write_text("06:00:00 added x-1 from queue\n06:30:00 x-1 -> hold\n"
+                                     "06:31:00 ATTENTION y-2 waits: x-1 is hold\n06:32:00 added y-2 from queue\n")
+        found = report.pilot_log_events(d / "pilot.log", 1_000_000.0)
+        self.assertEqual([e["kind"] for e in found], ["lane_queued", "lane_state", "lane_queued"], found)
+        self.assertEqual(found[2]["after"], "x-1", found)
+
+
 class ReportTest(Case):
     def write(self, run: str) -> None:
         path = self.root / "logs" / "fakerepo" / f"{run}.jsonl"
