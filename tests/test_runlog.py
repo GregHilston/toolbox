@@ -117,6 +117,7 @@ PS = """ 600.0 /usr/bin/python3 -c import execnet.gateway_base
  400.0 /x/.venv/bin/python -m pytest -n 8 tests
   50.0 uv run pytest tests
   70.0 /usr/bin/python3 -u -c import sys;exec(eval(sys.stdin.readline()))
+  25.0 python3 -c exec(eval(sys.stdin.read()))
   40.0 uv run build.py
   15.0 /x/bin/python /h/toolbox/bin/pi-ask.py --session s
  200.0 /Applications/Godot.app/Contents/MacOS/Godot --headless
@@ -140,12 +141,12 @@ class CpuTest(Case):
         self.assertEqual(cpu["pytest"], 1120.0, cpu)
         self.assertEqual(cpu["godot"], 200.0, cpu)
         self.assertEqual(cpu["pi"], 30.0, cpu)
-        self.assertEqual(cpu["other"], 91.0, cpu)
+        self.assertEqual(cpu["other"], 116.0, cpu)
 
     def test_the_sample_lists_the_top_three_commands_inside_other(self) -> None:
         with self.fake_ps():
             machine = runlog.machine()
-        self.assertEqual(list(machine["other_top"]), ["uv", "ssh", "python"], machine)
+        self.assertEqual(list(machine["other_top"]), ["uv", "ssh", "python3"], machine)
         self.assertEqual(machine["other_top"]["uv"], 40.0)
 
 
