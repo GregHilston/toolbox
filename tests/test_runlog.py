@@ -173,13 +173,29 @@ class ReportTest(Case):
             event(T0, "phase_end", ticket=None, phase="smoke", cost=0.99, tokens=9),
         ]
         cost = report.summarise(events)["cost"]
-        self.assertEqual(cost["landed"], (1, 0.15, 1500))
-        self.assertEqual(cost["parked"], (1, 0.5, 5000))
+        self.assertEqual(cost["landed"], (1, 0.15, 1500, 1))
+        self.assertEqual(cost["parked"], (1, 0.5, 5000, 1))
         out = report.report(["r1"], [report.summarise(events)])
         line = {x.split("  ")[0]: x for x in out.splitlines()}
         self.assertIn("$0.15", line["list $/landed ticket"], out)
         self.assertIn("$0.50", line["list $/parked ticket"], out)
         self.assertIn("1.5k", line["tokens/landed ticket"], out)
+
+    def test_a_plain_loop_run_counts_ticket_done_once_and_averages_over_priced_tickets(self) -> None:
+        events = [
+            event(T0, "phase_end", ticket="1", phase="worker", cost=0.20, tokens=2000),
+            event(T0, "ticket_done", ticket="1"),
+            event(T0, "ticket_parked", ticket="1", why="x"),
+            event(T0, "landed", ticket="1"),
+            event(T0, "ticket_done", ticket="2"),
+        ]
+        cost = report.summarise(events)["cost"]
+        self.assertEqual(cost["landed"], (2, 0.2, 2000, 1))
+        self.assertEqual(cost["parked"][0], 0)
+        out = report.report(["r1"], [report.summarise(events)])
+        line = {x.split("  ")[0]: x for x in out.splitlines()}
+        self.assertIn("$0.20", line["list $/landed ticket"], out)
+        self.assertIn("1 of 2", line["landed tickets"], out)
 
     def test_a_run_with_no_costs_prints_no_cost_rows(self) -> None:
         self.write("r1")

@@ -178,8 +178,10 @@ def human(seconds: float) -> str:
     return f"{seconds:.0f}s"
 
 
-def ticket_costs(events: list[dict]) -> dict[str, tuple[int, float, int]]:
-    """(tickets, list-price dollars, tokens) summed over each outcome's tickets.
+def ticket_costs(events: list[dict]) -> dict[str, tuple[int, float, int, int]]:
+    """(tickets, list-price dollars, tokens, tickets with cost) per outcome.
+
+    A ticket is landed on a pilot `landed` or a loop `ticket_done`.
 
     Go quota is one shared weekly percentage, so per-ticket cost is the
     phases' own list-price figures.
@@ -193,14 +195,14 @@ def ticket_costs(events: list[dict]) -> dict[str, tuple[int, float, int]]:
         if event["kind"] in ("phase_end", "lane_cost"):
             spent[ticket][0] += float(event.get("cost") or 0)
             spent[ticket][1] += int(event.get("tokens") or 0)
-        elif event["kind"] == "landed":
+        elif event["kind"] in ("landed", "ticket_done"):
             landed.add(ticket)
         elif event["kind"] == "ticket_parked":
             parked.add(ticket)
     out = {}
     for name, group in (("landed", landed), ("parked", parked - landed)):
         rows = [spent[t] for t in group if t in spent]
-        out[name] = (len(group), round(sum(r[0] for r in rows), 4), int(sum(r[1] for r in rows)))
+        out[name] = (len(group), round(sum(r[0] for r in rows), 4), int(sum(r[1] for r in rows)), len(rows))
     return out
 
 
@@ -252,14 +254,15 @@ def compact(tokens: float) -> str:
 
 
 def cost_block(names: list[str], summaries: list[dict]) -> str:
-    if not any(c for s in summaries for _, c, _ in s["cost"].values()):
+    if not any(c for s in summaries for _, c, _, _ in s["cost"].values()):
         return ""
     rows = []
     for outcome in ("landed", "parked"):
         stats = [s["cost"][outcome] for s in summaries]
-        rows.append([f"{outcome} tickets"] + [str(n) for n, _, _ in stats])
-        rows.append([f"list $/{outcome} ticket"] + [f"${c / n:.2f}" if n else "-" for n, c, _ in stats])
-        rows.append([f"tokens/{outcome} ticket"] + [compact(t / n) if n else "-" for n, _, t in stats])
+        rows.append([f"{outcome} tickets"] + [f"{n} ({k} of {n} priced)" if k < n else str(n)
+                                              for n, _, _, k in stats])
+        rows.append([f"list $/{outcome} ticket"] + [f"${c / k:.2f}" if k else "-" for _, c, _, k in stats])
+        rows.append([f"tokens/{outcome} ticket"] + [compact(t / k) if k else "-" for _, _, t, k in stats])
     return table([""] + names, rows)
 
 
