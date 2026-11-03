@@ -69,7 +69,9 @@ down. Work read-only by default: diagnose, then propose a fix and ask before act
   `https://<name>.grehg2.xyz`, never the public project. Check it with `lab-alerts` and
   `curl -sS -o /dev/null -w '%{http_code}' <url>`. Never use a public status site.
 - Runbooks live in `~/Git/home-lab/docs/runbooks/`; `README.md` there is the index.
-  Read the matching runbook before you run anything.
+  Read the matching runbook before you run anything. A named alert ("Exporter down")
+  has one: read `~/Git/home-lab/docs/runbooks/<slug>.md` first, even when nothing is firing now.
+- Weather: run `weather.py` (the `weather` skill). Never web search for it.
 - Run `hostname` if unsure where you are. Watchdog and backup logs live on dungeon:
   on moria `ssh dungeon tail -n 50 ~/Library/Logs/<name>.log`; on dungeon run the
   commands directly, without `ssh dungeon`. Never put load on dungeon: no builds,
@@ -78,9 +80,9 @@ down. Work read-only by default: diagnose, then propose a fix and ask before act
   "possibly", and name the check that would confirm it. Two alerts firing together do
   not prove one caused the other.
 - The default model, `litellm/local-small`, goes through the gateway on dungeon. If
-  dungeon or DNS is down, it fails. pi switches to this host's local oMLX model
-  (localhost:8000; 262k window on moria, the 64k `:lab` profile on dungeon) at start
-  when the gateway is down. To
+  dungeon or DNS is down, it fails. pi switches to this host's local oMLX model,
+  `omlx/Qwen3.6-35B-A3B-4bit` at localhost:8000 (262k window on moria; on dungeon the
+  64k `Qwen3.6-35B-A3B-4bit:lab` profile), at start when the gateway is down. To
   switch by hand, Greg types `/model`; it is not a shell command.
 - Every `litellm/*` model, `litellm/cloud` included, goes through dungeon.
   `litellm/cloud` and `deepseek/*` also need the internet.

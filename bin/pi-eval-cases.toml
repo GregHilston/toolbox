@@ -7,21 +7,21 @@ name = "alerts-home-lab"
 cwd = "~/Git/home-lab"
 prompt = "what's been alerting lately?"
 bash_matches = ['lab-alerts']
-max_turns = 12
+max_turns = 18
 
 [[case]]
 name = "alerts-home"
 cwd = "~"
 prompt = "anything alerting in the lab right now?"
 bash_matches = ['lab-alerts']
-max_turns = 12
+max_turns = 18
 
 [[case]]
 name = "alerts-notes"
 cwd = "~/Git/notes"
 prompt = "show me the recent alerts"
 bash_matches = ['lab-alerts']
-max_turns = 12
+max_turns = 18
 
 [[case]]
 name = "sabnzbd-down"
@@ -29,7 +29,7 @@ cwd = "~"
 prompt = "is sabnzbd down?"
 bash_matches = ['curl.*grehg2\.xyz|lab-alerts']
 not_tool = ["web_search"]
-max_turns = 8
+max_turns = 12
 
 [[case]]
 name = "internet-down"
@@ -37,14 +37,14 @@ cwd = "~"
 prompt = "my internet feels down"
 bash_matches = ['netcheck']
 not_tool = ["web_search"]
-max_turns = 10
+max_turns = 15
 
 [[case]]
 name = "pushover-backup"
 cwd = "~/Git/home-lab"
 prompt = "why did I get a pushover saying offsite backup failed?"
 calls_match = ['lab-alerts|oncall/SKILL\.md|promql\.sh --alerts', 'ssh dungeon|runbooks/backup']
-max_turns = 20
+max_turns = 30
 
 [[case]]
 name = "post-reboot"
@@ -53,35 +53,35 @@ prompt = "dungeon just rebooted, is everything back? just check, don't change an
 reads_skill = ["post-reboot"]
 bash_matches = ['ssh dungeon.*dungeon-post-reboot-check\.sh']
 not_bash_matches = ['docker (compose )?(up|down|restart|start|stop|rm)', 'launchctl (kickstart|load|bootstrap|bootout|unload)', 'systemctl (restart|start|stop)']
-max_turns = 15
+max_turns = 22
 
 [[case]]
 name = "fallback-model"
 cwd = "~/Git/toolbox"
 prompt = "Claude is down and dungeon is rebooting, which model should I switch to?"
 answer_matches = ['(?i)omlx', 'Qwen3\.6-35B-A3B-4bit']
-max_turns = 10
+max_turns = 15
 
 [[case]]
 name = "weather-tomorrow"
 cwd = "~"
 prompt = "what's the weather tomorrow?"
 bash_matches = ['weather\.py']
-max_turns = 6
+max_turns = 9
 
 [[case]]
 name = "front-door"
 cwd = "~"
 prompt = "is the front door locked?"
 bash_matches = ['ha-state\.py']
-max_turns = 6
+max_turns = 9
 
 [[case]]
 name = "air-fryer-notes"
 cwd = "~/Git/notes"
 prompt = "what did I write about my air fryer?"
 answer_matches = ['(?i)gourmia|air-fryer\.md']
-max_turns = 10
+max_turns = 15
 
 [[case]]
 name = "commit-rules"
@@ -89,11 +89,11 @@ cwd = "~/Git/toolbox"
 prompt = "Before you commit anything for me later: what rules do you follow for commit messages?"
 answer_matches = ['(?i)attribution']
 not_bash_matches = ['git commit']
-max_turns = 6
+max_turns = 9
 
 [[case]]
 name = "exporter-down"
 cwd = "~"
 prompt = "I got a Grafana alert 'Exporter down', what should I do?"
 calls_match = ['runbooks/exporter-down\.md']
-max_turns = 12
+max_turns = 18

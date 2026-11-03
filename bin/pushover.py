@@ -19,6 +19,7 @@ def send_pushover_notification(
     message: str = "Hello World",
     pushover_user_key: str | None = None,
     pushover_work_api_key: str | None = None,
+    priority: int = 0,
 ):
     if not pushover_user_key:
         pushover_user_key = os.environ.get("PUSHOVER_USER_KEY")
@@ -39,6 +40,7 @@ def send_pushover_notification(
             "user": pushover_user_key,
             "token": pushover_work_api_key,
             "message": message,
+            "priority": priority,
         },
     )
 
@@ -46,7 +48,8 @@ def send_pushover_notification(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Send a Pushover notification")
     parser.add_argument("--message", "-m", type=str, required=True)
+    parser.add_argument("--priority", type=int, default=0, choices=[-2, -1, 0])
     args = parser.parse_args()
 
-    response = send_pushover_notification(args.message)
+    response = send_pushover_notification(args.message, priority=args.priority)
     print(response)

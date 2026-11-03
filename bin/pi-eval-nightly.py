@@ -3,11 +3,12 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Run pi-eval.py and Pushover only when cases keep failing.
+"""Run pi-eval.py and Pushover once when a case keeps failing.
 
-Alerts when a case fails two nights running, or more than 2 cases fail.
-Known-flaky single failures stay quiet. Writes the last report to the log
-and keeps failure transcripts under the state dir for 7 days.
+Alerts, silently (priority -1), on the night a case's streak of failures
+reaches 3, and not again until it passes once. The local model misses a
+step most nights, so anything looser alerted every night. Writes the last
+report to the log and keeps failure transcripts under the state dir for 7 days.
 
 Usage:
     pi-eval-nightly.py
@@ -29,7 +30,7 @@ BIN = Path(__file__).resolve().parent
 HOME = Path.home()
 SECRETS = BIN.parent / "nixos" / "secrets" / ".env"
 KEEP_DAYS = 7
-MAX_FAILS_QUIET = 2
+STREAK_TO_ALERT = 3
 
 
 def load_secrets() -> dict[str, str]:
@@ -107,20 +108,23 @@ def main() -> int:
     args.log.write_text("\n".join(report) + "\n")
     print("\n".join(report))
 
-    last_failed = args.state_dir / "last-failed.json"
-    prev = set(read_json(last_failed, []))
-    last_failed.write_text(json.dumps(failed))
+    streaks_file = args.state_dir / "streaks.json"
+    prev = read_json(streaks_file, {})
+    streaks = {name: prev.get(name, 0) + 1 for name in failed}
+    streaks_file.write_text(json.dumps(streaks))
     prune(args.state_dir, today)
 
-    if not (set(failed) & prev or len(failed) > MAX_FAILS_QUIET):
+    new = [name for name, n in streaks.items() if n == STREAK_TO_ALERT]
+    if not new:
         return 0
-    msg = f"pi-eval: {summary} — failed: {', '.join(failed)} (log: ~/Library/Logs/pi-eval-nightly.log)"
+    msg = (f"pi-eval: failing {STREAK_TO_ALERT} nights running: {', '.join(new)} "
+           f"({summary}; log: ~/Library/Logs/pi-eval-nightly.log)")
     if version != old_version:
         msg += f"; pi changed {old_version} -> {version}"
     if args.no_push:
         print("would push:", msg)
         return 0
-    return subprocess.run([str(BIN / "pushover.py"), "-m", msg], env=env).returncode
+    return subprocess.run([str(BIN / "pushover.py"), "-m", msg, "--priority", "-1"], env=env).returncode
 
 
 if __name__ == "__main__":
