@@ -443,6 +443,19 @@ most nights, so a looser rule alerted nightly (2026-10-23 to 11-03). Each case's
 `max_turns` leaves room for that. Report: `~/Library/Logs/pi-eval-nightly.log`;
 failure transcripts: `~/.cache/pi-eval/<date>/`.
 
+What the local model obeys, learned 2026-11-03:
+
+- **A tool's own description beats `AGENTS.md`.** web_search said "current facts", so
+  pi searched for weather 3/3 despite an `AGENTS.md` rule; the exception in the tool
+  fixed it.
+- **A rule under the fallback-mode heading reads as conditional.** Put an
+  always-on rule in an always-on section.
+- **A case that matches doc text breaks when the doc is reworded.** `fallback-model`
+  failed every night after `AGENTS.md` dropped the model name. Grep the cases before
+  rewording.
+- Test a behaviour fix with `--only <case>` three times before merging; one pass is
+  luck.
+
 ### The review loop is practically free — use it every time
 
 The single highest-value habit found in the 2026-08-27 run, and the one most
