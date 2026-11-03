@@ -113,6 +113,51 @@ class EmitTest(Case):
         self.assertIn("load1", lines[0])
 
 
+PS = """ 600.0 /usr/bin/python3 -c import execnet.gateway_base
+ 400.0 /x/.venv/bin/python -m pytest -n 8 tests
+  50.0 uv run pytest tests
+ 200.0 /Applications/Godot.app/Contents/MacOS/Godot --headless
+  30.0 node /x/bin/pi --print
+  20.0 /usr/bin/ssh dungeon
+  10.0 /usr/bin/ssh dungeon
+   5.0 /bin/zsh
+   1.0 vim x
+"""
+
+
+class CpuTest(Case):
+    def fake_ps(self) -> mock._patch:
+        done = subprocess.CompletedProcess([], 0, stdout=PS)
+        return mock.patch.object(runlog.subprocess, "run", return_value=done)
+
+    def test_pytest_workers_and_children_are_named_by_their_args(self) -> None:
+        top: dict[str, float] = {}
+        with self.fake_ps():
+            cpu = runlog.cpu_by_family(top)
+        self.assertEqual(cpu["pytest"], 1050.0, cpu)
+        self.assertEqual(cpu["godot"], 200.0, cpu)
+        self.assertEqual(cpu["pi"], 30.0, cpu)
+        self.assertEqual(cpu["other"], 36.0, cpu)
+
+    def test_the_sample_lists_the_top_three_commands_inside_other(self) -> None:
+        with self.fake_ps():
+            machine = runlog.machine()
+        self.assertEqual(list(machine["other_top"]), ["ssh", "zsh", "vim"], machine)
+        self.assertEqual(machine["other_top"]["ssh"], 30.0)
+
+
+class GateKindTest(Case):
+    def test_a_plain_gate_is_a_worker_gate_and_a_landing_gate_stays_landing(self) -> None:
+        gateslot = load("gateslot.py")
+        os.environ["GATE_SLOT_DIR"] = str(self.root / "slots")
+        runlog.start("kinds")
+        for land in (False, True):
+            with gateslot.slot(land=land):
+                pass
+        kinds = [e["gate_kind"] for e in self.lines("kinds") if e["kind"] == "gate_queued"]
+        self.assertEqual(kinds, ["worker", "landing"])
+
+
 class ReportTest(Case):
     def write(self, run: str) -> None:
         path = self.root / "logs" / "fakerepo" / f"{run}.jsonl"
@@ -136,6 +181,32 @@ class ReportTest(Case):
         self.assertIn("17%", out, out)   # 600 s landing
         unexplained = next(line for line in out.splitlines() if line.startswith("unexplained"))
         self.assertLess(float(unexplained.split()[1].rstrip("%")), 5, out)
+
+    def test_a_ticket_runs_through_its_landing_after_the_lane_stops(self) -> None:
+        events = [
+            event(T0, "ticket_start", ticket="7"),
+            event(T0, "phase_start", ticket="7", phase="worker"),
+            event(T0 + 600, "phase_end", ticket="7", phase="worker"),
+            event(T0 + 600, "ticket_parked", ticket="7"),
+            event(T0 + 700, "prep_start", ticket=None),
+            event(T0 + 800, "review_start", ticket="7"),
+            event(T0 + 1000, "fix_start", ticket="7"),
+            event(T0 + 1200, "ready", ticket="7"),
+            event(T0 + 1300, "land_start", ticket="7"),
+            event(T0 + 1500, "land_done", ticket="7"),
+            event(T0 + 1500, "landed", ticket="7"),
+        ]
+        summary = report.summarise(events)
+        self.assertEqual(summary["total"], 1500, summary)
+        shares = summary["shares"]
+        self.assertEqual((shares["parked"], shares["prep"], shares["review"], shares["fix"]),
+                         (100, 100, 200, 200), shares)
+        self.assertEqual((shares["ready wait"], shares["landing"]), (100, 200), shares)
+        self.assertLess(shares["unexplained"], 75, shares)
+
+    def test_wakes_group_by_cause_not_by_lane(self) -> None:
+        events = [event(T0, "wake", reason="a CONFLICT: see x"), event(T0 + 1, "wake", reason="b CONFLICT: y")]
+        self.assertEqual(report.summarise(events)["wakes"], {"CONFLICT": 2})
 
     def test_the_summary_counts_gates_cache_wakes_and_skips(self) -> None:
         self.write("r1")

@@ -12,6 +12,7 @@ ticket extends to its lane's landing, so the landing is charged to it.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -19,9 +20,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import runlog
 
-CATS = ["queue", "LLM", "own tests", "gate wait", "gate run", "review", "fix", "landing", "unexplained"]
-PRIORITY = {"LLM": 1, "fix": 2, "review": 3, "landing": 4, "queue": 5, "gate wait": 6,
-            "gate run": 7, "own tests": 8}
+CATS = ["queue", "parked", "prep", "LLM", "own tests", "gate wait", "gate run", "review", "fix", "ready wait", "landing", "unexplained"]
+PRIORITY = {"LLM": 1, "prep": 1, "parked": 1, "ready wait": 1, "fix": 2, "review": 3, "landing": 4, "queue": 5,
+            "gate wait": 6, "gate run": 7, "own tests": 8}
+LIFE = {"ticket_parked": "parked", "prep_start": "prep", "review_start": "review", "fix_start": "fix", "ready": "ready wait",
+        "land_start": None}
+WAKE_KEYS = ["CONFLICT", "produced no commits", "parked", "did not land", "removes more assertions",
+             "ALL SETTLED", "waits:", "fix \\d+", "died", "stopped"]
 PHASE_CAT = {"plan": "LLM", "worker": "LLM", "retry": "LLM", "reviewer": "review",
              "review": "review", "fix": "fix"}
 
@@ -83,7 +88,7 @@ def tickets(events: list[dict]) -> list[list]:
                 ticket, start = opened.pop(lane)
                 rows.append([lane, ticket, start, event["t"]])
             opened[lane] = (ticket_of(event), event["t"])
-        elif event["kind"] == "ticket_done" and lane in opened:
+        elif event["kind"] in ("ticket_done", "ticket_parked") and lane in opened:
             ticket, start = opened.pop(lane)
             rows.append([lane, ticket, start, event["t"]])
     finish = activity(events)[-1]["t"] if events else 0.0
@@ -92,20 +97,12 @@ def tickets(events: list[dict]) -> list[list]:
     rows.sort(key=lambda row: row[2])
     if not rows:
         return rows
-    lands: dict[str, tuple[float, float | None]] = {}
     for event in events:
-        lane = lane_of(event)
-        if event["kind"] == "land_start":
-            lands[lane] = (event["t"], None)
-        elif event["kind"] == "land_done" and lane in lands:
-            lands[lane] = (lands[lane][0], event["t"])
-    last: dict[str, list] = {}
-    for row in rows:
-        last[row[0]] = row
-    for lane, row in last.items():
-        land = lands.get(lane)
-        if land and land[1] and land[0] >= row[3]:
-            row[3] = max(row[3], land[1])
+        if event["kind"] in LIFE or event["kind"] in ("land_done", "land_batch", "landed"):
+            mine = [row for row in rows if row[0] == lane_of(event) and ticket_of(event) in (None, row[1])
+                    and row[2] <= event["t"]]
+            if mine:
+                mine[-1][3] = max(mine[-1][3], event["t"])
     return rows
 
 
@@ -116,8 +113,19 @@ def segments(events: list[dict]) -> list[tuple[float, float, str, str, str | Non
     queued: dict[str, tuple[float, str | None]] = {}
     running: dict[str, float] = {}
     lands: dict[str, float] = {}
+    marks: dict[tuple, tuple[float, str | None]] = {}
+    current: dict[str, str | None] = {}
     for event in events:
         lane, kind, ticket = lane_of(event), event["kind"], ticket_of(event)
+        if kind == "ticket_start":
+            current[lane] = ticket
+        elif kind in LIFE and not ticket:
+            ticket = current.get(lane)
+        if kind in LIFE and ticket:
+            before = marks.get((lane, ticket))
+            if before and before[1]:
+                out.append((before[0], event["t"], before[1], lane, ticket))
+            marks[(lane, ticket)] = (event["t"], LIFE[kind])
         if kind == "phase_start":
             phases[(lane, ticket, event.get("phase"))] = event["t"]
         elif kind == "phase_end":
@@ -178,6 +186,14 @@ def human(seconds: float) -> str:
     return f"{seconds:.0f}s"
 
 
+def wake_reason(text: str) -> str:
+    """Group free-text attention lines by their cause, not their lane."""
+    for key in WAKE_KEYS:
+        if re.search(key, text):
+            return key.replace("\\d+", "N")
+    return text[:40]
+
+
 def summarise(events: list[dict]) -> dict:
     rows = tickets(events)
     totals = attribute(rows, segments(events))
@@ -191,7 +207,7 @@ def summarise(events: list[dict]) -> dict:
     wakes = Counter()
     for event in events:
         if event["kind"] == "wake":
-            wakes[str(event.get("why") or event.get("reason") or "unknown")] += 1
+            wakes[wake_reason(str(event.get("why") or event.get("reason") or "unknown"))] += 1
     buckets: dict[int, list[dict]] = defaultdict(list)
     begin = events[0]["t"] if events else 0.0
     for event in events:
@@ -208,7 +224,16 @@ def summarise(events: list[dict]) -> dict:
     return {"tickets": len(rows), "total": total, "shares": totals, "span": span,
             "gates": len(gates), "skipped": len(skipped), "preskipped": len(preskipped),
             "saved": sum(float(e.get("seconds") or 0) for e in skipped),
-            "wakes": wakes, "load": load, "waits": waits}
+            "wakes": wakes, "load": load, "waits": waits, "other": other_top(events)}
+
+
+def other_top(events: list[dict]) -> str:
+    """The commands that most often hold `other` CPU, from the machine samples."""
+    sums: Counter = Counter()
+    for event in events:
+        if event["kind"] == "machine":
+            sums.update(event.get("other_top") or {})
+    return ", ".join(name for name, _ in sums.most_common(3))
 
 
 def table(head: list[str], rows: list[list]) -> str:
@@ -234,6 +259,7 @@ def report(names: list[str], summaries: list[dict]) -> str:
     rows.append(["seconds saved"] + [human(s["saved"]) for s in summaries])
     rows.append(["biggest waits"] + ["; ".join(f"{cat} {human(sec)}" for cat, sec in s["waits"]) or "-"
                                      for s in summaries])
+    rows.append(["top other CPU"] + [s["other"] or "-" for s in summaries])
     out.append(table([""] + names, rows))
     out.append("")
     rows = []

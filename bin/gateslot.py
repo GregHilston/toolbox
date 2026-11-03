@@ -87,7 +87,7 @@ class Gate:
 @contextmanager
 def slot(land: bool = False, poll: float = 2.0, kind: str | None = None):
     n = int(os.environ.get("GATE_SLOTS", "2"))
-    gate = Gate(land, kind or ("landing" if land else None))
+    gate = Gate(land, kind or ("landing" if land else "worker"))
     gate.asked = time.time()
     runlog.emit("gate_queued", land=land, gate_kind=gate.kind)
     held = None

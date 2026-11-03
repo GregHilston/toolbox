@@ -109,14 +109,19 @@ def _family(command: str) -> str:
     low = command.lower()
     if "godot" in low:
         return "godot"
-    if "pytest" in low:
+    if re.search(r"pytest|execnet|xdist|multiprocessing\.(spawn|forkserver)|uv run", low):
         return "pytest"
-    if re.search(r"(^|[\s/])pi(\s|$)", command):
+    if re.search(r"(^|[\s/])pi(\s|$)|pi-coding-agent|bin/pi\b", command):
         return "pi"
     return "other"
 
 
-def cpu_by_family() -> dict[str, float]:
+def _name(command: str) -> str:
+    return Path(command.split(None, 1)[0]).name if command.split() else "?"
+
+
+def cpu_by_family(top: dict[str, float] | None = None) -> dict[str, float]:
+    """Sum CPU per family; `top` collects the command names inside other."""
     totals = {"godot": 0.0, "pytest": 0.0, "pi": 0.0, "other": 0.0}
     try:
         out = subprocess.run(["ps", "-axo", "pcpu=,args="], capture_output=True, text=True).stdout
@@ -127,7 +132,11 @@ def cpu_by_family() -> dict[str, float]:
         if len(parts) != 2:
             continue
         try:
-            totals[_family(parts[1])] += float(parts[0])
+            cpu = float(parts[0])
+            family = _family(parts[1])
+            totals[family] += cpu
+            if family == "other" and top is not None:
+                top[_name(parts[1])] = top.get(_name(parts[1]), 0.0) + cpu
         except ValueError:
             continue
     return {k: round(v, 1) for k, v in totals.items()}
@@ -185,9 +194,13 @@ def running_lanes() -> int:
 
 
 def machine() -> dict:
+    top: dict[str, float] = {}
+    cpu = cpu_by_family(top)
+    ranked = sorted(top.items(), key=lambda kv: -kv[1])[:3]
     return {
         "load1": round(os.getloadavg()[0], 2),
-        "cpu": cpu_by_family(),
+        "cpu": cpu,
+        "other_top": {k: round(v, 1) for k, v in ranked},
         "ram_free_mb": free_ram_mb(),
         "gates_held": gates_held(),
         "lanes": running_lanes(),
