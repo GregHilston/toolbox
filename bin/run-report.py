@@ -23,6 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import runlog
+import steptime
 
 CATS = ["queue", "parked", "prep", "LLM", "own tests", "gate wait", "gate run", "review", "fix", "ready wait",
         "landing", "unexplained"]
@@ -400,9 +401,56 @@ def report(names: list[str], summaries: list[dict]) -> str:
     return "\n".join(out).rstrip()
 
 
+WORKER_CATS = ["LLM thinking", "test runs", "gates", "sweeps", "other commands"]
+
+
+def worker_steps(events: list[dict]) -> dict[str, list[dict]]:
+    """Each ticket's (or lane's) timed worker steps, as steptime's lines."""
+    out: dict[str, list[dict]] = defaultdict(list)
+    for event in events:
+        if event["kind"] not in ("llm_turn", "worker_cmd"):
+            continue
+        key = ticket_of(event) or lane_of(event) or "?"
+        seconds = float(event.get("seconds") or 0)
+        if event["kind"] == "llm_turn":
+            out[key].append({"step": "llm", "seconds": seconds})
+        else:
+            out[key].append({"step": "cmd", "seconds": seconds, "cmd": str(event.get("cmd", "")),
+                             "cat": str(event.get("cat") or steptime.categorise(str(event.get("cmd", ""))))})
+    return out
+
+
+def worker_block(by_ticket: dict[str, list[dict]]) -> str:
+    """Worker time by category per ticket, then each ticket's five slowest commands."""
+    if not by_ticket:
+        return ""
+    rows, tops = [], []
+    for key, found in sorted(by_ticket.items()):
+        spent = Counter()
+        for step in found:
+            spent["LLM thinking" if step["step"] == "llm" else step["cat"]] += step["seconds"]
+        total = sum(spent.values())
+        rows.append([f"#{key}" if key.isdigit() else key, human(total)]
+                    + [f"{spent[c] / total:.0%} ({human(spent[c])})" if total else "-" for c in WORKER_CATS])
+        slow = sorted((s for s in found if s["step"] == "cmd"), key=lambda s: -s["seconds"])[:5]
+        tops.append(f"top commands, {rows[-1][0]}:")
+        tops.extend(f"  {human(s['seconds']):>5}  {s['cmd'][:100]!r}" for s in slow)
+    return "\n".join([table(["worker time", "total"] + WORKER_CATS, rows), "", *tops])
+
+
+def log_events(path: Path) -> list[dict]:
+    """A lane log's steps as run-log events, from step lines or an older raw pi stream."""
+    return [{"kind": "llm_turn" if s["step"] == "llm" else "worker_cmd", "ticket": path.stem, **s}
+            for s in steptime.steps(path.read_text(errors="replace"))]
+
+
 def main(argv: list[str]) -> int:
     if not argv:
-        sys.exit("usage: run-report.py <run> [<run> ...]")
+        sys.exit("usage: run-report.py <run> [<run> ...] | run-report.py --log <lane log>")
+    if argv[0] == "--log":
+        block = worker_block(worker_steps(log_events(Path(argv[1]))))
+        print(block or f"run-report.py: no timed steps in {argv[1]}")
+        return 0 if block else 1
     names, summaries, missing = [], [], []
     for name in argv:
         path = find_log(name)
@@ -412,10 +460,16 @@ def main(argv: list[str]) -> int:
         names.append(name)
         summaries.append(summarise(read(path)))
     for name in missing:
-        print(f"run-report.py: no log for {name} under {runlog.base_dir()}", file=sys.stderr)
+        now = runlog.current()
+        hint = (f"; this repo's current run is {now!r}, and events land there until something runs "
+                f"`runlog.py start {name}`") if now and now != name else ""
+        print(f"run-report.py: no log for {name} under {runlog.base_dir()}{hint}", file=sys.stderr)
     if not names:
         return 1
     print(report(names, summaries))
+    for name, path in zip(names, map(find_log, names)):
+        if block := worker_block(worker_steps(read(path))):
+            print(f"\n{name}\n{block}")
     return 0
 
 

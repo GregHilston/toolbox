@@ -46,6 +46,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gateslot  # noqa: E402
 import runlog  # noqa: E402
+import steptime  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 _spec = importlib.util.spec_from_file_location("preflight", HERE / "deepseek-preflight.py")
@@ -472,6 +473,7 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         # pi streams every token as a message_update: tens of MB a night.
         f.write(STREAMED.sub("", out) + (f"\n(timed out after {args.issue_minutes:g} min)\n" if code is None else ""))
     if harness == "pi":
+        log_steps(out, log)
         run = pi_result(out)
     else:
         run = claude_result(out)
@@ -481,6 +483,21 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
         wait_out_limit(log)
         return run_agent(args, harness, model, prompt, log, read_only, session, thinking, bash, phase=phase)
     return ended(run)
+
+
+def log_steps(out: str, log: Path) -> None:
+    """One timed line per worker command and LLM turn, in the issue's log and the run log."""
+    found = steptime.steps(out)
+    if not found:
+        return
+    with log.open("a") as f:
+        f.write(steptime.lines(found))
+    for step in found:
+        if step["step"] == "llm":
+            runlog.emit("llm_turn", seconds=step["seconds"])
+        else:
+            runlog.emit("worker_cmd", began=round(step["t"], 3), seconds=step["seconds"], exit=step["exit"],
+                        cat=step["cat"], cmd=step["cmd"])
 
 
 def wait_out_limit(log: Path) -> None:
