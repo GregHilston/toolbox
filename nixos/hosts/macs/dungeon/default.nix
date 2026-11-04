@@ -500,6 +500,42 @@ in {
     };
   };
 
+  # Files stuck in paperless's inbox -> node_exporter textfile; Grafana alerts.
+  # Runbook: home-lab/docs/runbooks/paperless-inbox-stuck.md.
+  launchd.user.agents.paperless-inbox-check = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/paperless-inbox-check.sh"
+      ];
+      RunAtLoad = true;
+      StartInterval = 600;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/paperless-inbox-check.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/paperless-inbox-check.log";
+    };
+  };
+
+  # Weekly document_exporter, before the 04:30 offsite job carries the export to fob.
+  # Runbook: home-lab/docs/runbooks/paperless-export-failed.md.
+  launchd.user.agents.paperless-export = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/paperless-export.sh"
+      ];
+      RunAtLoad = false;
+      StartCalendarInterval = [
+        {
+          Weekday = 0;
+          Hour = 2;
+          Minute = 30;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/paperless-export.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/paperless-export.log";
+    };
+  };
+
   # Monthly: restore from every backup repo and verify it.
   # Read-only (--no-lock); clear of 03:30 and 04:30.
   launchd.user.agents.backup-restore-drill = {
