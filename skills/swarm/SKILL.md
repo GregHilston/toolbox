@@ -50,7 +50,7 @@ lane.py stop <lane>
 
 `fetch` and `land` refuse while that lane's loop still runs (add `--force` only for a branch you know is finished), refuse a dirty main checkout, and refuse a test count below the baseline.
 
-Watch the lane logs with `Monitor` (grep for `Stopped|parked|Traceback`), never a sleep loop. Land each lane as soon as it stops, and keep runs short (`--max-issues 3`): a lane branch of 5 to 14 tickets rebased onto a busy `main` hit a conflict on almost every commit. Before parallel lanes, check the repo's tests use per-process temp folders and free ports, or gates collide.
+Watch a repo's pilot run with its one-wake script (gridkeep: `tools/land/wait_attention.sh <run>`, sandbox off, in a background Bash), which exits only on a decision; without a pilot, watch the lane logs with `Monitor` (grep for `Stopped|parked|Traceback`). Never a sleep loop. Land each lane as soon as it stops, and keep runs short (`--max-issues 3`): a lane branch of 5 to 14 tickets rebased onto a busy `main` hit a conflict on almost every commit. Before parallel lanes, check the repo's tests use per-process temp folders and free ports, or gates collide.
 
 ## Gates with many lanes
 
@@ -119,6 +119,17 @@ When lanes drain, fan out read-only audits in parallel, each a subagent with one
 Before that report, run the repo's ship steps if its `docs/orchestrating.md` has them (a build and upload for a playtest), on a green final `main`, then send Greg a phone ping with `pushover.py -m "..."` saying what is ready.
 
 A handoff that suggests the next `/swarm` gives the prompt in a code block that starts `/swarm ` (slash, name, space), never in a `>` quote and never as `/swarm.`. This skill has `disable-model-invocation`, so only Greg's typed command starts it; on 2026-10-21 a pasted `/swarm.` went through as plain text and the new session, rightly, refused to run the skill by hand.
+
+## Keep your own turns few
+
+Every orchestrator turn and tool call re-reads the whole chat, so on 2026-11-03 the Opus orchestrator was the biggest spender by far (114M cache reads in 13 hours). The repo's `docs/orchestrating.md` has the details; the rules:
+
+- One wake per decision: a one-shot background wait on the pilot's attention log, not a 30-minute `Monitor` on routine landings, and never two watchers at once.
+- End every subagent prompt with: gate in the foreground, no background work left running, the final message is the report.
+- Run same-file tickets in parallel and resolve conflicts at landing; `after` chains for them cost 946 ticket-minutes on 2026-11-03.
+- Hand off to a fresh session after each beta or every few hours.
+- Wait for events; don't poll lane state.
+- At the end of a run, read `run-report.py <run>` for time and `usage-mark.py report <run>` for tokens, name the biggest spender on each, and ticket a fix.
 
 ## Subagents
 
