@@ -742,11 +742,11 @@ find ~ -maxdepth 3 -name '*.backup' -exec mv {} ~/.hm-stale-backups-.../ \;
 
 ALWAYS test before deploying:
 
+Be sure to select the host, and only the host we're working with. IE if we're developing on the mines host, do not attempt to run `$ just ft home-lab` or `$ just fr home-lab`:
+
 `just diff <host>` previews a deploy: it builds the host here and lists package changes
 against what the host runs, read over ssh. A host of another platform (the NixOS hosts,
 from a Mac) has to run it itself.
-
-Be sure to select the host, and only the host we're working with. IE if we're developing on the mines host, do not attempt to run `$ just ft home-lab` or `$ just fr home-lab`:
 
 ### NixOS hosts
 1. Format: `nix fmt .`
