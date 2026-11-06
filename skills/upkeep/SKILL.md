@@ -22,7 +22,7 @@ It is read-only. Exit 0 means no high-severity findings or failures, 1 means lin
 
 Then run `hostname -s` and pick where heavy work goes:
 
-- **moria** takes builds and test suites, even when slow. Dungeon runs services, so it needs Greg's say-so each run.
+- **moria** takes builds and test suites, even when slow. Dungeon runs services, and `no-build-on-dungeon.py` blocks builds and `just test` there, so on dungeon send them to moria with `ssh moria`.
 - **A host with builds running stays untouched.** A second build competes with whatever Greg is deploying.
 
 Branch from `origin/main`. Run `just test` before changing anything, so failures you find later have a baseline.
@@ -64,7 +64,7 @@ One commit per item, so each can be reverted alone.
 cd nixos && nix flake update
 ```
 
-**Build failures.** Read the log before retrying. `atuin`'s tests time out at high load, so a failure saying `timed out waiting for session` needs a quieter host. With Greg's say-so, a build on dungeon proves the package itself.
+**Build failures.** Read the log before retrying. `atuin`'s tests time out at high load, so a failure saying `timed out waiting for session` needs a quieter host. A rebuild on a quiet moria proves the package itself.
 
 **ccstatusline.** Bump all three pins that `upkeep-check.py` reads. Render old and new against a scratch copy of the config, because `--config` rewrites the file it reads. If the new version migrates the schema, set the new version in the tracked file by hand and confirm a rerun changes nothing.
 
