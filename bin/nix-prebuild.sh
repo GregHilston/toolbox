@@ -18,6 +18,9 @@ cd "$clone"
 git fetch -q origin
 git checkout -q --detach "$sha"
 out=$(nix build --no-link --print-out-paths "./nixos#darwinConfigurations.$host.system")
+attic=(attic)
+# A moria deployed before #181 lacks it.
+command -v attic >/dev/null || attic=(nix shell nixpkgs#attic-client -c attic)
 # Off the tailnet, connecting hangs, not fails.
-timeout 300 attic push lab:darwin "$out" >/dev/null
+timeout 300 "${attic[@]}" push lab:darwin "$out" >/dev/null
 echo "moria built and uploaded $host."
