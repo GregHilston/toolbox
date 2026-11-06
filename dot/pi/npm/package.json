@@ -6,7 +6,7 @@
     "@gotgenes/pi-permission-system": "42.0.0",
     "@narumitw/pi-plan-mode": "0.59.4",
     "pi-agent-suite": "2.21.0",
-    "pi-mcp-adapter": "5.3.0",
+    "pi-mcp-adapter": "7.0.0",
     "pi-powerline-footer": "0.22.0",
     "pi-reddit-research": "0.2.0"
   }
