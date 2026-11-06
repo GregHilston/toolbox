@@ -802,6 +802,20 @@ in {
     };
   };
 
+  # The Nix cache's size and activity; home-lab's Nix Cache dashboard.
+  launchd.user.agents.attic-textfile = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/usr/bin/python3"
+        "/Users/${vars.user.name}/Git/toolbox/bin/attic-textfile.py"
+      ];
+      RunAtLoad = true;
+      StartInterval = 60;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/attic-textfile.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/attic-textfile.log";
+    };
+  };
+
   # ---------------------------------------------------------------------------
   # Frigate object detection on the Apple Neural Engine.
   # Frigate runs in OrbStack's Linux VM, which can't reach the ANE — so the
