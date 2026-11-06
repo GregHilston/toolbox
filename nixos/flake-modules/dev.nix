@@ -58,7 +58,7 @@
       exec nix flake check
     '';
 
-    # `gitleaks git` needs git, which `nix flake check`'s sandbox lacks.
+    # `git` mode scans history; `dir` reads one path.
     gitleaksHook = pkgs.writeShellScript "gitleaks-hook" ''
       rc=0
       for f in "$@"; do
@@ -89,6 +89,8 @@
         enable = true;
         name = "gitleaks";
         entry = "${gitleaksHook}";
+        # Reddit page HTML trips generic-api-key.
+        excludes = ["^tests/fixtures/"];
       };
 
       flake-check = {

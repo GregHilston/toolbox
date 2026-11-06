@@ -959,7 +959,8 @@ frees one. A weekly `nh clean all --keep-since 4d --keep 5` does: a root launchd
 in `modules/darwin/common.nix` (log `/var/log/nh-clean.log`) and NixOS's
 `programs.nh.clean` in `modules/common/core.nix`. Not home-manager's `programs.nh.clean`:
 its timer unit broke foundation's activation (4b3670c). nix-darwin's `nix.gc` cannot be
-used, because `nix.enable = false`.
+used, because `nix.enable = false`. nh also drops direnv and `result` roots older than
+4 days, so a dev shell may rebuild on next entry. Nothing rotates the Mac log.
 
 ## Secret Management — Decision Record (1Password vs. agenix / sops-nix)
 
