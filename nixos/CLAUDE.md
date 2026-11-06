@@ -976,7 +976,12 @@ first: it builds that host's system, and the agent uploads it.
 - The config goes in `/etc/nix/nix.custom.conf`, which Determinate's `nix.conf` includes;
   activation restarts the daemon only when that file changes.
 - moria's upload token lives in `~/.config/attic/config.toml` (`attic login`), not in the repo.
-- Off the tailnet the cache times out in 5 s and Nix falls back to `cache.nixos.org`.
+- Off the tailnet the name still resolves to dungeon's tailnet address, so a lookup times out
+  rather than failing: 1 s per try, 5 tries, then Nix skips the cache for about a minute.
+  `cache.nixos.org` is asked first, so this only slows a deploy on citadel away from home.
+- `watch-store` uploads only what it sees built. Paths built while dungeon was unreachable
+  are never uploaded; `attic push lab:darwin <path>` fills the gap. Its log is
+  `~/Library/Logs/attic-watch-store.log`.
 
 ## Secret Management — Decision Record (1Password vs. agenix / sops-nix)
 
