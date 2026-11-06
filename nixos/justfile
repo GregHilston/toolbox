@@ -62,11 +62,28 @@ gc:
 # Darwin rebuild (macOS)
 # Usage: `just dr <hostname>`
 dr host flake_path=flake_path:
+  -@just prebuild {{host}}
   ~/Git/toolbox/bin/aerospace-save-state.sh
   sudo darwin-rebuild switch --flake {{flake_path}}#{{host}}
   ~/Git/toolbox/bin/aerospace-restore-state.sh
   @echo ""
   @echo "Tip: Run 'just checklist' for post-deploy setup tasks"
+
+# Have moria build and cache a Mac's system, so its deploy only downloads.
+# Skipped on moria, for local changes, or if moria is unreachable.
+prebuild host:
+  #!/usr/bin/env bash
+  set -uo pipefail
+  [ "$(hostname -s)" = moria ] && exit 0
+  sha=$(git rev-parse HEAD)
+  git fetch -q origin 2>/dev/null
+  if [ -n "$(git status --porcelain -- .)" ] || [ -z "$(git branch -r --contains "$sha" 2>/dev/null)" ]; then
+    echo "Not prebuilding: this checkout has changes GitHub doesn't."
+    exit 0
+  fi
+  echo "Asking moria to build {{host}} first..."
+  ssh -o ConnectTimeout=5 -o BatchMode=yes moria bash -s -- "$sha" {{host}} < ../bin/nix-prebuild.sh \
+    || echo "Prebuild on moria failed; building here."
 
 # Darwin test (macOS)
 # Usage: `just dt <hostname>`
