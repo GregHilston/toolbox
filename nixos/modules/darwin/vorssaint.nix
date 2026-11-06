@@ -379,9 +379,10 @@
     # Add-only, so exceptions added in-app stay.
     ADDED=""
     for ID in ${lib.escapeShellArgs cfg.autoQuitExceptions}; do
+      # Not json: plutil refuses this domain, on stdout.
       if ! /usr/bin/defaults export "$DOMAIN" - \
-        | /usr/bin/plutil -extract autoQuitExceptions json -o - - 2>/dev/null \
-        | ${pkgs.jq}/bin/jq -e --arg id "$ID" 'index($id) != null' >/dev/null; then
+        | /usr/bin/plutil -extract autoQuitExceptions xml1 -o - - 2>/dev/null \
+        | /usr/bin/grep -qF "<string>$ID</string>"; then
         /usr/bin/defaults write "$DOMAIN" autoQuitExceptions -array-add "$ID"
         ADDED="$ADDED $ID"
       fi
