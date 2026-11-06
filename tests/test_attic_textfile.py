@@ -37,7 +37,7 @@ class TestAtticTextfile(unittest.TestCase):
             INSERT INTO chunk VALUES (1, 'V', 40), (2, 'V', 2);
         """)
         con.commit()
-        # Left open, so the rows sit in the WAL file.
+        # Open writer keeps rows in WAL.
         self.writer = con
 
     def tearDown(self):
@@ -54,6 +54,18 @@ class TestAtticTextfile(unittest.TestCase):
         self.assertIn('attic_last_download_timestamp_seconds{cache="darwin"} 1578009600', lines)
         self.assertIn('attic_objects_pushed_24h{cache="darwin"} 0', lines)
         self.assertFalse(any('"gone"' in line for line in lines))
+
+    def test_a_write_during_the_copy_is_refused(self):
+        real = mod.shutil.copyfile
+
+        def copy_then_write(src, dst):
+            real(src, dst)
+            self.writer.execute("INSERT INTO nar VALUES (NULL, 'V', 1)")
+            self.writer.commit()
+
+        with mock.patch.object(mod.shutil, "copyfile", copy_then_write):
+            with self.assertRaises(RuntimeError):
+                mod.read(self.db)
 
     def test_empty_cache_has_no_timestamps(self):
         self.writer.execute("DELETE FROM object")

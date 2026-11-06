@@ -41,13 +41,25 @@ WHERE c.deleted_at IS NULL GROUP BY c.name
 """
 
 
+def _stamp(path: Path) -> tuple[int, int] | None:
+    try:
+        st = path.stat()
+    except FileNotFoundError:
+        return None
+    return st.st_size, st.st_mtime_ns
+
+
 def read(db: Path) -> list[str]:
     """Sample lines from a copy of `db`. Raises if it can't be read."""
+    files = [db.with_name(db.name + s) for s in ("", "-wal")]
     with tempfile.TemporaryDirectory() as tmp:
-        for suffix in ("", "-wal"):
-            src = db.with_name(db.name + suffix)
+        before = [_stamp(f) for f in files]
+        for src in files:
             if src.exists():
-                shutil.copyfile(src, Path(tmp, "server.db" + suffix))
+                shutil.copyfile(src, Path(tmp, src.name.replace(db.name, "server.db")))
+        # A write mid-copy can tear it.
+        if [_stamp(f) for f in files] != before:
+            raise RuntimeError("database changed while copying")
         con = sqlite3.connect(Path(tmp, "server.db"))
         try:
             rows = con.execute(PER_CACHE).fetchall()
