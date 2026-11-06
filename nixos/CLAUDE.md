@@ -966,6 +966,18 @@ its timer unit broke foundation's activation (4b3670c). nix-darwin's `nix.gc` ca
 used, because `nix.enable = false`. nh also drops direnv and `result` roots older than
 4 days, so a dev shell may rebuild on next entry. Nothing rotates the Mac log.
 
+## The Macs share a Nix cache on dungeon
+
+`modules/darwin/nix-cache.nix` points every Mac at `https://cache.grehg2.xyz/darwin` (Attic,
+home-lab `docs/nix-cache.md`), and moria's `attic watch-store` agent uploads what moria builds.
+To give dungeon or citadel a deploy with nothing to compile, run `just diff <host>` on moria
+first: it builds that host's system, and the agent uploads it.
+
+- The config goes in `/etc/nix/nix.custom.conf`, which Determinate's `nix.conf` includes;
+  activation restarts the daemon only when that file changes.
+- moria's upload token lives in `~/.config/attic/config.toml` (`attic login`), not in the repo.
+- Off the tailnet the cache times out in 5 s and Nix falls back to `cache.nixos.org`.
+
 ## Secret Management — Decision Record (1Password vs. agenix / sops-nix)
 
 **Current approach (keep):** Secrets live in 1Password (vault **Infra**). Committed `.tpl`

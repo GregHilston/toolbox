@@ -32,6 +32,9 @@ in {
 
   networking.hostName = "moria";
 
+  # moria builds for every Mac.
+  custom.nixCache.push = true;
+
   # Hermes' key: reel transcription only.
   users.users.${vars.user.name}.openssh.authorizedKeys.keys = [
     "restrict,command=\"/Users/${vars.user.name}/Git/toolbox/bin/instagram-transcribe-moria.sh\" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFMxwdR8UdqWn3YD0kBX5yREKgQCF0kq/1ItiyKV083V hermes-moria-transcribe"

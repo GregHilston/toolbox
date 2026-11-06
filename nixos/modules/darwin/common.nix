@@ -9,7 +9,7 @@
   # Vorssaint's command bar takes ⌘Space there.
   spotlightOn = !config.services.vorssaint.enable;
 in {
-  imports = [./vorssaint.nix];
+  imports = [./vorssaint.nix ./nix-cache.nix];
   services.vorssaint.enable = true;
 
   # Let Determinate manage the Nix daemon; disable nix-darwin's nix management
