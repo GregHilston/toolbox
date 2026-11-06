@@ -176,6 +176,12 @@ reads Infra, can't write). Keep it in that file, never in the environment, becau
 everything an agent starts inherits the environment. Any process running as Greg can read it.
 macOS 27 fix, token rotation and limits: `nixos/docs/secrets.md`.
 
+## Upgrading this repo — /upkeep
+
+`/upkeep` (`skills/upkeep/`) takes Dependabot, audits, the flake lock and pins to one
+reviewed PR. `upkeep-check.py` is its read-only report, and also shows whether dungeon and
+moria reached the lock after a deploy.
+
 ## Before a pi run — deepseek-preflight
 
 Run `bin/deepseek-preflight.py` before starting DeepSeek work: key funded, peak window,
