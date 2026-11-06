@@ -24,7 +24,7 @@ lab-alerts.py --days 7
 cd ~/Git/home-lab && scripts/service-audit.py --updates
 gh pr list --state open
 gh api "repos/GregHilston/home-lab/dependabot/alerts?state=open&per_page=100" --paginate
-df -h /System/Volumes/Data
+ssh dungeon df -h /System/Volumes/Data
 ```
 
 `service-audit.py` needs `secrets/.env`, so in a worktree read
