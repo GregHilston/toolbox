@@ -1,76 +1,108 @@
 ---
 name: lab-audit
-description: Pass over every home-lab service. Find stale image pins and coverage gaps (probe, Homepage, backup), research each update's release notes with subagents, pitch an approve/hold list to Greg, then ship approved updates one at a time on dungeon and verify each. Use for /lab-audit.
+description: Full home-lab update pass. Review recent alerts, Dependabot alerts and PRs, stale image pins and coverage gaps, pitch an approve/hold list to Greg, then build one reviewed PR with exact deploy commands for him to run and verify the result. Use for /lab-audit.
 disable-model-invocation: true
-argument-hint: "[service…] [deploy]"
+argument-hint: "[service…]"
 ---
 
 # lab-audit
 
-You are the orchestrator. Subagents read release notes; you hold the procedure, talk to
-Greg, and own the commits. **Pitch mode** is the default: nothing ships until Greg approves
-it. With `deploy` in the arguments, ship the bumps your review calls safe without asking;
-a major, or a bump that migrates a database, still waits for Greg. With service names in
-the arguments, limit the pass to those.
+You are the orchestrator: you hold the procedure, talk to Greg, and own the commits. DeepSeek
+workers do the reading. **Greg merges and deploys.** You branch, test and open the PR, then
+verify after he runs it. With service names in the arguments, limit the pass to those.
 
-The procedure lives in the lab repo: `~/Git/home-lab/docs/updating-services.md` for
-updates and `~/Git/home-lab/docs/adding-a-service.md` for coverage. Read both and
-`~/Git/home-lab/CLAUDE.md` first.
+The lab's facts live in its repo. Read these first: `docs/updating-services.md` (traps, and what
+each lockfile runs), `docs/adding-a-service.md` (coverage), `docs/alerting.md`, `CLAUDE.md`. Then
+search past findings: `grep -ril <service> ~/Git/notes/llm`.
 
 ## 1. Inventory
 
 ```bash
+usage-mark.py start lab-audit
+deepseek-preflight.py
+lab-alerts.py --days 7
 cd ~/Git/home-lab && scripts/service-audit.py --updates
-gh pr list --author app/dependabot
+gh pr list --state open
+gh api "repos/GregHilston/home-lab/dependabot/alerts?state=open&per_page=100" --paginate
+ssh dungeon df -h /System/Volumes/Data
 ```
 
-**Done when** you hold three lists: open coverage gaps, bumps available (with Dependabot
-PRs matched to them), and images the script could not check.
+`service-audit.py` needs `secrets/.env`, so in a worktree read
+`~/Library/Logs/service-audit-check.log` on dungeon instead.
 
-## 2. Coverage gaps
+**Done when** you hold six lists: alerts by group, coverage gaps, image bumps, images the script
+could not check, Dependabot alerts per lockfile, and open PRs, each noting any overlap with this pass.
 
-For each gap, decide: fix it (the matching touchpoint in `adding-a-service.md`) or exempt
-it with a reason in `scripts/service-audit.exempt`. A gap you cannot judge goes to Greg.
-For an image the script could not check, add its GitHub repo to `RELEASE_REPOS` in
-`digest/digest/config.py` when it has releases.
+## 2. Alerts
 
-## 3. Research the bumps
+For each group, run its runbook's read-only checks and record one of: still broken, recovered, or
+false alarm. `OPEN` only means no all-clear arrived, so check the current state. A false alarm is a
+bug: its fix joins this pass, with a test that fails first.
 
-One subagent per bump, all in one message, in parallel. Use `model: "haiku"` for a patch
-release and `model: "sonnet"` for a minor or a major. Each brief carries the service, the
-pin and the target, a pointer to `docs/updating-services.md` (its trap table) and
-`CLAUDE.md`, and these instructions:
+## 3. Coverage gaps
 
-- read every release between the pin and the target on GitHub, not only the latest;
-- read-only: edit nothing, restart nothing;
-- return a verdict, **ship**, **care** (the extra steps, such as a backup, a config edit or
-  the gluetun group recreate) or **hold** (why), plus any database migration and the
-  rollback.
+Fix each gap (the touchpoint in `adding-a-service.md`) or exempt it with a reason in
+`scripts/service-audit.exempt`. A gap you cannot judge goes to Greg. For an image the script could
+not check, add its repo to `RELEASE_REPOS` in `digest/digest/config.py`.
 
-A major, or any bump that migrates a database, also gets a DeepSeek second opinion through
-the `pi-ask` skill. **Done when** every bump has a verdict with the releases it read.
+## 4. Research
 
-## 4. Pitch
+Give each batch of bumps to a `pi-ask` worker, read-only, grouped by risk: release notes between
+the pin and the target, the trap table, and the service's compose block and config. Each returns
+**ship**, **care** (the extra steps) or **hold** (why), with any data migration, the rollback, and
+any release it did not read. Rerun a thin report on Sonnet. Check for yourself what a verdict
+rests on in live state, such as a setting in an app's database.
 
-Write the full table (service, pin → target, verdict, why, extra steps) to
-`<scratchpad>/lab-audit.md` and give Greg its path. Then ask one `AskUserQuestion` with up
-to four questions, one per group: **ship** verdicts, **care** verdicts, majors, and
-coverage fixes. Each question offers approve all, choose (he names them in Other), or
-hold. In `deploy` mode, say you are shipping the ship verdicts and ask only about the rest.
+For lockfiles, find what the lockfile actually runs first (`updating-services.md`), and move only
+flagged packages. Hold a resolution that jumps a direct dependency's major for its own change.
 
-## 5. Ship, one at a time
+**Done when** every bump and lockfile has a verdict, and you can name what you could not check.
 
-Follow Ship one in `updating-services.md` for each approved bump, in order of risk, lowest
-first: backup check, pin change, tests, one commit per service (conventional,
-`chore(deps): <svc> <old> -> <new>`, no AI attribution lines), push, deploy on dungeon,
-verify. A Dependabot PR is merged instead of re-edited. **A bump is done only when its
-verify passes.** One that fails gets rolled back and reported before the next one ships.
+## 5. Pitch
 
-Coverage fixes ship the same way, one commit per idea.
+Write the full table to `<scratchpad>/lab-audit.md`, and give Greg its path. Then ask one
+`AskUserQuestion` with up to four questions, one per group: **ship**, **care**, majors, and fixes
+(alerts and coverage). Each offers approve all, choose (he names them in Other), or hold.
 
-## 6. Report
+## 6. Build
 
-Per service: shipped (commit and verify evidence), held (why), or rolled back (what
-broke). Re-run `scripts/service-audit.py` and paste its summary line. If this pass found a
-new trap, add a row to the trap table in `updating-services.md`; if it taught something
-about running this skill, edit this file.
+On one branch from `origin/main`: one commit per service, conventional, with no AI attribution lines.
+
+- **Start each changed image once, with its real environment.** Release notes cannot show what a
+  compose `environment:` does to a new build; on 2026-11-02 that took Caddy down. Use a scratch
+  directory, `--network none` where it can run so, and never a production volume. Build on moria
+  when it is awake, since dungeon has no RAM to spare, and read the output: some validators exit 0
+  on failure.
+- **Run the tests the change touches, on the interpreter that runs it,** and compare any failure
+  with `origin/main`.
+- **Write only what the output showed.** A claim goes in the PR after you have read its evidence.
+
+**Done when** the PR's body holds what changed and why, what was left out and why, what was not
+verified, test results, and staged deploy steps: a fresh snapshot, then lowest risk first, each
+with the commands and checks that prove it, and the rollback.
+
+## 7. Review
+
+Run two reviews, side by side in one message: a Sonnet subagent on the deploy commands, pins and
+claims, and a `pi-ask` worker on what a diff read misses. Each checks upstream source and the
+scripts it calls. Verify each finding before taking it: reviewers are wrong too, and in both
+directions. Fix what you accept, and say in your report what you rejected and why. Re-review any
+fix to a deploy step.
+
+## 8. Hand over
+
+Give Greg the PR links in merge order and the deploy commands in the last message of the turn. Name
+what each step takes down and what he must check by hand. Stop until he reports back.
+
+## 9. Verify
+
+Check each service by what it is for, not only that it runs: read the state a user would depend
+on, such as a lock's state in Home Assistant, a real search, or an exporter's metric count. Recheck
+after a few minutes, since first-minute numbers miss leaks and slow failures. A failure gets the
+trap table's or runbook's fix, or a follow-up PR, and a report before anything else ships.
+
+## 10. Write back
+
+Put findings in `~/Git/notes/llm/`, and commit that repo. Add each new trap to the table in
+`updating-services.md`, and a runbook line for each service fix. If this pass taught something about
+running this skill, edit this file. End the report with `usage-mark.py report lab-audit`.
