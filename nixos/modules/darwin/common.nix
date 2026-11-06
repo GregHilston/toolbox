@@ -15,6 +15,23 @@ in {
   # Let Determinate manage the Nix daemon; disable nix-darwin's nix management
   nix.enable = false;
 
+  # Determinate's GC never frees old generations.
+  launchd.daemons.nh-clean = {
+    serviceConfig = {
+      ProgramArguments = ["${pkgs.nh}/bin/nh" "clean" "all" "--keep-since" "4d" "--keep" "5"];
+      EnvironmentVariables.PATH = "/nix/var/nix/profiles/default/bin:/usr/bin:/bin";
+      StartCalendarInterval = [
+        {
+          Weekday = 0;
+          Hour = 3;
+          Minute = 17;
+        }
+      ];
+      StandardOutPath = "/var/log/nh-clean.log";
+      StandardErrorPath = "/var/log/nh-clean.log";
+    };
+  };
+
   # nixpkgs overlays + allowUnfree come from the shared nixpkgsModule in
   # flake-modules/hosts.nix.
 

@@ -31,35 +31,15 @@ jobs:
         working-directory: nixos
         run: nix flake check
 
-      - name: Validate foundation
+      - name: Validate every nixos host
         working-directory: nixos
         run: |
-          echo "Building foundation..."
-          nix build .#nixosConfigurations.foundation.config.system.build.toplevel --dry-run
-
-      - name: Validate isengard
-        working-directory: nixos
-        run: |
-          echo "Building isengard..."
-          nix build .#nixosConfigurations.isengard.config.system.build.toplevel --dry-run
-
-      - name: Validate mines
-        working-directory: nixos
-        run: |
-          echo "Building mines..."
-          nix build .#nixosConfigurations.mines.config.system.build.toplevel --dry-run
-
-      - name: Validate home-lab
-        working-directory: nixos
-        run: |
-          echo "Building home-lab..."
-          nix build .#nixosConfigurations.home-lab.config.system.build.toplevel --dry-run
-
-      - name: Validate rohan
-        working-directory: nixos
-        run: |
-          echo "Building rohan..."
-          nix build .#nixosConfigurations.rohan.config.system.build.toplevel --dry-run
+          hosts=$(nix eval .#nixosConfigurations --raw --apply 'x: toString (builtins.attrNames x)')
+          test -n "$hosts"
+          for h in $hosts; do
+            echo "Building $h..."
+            nix build ".#nixosConfigurations.$h.config.system.build.toplevel" --dry-run
+          done
 
   validate-darwin:
     name: Validate Darwin configurations
@@ -79,20 +59,12 @@ jobs:
       - name: Cache Nix store
         uses: DeterminateSystems/magic-nix-cache-action@v15
 
-      - name: Validate dungeon
+      - name: Validate every darwin host
         working-directory: nixos
         run: |
-          echo "Building dungeon..."
-          nix build .#darwinConfigurations.dungeon.config.system.build.toplevel --dry-run
-
-      - name: Validate moria
-        working-directory: nixos
-        run: |
-          echo "Building moria..."
-          nix build .#darwinConfigurations.moria.config.system.build.toplevel --dry-run
-
-      - name: Validate citadel
-        working-directory: nixos
-        run: |
-          echo "Building citadel..."
-          nix build .#darwinConfigurations.citadel.config.system.build.toplevel --dry-run
+          hosts=$(nix eval .#darwinConfigurations --raw --apply 'x: toString (builtins.attrNames x)')
+          test -n "$hosts"
+          for h in $hosts; do
+            echo "Building $h..."
+            nix build ".#darwinConfigurations.$h.system" --dry-run
+          done

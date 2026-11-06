@@ -6,6 +6,7 @@
 # have no business on a 2010 ThinkPad. That's why the identity layer lives in
 # ./common.nix — rohan takes that and stops there.
 {
+  inputs,
   pkgs,
   vars,
   lib,
@@ -16,7 +17,12 @@ in {
   imports = [
     ./common.nix
     ../programs/tui
+    inputs.nix-index-database.homeModules.default
   ];
+
+  # Its zsh hook: see programs/tui/zsh.
+  programs.nix-index.enable = true;
+  programs.nix-index-database.comma.enable = true;
 
   # nixpkgs config (overlays + allowUnfree) comes from the system via
   # home-manager.useGlobalPkgs (set in flake-modules/hosts.nix).

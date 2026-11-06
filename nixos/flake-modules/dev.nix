@@ -57,6 +57,15 @@
       cd "$(${gitBin} rev-parse --show-toplevel)/nixos"
       exec nix flake check
     '';
+
+    # `git` mode scans history; `dir` reads one path.
+    gitleaksHook = pkgs.writeShellScript "gitleaks-hook" ''
+      rc=0
+      for f in "$@"; do
+        ${pkgs.gitleaks}/bin/gitleaks dir --redact --no-banner --log-level warn "$f" || rc=1
+      done
+      exit $rc
+    '';
   in {
     pre-commit.settings.hooks = {
       treefmt = {
@@ -73,6 +82,15 @@
         # a formatter for another filetype there and widen this too, or the hook
         # quietly stops covering it (`nix flake check` still would).
         files = "^nixos/.*\\.nix$";
+      };
+
+      # This repo is public.
+      secret-scan = {
+        enable = true;
+        name = "gitleaks";
+        entry = "${gitleaksHook}";
+        # Reddit page HTML trips generic-api-key.
+        excludes = ["^tests/fixtures/"];
       };
 
       flake-check = {

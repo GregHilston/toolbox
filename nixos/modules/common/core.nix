@@ -8,6 +8,15 @@
 }: {
   nix.settings.experimental-features = ["nix-command" "flakes"];
 
+  # System-level: the home-manager timer broke foundation's activation.
+  programs.nh = {
+    enable = true;
+    clean = {
+      enable = true;
+      extraArgs = "--keep-since 4d --keep 5";
+    };
+  };
+
   networking.networkmanager.enable = true;
 
   time.timeZone = vars.system.timeZone;

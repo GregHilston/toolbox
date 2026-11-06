@@ -9,6 +9,9 @@
 
   networking.hostName = "foundation";
 
+  # WSL has no kernel links; reboot check aborts.
+  system.autoUpgrade.allowReboot = lib.mkForce false;
+
   # The primary user (groups, password, shell, ssh key) comes from
   # modules/common/core.nix, with input/docker added by modules/common.
 
