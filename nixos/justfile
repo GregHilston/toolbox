@@ -73,6 +73,34 @@ dr host flake_path=flake_path:
 dt host flake_path=flake_path:
   sudo darwin-rebuild check --flake {{flake_path}}#{{host}}
 
+# What `fr`/`dr` would change on a host: builds here, reads the host over ssh
+# Usage: `just diff <hostname>`
+diff host flake_path=flake_path:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cd {{flake_path}}
+  kind=$(nix eval --raw .#darwinConfigurations --apply 'x: if x ? "{{host}}" then "darwin" else "nixos"')
+  if [ "$kind" = darwin ]; then
+    attr=".#darwinConfigurations.{{host}}"; out="$attr.system"
+  else
+    attr=".#nixosConfigurations.{{host}}"; out="$attr.config.system.build.toplevel"
+  fi
+  want=$(nix eval --raw "$attr.pkgs.stdenv.hostPlatform.system")
+  have=$(nix eval --raw --impure --expr builtins.currentSystem)
+  if [ "$want" != "$have" ]; then
+    echo "{{host}} is $want; this machine builds $have. Run it on {{host}}." >&2
+    exit 1
+  fi
+  tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+  new=$(nix build --no-link --print-out-paths "$out")
+  nix-store -qR "$new" > "$tmp/new"
+  if [ "{{host}}" = "$(hostname -s)" ]; then
+    nix-store -qR /run/current-system > "$tmp/old"
+  else
+    ssh {{host}} 'PATH=/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:$PATH nix-store -qR /run/current-system' > "$tmp/old"
+  fi
+  ../bin/nix-closure-diff.py "$tmp/old" "$tmp/new"
+
 # Validate all configurations (run in devcontainer or any Nix environment)
 # Host lists are derived from the flake, so new hosts are covered automatically.
 #
