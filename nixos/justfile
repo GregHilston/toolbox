@@ -100,6 +100,12 @@ diff host flake_path=flake_path:
     ssh {{host}} 'PATH=/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:$PATH nix-store -qR /run/current-system' > "$tmp/old"
   fi
   ../bin/nix-closure-diff.py "$tmp/old" "$tmp/new"
+  # attic on PATH means this host pushes.
+  if command -v attic >/dev/null; then
+    # Off the tailnet, connecting hangs, not fails.
+    timeout 60 attic push lab:darwin "$new" >/dev/null && echo "Uploaded to the cache." \
+      || echo "Cache upload failed; the diff above stands." >&2
+  fi
 
 # Validate all configurations (run in devcontainer or any Nix environment)
 # Host lists are derived from the flake, so new hosts are covered automatically.
