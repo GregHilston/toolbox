@@ -970,8 +970,9 @@ used, because `nix.enable = false`. nh also drops direnv and `result` roots olde
 
 `modules/darwin/nix-cache.nix` points every Mac at `https://cache.grehg2.xyz/darwin` (Attic,
 home-lab `docs/nix-cache.md`). `just dr` on dungeon or citadel first runs `just prebuild`,
-which pipes `bin/nix-prebuild.sh` to moria over ssh: moria builds that host's system at the
-same commit, in its own clone, and uploads it, so the deploy only downloads. It is skipped,
+which pipes `bin/nix-prebuild.sh` to moria over ssh (`moriats`, the tailnet name): moria builds
+that host's system from `github:` at the same commit and uploads it, so the deploy only
+downloads. It is skipped,
 and the host builds for itself, when the checkout has changes GitHub lacks or moria is
 unreachable. `just diff <host>` on moria uploads too.
 Not `attic watch-store`: it crashed on the first new path (upstream issue #226, open).

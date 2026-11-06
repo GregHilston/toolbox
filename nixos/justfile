@@ -62,7 +62,7 @@ gc:
 # Darwin rebuild (macOS)
 # Usage: `just dr <hostname>`
 dr host flake_path=flake_path:
-  -@just prebuild {{host}}
+  -@just prebuild {{host}} {{flake_path}}
   ~/Git/toolbox/bin/aerospace-save-state.sh
   sudo darwin-rebuild switch --flake {{flake_path}}#{{host}}
   ~/Git/toolbox/bin/aerospace-restore-state.sh
@@ -71,18 +71,22 @@ dr host flake_path=flake_path:
 
 # Have moria build and cache a Mac's system, so its deploy only downloads.
 # Skipped on moria, for local changes, or if moria is unreachable.
-prebuild host:
+prebuild host flake_path=flake_path:
   #!/usr/bin/env bash
   set -uo pipefail
   [ "$(hostname -s)" = moria ] && exit 0
-  sha=$(git rev-parse HEAD)
-  git fetch -q origin 2>/dev/null
-  if [ -n "$(git status --porcelain -- .)" ] || [ -z "$(git branch -r --contains "$sha" 2>/dev/null)" ]; then
+  repo=(git -C {{flake_path}})
+  sha=$("${repo[@]}" rev-parse HEAD)
+  "${repo[@]}" fetch -q origin 2>/dev/null
+  # Untracked files never reach a flake build.
+  if [ -n "$("${repo[@]}" status --porcelain -uno)" ] || [ -z "$("${repo[@]}" branch -r --contains "$sha" 2>/dev/null)" ]; then
     echo "Not prebuilding: this checkout has changes GitHub doesn't."
     exit 0
   fi
   echo "Asking moria to build {{host}} first..."
-  ssh -o ConnectTimeout=5 -o BatchMode=yes moria bash -s -- "$sha" {{host}} < ../bin/nix-prebuild.sh \
+  # moriats reaches moria away from home too.
+  ssh -o ConnectTimeout=5 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o BatchMode=yes \
+    moriats bash -s -- "$sha" {{host}} < ../bin/nix-prebuild.sh \
     || echo "Prebuild on moria failed; building here."
 
 # Darwin test (macOS)
