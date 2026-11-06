@@ -33,6 +33,7 @@
 # back to the tool modules — they will silently do nothing.
 # ──────────────────────────────────────────────────────────────────────────────
 {
+  config,
   lib,
   pkgs,
   osConfig ? null,
@@ -161,6 +162,10 @@
       }
     fi
 
+    ${lib.optionalString config.programs.nix-index.enable ''
+      # nix-index — an unknown command names the package that has it
+      source ${config.programs.nix-index.package}/etc/profile.d/command-not-found.sh
+    ''}
     # ── Nix maintenance ──────────────────────────────────────────────
     alias ncg='nix-collect-garbage --delete-older-than 3d && sudo nix-collect-garbage -d'
     alias nc='nix flake check'

@@ -25,6 +25,8 @@
     stylix.url = "github:danth/stylix";
     stylix.inputs.nixpkgs.follows = "nixpkgs";
     nur.url = "github:nix-community/NUR";
+    nix-index-database.url = "github:nix-community/nix-index-database";
+    nix-index-database.inputs.nixpkgs.follows = "nixpkgs";
     nix-vscode-extensions.url = "github:nix-community/nix-vscode-extensions";
     flake-utils.url = "github:numtide/flake-utils";
     # 2. Override the flake-utils default to your version

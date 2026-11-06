@@ -951,14 +951,15 @@ Verify from the main checkout, or with the override above.
 See [.devcontainer/README.md](.devcontainer/README.md). It can `nix flake check` and
 dry-run builds; it cannot `nixos-rebuild switch` or test hardware behaviour.
 
-## Automatic Nix Garbage Collection for Darwin Hosts — PROPOSED, NOT IMPLEMENTED
+## Old generations are pruned weekly, on every host
 
-Darwin runs Determinate Nix (`nix.enable = false`), so nix-darwin's `nix.gc` module
-asserts out. **There is no scheduled GC on any Mac** — reclaim by hand with
-`just delete-all-old-generations`. Adopting Determinate's own collector is the
-intended fix — see <https://docs.determinate.systems/guides/nix-darwin/>. The
-step-by-step adoption plan was removed from here rather than relocated; it is
-recoverable from git history if wanted.
+Determinate Nixd already collects garbage on the Macs by default (it keeps 5–20% of
+the disk free), but a system or home-manager generation is a GC root, so it never
+frees one. A weekly `nh clean all --keep-since 4d --keep 5` does: a root launchd daemon
+in `modules/darwin/common.nix` (log `/var/log/nh-clean.log`) and NixOS's
+`programs.nh.clean` in `modules/common/core.nix`. Not home-manager's `programs.nh.clean`:
+its timer unit broke foundation's activation (4b3670c). nix-darwin's `nix.gc` cannot be
+used, because `nix.enable = false`.
 
 ## Secret Management — Decision Record (1Password vs. agenix / sops-nix)
 

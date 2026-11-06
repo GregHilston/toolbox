@@ -1,4 +1,5 @@
 {
+  config,
   pkgs,
   vars,
   ...
@@ -12,9 +13,11 @@ in {
     ../../modules/stylix
   ];
 
+  # Without `flake`, nixos-upgrade rebuilds from channels.
   system.autoUpgrade = {
     enable = true;
     allowReboot = true;
+    flake = "github:GregHilston/toolbox?dir=nixos#${config.networking.hostName}";
   };
 
   # useGlobalPkgs/useUserPackages/backupFileExtension/extraSpecialArgs come from
