@@ -57,6 +57,10 @@
           },
           {
             "type": "command",
+            "command": "~/.claude/hooks/no-build-on-dungeon.py"
+          },
+          {
+            "type": "command",
             "command": "~/.claude/hooks/no-ai-attribution.py"
           },
           {
