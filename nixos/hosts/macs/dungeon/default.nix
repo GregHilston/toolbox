@@ -515,6 +515,21 @@ in {
     };
   };
 
+  # Imports ID-matched importBlocked downloads when safe; shadow mode until --apply is added.
+  # Runbook: home-lab/docs/runbooks/arr-import-blocked.md.
+  launchd.user.agents.arr-auto-import = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/arr-auto-import.sh"
+      ];
+      RunAtLoad = true;
+      StartInterval = 900;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/arr-auto-import.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/arr-auto-import.log";
+    };
+  };
+
   # Weekly document_exporter, before the 04:30 offsite job carries the export to fob.
   # Runbook: home-lab/docs/runbooks/paperless-export-failed.md.
   launchd.user.agents.paperless-export = {
