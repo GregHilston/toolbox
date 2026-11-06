@@ -32,6 +32,21 @@ BLOCKED = [
     "caffeinate -i just validate",
     "bash -c 'nix build x'",
     "ls; just validate > /tmp/log 2>&1",
+    "nix build x # don't",
+    "echo `just validate`",
+    'echo "$(just validate)"',
+    "just --justfile nixos/justfile validate",
+    "just -f nixos/justfile validate",
+    "just -d nixos validate",
+    "sudo -u greg nix build x",
+    "env -u FOO nix build x",
+    "xargs -I {} nix build {}",
+    "nix --option cores 4 build x",
+    "nix shell nixpkgs#x -c nix build y",
+    "watch nix build x",
+    "dash -c 'nix build x'",
+    "ssh dungeon 'nix build x'",
+    "ssh -o ConnectTimeout=5 localhost just validate",
 ]
 
 ALLOWED = [
@@ -46,6 +61,10 @@ ALLOWED = [
     "just secrets",
     "just list-hosts",
     "grep 'nix build' README.md",
+    "cat > /tmp/pr.md <<EOF\nRun:\nnix build .#x\nEOF",
+    "cat <<'EOF' > /tmp/b.md\njust validate\nEOF",
+    "git commit -F - <<EOF\nnix flake check\nEOF",
+    "ssh -t -p 22 moria 'just validate'",
 ]
 
 
