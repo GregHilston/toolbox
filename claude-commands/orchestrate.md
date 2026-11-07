@@ -539,6 +539,11 @@ Two details make it work:
   path, the sandbox rule, and **the failure modes to hunt for in this specific
   issue** — generic "review this" gets generic results. Ask it to verify the
   worker's highest-consequence claim by running something, not by reading.
+  Name its scratch copy for it (`scratchpad/rev<issue>-<random>`): on 2026-11-06
+  one reviewer rsync'd its branch over another reviewer's shared `wt` copy mid-run.
+- **Keep the worker's suite in the foreground.** Tell it to pass the Bash tool
+  `timeout: 600000` on the full suite; otherwise the harness backgrounds it after
+  two minutes, and each stale watcher and poll wakes you (about 30 wakes in one night).
 - **The findings go back to the original worker, not to a new one.** Keep the
   `agentId` from each spawn and `SendMessage` the findings to it; it still holds
   its own reasoning and can say "I disagree, here is why". Frame it as a
