@@ -447,7 +447,7 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
             cmd += ["--tools", "read,grep,find,ls" + (",bash" if bash else "")]
         if model in CLOUD:
             cmd += ["--provider", "litellm"]
-            model = "cloud"
+            model = os.environ.get("PI_CLOUD_MODEL", "cloud")  # cloud-deepseek while Go refuses
     shown = model or "default"
     if model:
         cmd[1:1] = ["--model", model]

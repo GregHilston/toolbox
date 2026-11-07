@@ -233,7 +233,7 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--session", required=True, help="name; reuse it to follow up")
     p.add_argument("--dir", help="worker cwd; a follow-up reuses the first turn's (default .)")
-    p.add_argument("--model", default="cloud", help="LiteLLM alias (default cloud)")
+    p.add_argument("--model", default=os.environ.get("PI_CLOUD_MODEL", "cloud"), help="LiteLLM alias (default $PI_CLOUD_MODEL, else cloud)")
     p.add_argument("--idle", type=int, default=300, help="kill after N silent seconds")
     p.add_argument("--max-cost", type=float, default=0.50, help="stop past $N at DeepSeek's prices (default 0.50)")
     p.add_argument("--max-turns", type=int, default=100, help="stop past N model turns (default 100)")
