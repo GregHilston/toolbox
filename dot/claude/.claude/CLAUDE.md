@@ -73,7 +73,7 @@ End every handoff with the exact message I paste to start the next chat, in a co
 - I may leave a question unanswered for hours. A pick blocks your whole session, so first start all the work that doesn't depend on it, and put a decision that can wait on its ticket instead; on 2026-11-02 an open pick idled a swarm for 1h 23m.
 - When I ask "are we good?" or for status, say plainly what's done, what's still running, and what needs me.
 - When I ask for findings "to review before I approve", act on none of them: no ticket, fix or flag flip. Send one short report with a recommendation per finding, then an `AskUserQuestion` of the actions (2026-11-07). A ticket I ask for outright is filed straight away.
-- When I say we're winding down, start nothing new and queue nothing: let running work finish, write lessons and ticket updates, then the handoff.
+- When I say we're winding down, start nothing new and queue nothing: let running work finish, write lessons and ticket updates, then the handoff. Say back what that leaves unstarted, such as a planned release (2026-11-07: the beta waited).
 - An investigation reports as short reports, one screen each, findings with numbers, figures, a recommendations table, and a marimo notebook behind it. Each ends with a line I can paste to open a new Claude Code chat on that report (2026-11-06). Bugs and obvious fixes from it become tickets; anything needing a design call goes in a handoff for me.
 - During a run over an hour, send a one-line status about hourly, even when nothing needs me; on 2026-10-27 I had to ask after two silent hours.
 - Put steps I must act on in the last message of a turn. A table written mid-turn, between tool calls, is easy to miss on my phone; I missed one on 2026-10-22.
