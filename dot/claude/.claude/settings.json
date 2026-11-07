@@ -65,6 +65,10 @@
           },
           {
             "type": "command",
+            "command": "~/.claude/hooks/no-piped-gate.py"
+          },
+          {
+            "type": "command",
             "command": "rtk hook claude"
           }
         ]
