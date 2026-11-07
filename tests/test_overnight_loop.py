@@ -1139,3 +1139,16 @@ class TestPiEvents(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GhRetryTest(unittest.TestCase):
+    def test_a_rate_limit_lasting_two_minutes_is_waited_out(self):
+        failed = subprocess.CompletedProcess([], 1, "", "GraphQL: API rate limit already exceeded")
+        ok = subprocess.CompletedProcess([], 0, "main", "")
+        waits: list[float] = []
+        runs = [failed, failed, failed, failed, ok]
+        with mock.patch.object(loop.subprocess, "run", side_effect=runs), \
+                mock.patch.object(loop.time, "sleep", side_effect=waits.append):
+            got = loop.sh("gh", "repo", "view")
+        self.assertEqual(got, "main", f"got {got!r}, want 'main' after four refusals")
+        self.assertGreaterEqual(sum(waits), 120, f"waited {sum(waits)} s in all, want at least 120")
