@@ -560,6 +560,11 @@ Two details make it work:
   turns with findings by call 15 and a verdict by call 25: at 45 turns two of
   seven ran out before a verdict on 2026-11-07, each costing a relay round, and
   relay was that run's biggest wait (63 minutes).
+- **Check a fix round's claims against its commit.** A worker reported a
+  regression test its commit never contained (2026-11-07); read the commit's file
+  list before the recheck. Tell a worker running a long job to wait on one
+  completion notification, not a progress monitor, which woke the orchestrator
+  about ten times in one run.
 - **The findings go back to the original worker, not to a new one.** Keep the
   `agentId` from each spawn and `SendMessage` the findings to it; it still holds
   its own reasoning and can say "I disagree, here is why". Frame it as a
