@@ -30,6 +30,18 @@ blocked or login-walled.
 - A 403 or 429 is often only this host's IP being blocked. `fetch-thread.py` then
   reruns itself over ssh on dungeon, then FOB (`$FETCH_THREAD_RELAYS`), and says so
   on stderr. `reddit-search.py` does not: run it through `ssh dungeon '…'`.
+- If `reddit-search.py` answers 403 everywhere (it did from moria and dungeon on
+  2026-11-08), find threads with DeepSeek Search instead:
+  `POST https://api.deepseek.com/v1/tools/search` with `{"query": "site:reddit.com <game> <topic>", "count": 8}`
+  and `Authorization: Bearer $DEEPSEEK_API_KEY`. Drop the `?solution=…` tail from each
+  result's URL, then read it with `fetch-thread.py`. Name the game or subreddit in the
+  query: game-specific queries found relevant threads 6 of 6 times, generic design ones 0
+  of 2. Results carry a summary but no page text, and DeepSeek Fetch answers 404 on Reddit.
+  It costs $0.75 per 1,000 searches (nine cost about a cent), and the query leaves for
+  DeepSeek, so never search anything private this way.
+- Through the dungeon relay, `fetch-thread.py` returns the comments but the post body is
+  rate-limited (429), and two reads back to back trip the limit: leave about a minute
+  between threads (75 seconds worked 4 of 4).
 - If both commands break, `REDDIT_LIVE=1 python3 -m unittest test_fetch_reddit_live` in
   `toolbox/tests/` says what Reddit changed. pi's `reddit_*` tools use the old endpoints and
   are unreliable.

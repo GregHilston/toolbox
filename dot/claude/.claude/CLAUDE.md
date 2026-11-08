@@ -85,6 +85,7 @@ End every handoff with the exact message I paste to start the next chat, in a co
 - Before and after screenshots posted on the ticket let me judge a visual change without opening anything; do it for every visible change (2026-10-26).
 - In a decision question, explain any game mechanic or term in one plain line first; I forget names (rider damage, the action cap, 2026-10-26). Write what we decide onto the tickets, not only into notes.
 - Before changing something I use, find the copy I actually use. On 2026-10-26 you edited the gym HTML page while my phone ran openGym, and I synced and saw no change.
+- When I answer a design pick with "think about it and propose", bring one proposal built on the project's own numbers and outside evidence (other games, community threads), with its reasoning, not a fresh set of bare options (2026-11-08).
 - DeepSeek credit isn't scarce: a few dollars of real balance is more than a day of work. Don't reroute work to save it; just don't waste it.
 - Run commands yourself unless they need my hands, a keyboard shortcut or my screen, even if a handoff says I run them. When I report something didn't work, first check the state it should have changed: on 2026-10-30 two "failures" were setup commands that had never run, which I could have run myself.
 - Before offering a pick that rests on what an API returns, call the API. On 2026-10-30 I chose a collector for "true hourly numbers" that AdGuard's API doesn't have on a 30-day window; the build found it only after I'd answered. The same goes for a game rule: read the code before describing it in a pick (2026-10-31, a lock). My free-text answers often change the design, so read them before filing, and put them on the ticket as soon as the round ends.
@@ -103,6 +104,7 @@ End every handoff with the exact message I paste to start the next chat, in a co
 - **Opus** only when I ask for it.
 - **Point a delegated task at the repo's own rules for it** (a command, skill or `CLAUDE.md` section) rather than restating them in the prompt. On 2026-10-21 a Haiku agent filed vault clips from my hand-written spec, never saw `.claude/commands/triage.md`, and made a string of mistakes Greg had to catch. Clip writing is Sonnet work.
 - **DeepSeek** (`pi-ask.py`, `--harness pi` lanes) for every second-opinion review of a branch with logic in it, for bulk reading, and by default for implementation and research too, with Opus orchestrating (2026-11-01). Sonnet is for reading shots and tickets that parked twice. Use it from the start of a session, not as an afterthought. The gateway's `cloud` runs OpenCode Go, then GPT-5.6 Luna on ChatGPT Plus, then DeepSeek's API; `PI_CLOUD_MODEL=cloud-go|cloud-luna|cloud-deepseek` pins one (2026-11-08).
+- **Bulk LLM generation** (playtest cohorts, batch labelling) runs on the free local model through oMLX. Luna's ChatGPT allowance is for small samples: run a 5–10 item pilot, read its gauge with `deepseek-preflight.py`, and keep a batch under 20% of the weekly allowance (2026-11-08).
 - Run `deepseek-preflight.py` before starting DeepSeek work: it prints the rate now, minutes to the next peak, and the balance. Start long `pi` lanes with `--off-peak`, so they wait out peak hours. A review costs cents, so run it even at peak price.
 
 ## Bash working directory — use absolute paths
@@ -124,6 +126,14 @@ so read a start command's output back; a word starting with `=` is a command loo
 alias, so `ask() {…}` fails to parse and helpers go in a bash script (2026-10-30);
 `cmd 2>&1 >/dev/null | x` still pipes stdout through multios, and printed an API key on
 2026-10-30, so near a secret write output to a file and read its length.
+
+Sandbox and background traps:
+- `$TMPDIR` is a different folder with the sandbox on and off, so a file one command writes
+  there is missing to the other. Write anything two commands share to a fixed path
+  (2026-11-08: a pilot's output had to be dug out of `/var/folders`).
+- A background Bash command stops at its timeout: 30 minutes unless you set one, 2 hours at
+  most. Give `caffeinate` and long runs an explicit timeout, and split work longer than
+  2 hours into runs (2026-11-08: keep-awake was killed twice mid-run).
 
 ## File Inspection
 
