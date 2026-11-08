@@ -25,12 +25,22 @@ Examples:
     fetch-thread.py https://reddit.com/r/python/comments/abc123
     fetch-thread.py 48072225 hn --format json | jq .
     fetch-thread.py abc123 reddit python > thread.md
+
+Reddit often blocks one host's IP. On a 403 or 429 the script reruns itself over
+ssh on each host in $FETCH_THREAD_RELAYS (default "dungeon fob"), skipping this one,
+and prints the first answer. It ships its own files, so a relay needs only python3.
 """
 
 from __future__ import annotations
 
 import argparse
+import io
+import os
+import socket
+import subprocess
 import sys
+import tarfile
+from pathlib import Path
 
 # Import the converter functions
 try:
@@ -84,6 +94,39 @@ def infer_platform_from_args(args: list[str]) -> tuple[str, list[str]]:
         f"Could not detect platform from '{first_arg}'. "
         "Please specify explicitly: 'hn' or 'reddit'"
     )
+
+
+RELAY_FILES = ("fetch-thread.py", "fetch_reddit.py", "fetch_hn.py", "_thread_converters.py")
+
+
+def blocked(error: Exception) -> bool:
+    """Is this Reddit refusing our IP, which another host may get past?"""
+    return any(code in str(error) for code in ("HTTP 403", "HTTP 429"))
+
+
+def relay(argv: list[str]) -> str | None:
+    """Rerun on the first relay host Reddit answers; None when none does."""
+    here = socket.gethostname().split(".")[0]
+    bundle = io.BytesIO()
+    with tarfile.open(fileobj=bundle, mode="w") as tar:
+        for name in RELAY_FILES:
+            tar.add(Path(__file__).with_name(name), arcname=name)
+    args = " ".join("'" + a.replace("'", "'\\''") + "'" for a in argv)
+    # A fixed directory: each run overwrites it, nothing to clean up.
+    remote = f"d=~/.cache/fetch-thread-relay; mkdir -p $d && tar -x -C $d && FETCH_THREAD_RELAYS= python3 $d/fetch-thread.py {args}"
+    for host in os.environ.get("FETCH_THREAD_RELAYS", "dungeon fob").split():
+        if host == here:
+            continue
+        print(f"Reddit blocked {here}; trying {host}", file=sys.stderr)
+        try:
+            run = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", host, remote],
+                                 input=bundle.getvalue(), capture_output=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            continue
+        if run.returncode == 0:
+            return run.stdout.decode()
+        print(f"  {host}: {run.stderr.decode().strip().splitlines()[-1:] or run.returncode}", file=sys.stderr)
+    return None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -171,8 +214,11 @@ def main() -> None:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
+        relayed = relay(sys.argv[1:]) if platform == "reddit" and blocked(e) else None
+        if relayed is None:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        print(relayed, end="")
 
 
 if __name__ == "__main__":

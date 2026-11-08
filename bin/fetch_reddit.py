@@ -66,6 +66,11 @@ class Comment:
 # ============================================================================
 
 
+def _strip(text: str, prefix: str) -> str:
+    """`str.removeprefix`, which FOB's Python 3.7 lacks (fetch-thread.py relays there)."""
+    return text[len(prefix):] if text.startswith(prefix) else text
+
+
 def get(path: str, form: dict | None = None) -> str:
     """GET, or POST when `form` is given, a reddit.com path; the body as text."""
     data = urlencode(form).encode() if form is not None else None
@@ -166,8 +171,8 @@ class _CommentParser(HTMLParser):
         if tag == "shreddit-comment":
             self.comments.append(
                 Comment(
-                    id=(a.get("thingid") or "").removeprefix("t1_"),
-                    parent_id=(a.get("parentid") or "").removeprefix("t1_"),
+                    id=_strip(a.get("thingid") or "", "t1_"),
+                    parent_id=_strip(a.get("parentid") or "", "t1_"),
                     author=a.get("author") or "[deleted]",
                     score=_int(a.get("score")),
                     depth=_int(a.get("depth")) or 0,
@@ -227,7 +232,7 @@ def parse_post_rss(feed: str, subreddit: str, post_id: str) -> Post:
         subreddit=subreddit,
         title=(entry.findtext(f"{ATOM}title") or "").strip(),
         url=f"{BASE}/r/{subreddit}/comments/{post_id}/",
-        author=(entry.findtext(f"{ATOM}author/{ATOM}name") or "").removeprefix("/u/"),
+        author=_strip(entry.findtext(f"{ATOM}author/{ATOM}name") or "", "/u/"),
         created=entry.findtext(f"{ATOM}published") or entry.findtext(f"{ATOM}updated") or "",
         body=_text(entry.findtext(f"{ATOM}content") or ""),
     )

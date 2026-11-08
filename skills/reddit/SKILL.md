@@ -27,8 +27,9 @@ blocked or login-walled.
 
 ## When it fails
 
-- A 403 on moria is often only moria's IP being blocked. Run the same command through
-  `ssh dungeon '…'` before debugging.
+- A 403 or 429 is often only this host's IP being blocked. `fetch-thread.py` then
+  reruns itself over ssh on dungeon, then FOB (`$FETCH_THREAD_RELAYS`), and says so
+  on stderr. `reddit-search.py` does not: run it through `ssh dungeon '…'`.
 - If both commands break, `REDDIT_LIVE=1 python3 -m unittest test_fetch_reddit_live` in
   `toolbox/tests/` says what Reddit changed. pi's `reddit_*` tools use the old endpoints and
   are unreliable.
