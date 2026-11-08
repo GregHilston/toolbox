@@ -86,7 +86,8 @@ Implement GitHub issue #{n} in this repository, then stop.
    cat a whole large file. Iterate with the repo's one-suite test script, and its
    changed-suites form if it has one. Don't run the full gate: the loop runs it after
    your last commit and tells you what failed. Never edit verify.sh or the issue, and
-   never delete or weaken a test to make it pass.
+   never delete or weaken a test to make it pass. Scratch files go in $TMPDIR:
+   writes to /tmp are denied.
 4. Commit with a conventional commit message ending in "(#{n})", such as
    "feat(car): add handbrake (#{n})". Do not push and do not write to GitHub.
 
@@ -458,6 +459,8 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
     (tmp / "tmp").mkdir(exist_ok=True)
     env = os.environ | {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000", "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1",
                         "TMPDIR": str(tmp / "tmp")}
+    # uv run's venv; the repo's own `uv run` warns on it.
+    env.pop("VIRTUAL_ENV", None)
     if bash:  # depth 1 leaves bash-guard's hard-block table; interactive mode would abort every flagged command
         env["PI_SUBAGENT_DEPTH"] = "1"
     stdout, stdin = tmp / "agent.out", tmp / "prompt.md"

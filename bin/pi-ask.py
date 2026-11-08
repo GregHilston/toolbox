@@ -54,7 +54,8 @@ UNLOGGED = {"message_update", "tool_execution_update"}
 WORKER_ROLE = (
     "You are a headless worker another agent started with pi-ask.py. Nobody can answer a question, "
     "so never ask one: make a reasonable assumption and say so. Do what the task asks and no more, "
-    "and stay in the working directory unless the task names other paths. Your last message is the "
+    "and stay in the working directory unless the task names other paths. Write no scratch files: "
+    "writes to /tmp are denied, so pipe output instead. Your last message is the "
     "whole answer the caller reads: complete and concise, with no preamble."
 )
 # Both fail at once with no UI.
@@ -282,6 +283,8 @@ def main() -> int:
 
     # Depth 1: headless hard-block mode, no git writes.
     env = dict(os.environ, PATH=f"{TOOLBOX_BIN}:{os.environ.get('PATH', '')}", PI_SUBAGENT_DEPTH="1")
+    # uv run's venv; the repo's own `uv run` warns on it.
+    env.pop("VIRTUAL_ENV", None)
     # "--": a prompt may start with - or ---.
     cmd = ["pi", "--mode", "json", "--approve", "--provider", "litellm", "--model", args.model,
            "--session-id", args.session, "--no-skills", "--append-system-prompt", WORKER_ROLE,
