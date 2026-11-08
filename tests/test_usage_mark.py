@@ -59,5 +59,24 @@ class Deltas(unittest.TestCase):
         self.assertEqual((um.fmt(950), um.fmt(1200), um.fmt(3_400_000), um.fmt(None)), ("950", "1.2k", "3.4M", "?"))
 
 
+
+class Luna(unittest.TestCase):
+
+    def test_luna_gets_its_own_row_at_no_cost(self) -> None:
+        rows = um.deepseek_rows({"gpt-5.6-luna": {"total_in": 1000, "cread": 400, "out": 50, "spend": 0.0}}, peak=False)
+        assert set(rows) == {"Luna"}, f"rows {set(rows)}, want Luna only"
+        assert rows["Luna"]["cost"] == 0.0 and not rows["Luna"]["est"], f"Luna {rows['Luna']}, want cost 0 not estimated"
+        assert rows["Luna"]["in"] == 600, f"Luna in {rows['Luna']['in']}, want 600"
+
+
+    def test_render_shows_the_luna_quota(self) -> None:
+        mark = {"t": 0, "gauges": {"balance": 5.0}}
+        rep = um.build("x", mark, {}, {"Luna": {"in": 1, "out": 1, "cread": 1, "cwrite": None, "cost": 0.0, "est": False}},
+                       {"balance": 5.0, "luna_5h": 3.0, "luna_weekly": 0.0}, [], peak=False)
+        out = um.render(rep)
+        assert "| Luna |" in out, f"no Luna row in:\n{out}"
+        assert "Luna quota 5h 3% / wk 0%" in out, f"no Luna quota line in:\n{out}"
+
+
 if __name__ == "__main__":
     unittest.main()

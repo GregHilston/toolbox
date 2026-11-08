@@ -12,7 +12,8 @@ Claude tokens come from every transcript under ~/.claude/projects on this
 machine, all repos included (Claude is on a subscription, so cost shows "-").
 DeepSeek API and OpenCode Go come from the LiteLLM gateway's counters in
 Prometheus, read through Grafana's datasource proxy. The gateway tells them
-apart by model: `deepseek-v4.1-flash` is Go, any other `deepseek-*` is the API.
+apart by model: `deepseek-v4.1-flash` is Go, any other `deepseek-*` is the API,
+and `gpt-*` from the `chatgpt` provider is Luna on ChatGPT Plus (flat fee, $0).
 Work that bypasses the gateway shows only in the balance change.
 
 Columns: in is fresh input (DeepSeek cache misses), c.read is cache hits,
@@ -37,6 +38,7 @@ PROM = os.environ.get(
 MARKS = Path(os.environ.get("USAGE_MARK_DIR", Path.home() / ".cache" / "usage-mark"))
 PROJECTS = Path(os.environ.get("USAGE_MARK_PROJECTS", Path.home() / ".claude" / "projects"))
 GO_MODEL = "deepseek-v4.1-flash"
+LABELS = ("DS API", "Go", "Luna")
 # USD per 1M tokens (cache hit, miss, output) for Flash; peak doubles.
 FLASH = {"off": (0.003, 0.15, 0.60), "peak": (0.006, 0.30, 1.20)}
 FIELDS = ("in", "out", "cread", "cwrite")
@@ -92,7 +94,7 @@ def prom(query: str) -> list[dict]:
 
 
 def gateway_counters() -> dict[str, dict[str, float]]:
-    """Cumulative gateway counters per deepseek model."""
+    """Cumulative gateway counters per DeepSeek and ChatGPT model."""
     queries = {
         "total_in": "litellm_input_tokens_metric_total",
         "cread": "litellm_input_cached_tokens_metric_total",
@@ -101,18 +103,20 @@ def gateway_counters() -> dict[str, dict[str, float]]:
     }
     out: dict[str, dict[str, float]] = {}
     for key, metric in queries.items():
-        for r in prom(f'sum by(model)({metric}{{api_provider="deepseek"}})'):
+        for r in prom(f'sum by(model)({metric}{{api_provider=~"deepseek|chatgpt"}})'):
             out.setdefault(r["metric"]["model"], {})[key] = float(r["value"][1])
     return out
 
 
 def gauges() -> dict[str, float]:
-    """Balance and Go quota percentages right now."""
+    """Balance, Go and Luna quota percentages right now."""
     out: dict[str, float] = {}
     for r in prom("homelab_deepseek_balance_usd"):
         out["balance"] = float(r["value"][1])
     for r in prom("homelab_opencode_go_usage_percent"):
         out["go_" + r["metric"]["window"]] = float(r["value"][1])
+    for r in prom("homelab_chatgpt_usage_percent"):
+        out["luna_" + r["metric"]["window"]] = float(r["value"][1])
     return out
 
 
@@ -126,10 +130,10 @@ def counter_delta(now: dict[str, dict[str, float]], base: dict[str, dict[str, fl
 
 
 def deepseek_rows(delta: dict[str, dict[str, float]], peak: bool) -> dict[str, dict]:
-    """Fold gateway deltas into a `DS API` row and a `Go` row."""
+    """Fold gateway deltas into `DS API`, `Go` and `Luna` rows."""
     rows: dict[str, dict] = {}
     for model, d in delta.items():
-        label = "Go" if model == GO_MODEL else "DS API"
+        label = "Luna" if model.startswith("gpt-") else "Go" if model == GO_MODEL else "DS API"
         hit, total, out = d.get("cread", 0.0), d.get("total_in", 0.0), d.get("out", 0.0)
         if not (hit or total or out):
             continue
@@ -138,7 +142,9 @@ def deepseek_rows(delta: dict[str, dict[str, float]], peak: bool) -> dict[str, d
         r["out"] += int(out)
         r["cread"] += int(hit)
         spend = d.get("spend", 0.0)
-        if spend <= 0:  # Go bills a flat plan, so its dollars are list price
+        if label == "Luna":  # flat plan; no list price to estimate
+            spend = 0.0
+        elif spend <= 0:  # Go bills a flat plan, so its dollars are list price
             rate = FLASH["peak" if peak else "off"]
             spend = (hit * rate[0] + (total - hit) * rate[1] + out * rate[2]) / 1e6
             r["est"] = True
@@ -167,9 +173,9 @@ def build(name: str, mark: dict, claude: dict | None, ds: dict | None, now_g: di
     for model, v in sorted((claude or {}).items(), key=lambda kv: -kv[1]["out"]):
         rows.append({"src": short(model), "in": v["in"], "out": v["out"], "cread": v["cread"], "cwrite": v["cwrite"], "cost": None, "est": False})
     if ds is None:
-        rows += [{"src": s, "in": None, "out": None, "cread": None, "cwrite": None, "cost": None, "est": False} for s in ("DS API", "Go")]
+        rows += [{"src": s, "in": None, "out": None, "cread": None, "cwrite": None, "cost": None, "est": False} for s in LABELS]
     else:
-        for label in ("DS API", "Go"):
+        for label in LABELS:
             if label in ds:
                 rows.append({"src": label, **ds[label]})
     extra: dict[str, float | None] = {}
@@ -178,6 +184,8 @@ def build(name: str, mark: dict, claude: dict | None, ds: dict | None, now_g: di
         extra["balance_change"] = round(now_g["balance"] - g0["balance"], 4) if "balance" in now_g and "balance" in g0 else None
         for w in ("rolling", "weekly", "monthly"):
             extra["go_" + w] = now_g.get("go_" + w)
+        for w in ("5h", "weekly"):
+            extra["luna_" + w] = now_g.get("luna_" + w)
     elapsed = int(dt.datetime.now().timestamp() - mark["t"])
     return {"name": name, "minutes": elapsed // 60, "rows": rows, "extra": extra, "notes": notes, "claude_ok": claude is not None}
 
@@ -195,11 +203,13 @@ def render(rep: dict) -> str:
     bits = []
     if x.get("go_rolling") is not None:
         bits.append(f"Go quota 5h {x['go_rolling']:g}% / wk {x['go_weekly']:g}% / mo {x['go_monthly']:g}%")
+    if x.get("luna_5h") is not None:
+        bits.append(f"Luna quota 5h {x['luna_5h']:g}% / wk {x.get('luna_weekly') or 0:g}%")
     if x.get("balance_change") is not None:
         bits.append(f"DS balance {x['balance_change']:+.2f}")
     if bits:
         lines += ["", "; ".join(bits)]
-    lines += ["", "Claude counts all repos on this machine; Go $ is list-price (~)."]
+    lines += ["", "Claude counts all repos on this machine; Go $ is list-price (~); Luna is flat-fee ($0)."]
     lines += [f"? {n}" for n in rep["notes"]]
     return "\n".join(lines)
 
