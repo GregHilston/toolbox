@@ -30,7 +30,7 @@ class GatewayProvider(unittest.TestCase):
 
     def test_offers_exactly_the_gateway_aliases(self) -> None:
         ids = [m["id"] for m in self.gateway["models"]]
-        self.assertEqual(sorted(ids), ["cloud", "cloud-deepseek", "local-big", "local-lab", "local-small"])
+        self.assertEqual(sorted(ids), ["cloud", "cloud-deepseek", "cloud-go", "cloud-luna", "local-big", "local-lab", "local-small"])
 
     def test_local_aliases_fit_the_lab_profile(self) -> None:
         # Past 65536 the oMLX :lab profile rejects the prompt.

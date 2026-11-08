@@ -35,7 +35,7 @@
         },
         {
           "id": "cloud",
-          "name": "cloud: Flash via OpenCode Go, overflowing to DeepSeek",
+          "name": "cloud: OpenCode Go, overflowing to Luna, then DeepSeek",
           "reasoning": true,
           "thinkingLevelMap": {
             "minimal": null,
@@ -54,6 +54,64 @@
             "maxTokensField": "max_tokens",
             "requiresReasoningContentOnAssistantMessages": true,
             "thinkingFormat": "deepseek",
+            "supportsStrictMode": true,
+            "supportsReasoningEffort": true
+          },
+          "inputLimits": {
+            "images": {
+              "resize": { "maxWidth": 2000, "maxHeight": 2000, "maxBytes": 4718592, "jpegQuality": 80 }
+            }
+          }
+        },
+        {
+          "id": "cloud-go",
+          "name": "cloud-go: Flash on OpenCode Go only (flat fee)",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "minimal": null,
+            "low": "low",
+            "medium": null,
+            "high": "high",
+            "max": "max"
+          },
+          "contextWindow": 1000000,
+          "maxTokens": 384000,
+          "input": ["text", "image"],
+          "cost": { "input": 0.3, "output": 1.2, "cacheRead": 0.006, "cacheWrite": 0 },
+          "compat": {
+            "supportsStore": false,
+            "supportsDeveloperRole": false,
+            "maxTokensField": "max_tokens",
+            "requiresReasoningContentOnAssistantMessages": true,
+            "thinkingFormat": "deepseek",
+            "supportsStrictMode": true,
+            "supportsReasoningEffort": true
+          },
+          "inputLimits": {
+            "images": {
+              "resize": { "maxWidth": 2000, "maxHeight": 2000, "maxBytes": 4718592, "jpegQuality": 80 }
+            }
+          }
+        },
+        {
+          "id": "cloud-luna",
+          "name": "cloud-luna: GPT-5.6 Luna on ChatGPT Plus only (flat fee)",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "minimal": null,
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "max": "xhigh"
+          },
+          "contextWindow": 1050000,
+          "maxTokens": 128000,
+          "input": ["text", "image"],
+          "cost": { "input": 0.3, "output": 1.2, "cacheRead": 0.006, "cacheWrite": 0 },
+          "compat": {
+            "supportsStore": false,
+            "supportsDeveloperRole": false,
+            "maxTokensField": "max_tokens",
             "supportsStrictMode": true,
             "supportsReasoningEffort": true
           },

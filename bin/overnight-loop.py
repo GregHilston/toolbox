@@ -15,8 +15,8 @@ overnight:parked. Each issue appends to progress.md, which the next worker reads
 pi workers use the LiteLLM gateway's `cloud` model unless --model names another,
 and --budget stops starting issues once this run has spent that much there. The
 gateway's own daily cap on `cloud` is the hard limit underneath: past it, every
-request gets a 429. `cloud` is OpenCode Go until Go refuses, then DeepSeek; only
-DeepSeek counts, so --budget and the cap cover the overflow, not Go's flat fee.
+request gets a 429. `cloud` is OpenCode Go, then Luna on ChatGPT Plus, then DeepSeek;
+only DeepSeek counts, so --budget and the cap cover the last overflow, not the flat fees.
 
 Claude's cost figures are list-price estimates, since a subscription bills none
 of it. The `Real:` line sums this run's own pi phases, priced from DeepSeek's table;
@@ -404,7 +404,7 @@ def pi_result(out: str) -> Run:
         # A later answer means pi's retry worked.
         run.error = str(msg.get("errorMessage", "error")) if msg.get("stopReason") == "error" else ""
         when = datetime.fromtimestamp(msg.get("timestamp", time.time() * 1000) / 1000, timezone.utc)
-        run.cost += preflight.turn_cost(msg.get("model"), msg.get("usage") or {}, when)
+        run.cost += preflight.turn_cost(msg.get("responseModel") or msg.get("model"), msg.get("usage") or {}, when)
         usage = msg.get("usage") or {}
         run.tokens += int(usage.get("totalTokens") or sum(
             int(usage.get(k) or 0) for k in ("input", "output", "cacheRead", "cacheWrite")))
@@ -447,7 +447,7 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
             cmd += ["--tools", "read,grep,find,ls" + (",bash" if bash else "")]
         if model in CLOUD:
             cmd += ["--provider", "litellm"]
-            model = os.environ.get("PI_CLOUD_MODEL", "cloud")  # cloud-deepseek while Go refuses
+            model = os.environ.get("PI_CLOUD_MODEL", "cloud")  # cloud-go, cloud-luna or cloud-deepseek pins one
     shown = model or "default"
     if model:
         cmd[1:1] = ["--model", model]

@@ -45,9 +45,10 @@ did; `pi-ask.py` handles both.
   or 4, ask again with the same name to carry on. Stop it with Ctrl-C or a
   plain `kill`, never `kill -9`: that leaves pi running on its own with no
   cost cap.
-- **It runs on the gateway's `cloud` model** (Flash, on OpenCode Go until Go
-  refuses, then DeepSeek). The answer header gives the cost at DeepSeek's prices,
-  which `--max-cost` uses. Go also charges those prices, against its allowance.
+- **It runs on the gateway's `cloud` model**: OpenCode Go, then GPT-5.6 Luna on
+  ChatGPT Plus, then DeepSeek. `--model cloud-go`, `cloud-luna` or `cloud-deepseek`
+  runs only that one, failing when it refuses. The answer header gives the cost at
+  DeepSeek's prices, which `--max-cost` uses; a turn Luna answered costs $0.
 - **What the worker can touch.** It reads anything under `~/Git`; copy in
   anything else first. Its `edit` tool is refused outside `--dir`, but inside it
   can change and discard files (`git checkout -- .`, `sed -i`), and shell

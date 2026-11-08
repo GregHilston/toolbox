@@ -143,6 +143,8 @@ class TestTurnCost(unittest.TestCase):
         saturday = dt.datetime(2026, 10, 17, 12, tzinfo=dt.timezone.utc)
         self.assertEqual(pf.turn_cost("cloud", self.USAGE, saturday),
                          pf.turn_cost("deepseek-flash", self.USAGE, saturday))
+        luna = pf.turn_cost("cloud-luna", self.USAGE, saturday)
+        self.assertEqual(luna, 0, f"a Luna turn cost {luna}, want 0: ChatGPT Plus is a flat fee")
 
 class TestGoSummary(unittest.TestCase):
     def test_says_how_much_of_each_window_is_used(self):
@@ -158,3 +160,17 @@ class TestGoSummary(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestLunaSummary(unittest.TestCase):
+    def test_lists_each_window(self) -> None:
+        line = pf.luna_summary({"up": 1, "5h": 12, "weekly": 40})
+        self.assertEqual(line, "5h 12%, weekly 40%", f"got {line!r}")
+
+    def test_lost_login_says_so(self) -> None:
+        line = pf.luna_summary({"up": 0})
+        self.assertIn("LOGIN LOST", line, f"got {line!r}, want the login named")
+
+    def test_no_gauges_is_unknown(self) -> None:
+        line = pf.luna_summary({})
+        self.assertTrue(line.startswith("unknown"), f"got {line!r}, want unknown")

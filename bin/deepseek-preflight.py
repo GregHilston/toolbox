@@ -20,8 +20,8 @@ to avoid rather than a discount to chase - and the trap is that those windows
 land on a US Eastern evening, which is exactly when someone kicks off an
 overnight run. 01:00 UTC Monday is 21:00 Eastern on *Sunday*.
 
-It also prints OpenCode Go's quota, which never changes the exit code: the gateway's
-`cloud` overflows to DeepSeek by itself when Go runs out.
+It also prints OpenCode Go's and ChatGPT Plus's quotas, which never change the exit code:
+the gateway's `cloud` overflows by itself, from Go to Luna to DeepSeek.
 
 Exit codes: 0 clear, 1 something wants a human's attention, 2 could not tell
 (no key, network down). 1 and 2 are deliberately different: "you are nearly out
@@ -36,11 +36,13 @@ import json
 import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 
 BALANCE_URL = "https://api.deepseek.com/user/balance"
 # Undocumented; anomalyco/opencode#43983 names it.
 GO_USAGE_URL = "https://opencode.ai/zen/go/v1/usage"
+PROMETHEUS_URL = os.environ.get("PROMETHEUS_URL", "http://dungeon:9090")
 
 # (start_hour, end_hour) in UTC, Monday-Friday only. End is exclusive.
 PEAK_WINDOWS_UTC = ((1, 4), (6, 10))
@@ -53,6 +55,8 @@ PRICES = {
     "deepseek-v4-pro": {"off": (0.022, 0.66, 1.98), "peak": (0.044, 1.32, 3.96)},
     "deepseek-flash": {"off": (0.003, 0.15, 0.60), "peak": (0.006, 0.30, 1.20)},
     "deepseek-v4-flash": {"off": (0.003, 0.15, 0.60), "peak": (0.006, 0.30, 1.20)},
+    # ChatGPT Plus is a flat fee.
+    "cloud-luna": {"off": (0, 0, 0), "peak": (0, 0, 0)},
 }
 
 
@@ -71,8 +75,9 @@ def is_peak(when: dt.datetime) -> bool:
 def turn_cost(model: str | None, usage: dict, when: dt.datetime) -> float:
     """What one pi turn cost, at the rate in force when it ran.
 
-    `usage` is pi's per-message usage. A model missing from PRICES, such as the
-    LiteLLM gateway's `cloud` alias, is priced as Flash, which is what it serves.
+    `usage` is pi's per-message usage. Pass pi's `responseModel` first: the gateway
+    names the alias that answered, so a `cloud` turn Luna served costs nothing. A
+    model missing from PRICES, such as `cloud` itself, is priced as Flash.
     """
     rates = PRICES.get(model or "", PRICES["deepseek-flash"])
     hit, miss, output = rates["peak" if is_peak(when) else "off"]
@@ -120,6 +125,24 @@ def fetch_go_usage(key: str, timeout: float = 10.0) -> dict:
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.load(resp)["usage"]
+
+
+def fetch_luna_usage(timeout: float = 10.0) -> dict[str, float]:
+    """Luna's gauges as home-lab's gateway publishes them; the login lives there, not here."""
+    query = "{__name__=~'homelab_chatgpt_usage_(up|percent)'}"
+    url = PROMETHEUS_URL + "/api/v1/query?" + urllib.parse.urlencode({"query": query})
+    with urllib.request.urlopen(url, timeout=timeout) as resp:
+        result = json.load(resp)["data"]["result"]
+    return {r["metric"].get("window", "up"): float(r["value"][1]) for r in result}
+
+
+def luna_summary(gauges: dict[str, float]) -> str:
+    """Each window's percent used, or why Luna cannot answer."""
+    if not gauges:
+        return "unknown - no gauges yet (the gateway publishes them after its first request)"
+    if gauges.get("up") != 1:
+        return "LOGIN LOST - cloud skips Luna; home-lab runbook llm-chatgpt-login"
+    return ", ".join(f"{w} {gauges[w]:g}%" for w in ("5h", "weekly") if w in gauges)
 
 
 def go_summary(usage: dict) -> str:
@@ -218,10 +241,18 @@ def main() -> int:
             except Exception as exc:  # noqa: BLE001 - it never decides the verdict
                 go = f"unknown - {exc}"
 
+    luna: str | None = None
+    if not args.skip_balance:
+        try:
+            luna = luna_summary(fetch_luna_usage())
+        except Exception as exc:  # noqa: BLE001 - it never decides the verdict
+            luna = f"unknown - {exc}"
+
     verdict = evaluate(balance, now, args.min_balance, args.warn_minutes)
     verdict["currency"] = currency
     verdict["unreachable"] = unreachable
     verdict["go"] = go
+    verdict["luna"] = luna
 
     if args.json:
         print(json.dumps(verdict, indent=2))
@@ -240,6 +271,8 @@ def main() -> int:
             print(f"  balance  ${balance:.2f} {currency}   (floor ${args.min_balance:.2f})")
         if go:
             print(f"  go       {go}")
+        if luna:
+            print(f"  luna     {luna}")
         print()
         if verdict["problems"]:
             for p in verdict["problems"]:

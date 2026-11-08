@@ -13,8 +13,10 @@ gateway's aliases, never an oMLX model, and the gateway decides where each runs:
 | `local-small` | moria's oMLX when awake, else dungeon's | the default |
 | `local-lab` | dungeon only | automation that must not wake moria |
 | `local-big` | moria's Strata, Qwen3.8-Flash-Next; fails in ~7 s when moria is away | harder work while moria is up; text only, slow to first token |
-| `cloud` | OpenCode Go (Flash), then DeepSeek's API when Go refuses | flat fee, then metered; never a fallback for a `local-` alias |
-| `cloud-deepseek` | DeepSeek's API (Flash) | metered; `cloud`'s overflow |
+| `cloud` | OpenCode Go (Flash), then Luna, then DeepSeek's API | flat fees, then metered; never a fallback for a `local-` alias |
+| `cloud-go` | OpenCode Go (Flash) only; fails when Go refuses | flat fee |
+| `cloud-luna` | GPT-5.6 Luna on ChatGPT Plus only; fails when it refuses | flat fee; `cloud`'s first overflow |
+| `cloud-deepseek` | DeepSeek's API (Flash) | metered; `cloud`'s last overflow |
 
 The `local-` prefix means the prompt stays on the tailnet; `cloud` leaves the
 house, and names the job rather than the vendor behind it.
@@ -55,8 +57,8 @@ re-read before every request — so refreshing it needs no rebuild, no
 
 The default stays free: a bare `pi` is the gateway's `local-small`. DeepSeek is the
 opt-in alternative, reachable two ways. The gateway's `cloud` alias serves
-Flash through OpenCode Go until Go refuses, then on the gateway's DeepSeek key, which tracks the spend
-(home-lab `docs/llm-gateway.md` → OpenCode Go). The direct built-in provider
+Flash through OpenCode Go until Go refuses, then GPT-5.6 Luna on ChatGPT Plus, then the gateway's
+DeepSeek key, which tracks the spend (home-lab `docs/llm-gateway.md` → OpenCode Go, ChatGPT Plus). The direct built-in provider
 below serves Flash and Pro on `DEEPSEEK_API_KEY`, and stays because
 `/orchestrate-pi --model pro` runs on it and `deepseek-preflight.py` reads that key's
 balance. `/orchestrate-pi`'s Flash workers use `cloud`.

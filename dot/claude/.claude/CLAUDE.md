@@ -100,7 +100,7 @@ End every handoff with the exact message I paste to start the next chat, in a co
 - **Sonnet** when the task needs judgement: design, perf work that must stay bit-identical, networking, multi-file refactors, conflict resolution, research that weighs sources, and reviews of branches with real logic. If a Haiku agent's report is thin or wrong, rerun that task on Sonnet and note it.
 - **Opus** only when I ask for it.
 - **Point a delegated task at the repo's own rules for it** (a command, skill or `CLAUDE.md` section) rather than restating them in the prompt. On 2026-10-21 a Haiku agent filed vault clips from my hand-written spec, never saw `.claude/commands/triage.md`, and made a string of mistakes Greg had to catch. Clip writing is Sonnet work.
-- **DeepSeek** (`pi-ask.py`, `--harness pi` lanes) for every second-opinion review of a branch with logic in it, for bulk reading, and by default for implementation and research too, with Opus orchestrating (2026-11-01). Sonnet is for reading shots and tickets that parked twice. Use it from the start of a session, not as an afterthought.
+- **DeepSeek** (`pi-ask.py`, `--harness pi` lanes) for every second-opinion review of a branch with logic in it, for bulk reading, and by default for implementation and research too, with Opus orchestrating (2026-11-01). Sonnet is for reading shots and tickets that parked twice. Use it from the start of a session, not as an afterthought. The gateway's `cloud` runs OpenCode Go, then GPT-5.6 Luna on ChatGPT Plus, then DeepSeek's API; `PI_CLOUD_MODEL=cloud-go|cloud-luna|cloud-deepseek` pins one (2026-11-08).
 - Run `deepseek-preflight.py` before starting DeepSeek work: it prints the rate now, minutes to the next peak, and the balance. Start long `pi` lanes with `--off-peak`, so they wait out peak hours. A review costs cents, so run it even at peak price.
 
 ## Bash working directory — use absolute paths
@@ -155,8 +155,8 @@ Notes an LLM writes for `~/Git/notes` go in its `llm/` folder, filed with
 ## Researching Reddit
 
 Use the `reddit` skill (`reddit-search.py`, then `fetch-thread.py <url>`); no login needed.
-**A 403 on moria is often only moria's IP being blocked:** run the same command through
-`ssh dungeon '…'` before debugging (worked all day on 2026-10-22).
+**A 403 on moria is often only moria's IP being blocked:** `fetch-thread.py` retries through
+dungeon, then FOB, by itself; run `reddit-search.py` through `ssh dungeon '…'` before debugging.
 
 **Don't reach for `searxngr` to find Reddit threads:** its egress IP is blocked by every
 engine that indexes Reddit deeply. It still works for general web search; `WebSearch` is the

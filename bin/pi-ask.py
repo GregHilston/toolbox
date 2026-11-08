@@ -106,7 +106,7 @@ class Tally:
             return
         usage = message.get("usage") or {}
         when = datetime.fromtimestamp(message.get("timestamp", time.time() * 1000) / 1000, timezone.utc)
-        self.cost += preflight.turn_cost(message.get("model"), usage, when)
+        self.cost += preflight.turn_cost(message.get("responseModel") or message.get("model"), usage, when)
         parts = [b.get("text", "") for b in message.get("content", []) if b.get("type") == "text"]
         if any(parts):
             self.text = "".join(parts)
