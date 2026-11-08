@@ -464,6 +464,13 @@ loudly rather than silently substituting your own."
   than compacting it**, so the answer is not to summarise later — it is not to
   load the bloat in the first place.
 - Let hooks run. **Never `--no-verify`.** State the expected duration.
+- **The worker never runs the whole gate, in a build or a fix round.** It
+  iterates on the suites its change reaches and stops when those pass; you run
+  the one full gate after review says LAND, then merge. On 2026-11-07 the
+  orchestrator's own prompts said "run the gate once at the end" and "last round:
+  run the gate", and full gates rose to 3.1 per ticket against a written
+  one-per-ticket rule. Where a repo enforces the rule (gridkeep's `verify.sh`
+  ledger), never hand a worker the bypass (`VERIFY_AGAIN`) in its prompt.
 - **A suite that blows past its known baseline is hung, not slow — go and read
   why.** You are told what the suites cost (Step 2d). When one that takes ~50s is
   still going at 300, re-running it is the wrong move; the second and third
@@ -541,9 +548,16 @@ Two details make it work:
   worker's highest-consequence claim by running something, not by reading.
   Name its scratch copy for it (`scratchpad/rev<issue>-<random>`): on 2026-11-06
   one reviewer rsync'd its branch over another reviewer's shared `wt` copy mid-run.
-- **Keep the worker's suite in the foreground.** Tell it to pass the Bash tool
-  `timeout: 600000` on the full suite; otherwise the harness backgrounds it after
-  two minutes, and each stale watcher and poll wakes you (about 30 wakes in one night).
+- **Keep every suite in the foreground.** Pass the Bash tool `timeout: 600000`
+  (1800000 for a gate that may queue for a slot); otherwise the harness
+  backgrounds it after two minutes, and each stale watcher and poll wakes you
+  (about 30 wakes in one night).
+- **Land on LAND, fix only on FIX.** A "LAND with follow-ups" verdict merges at
+  once and its follow-ups become tickets; a fix round runs only on FIX, runs no
+  full gate, and the recheck reads the fix commit. Budget a DeepSeek review 60
+  turns with findings by call 15 and a verdict by call 25: at 45 turns two of
+  seven ran out before a verdict on 2026-11-07, each costing a relay round, and
+  relay was that run's biggest wait (63 minutes).
 - **The findings go back to the original worker, not to a new one.** Keep the
   `agentId` from each spawn and `SendMessage` the findings to it; it still holds
   its own reasoning and can say "I disagree, here is why". Frame it as a
