@@ -465,8 +465,10 @@ loudly rather than silently substituting your own."
   load the bloat in the first place.
 - Let hooks run. **Never `--no-verify`.** State the expected duration.
 - **The worker never runs the whole gate, in a build or a fix round.** It
-  iterates on the suites its change reaches and stops when those pass; you run
-  the one full gate after review says LAND, then merge. On 2026-11-07 the
+  iterates on the suites its change reaches and stops when those pass; after review
+  says LAND you merge on the cheap landing check and run the full gate on main
+  once per batch of up to four merges and before a release (rules, data, flag
+  and gate-change work still gates first). On 2026-11-07 the
   orchestrator's own prompts said "run the gate once at the end" and "last round:
   run the gate", and full gates rose to 3.1 per ticket against a written
   one-per-ticket rule. Where a repo enforces the rule (gridkeep's `verify.sh`
