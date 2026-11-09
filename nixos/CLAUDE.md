@@ -576,7 +576,7 @@ activation (`just fr <host>` or `just dr <host>`), on every host that imports
 6. **Home Manager**: User packages go in `modules/home/default.nix`, not system packages
 7. **WSL specifics**: foundation host needs `wsl.enable = true` and related WSL config
 8. **No hardcoded IPs**: Never put IP addresses directly in host configs or modules. All host IPs are defined in `config/vars.nix` under `networking.hosts`. Reference them as `vars.networking.hosts.<name>.lan` or `vars.networking.hosts.<name>.tailscale`. If a new host or IP is needed, add it to `vars.nix` first.
-9. **SSH config**: SSH client match blocks are managed centrally in `modules/programs/tui/ssh.nix` using vars. Do not add SSH host entries in individual host configs.
+9. **SSH config**: SSH client match blocks are managed centrally in `modules/programs/tui/ssh.nix` using vars. Do not add SSH host entries in individual host configs. `~/.ssh/config` is a read-only home-manager link, so appending to it fails with "permission denied" (2026-11-09): add the host there and apply with `just dr <host>`.
 10. **`vars.user.name` is the LOCAL account, never a remote login**: it is
     `greghilston` on citadel (work) and `ghilston` everywhere else. The account to
     log in as *on a remote machine* is that machine's own fact and lives beside its
