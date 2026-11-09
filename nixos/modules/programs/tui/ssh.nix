@@ -78,6 +78,13 @@ in {
         User = hosts.pixel.user;
         Port = hosts.pixel.sshPort;
       };
+      # Hetzner VPS: debrief, and Gridkeep prod (#616).
+      "debrief" = {
+        HostName = "178.105.216.204";
+        User = "root";
+        IdentityFile = "\"~/.ssh/foo hetzner server\"";
+        IdentitiesOnly = true;
+      };
       "*" = {
         IdentityFile = "~/.ssh/id_rsa";
       };
