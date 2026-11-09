@@ -105,7 +105,7 @@ def main():
     elif mode == "stop":
         if not in_repo(cwd):
             return
-        kept = [ln for ln in run_tool("--repo", cwd, "--check").splitlines() if ln.startswith("KEPT")]
+        kept = [ln for ln in run_tool("--repo", cwd, "--check", "--no-fetch").splitlines() if ln.startswith("KEPT")]
         if kept:
             msg = "Landed worktrees git will not remove; Greg needs to look:\n" + "\n".join(kept)
             print(json.dumps({"systemMessage": msg}))

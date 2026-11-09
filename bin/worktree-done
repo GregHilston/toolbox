@@ -76,6 +76,7 @@ def main():
     ap.add_argument("--repo", help="repository (default: the one containing the cwd)")
     ap.add_argument("--dry-run", action="store_true", help="print what would be removed, touch nothing")
     ap.add_argument("--check", action="store_true", help="list landed worktrees git would refuse, remove nothing")
+    ap.add_argument("--no-fetch", action="store_true", help="trust the local origin/main (it can only lag)")
     ap.add_argument("--verbose", action="store_true", help="also say why a worktree is skipped")
     args = ap.parse_args()
 
@@ -83,7 +84,7 @@ def main():
     entries = worktrees(repo)
     main_path = entries[0]["worktree"]
 
-    if git(repo, "fetch", "-q", "origin").returncode != 0:
+    if not args.no_fetch and git(repo, "fetch", "-q", "origin").returncode != 0:
         sys.exit("worktree-done: git fetch origin failed; nothing removed")
 
     limit = [os.path.realpath(p) for p in args.paths]

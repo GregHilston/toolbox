@@ -201,6 +201,13 @@ class TestNoRemoval(Repo):
         self.assertIn("worktree/a", self.branches())
 
 
+    def test_no_fetch_skips_the_fetch_and_trusts_the_local_ref(self):
+        wt = self.worktree("a")
+        git(self.main, "remote", "set-url", "origin", str(self.root / "nowhere.git"))
+        out = self.run_tool("--no-fetch", "--check")
+        self.assertEqual(out.returncode, 0, f"exit {out.returncode}, want 0: {out.stderr}")
+        self.assertTrue(wt.exists(), "--check must leave the worktree")
+
 class TestSource(unittest.TestCase):
     FORBIDDEN = [
         r"\brm\b",
