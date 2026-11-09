@@ -71,6 +71,7 @@ For every finished branch:
 3. Get a DeepSeek second opinion on every branch with real logic in it, and always on large or risky ones (architecture, networking, auth, data): `pi-ask.py --session review-<x> --dir <a separate detached worktree> @prompt.md`. A different model family catches different bugs: its review of a 20-commit refactor found four real bugs that Sonnet passed. `pi-ask.py` retries a stalled run once itself; if there is still no answer, rerun it, never skip it.
 4. Read every test diff the branch carries: a deleted assertion is a weakened test even when the report calls it a new one, and "the suite passes" must name the command that ran the whole suite (both slipped through on 2026-10-28).
 5. Fix small leftovers yourself; ticket the rest. Then land with the second-opinion line: `lane.py land <worktree> --second-opinion review-<x>`. It refuses unless that session answered. A data-only or test-only branch passes `--no-second-opinion "<why>"` instead.
+6. A landed worktree leaves through `worktree-done` (toolbox `bin`), which runs only `git worktree remove` and `git branch -d`; the post-push hook runs it for you. Git refuses one with untracked or modified files and it prints a `KEPT` line: list those for Greg, never remove one by hand or with a force flag. Workers keep scratch in the scratchpad, not the worktree.
 
 ## Throughput: what kept a 20-lane night moving
 
