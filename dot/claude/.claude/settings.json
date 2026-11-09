@@ -116,6 +116,29 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/Git/toolbox/bin/worktree-done-hook post-push",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/Git/toolbox/bin/worktree-done-hook stop",
+            "timeout": 120
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
