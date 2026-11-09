@@ -17,12 +17,6 @@ If I ever ask you to generate a PR description, do so by writing markdown to a f
 
 @RTK.md
 
-## Pixel 8 (Termux)
-
-Shared storage path: `/data/data/com.termux/files/home/storage/shared/Git/`
-- Notes repo: `shared/Git/notes/`
-- SSH: port 8022, user `u0_a305`, IP in `~/.ssh/config`
-
 ## Documentation Philosophy
 
 When writing or updating any CLAUDE.md or README:
@@ -85,7 +79,7 @@ End every handoff with the exact message I paste to start the next chat, in a co
 - Before and after screenshots posted on the ticket let me judge a visual change without opening anything; do it for every visible change (2026-10-26).
 - In a decision question, explain any game mechanic or term in one plain line first; I forget names (rider damage, the action cap, 2026-10-26). Write what we decide onto the tickets, not only into notes.
 - Before changing something I use, find the copy I actually use. On 2026-10-26 you edited the gym HTML page while my phone ran openGym, and I synced and saw no change.
-- A chat I start fresh from my phone runs on moria in SDK mode (`entrypoint: sdk-cli` in its transcript), gets no title, and `/resume` hides it. One started with `claude` in a terminal on moria, then attached with `/remote-control`, shows up in `/resume` like any other. Point me at that when I ask how to continue a phone chat on the laptop (2026-11-08).
+- A chat I start fresh from my phone runs on moria in SDK mode (`entrypoint: sdk-cli` in its transcript), gets no title, and `/resume` hides it. One started with `claude` in a terminal on moria, then attached with `/remote-control`, shows up in `/resume` like any other. Point me at that when I ask how to continue a phone chat on the laptop (2026-11-08). SDK mode also drains the 5-hour window faster; see "Picking a model".
 - When I answer a design pick with "think about it and propose", bring one proposal built on the project's own numbers and outside evidence (other games, community threads), with its reasoning, not a fresh set of bare options (2026-11-08).
 - DeepSeek credit isn't scarce: a few dollars of real balance is more than a day of work. Don't reroute work to save it; just don't waste it.
 - Run commands yourself unless they need my hands, a keyboard shortcut or my screen, even if a handoff says I run them. When I report something didn't work, first check the state it should have changed: on 2026-10-30 two "failures" were setup commands that had never run, which I could have run myself.
@@ -103,6 +97,7 @@ End every handoff with the exact message I paste to start the next chat, in a co
 - **Haiku first:** it costs far less, so use it wherever it can do the job. That covers status sweeps, running captures and gates, listing results, rebases without real conflicts, small well-specified tickets, reviews of test-only or data-only diffs, and focused read-only searches.
 - **Sonnet** when the task needs judgement: design, perf work that must stay bit-identical, networking, multi-file refactors, conflict resolution, research that weighs sources, and reviews of branches with real logic. If a Haiku agent's report is thin or wrong, rerun that task on Sonnet and note it.
 - **Opus** only when I ask for it.
+- **Headless Claude costs more quota.** `claude -p` and Agent SDK sessions (`entrypoint: sdk-cli`/`sdk-ts`) use up the 5-hour window 1.8–2.9× faster than an interactive session for the same tokens, by several independent A/B tests in anthropics/claude-code#97074 (open on 2026-11-08). Prefer a pi lane or an interactive Remote Control session over a Claude `-p` worker.
 - **Point a delegated task at the repo's own rules for it** (a command, skill or `CLAUDE.md` section) rather than restating them in the prompt. On 2026-10-21 a Haiku agent filed vault clips from my hand-written spec, never saw `.claude/commands/triage.md`, and made a string of mistakes Greg had to catch. Clip writing is Sonnet work.
 - **DeepSeek** (`pi-ask.py`, `--harness pi` lanes) for every second-opinion review of a branch with logic in it, for bulk reading, and by default for implementation and research too, with Opus orchestrating (2026-11-01). Sonnet is for reading shots and tickets that parked twice. Use it from the start of a session, not as an afterthought. The gateway's `cloud` runs OpenCode Go, then GPT-5.6 Luna on ChatGPT Plus, then DeepSeek's API; `PI_CLOUD_MODEL=cloud-go|cloud-luna|cloud-deepseek` pins one (2026-11-08).
 - **Bulk LLM generation** (playtest cohorts, batch labelling) runs on the free local model through oMLX. Luna's ChatGPT allowance is for small samples: run a 5–10 item pilot, read its gauge with `deepseek-preflight.py`, and keep a batch under 20% of the weekly allowance (2026-11-08).
@@ -142,19 +137,15 @@ Prefer the `Read`, `Grep`, and `Glob` tools over shelling out to `cat`/`head`/`t
 
 ## 1Password from any repo
 
-moria and dungeon hold a service account token that reads vault Infra with no prompt and
-nobody at the Mac. Use it from any repo, one command at a time:
+moria and dungeon hold a read-only token for vault Infra. Read one secret per command:
 
 ```bash
 OP_SERVICE_ACCOUNT_TOKEN=$(cat ~/.config/op/service-account-token) op read 'op://Infra/<item>/<field>'
 ```
 
-- Never export it, or put it in `.zshrc` or a session env: everything an agent starts inherits that.
-- Don't let a secret reach output. Send it to a file or the program that needs it, and check only its length.
-- It can't write. Creating or editing an item goes through the desktop app, which needs Greg to approve a prompt.
-- It sees Infra only, not Private or the Mozilla account.
-
-`just secrets` in toolbox and home-lab already reads the file. Rotation is in `~/Git/toolbox/nixos/docs/secrets.md`.
+Never export the token or put it in a session env: everything an agent starts inherits it.
+Send a secret to a file or the program that needs it, and check only its length. Limits and
+rotation: `~/Git/toolbox/nixos/docs/secrets.md`.
 
 ## Toolbox
 
@@ -164,16 +155,6 @@ OP_SERVICE_ACCOUNT_TOKEN=$(cat ~/.config/op/service-account-token) op read 'op:/
 
 Notes an LLM writes for `~/Git/notes` go in its `llm/` folder, filed with
 `topics:`, never at the root. The vault's `CLAUDE.md` has the details.
-
-## Researching Reddit
-
-Use the `reddit` skill (`reddit-search.py`, then `fetch-thread.py <url>`); no login needed.
-**A 403 on moria is often only moria's IP being blocked:** `fetch-thread.py` retries through
-dungeon, then FOB, by itself; run `reddit-search.py` through `ssh dungeon '…'` before debugging.
-
-**Don't reach for `searxngr` to find Reddit threads:** its egress IP is blocked by every
-engine that indexes Reddit deeply. It still works for general web search; `WebSearch` is the
-fallback.
 
 ## Agent skills
 
