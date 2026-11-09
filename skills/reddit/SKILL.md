@@ -41,7 +41,8 @@ blocked or login-walled.
   DeepSeek, so never search anything private this way.
 - Through the dungeon relay, `fetch-thread.py` returns the comments but the post body is
   rate-limited (429), and two reads back to back trip the limit: leave about a minute
-  between threads (75 seconds worked 4 of 4).
+  between threads (75 seconds worked 4 of 4). A DeepSeek Search summary holds the post
+  body when the thread is indexed, but it missed 2 of 2 posts on 2026-11-08.
 - If both commands break, `REDDIT_LIVE=1 python3 -m unittest test_fetch_reddit_live` in
   `toolbox/tests/` says what Reddit changed. pi's `reddit_*` tools use the old endpoints and
   are unreliable.
