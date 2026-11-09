@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""worktree-done-hook <post-push|stop>: Claude Code hook wrapper for worktree-done.
+
+post-push (PostToolUse, Bash): after a successful `git push`, run
+`worktree-done` on the repo and hand any output to the agent as context.
+stop (Stop): run `worktree-done --check` and warn Greg, without blocking,
+about landed worktrees git refuses to remove. Never exits 2: the agent may not
+delete untracked files, so a block would loop. Silent outside git repos.
+WORKTREE_DONE_BIN overrides the worktree-done path.
+"""
+
+import json
+import os
+import shlex
+import subprocess
+import sys
+
+SEPARATORS = {";", "&&", "||", "|", "&", "\n", "(", ")"}
+WRAPPERS = {"rtk", "env", "command", "time"}
+GIT_ARG_OPTS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
+
+
+def tokens(command):
+    lex = shlex.shlex(command, posix=True, punctuation_chars=";&|()\n")
+    lex.whitespace = " \t\r"
+    lex.whitespace_split = True
+    return list(lex)
+
+
+def push_dirs(command, cwd):
+    """Directories of each `git push` in the command, as a shell would run them."""
+    try:
+        toks = tokens(command)
+    except ValueError:
+        return []
+    found, seg = [], []
+    for tok in toks + ["\n"]:
+        if tok not in SEPARATORS:
+            seg.append(tok)
+            continue
+        d = push_in_segment(seg, cwd)
+        if d:
+            found.append(d)
+        seg = []
+    return found
+
+
+def push_in_segment(seg, cwd):
+    i = 0
+    while i < len(seg) and (seg[i] in WRAPPERS or ("=" in seg[i] and not seg[i].startswith("-"))):
+        i += 1
+    if i >= len(seg) or seg[i] != "git":
+        return None
+    i += 1
+    where = cwd
+    while i < len(seg) and seg[i].startswith("-"):
+        if seg[i] == "-C" and i + 1 < len(seg):
+            where = os.path.join(where, seg[i + 1])
+        i += 2 if seg[i] in GIT_ARG_OPTS else 1
+    return where if i < len(seg) and seg[i] == "push" else None
+
+
+def in_repo(path):
+    path = os.path.abspath(path)
+    while True:
+        if os.path.exists(os.path.join(path, ".git")):
+            return True
+        parent = os.path.dirname(path)
+        if parent == path:
+            return False
+        path = parent
+
+
+def run_tool(*args):
+    tool = os.environ.get("WORKTREE_DONE_BIN") or os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), "worktree-done"
+    )
+    try:
+        out = subprocess.run([tool, *args], capture_output=True, text=True, timeout=90)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return out.stdout.strip()
+
+
+def main():
+    mode = sys.argv[1] if len(sys.argv) > 1 else ""
+    try:
+        event = json.load(sys.stdin)
+    except ValueError:
+        return
+    cwd = event.get("cwd") or os.getcwd()
+    if mode == "post-push":
+        resp = event.get("tool_response")
+        if isinstance(resp, dict) and (resp.get("interrupted") or resp.get("is_error")):
+            return
+        command = (event.get("tool_input") or {}).get("command") or ""
+        if "push" not in command:
+            return
+        dirs = [d for d in push_dirs(command, cwd) if in_repo(d)]
+        if not dirs:
+            return
+        out = run_tool("--repo", dirs[0])
+        if out:
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": out}}))
+    elif mode == "stop":
+        if not in_repo(cwd):
+            return
+        kept = [ln for ln in run_tool("--repo", cwd, "--check").splitlines() if ln.startswith("KEPT")]
+        if kept:
+            msg = "Landed worktrees git will not remove; Greg needs to look:\n" + "\n".join(kept)
+            print(json.dumps({"systemMessage": msg}))
+
+
+if __name__ == "__main__":
+    main()

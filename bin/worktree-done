@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""worktree-done: remove git worktrees whose branch has fully landed.
+
+Only git removes anything: `git worktree remove <path>` then `git branch -d`,
+never with a force flag. Git's own refusal is the safety check, so a worktree
+with modified tracked files or untracked files is kept and reported. Files
+matched by .gitignore do not block removal: git deletes them with the worktree.
+
+A worktree is a candidate when it is not the main checkout or the one holding
+the current directory, has a branch, that branch's tip is an ancestor of
+origin/main after `git fetch origin`, and the branch has a commit of its own
+(more than one reflog entry), so a worker's fresh worktree is left alone.
+
+Output, one line each: REMOVED <path> (<branch>), KEPT <path>: <reason>.
+Exit 0 when it ran, 1 on a real error (not a repo, fetch failed: nothing is
+removed then).
+"""
+
+import argparse
+import os
+import subprocess
+import sys
+
+BASE = "origin/main"
+
+
+def git(repo, *args):
+    return subprocess.run(["git", "-C", repo, *args], capture_output=True, text=True)
+
+
+def worktrees(repo):
+    """Entries from `git worktree list --porcelain`, main checkout first."""
+    out = git(repo, "worktree", "list", "--porcelain")
+    if out.returncode != 0:
+        sys.exit(f"worktree-done: not a git repository: {repo}")
+    entries, cur = [], {}
+    for line in out.stdout.splitlines() + [""]:
+        if not line:
+            if cur:
+                entries.append(cur)
+            cur = {}
+            continue
+        key, _, val = line.partition(" ")
+        cur[key] = val
+    return entries
+
+
+def inside(child, parent):
+    child, parent = os.path.realpath(child), os.path.realpath(parent)
+    return child == parent or child.startswith(parent.rstrip(os.sep) + os.sep)
+
+
+def own_commits(repo, branch):
+    out = git(repo, "reflog", "show", "--format=%h", f"refs/heads/{branch}")
+    return len(out.stdout.split()) > 1
+
+
+def landed(repo, branch):
+    return git(repo, "merge-base", "--is-ancestor", f"refs/heads/{branch}", BASE).returncode == 0
+
+
+def dirty_paths(path):
+    out = git(path, "status", "--porcelain").stdout.splitlines()
+    return [line[3:] for line in out]
+
+
+def refusal(paths):
+    shown = ", ".join(paths[:5])
+    more = f" (+{len(paths) - 5} more)" if len(paths) > 5 else ""
+    return f"git would refuse, {len(paths)} dirty path(s): {shown}{more}"
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("paths", nargs="*", help="limit to these worktrees")
+    ap.add_argument("--repo", help="repository (default: the one containing the cwd)")
+    ap.add_argument("--dry-run", action="store_true", help="print what would be removed, touch nothing")
+    ap.add_argument("--check", action="store_true", help="list landed worktrees git would refuse, remove nothing")
+    ap.add_argument("--verbose", action="store_true", help="also say why a worktree is skipped")
+    args = ap.parse_args()
+
+    repo = os.path.abspath(args.repo or ".")
+    entries = worktrees(repo)
+    main_path = entries[0]["worktree"]
+
+    if git(repo, "fetch", "-q", "origin").returncode != 0:
+        sys.exit("worktree-done: git fetch origin failed; nothing removed")
+
+    limit = [os.path.realpath(p) for p in args.paths]
+    seen = set()
+    for e in entries:
+        path = e["worktree"]
+        if limit and os.path.realpath(path) not in limit:
+            continue
+        seen.add(os.path.realpath(path))
+        branch = e.get("branch", "").removeprefix("refs/heads/")
+
+        def skip(why):
+            if args.verbose:
+                print(f"SKIP {path}: {why}")
+
+        if os.path.realpath(path) == os.path.realpath(main_path):
+            skip("main checkout")
+        elif "bare" in e or not branch:
+            skip("no branch")
+        elif inside(os.getcwd(), path):
+            skip("current directory")
+        elif not own_commits(repo, branch):
+            skip("no commits of its own")
+        elif not landed(repo, branch):
+            skip(f"{branch} not on {BASE}")
+        elif "locked" in e:
+            print(f"KEPT {path}: worktree is locked")
+        else:
+            dirty = dirty_paths(path)
+            if dirty:
+                print(f"KEPT {path}: {refusal(dirty)}")
+            elif args.check:
+                pass
+            elif args.dry_run:
+                print(f"WOULD REMOVE {path} ({branch})")
+            else:
+                done = git(repo, "worktree", "remove", path)
+                if done.returncode != 0:
+                    why = done.stderr.strip().splitlines()[-1:] or ["git refused"]
+                    print(f"KEPT {path}: {why[0]}")
+                    continue
+                print(f"REMOVED {path} ({branch})")
+                if git(main_path, "branch", "-d", branch).returncode != 0:
+                    print(f"KEPT branch {branch}: git branch -d refused")
+    for p in limit:
+        if p not in seen:
+            print(f"KEPT {p}: not a worktree of {repo}")
+
+
+if __name__ == "__main__":
+    main()
