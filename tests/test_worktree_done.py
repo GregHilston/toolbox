@@ -245,7 +245,7 @@ class TestHook(Repo):
         path = self.root / "stub.sh"
         path.write_text(f"#!/bin/sh\necho \"$@\" >> '{self.root}/calls'\n{text}\n")
         path.chmod(0o755)
-        return {"WORKTREE_DONE_BIN": str(path)}
+        return {"WORKTREE_DONE_BIN": str(path), "WORKTREE_DONE_STATE": str(self.root / "state")}
 
     def calls(self):
         f = self.root / "calls"
@@ -324,6 +324,23 @@ class TestHook(Repo):
         env = self.stub("echo 'REMOVED /w (b)'")
         out = hook("stop", {"hook_event_name": "Stop", "cwd": str(self.main)}, env)
         self.assertEqual(out.stdout, "")
+
+    def test_stop_reports_each_kept_worktree_once(self):
+        stop = {"hook_event_name": "Stop", "cwd": str(self.main)}
+        env = self.stub("echo 'KEPT /w: git would refuse'")
+        self.assertIn("KEPT /w", json.loads(hook("stop", stop, env).stdout)["systemMessage"])
+        out = hook("stop", stop, env)
+        self.assertEqual(out.stdout, "", f"repeat stop said {out.stdout!r}, want silence")
+
+        env = self.stub("printf 'KEPT /w: git would refuse\\nKEPT /v: git would refuse\\n'")
+        msg = json.loads(hook("stop", stop, env).stdout)["systemMessage"]
+        self.assertIn("KEPT /v", msg)
+        self.assertNotIn("KEPT /w", msg, f"old /w reported again: {msg!r}")
+
+        hook("stop", stop, self.stub("true"))
+        env = self.stub("echo 'KEPT /w: git would refuse'")
+        msg = json.loads(hook("stop", stop, env).stdout)["systemMessage"]
+        self.assertIn("KEPT /w", msg, f"/w kept again after it cleared, got {msg!r}")
 
     def test_stop_silent_outside_a_repo(self):
         env = self.stub("echo 'KEPT /w: x'")

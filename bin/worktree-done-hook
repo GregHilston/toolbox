@@ -3,7 +3,7 @@
 
 post-push (PostToolUse, Bash): after a successful `git push`, run
 `worktree-done` on the repo and hand any output to the agent as context.
-stop (Stop): run `worktree-done --check` and warn Greg, without blocking,
+stop (Stop): run `worktree-done --check` and warn Greg once per kept worktree, without blocking,
 about landed worktrees git refuses to remove. Never exits 2: the agent may not
 delete untracked files, so a block would loop. Silent outside git repos.
 WORKTREE_DONE_BIN overrides the worktree-done path.
@@ -82,6 +82,30 @@ def run_tool(*args):
     return out.stdout.strip()
 
 
+def unreported(cwd, kept):
+    """The KEPT lines whose worktree no earlier stop reported; remembers the current set."""
+    root = subprocess.run(
+        ["git", "-C", cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    state_dir = os.environ.get("WORKTREE_DONE_STATE") or os.path.expanduser("~/.cache/worktree-done")
+    state = os.path.join(state_dir, root.strip("/").replace("/", "_") + ".reported")
+    try:
+        with open(state) as f:
+            seen = set(f.read().split("\n"))
+    except OSError:
+        seen = set()
+    paths = {ln.split()[1].rstrip(":"): ln for ln in kept if len(ln.split()) > 1}
+    try:
+        os.makedirs(state_dir, exist_ok=True)
+        with open(state, "w") as f:
+            f.write("\n".join(sorted(paths)))
+    except OSError:
+        return kept
+    return [ln for p, ln in paths.items() if p not in seen]
+
+
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
     try:
@@ -106,8 +130,9 @@ def main():
         if not in_repo(cwd):
             return
         kept = [ln for ln in run_tool("--repo", cwd, "--check", "--no-fetch").splitlines() if ln.startswith("KEPT")]
-        if kept:
-            msg = "Landed worktrees git will not remove; Greg needs to look:\n" + "\n".join(kept)
+        new = unreported(cwd, kept)
+        if new:
+            msg = "Landed worktrees git will not remove; Greg needs to look:\n" + "\n".join(new)
             print(json.dumps({"systemMessage": msg}))
 
 
