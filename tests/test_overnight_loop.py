@@ -495,6 +495,13 @@ class TestVerify(LoopTest):
         self.assertIn("overnight:done", self.labels(2))
 
 
+class TestVerifyCmd(LoopTest):
+    def test_a_lighter_verify_cmd_replaces_the_whole_gate(self):
+        self.issues({1: "First"})
+        out = self.run_loop("--harness", "pi", "--reviewer", "none", "--verify-cmd", "true", FAKE_WORK_1="bad")
+        self.assertIn("overnight:done", self.labels(1), out.stdout + out.stderr)
+
+
 class TestGate(LoopTest):
     def test_a_worker_that_edits_verify_sh_is_parked(self):
         out = self.run_loop("--harness", "pi", "--reviewer", "none", FAKE_WORK_1="gate")

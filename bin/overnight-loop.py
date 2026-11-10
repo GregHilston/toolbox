@@ -34,6 +34,7 @@ import importlib.util
 import json
 import os
 import re
+import shlex
 import signal
 import subprocess
 import sys
@@ -300,7 +301,7 @@ def verify(args, log: Path, kind: str = "loop") -> tuple[bool, str]:
     began = time.time()
     with out.open("w") as f, gateslot.slot(kind=kind) as gate:
         started = time.time()  # queue wait stays outside the limit
-        code = run_group(["./verify.sh"], args.verify_minutes, signal.SIGKILL,
+        code = run_group(shlex.split(getattr(args, "verify_cmd", "./verify.sh")), args.verify_minutes, signal.SIGKILL,
                          stdin=subprocess.DEVNULL, stdout=f, stderr=subprocess.STDOUT)
         gate.code = code
     kill_leftovers(started)
@@ -800,6 +801,8 @@ def main() -> None:
     p.add_argument("--max-issues", type=int, default=20)
     p.add_argument("--max-fails", type=int, default=3, help="stop after this many parks in a row (default 3)")
     p.add_argument("--issue-minutes", type=float, default=90, help="time limit per agent run (default 90)")
+    p.add_argument("--verify-cmd", default="./verify.sh",
+                   help="the baseline and worker check (default ./verify.sh); a lighter one leaves the whole gate to a later step")
     p.add_argument("--verify-minutes", type=float, default=15,
                    help="time limit per ./verify.sh run, past which it counts as a fail (default 15)")
     p.add_argument("--issue-usd", type=float, default=10, help="claude only: budget per agent run (default 10)")
@@ -856,7 +859,8 @@ def main() -> None:
         ok, tail = verify(args, Path(".overnight/logs/baseline.log"), "baseline")
         if not ok:
             sys.exit(f"./verify.sh fails before any work, so nothing can be judged:\n{tail}")
-        gateslot.mark_passed()
+        if args.verify_cmd == "./verify.sh":
+            gateslot.mark_passed()
     smoke_test(args, args.harness, args.model)
     if args.reviewer != "none":
         smoke_test(args, args.reviewer, args.reviewer_model)
