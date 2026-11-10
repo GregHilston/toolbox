@@ -826,6 +826,8 @@ def main() -> None:
     args = p.parse_args()
     # The lander's gate still runs in full.
     os.environ["VERIFY_CACHE"] = "1"
+    # uv's warning about it fails quick.sh.
+    os.environ.pop("VIRTUAL_ENV", None)
     os.environ.setdefault("RUN_LOG_LANE", Path.cwd().name)
     args.spend, args.unreviewed_from = None, None
     phases = [(args.harness, args.model)] + ([(args.reviewer, args.reviewer_model)] if args.reviewer != "none" else [])
