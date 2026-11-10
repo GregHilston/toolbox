@@ -501,6 +501,23 @@ class TestVerifyCmd(LoopTest):
         out = self.run_loop("--harness", "pi", "--reviewer", "none", "--verify-cmd", "true", FAKE_WORK_1="bad")
         self.assertIn("overnight:done", self.labels(1), out.stdout + out.stderr)
 
+    @staticmethod
+    def gate_lines(slots):
+        log = slots / "gate-wait.jsonl"
+        lines = log.read_text().splitlines() if log.exists() else []
+        return [x for x in lines if json.loads(x)["kind"] == "gate"]
+
+    def test_a_light_check_takes_no_gate_slot_and_marks_no_pass(self):
+        slots = Path(self.tmp.name) / "slots"
+        self.issues({1: "First"})
+        self.run_loop("--harness", "pi", "--reviewer", "none", "--verify-cmd", "true", GATE_SLOT_DIR=str(slots))
+        self.assertEqual(self.gate_lines(slots), [], "a light check queued for a gate slot")
+        self.assertFalse((slots / "passed").exists(), "a light check marked the tree as passing the whole gate")
+        self.issues({1: "First"})
+        self.git("checkout", "-q", "main")
+        self.run_loop("--harness", "pi", "--reviewer", "none", GATE_SLOT_DIR=str(slots))
+        self.assertTrue(self.gate_lines(slots), "the whole gate no longer takes a slot")
+
 
 class TestGate(LoopTest):
     def test_a_worker_that_edits_verify_sh_is_parked(self):

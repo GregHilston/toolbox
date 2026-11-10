@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import atexit
+import contextlib
 import importlib.util
 import json
 import os
@@ -39,6 +40,7 @@ import signal
 import subprocess
 import sys
 import time
+import types
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -299,7 +301,10 @@ def verify(args, log: Path, kind: str = "loop") -> tuple[bool, str]:
     out = scratch() / "verify.out"
     runlog.emit("phase_start", phase="gate", gate_kind=kind)
     began = time.time()
-    with out.open("w") as f, gateslot.slot(kind=kind) as gate:
+    light = getattr(args, "verify_cmd", "./verify.sh") != "./verify.sh"
+    # Only the whole gate queues for a slot.
+    held = contextlib.nullcontext(types.SimpleNamespace()) if light else gateslot.slot(kind=kind)
+    with out.open("w") as f, held as gate:
         started = time.time()  # queue wait stays outside the limit
         code = run_group(shlex.split(getattr(args, "verify_cmd", "./verify.sh")), args.verify_minutes, signal.SIGKILL,
                          stdin=subprocess.DEVNULL, stdout=f, stderr=subprocess.STDOUT)
@@ -852,7 +857,7 @@ def main() -> None:
             f.write("\n" + "\n".join(missing) + "\n")
     if args.harness == "pi":
         allow_pi_writes()
-    if gateslot.already_passed():
+    if args.verify_cmd == "./verify.sh" and gateslot.already_passed():
         print("Baseline gate skipped: this tree already passed.", flush=True)
         runlog.emit("gate_skipped", gate_kind="baseline")
     else:
