@@ -4,9 +4,9 @@
   "dependencies": {
     "@ff-labs/pi-fff": "0.11.0",
     "@gotgenes/pi-permission-system": "42.0.0",
-    "@narumitw/pi-plan-mode": "0.59.4",
-    "pi-agent-suite": "2.21.0",
-    "pi-mcp-adapter": "7.0.0",
+    "@narumitw/pi-plan-mode": "0.60.0",
+    "pi-agent-suite": "2.22.1",
+    "pi-mcp-adapter": "7.0.1",
     "pi-powerline-footer": "0.22.0",
     "pi-reddit-research": "0.2.0"
   }
