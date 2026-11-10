@@ -124,6 +124,8 @@ alias, so `ask() {…}` fails to parse and helpers go in a bash script (2026-10-
 `cmd 2>&1 >/dev/null | x` still pipes stdout through multios, and printed an API key on
 2026-10-30, so near a secret write output to a file and read its length.
 
+A Bash call that writes many heredoc files has hung until its 120 s limit three times (2026-11-09 twice, 2026-11-10), though every file was written; write such files with the Write tool, or one heredoc per call.
+
 Sandbox and background traps:
 - `$TMPDIR` is a different folder with the sandbox on and off, so a file one command writes
   there is missing to the other. Write anything two commands share to a fixed path
