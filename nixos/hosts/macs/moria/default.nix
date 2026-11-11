@@ -13,6 +13,8 @@ in {
     ../../../modules/darwin/homebrew-server.nix
     ../../../modules/darwin/home.nix
     ../../../modules/darwin/omlx.nix
+    # Never citadel: personal finance stays off the work laptop.
+    ../../../modules/darwin/finance.nix
     # Raise the Metal wired-memory ceiling. macOS defaults the GPU to 75% of
     # unified memory (96 GB here) while oMLX's own auto ceiling is ~84% —
     # measured 86-87 GB steady with the builder and orchestrator models both

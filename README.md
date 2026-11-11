@@ -8,6 +8,14 @@ My toolbox contains a series of configuration files, helper scripts, and automat
 
 Run `ls`: each top-level directory has one job. Start with `nixos/` for hosts, `dot/` for dotfiles, `bin/` for scripts on `$PATH`, and `skills/` for agent skills. `CLAUDE.md` is the repo guide, and `just --list` shows the root recipes.
 
+## Household Finances
+
+moria and dungeon get the tools for a plain-text household ledger (Beancount and
+Fava) through `nixos/modules/darwin/finance.nix`. How the ledger works, and every
+command to run it, is in the private home-lab repo:
+[`finance/README.md`](https://github.com/GregHilston/home-lab/blob/main/finance/README.md).
+No financial data or categories live here.
+
 ## How Do I Use This Repo?
 
 See the [nixos/](nixos/) directory for NixOS and nix-darwin host configurations. Each host is managed declaratively via Nix flakes.
