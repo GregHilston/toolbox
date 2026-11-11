@@ -1,6 +1,4 @@
-# Household ledger tools. The ledger itself and its Python environment
-# (beancount, fava) live in the private home-lab repo's finance/ and come
-# from its uv project; this adds what uv cannot install.
+# What the home-lab ledger's uv env can't install.
 {
   pkgs,
   vars,
