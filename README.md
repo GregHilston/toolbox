@@ -12,6 +12,14 @@ Run `ls`: each top-level directory has one job. Start with `nixos/` for hosts, `
 
 See the [nixos/](nixos/) directory for NixOS and nix-darwin host configurations. Each host is managed declaratively via Nix flakes.
 
+## Household Finances
+
+moria and dungeon get the tools for a plain-text household ledger (Beancount and
+Fava) through `nixos/modules/darwin/finance.nix`. How the ledger works is in the
+private home-lab repo:
+[`finance/README.md`](https://github.com/GregHilston/home-lab/blob/main/finance/README.md).
+No financial data or categories live here.
+
 ## Local Diff & PR Viewers
 
 Two browser-based diff viewers for reviewing changes locally, without pushing anything or opening a GitHub PR. Both are **Mac-only** — they need a Node.js runtime (`npx`), which the Macs have (citadel via volta; dungeon/moria via Homebrew) but the NixOS hosts do not (node lives only inside per-project dev shells there).

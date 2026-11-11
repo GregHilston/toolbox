@@ -104,6 +104,8 @@ in {
     ../../../modules/darwin/homebrew-server.nix
     ../../../modules/darwin/home.nix
     ../../../modules/darwin/omlx.nix
+    # Never citadel: personal finance stays off the work laptop.
+    ../../../modules/darwin/finance.nix
   ];
 
   networking.hostName = "dungeon";
