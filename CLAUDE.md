@@ -206,7 +206,8 @@ unattended worker is doing".
 ## Thread Fetchers — Search & Convert HN & Reddit to Markdown/JSON
 
 `reddit-search.py` and `fetch-thread.py`, no login needed; see the `reddit` skill and
-`bin/CLAUDE.md` → "Thread fetchers".
+`bin/CLAUDE.md` → "Thread fetchers". When Reddit 403s every route, the skill's Arctic
+Shift archive still reads threads.
 
 ## Local Diff & PR Viewers — diff2html & difit
 

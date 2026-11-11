@@ -6,6 +6,9 @@ Reddit's own web UI lazy-loads (/svc/shreddit/) are not, given a browser
 User-Agent. Parsing them breaks when Reddit changes its markup;
 tests/test_fetch_reddit_live.py is the check that notices.
 
+When Reddit blocks every IP we have, read the Arctic Shift archive
+(arctic-shift.photon-reddit.com) instead; the reddit skill shows how.
+
 A module, imported by fetch-thread.py, reddit-search.py and notes-triage-fetch.py.
 """
 

@@ -159,6 +159,11 @@ rotation: `~/Git/toolbox/nixos/docs/secrets.md`.
 Notes an LLM writes for `~/Git/notes` go in its `llm/` folder, filed with
 `topics:`, never at the root. The vault's `CLAUDE.md` has the details.
 
+## Researching Reddit
+
+Use the `reddit` skill. Reddit blocks our IPs often; its "When it fails" section lists the
+fallbacks, ending with the Arctic Shift archive, which works when every IP is blocked.
+
 ## Agent skills
 
 ### Writing a skill or an agent tool

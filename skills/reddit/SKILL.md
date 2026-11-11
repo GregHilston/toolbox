@@ -43,6 +43,24 @@ blocked or login-walled.
   rate-limited (429), and two reads back to back trip the limit: leave about a minute
   between threads (75 seconds worked 4 of 4). A DeepSeek Search summary holds the post
   body when the thread is indexed, but it missed 2 of 2 posts on 2026-11-08.
+- When every route 403s (2026-11-10: moria, dungeon and `read-page.py`'s jina), read the
+  [Arctic Shift](https://arctic-shift.photon-reddit.com) archive. It mirrors posts and
+  comments, costs nothing, and never touches Reddit:
+
+  ```bash
+  curl -s "https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=selfhosted&title=budget&limit=100"
+  ```
+
+  - It returns `{"data": [...], "error": ...}`. Records are huge: print only `id`,
+    `title`, `selftext`, `score`, `num_comments` and `created_utc` with `python3 -I -c`.
+  - Filter by `subreddit`, `title`, `selftext`, `author`, `after`/`before` (`YYYY-MM-DD`)
+    and `limit` (100 at most). It rejects `sort=desc` and a `permalink` field.
+  - Comments: `/api/comments/tree?link_id=<post id>&limit=500`.
+  - `data: null` with `Timeout. Maybe slow down a bit` is throttling: one caller at a
+    time, a few seconds apart.
+  - A score is frozen when the post is archived, so rank by `num_comments`.
+  - Link a thread as `https://www.reddit.com/r/<sub>/comments/<id>/`. Queries go to a
+    third party, so search nothing private.
 - If both commands break, `REDDIT_LIVE=1 python3 -m unittest test_fetch_reddit_live` in
   `toolbox/tests/` says what Reddit changed. pi's `reddit_*` tools use the old endpoints and
   are unreliable.
