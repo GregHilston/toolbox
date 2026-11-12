@@ -84,8 +84,11 @@ prebuild host flake_path=flake_path:
     exit 0
   fi
   echo "Asking moria to build {{host}} first..."
+  # Without a key, a person types moria's password.
+  batch=()
+  [ -t 0 ] || batch=(-o BatchMode=yes)
   # moriats works away from home; first use learns its key.
-  ssh -o ConnectTimeout=5 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o BatchMode=yes \
+  ssh -o ConnectTimeout=5 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 "${batch[@]}" \
     -o StrictHostKeyChecking=accept-new \
     moriats bash -s -- "$sha" {{host}} < ../bin/nix-prebuild.sh \
     || echo "Prebuild on moria failed; building here."
