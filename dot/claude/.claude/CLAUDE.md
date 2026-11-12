@@ -124,6 +124,10 @@ alias, so `ask() {…}` fails to parse and helpers go in a bash script (2026-10-
 `cmd 2>&1 >/dev/null | x` still pipes stdout through multios, and printed an API key on
 2026-10-30, so near a secret write output to a file and read its length.
 
+`ls` is eza, so `ls -t` errors; use `/bin/ls`. A recursive `grep` in toolbox and
+`git status` in the main home-lab checkout each hung for 120 s; use `git grep` and
+`git status -uno` (2026-11-11).
+
 A Bash call that writes many heredoc files has hung until its 120 s limit three times (2026-11-09 twice, 2026-11-10), though every file was written; write such files with the Write tool, or one heredoc per call.
 
 Sandbox and background traps:
