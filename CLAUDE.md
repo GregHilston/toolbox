@@ -149,6 +149,9 @@ Herdr runs on every host: Homebrew on Macs, nix on NixOS, config in `dot/herdr/`
 - Subagent tabs only show a transcript. For a session agents can message, `skills/herdr` wraps `herdr --skill` (`agent start`, `agent prompt`, `agent read`).
 - Never leave Herdr's integrations checked on its first-run screen or run `herdr integration install`: they write through the symlinks into this repo. `onboarding = false` in the config hides that screen.
 - Restart the server after changing `keys.prefix`; `herdr server reload-config` did not make a new prefix work on 2026-10-30.
+- Before binding a key, check `dot/aerospace/.aerospace.toml` and `dot/zellij/` for it. AeroSpace owns `Alt` and `Alt+Shift`, zellij owns `Ctrl+B`, so Herdr's direct keys are `Ctrl+Alt`. `Ctrl+Alt+/` pops up `cheatsheet.txt`; update it with each binding.
+- `zj <name>` opens Herdr in tab 1 through `bin/zj-herdr-tab.sh` and a hook above p10k's instant prompt in `.zshrc`. Anything that takes the terminal belongs above that block: on 2026-11-12, a Herdr started below it never drew.
+- To test a TUI in zellij, open a real window (`open -na Ghostty --args -e /bin/zsh -lic '…'`) and read it with `zellij -s <s> action dump-screen --pane-id terminal_0`. A Python pty can't answer Herdr's terminal queries, and from inside Herdr, strip `HERDR_*` first, or Herdr refuses to nest.
 - Why, with results: `~/Git/notes/llm/herdr-rollout-plan.md` and `herdr-trial.md`.
 
 ## Hermes — runs on dungeon, Desktop clients here
