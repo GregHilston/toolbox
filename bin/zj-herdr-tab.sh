@@ -11,4 +11,9 @@ if list=$(herdr workspace list 2>/dev/null) &&
   herdr workspace create --cwd "$PWD" --label "$name" --focus >/dev/null
 fi
 
+# Herdr started detached never draws.
+until [[ $(zellij action list-clients 2>/dev/null | wc -l) -gt 1 ]]; do
+  sleep 0.2
+done
+
 exec herdr
