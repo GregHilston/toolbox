@@ -14,8 +14,6 @@ root="${XDG_STATE_HOME:-$HOME/.local/state}/herdr-subagent"
 dir="$root/$session"
 mkdir -p "$dir"
 exec 2>>"$root/hook.log"
-PS4='+ $(date +%T) '
-set -x
 h="$HERDR_BIN_PATH"
 base="${parent%.jsonl}/subagents/agent-$id"
 case "$1" in

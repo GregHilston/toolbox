@@ -282,7 +282,9 @@ def main() -> int:
     log = LOG_DIR / f"{args.session}.jsonl"
 
     # Depth 1: headless hard-block mode, no git writes.
-    env = dict(os.environ, PATH=f"{TOOLBOX_BIN}:{os.environ.get('PATH', '')}", PI_SUBAGENT_DEPTH="1")
+    # No HERDR_*: pi would report as the caller's pane.
+    env = {k: v for k, v in os.environ.items() if not k.startswith("HERDR_")}
+    env |= {"PATH": f"{TOOLBOX_BIN}:{os.environ.get('PATH', '')}", "PI_SUBAGENT_DEPTH": "1"}
     # uv run's venv; the repo's own `uv run` warns on it.
     env.pop("VIRTUAL_ENV", None)
     # "--": a prompt may start with - or ---.

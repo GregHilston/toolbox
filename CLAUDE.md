@@ -146,6 +146,7 @@ through `skills/image-generate`; Hermes uses its native `image_generate` tool in
 Herdr runs on every host: Homebrew on Macs, nix on NixOS, config in `dot/herdr/`. Use it for interactive Claude work. `/orchestrate` and lanes stay for repos where agents may land alone, and lanes run without `HERDR_*` so they cannot report to the pane that started them.
 
 - `dot/claude/.claude/hooks/herdr-subagent.sh` gives each Agent-tool subagent a tab and sidebar row. It exits at once outside Herdr. Its task and model come from Claude's undocumented `subagents/agent-<id>.meta.json`.
+- Subagent tabs only show a transcript. For a session agents can message, `skills/herdr` wraps `herdr --skill` (`agent start`, `agent prompt`, `agent read`).
 - Never leave Herdr's integrations checked on its first-run screen or run `herdr integration install`: they write through the symlinks into this repo. `onboarding = false` in the config hides that screen.
 - Restart the server after changing `keys.prefix`; `herdr server reload-config` did not make a new prefix work on 2026-10-30.
 - Why, with results: `~/Git/notes/llm/herdr-rollout-plan.md` and `herdr-trial.md`.

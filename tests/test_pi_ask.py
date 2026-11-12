@@ -23,7 +23,7 @@ FAKE_PI = textwrap.dedent('''\
     assert sys.argv[-2] == "--", sys.argv
     if env("FAKE_PI_ARGV"):
         with open(env("FAKE_PI_ARGV"), "w") as f:
-            json.dump({"argv": sys.argv[1:], "cwd": os.getcwd()}, f)
+            json.dump({"argv": sys.argv[1:], "cwd": os.getcwd(), "env": dict(os.environ)}, f)
 
     def say(event):
         print(json.dumps(event), flush=True)
@@ -121,6 +121,13 @@ class TestPiAsk(unittest.TestCase):
         self.assertIn("$0.1500", out.stdout)
         log = Path(self.tmp.name) / ".cache" / "pi-ask" / "t2.jsonl"
         self.assertEqual(log.read_text().count("message_end"), 2)
+
+    def test_pi_does_not_inherit_the_herdr_pane(self):
+        argv = Path(self.tmp.name) / "argv.json"
+        self.ask("--session", "t-herdr", "--dir", self.tmp.name, "hi", FAKE_PI_ARGV=str(argv),
+                 HERDR_ENV="1", HERDR_PANE_ID="w1:p1")
+        env = json.loads(argv.read_text())["env"]
+        self.assertFalse([k for k in env if k.startswith("HERDR_")], "pi holds Herdr's pane")
 
     def test_passes_a_prompt_that_looks_like_an_option(self):
         out = self.ask("--session", "t3", "--dir", self.tmp.name, "---\ntitle: x\n---")
