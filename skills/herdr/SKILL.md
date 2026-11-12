@@ -1,6 +1,6 @@
 ---
 name: herdr
-description: Drive Herdr, the terminal multiplexer Greg runs agents in. Open panes, run commands in them, start a named Claude, pi or Codex session beside you, send it prompts and read its answers. Use only when Greg mentions Herdr or asks for a pane, tab or another agent session he can see and talk to. Requires HERDR_ENV=1.
+description: Drive Herdr, the terminal multiplexer Greg runs agents in. Open panes, run commands in them, start a named Claude, pi or Codex session beside you, send it prompts and read its answers. Use when Greg mentions Herdr, or wants a session he can watch or talk to himself. Not for behind-the-scenes research or one-shot reviews, which stay subagents or pi-ask. Requires HERDR_ENV=1.
 license: MIT
 ---
 
