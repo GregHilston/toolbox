@@ -14,6 +14,13 @@ previous_tab = ["prefix+p", "ctrl+alt+p"]
 open_notification_target = ["prefix+o", "ctrl+alt+o"]
 goto = ["prefix+g", "ctrl+alt+g"]
 
+[[keys.command]]
+key = "ctrl+alt+slash"
+type = "popup"
+command = "less -R ~/Git/toolbox/dot/herdr/.config/herdr/cheatsheet.txt"
+width = "80%"
+height = "90%"
+
 [ui.sidebar.agents]
 rows = [
   ["state_icon", "workspace", "agent"],

@@ -1,0 +1,42 @@
+KEYS                                            q closes · / searches
+
+Which program owns which keys
+  AeroSpace  Alt, Alt+Shift          windows and macOS workspaces
+  zellij     Ctrl+B prefix           sessions and tabs (Ghostty)
+  Herdr      Alt+A prefix, Ctrl+Opt  agents and Herdr workspaces
+
+HERDR, no prefix (Ctrl+Opt)
+  J / K        next / previous workspace
+  1-9          jump to workspace N
+  L / H        next / previous agent
+  N / P        next / previous tab
+  O            jump to the agent that just notified
+  G            agent list: b blocked, w working, Enter jumps
+  /            this sheet
+
+HERDR, Alt+A then
+  c  new tab           n / p  next / prev tab    1-9  go to tab
+  v  split right       -      split down         x    close pane
+  h j k l  focus pane  Tab    cycle pane         z    zoom
+  w  workspace picker  g      agent list         o    notified agent
+  N  new workspace     W      rename workspace   T    rename tab
+  b  sidebar           e      scrollback in $EDITOR
+  q  detach            ?      every binding, live
+
+ZELLIJ, Ctrl+B then
+  c  new tab        &  close tab       n / p  next / prev tab
+  1-9 go to tab     Tab  last tab      ,  rename tab
+  %  split right    "  split down      x  close pane
+  z  zoom           o  cycle pane      [  scroll back
+  s  session picker d  detach          ?  every binding
+  shell: zj <name> start or resume · zj list · zjk <name> kill
+
+AEROSPACE
+  Alt h j k l        focus window        Alt+Shift h j k l  move window
+  Alt 1-9            macOS workspace N   Alt+Shift 1-9      send window there
+  Alt Tab            last workspace      Alt+Shift Tab      workspace to next monitor
+  Alt f              fullscreen          Alt - / =          resize
+  Alt /              tiles layout        Alt ,              accordion layout
+  Alt+Shift ;        service mode
+
+Inside Herdr, Ctrl+D closes the pane's shell, not Herdr.
