@@ -50,6 +50,14 @@ if [[ -o interactive && ! -f ~/.hide-zj-motd ]]; then
   fi
 fi
 
+# Above instant prompt: it captures the terminal.
+# Every pane inherits ZJ_HERDR; pane 0 acts.
+if [[ -n ${ZJ_HERDR-} && ${ZELLIJ_PANE_ID-} == 0 ]]; then
+  unset ZJ_HERDR
+  zj-herdr-tab.sh
+fi
+unset ZJ_HERDR
+
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -267,13 +275,6 @@ zj() {
 }
 
 alias zjk='zellij kill-session'
-
-# The server inherits ZJ_HERDR, so every pane sees it; only pane 0 acts.
-if [[ -n ${ZJ_HERDR-} && ${ZELLIJ_PANE_ID-} == 0 ]]; then
-  unset ZJ_HERDR
-  zj-herdr-tab.sh
-fi
-unset ZJ_HERDR
 
 # Serve ~/Git's repos to the Claude app from a background zellij session
 # (bin/claude-rc.sh). `zj claude-rc` to watch, `zjk claude-rc` to stop.
