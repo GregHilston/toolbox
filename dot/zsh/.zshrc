@@ -249,7 +249,14 @@ zj() {
 
   if [[ -z $name ]]; then
     zellij list-sessions
-  elif [[ -n $ZELLIJ ]]; then
+    return
+  fi
+
+  # A new session's first pane runs Herdr; see the hook below zj.
+  env -u ZELLIJ -u ZELLIJ_SESSION_NAME -u ZELLIJ_PANE_ID ZJ_HERDR=1 \
+    zellij attach --create-background "$name"
+
+  if [[ -n $ZELLIJ ]]; then
     # Already in a session: hand this client over. zellij refuses to nest, and
     # switch-session creates or resurrects the target the same way attach -c
     # does (it is what the session-manager's own new-session flow calls).
@@ -260,6 +267,13 @@ zj() {
 }
 
 alias zjk='zellij kill-session'
+
+# The server inherits ZJ_HERDR, so every pane sees it; only pane 0 acts.
+if [[ -n ${ZJ_HERDR-} && ${ZELLIJ_PANE_ID-} == 0 ]]; then
+  unset ZJ_HERDR
+  zj-herdr-tab.sh
+fi
+unset ZJ_HERDR
 
 # Serve ~/Git's repos to the Claude app from a background zellij session
 # (bin/claude-rc.sh). `zj claude-rc` to watch, `zjk claude-rc` to stop.
