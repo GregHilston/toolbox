@@ -2,6 +2,17 @@ onboarding = false
 
 [keys]
 prefix = ["alt+a", "ctrl+backslash"]
+# Direct keys live on ctrl+alt: AeroSpace owns alt
+# and alt+shift, zellij owns ctrl.
+next_workspace = "ctrl+alt+j"
+previous_workspace = "ctrl+alt+k"
+switch_workspace = "ctrl+alt+1..9"
+next_agent = "ctrl+alt+l"
+previous_agent = "ctrl+alt+h"
+next_tab = ["prefix+n", "ctrl+alt+n"]
+previous_tab = ["prefix+p", "ctrl+alt+p"]
+open_notification_target = ["prefix+o", "ctrl+alt+o"]
+goto = ["prefix+g", "ctrl+alt+g"]
 
 [ui.sidebar.agents]
 rows = [
