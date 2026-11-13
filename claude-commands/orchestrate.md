@@ -700,6 +700,8 @@ printing nothing.
 
 ## Closing report
 
+End it with a **Throughput** section: wall time per issue split into build, review, fix and merge; the biggest wait; one change that cuts wall time, CPU or tokens next run. Apply that change next run.
+
 Summarize: what shipped, what each agent found that the issue did not know, what
 was parked and why, **which issues will close on your next push and which you
 closed by hand**, what you filed, any judgement calls the user should review, and

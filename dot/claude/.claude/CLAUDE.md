@@ -42,6 +42,8 @@ Active voice. No stage performances. Pick the commonest word among alternatives.
 
 ## Ending a chat
 
+Every `/orchestrate` closing report, and every final report of a long chat, ends with a short **Throughput** section: wall time per ticket split into build, review, fix and merge, the biggest wait, and one change that would cut wall time, CPU or tokens next time. Apply the change in the next run, not just name it (2026-11-13: a six-ticket gate run took hours longer than I expected).
+
 When I say I'm ending the chat, or ask for a handoff, first reflect: what did we learn this session that a future session should know? Cover technical lessons, domain lessons (game dev, the project's rules), how you and I work together, and how subagents and lanes behaved.
 
 Then answer two questions with this session's numbers, not guesses:
@@ -105,7 +107,7 @@ End every handoff with the exact message I paste to start the next chat, in a co
 - **Opus** only when I ask for it.
 - **Headless Claude costs more quota.** `claude -p` and Agent SDK sessions (`entrypoint: sdk-cli`/`sdk-ts`) use up the 5-hour window 1.8–2.9× faster than an interactive session for the same tokens, by several independent A/B tests in anthropics/claude-code#97074 (open on 2026-11-08). Prefer a pi lane or an interactive Remote Control session over a Claude `-p` worker.
 - **Point a delegated task at the repo's own rules for it** (a command, skill or `CLAUDE.md` section) rather than restating them in the prompt. On 2026-10-21 a Haiku agent filed vault clips from my hand-written spec, never saw `.claude/commands/triage.md`, and made a string of mistakes Greg had to catch. Clip writing is Sonnet work.
-- **DeepSeek** (`pi-ask.py`, `--harness pi` lanes) for every second-opinion review of a branch with logic in it, for bulk reading, and by default for implementation and research too, with Opus orchestrating (2026-11-01). Sonnet is for reading shots and tickets that parked twice. Use it from the start of a session, not as an afterthought. The gateway's `cloud` runs OpenCode Go, then GPT-5.6 Luna on ChatGPT Plus, then DeepSeek's API; `PI_CLOUD_MODEL=cloud-go|cloud-luna|cloud-deepseek` pins one (2026-11-08).
+- **DeepSeek** (`pi-ask.py`, `--harness pi` lanes) for every second-opinion review of a branch with logic in it, for bulk reading, and by default for implementation and research too, with Opus orchestrating (2026-11-01). Sonnet is for reading shots and tickets that parked twice. Use it from the start of a session, not as an afterthought. The gateway's `cloud` runs OpenCode Go, then GPT-5.6 Luna on ChatGPT Plus, then DeepSeek's API; `PI_CLOUD_MODEL=cloud-go|cloud-luna|cloud-deepseek` pins one (2026-11-08), but only `pi-ask.py`, `overnight-loop.py` and gridkeep's `tools/land/` read it; a bare `pi` ignores it and falls back to `local-small` (`~/.pi/agent/settings.json`), so pass `--model`. "Use DeepSeek" means plain `--model cloud`, whose Go-first order is my preference; pin a vendor only when I name one (2026-11-13).
 - **Bulk LLM generation** (playtest cohorts, batch labelling) runs on the free local model through oMLX. Luna's ChatGPT allowance is for small samples: run a 5–10 item pilot, read its gauge with `deepseek-preflight.py`, and keep a batch under 20% of the weekly allowance (2026-11-08).
 - Run `deepseek-preflight.py` before starting DeepSeek work: it prints the rate now, minutes to the next peak, and the balance. Start long `pi` lanes with `--off-peak`, so they wait out peak hours. A review costs cents, so run it even at peak price.
 
