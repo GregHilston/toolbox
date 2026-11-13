@@ -124,8 +124,8 @@ path, or lead with `cd /abs/path &&`, wherever a wrong cwd gives a wrong answer,
 
 zsh traps: an unquoted `$var` doesn't word-split, even in `set -- $p` (write the values out,
 use `${=p}`, or loop in `bash -c`); on 2026-11-01 that named eight lanes `pt-first 3` and so on,
-so read a start command's output back; a word starting with `=` is a command lookup, so quote `echo "===="` (2026-10-26); `ask` is an
-alias, so `ask() {…}` fails to parse and helpers go in a bash script (2026-10-30);
+so read a start command's output back; a word starting with `=` is a command lookup, so quote `echo "===="` (2026-10-26); `ask` and `c` are
+aliases, so `ask() {…}` fails to parse and helpers go in a bash script (2026-10-30, `c` on 2026-11-13);
 `$var:r` (or `:h`, `:t`) is a path modifier, so write `"${sha}:refs/heads/main"` (2026-11-12, a push refspec lost its `:r`);
 `cmd 2>&1 >/dev/null | x` still pipes stdout through multios, and printed an API key on
 2026-10-30, so near a secret write output to a file and read its length.
