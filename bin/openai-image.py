@@ -84,7 +84,26 @@ def generate(prompt: str, quality: str, size: str, n: int, refs: list[Path]) -> 
         fail(f"could not reach api.openai.com: {e.reason}")
     usage = data.get("usage") or {}
     print(f"quality {quality}, size {size}, tokens in {usage.get('input_tokens', '?')} out {usage.get('output_tokens', '?')}", file=sys.stderr)
+    log_spend(usage, quality, size, len(data["data"]))
     return [base64.b64decode(d["b64_json"]) for d in data["data"]]
+
+
+# USD per 1M tokens: text in, image in, image out (pricing page, 2026-11-13).
+PRICE = (5.00, 8.00, 30.00)
+LEDGER = Path(os.environ.get("OPENAI_IMAGE_LEDGER", Path.home() / ".cache" / "openai-image" / "ledger.jsonl"))
+
+
+def log_spend(usage: dict, quality: str, size: str, n: int) -> None:
+    """Append one line per call, which usage-mark.py sums."""
+    d = usage.get("input_tokens_details") or {}
+    text_in = d.get("text_tokens", usage.get("input_tokens", 0) or 0)
+    image_in = d.get("image_tokens", 0) or 0
+    out = usage.get("output_tokens", 0) or 0
+    cost = (text_in * PRICE[0] + image_in * PRICE[1] + out * PRICE[2]) / 1e6
+    LEDGER.parent.mkdir(parents=True, exist_ok=True)
+    with LEDGER.open("a") as fh:
+        fh.write(json.dumps({"t": time.time(), "model": "gpt-image-2", "quality": quality, "size": size, "n": n,
+                             "text_in": text_in, "image_in": image_in, "out": out, "usd": round(cost, 5)}) + "\n")
 
 
 def main() -> None:

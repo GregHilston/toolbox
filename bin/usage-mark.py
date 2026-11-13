@@ -15,6 +15,7 @@ Prometheus, read through Grafana's datasource proxy. The gateway tells them
 apart by model: `deepseek-v4.1-flash` is Go, any other `deepseek-*` is the API,
 and `gpt-*` from the `chatgpt` provider is Luna on ChatGPT Plus (flat fee, $0).
 Work that bypasses the gateway shows only in the balance change.
+OpenAI Images API spend comes from the ledger `openai-image.py` appends per call.
 
 Columns: in is fresh input (DeepSeek cache misses), c.read is cache hits,
 c.write is Claude's cache creation. A source that cannot answer prints `?`
@@ -42,6 +43,7 @@ LABELS = ("DS API", "Go", "Luna")
 # USD per 1M tokens (cache hit, miss, output) for Flash; peak doubles.
 FLASH = {"off": (0.003, 0.15, 0.60), "peak": (0.006, 0.30, 1.20)}
 FIELDS = ("in", "out", "cread", "cwrite")
+IMAGE_LEDGER = Path(os.environ.get("OPENAI_IMAGE_LEDGER", Path.home() / ".cache" / "openai-image" / "ledger.jsonl"))
 
 
 def parse_ts(text: str) -> float:
@@ -81,6 +83,25 @@ def claude_usage(root: Path, since: float) -> dict[str, dict[str, int]]:
         row["cread"] += u.get("cache_read_input_tokens") or 0
         row["cwrite"] += u.get("cache_creation_input_tokens") or 0
     return out
+
+
+def image_row(ledger: Path, since: float) -> dict | None:
+    """Sum OpenAI image calls after `since`; None when there were none."""
+    if not ledger.exists():
+        return None
+    r = {"src": "OpenAI img", "in": 0, "out": 0, "cread": 0, "cwrite": None, "cost": 0.0, "est": False, "images": 0}
+    for line in ledger.read_text().splitlines():
+        try:
+            c = json.loads(line)
+        except ValueError:
+            continue
+        if c["t"] < since:
+            continue
+        r["in"] += c["text_in"] + c["image_in"]
+        r["out"] += c["out"]
+        r["cost"] += c["usd"]
+        r["images"] += c["n"]
+    return r if r["images"] else None
 
 
 def prom(query: str) -> list[dict]:
@@ -178,6 +199,9 @@ def build(name: str, mark: dict, claude: dict | None, ds: dict | None, now_g: di
         for label in LABELS:
             if label in ds:
                 rows.append({"src": label, **ds[label]})
+    img = image_row(IMAGE_LEDGER, mark["t"])
+    if img:
+        rows.append(img)
     extra: dict[str, float | None] = {}
     if now_g is not None and mark.get("gauges"):
         g0 = mark["gauges"]
@@ -210,6 +234,9 @@ def render(rep: dict) -> str:
     if bits:
         lines += ["", "; ".join(bits)]
     lines += ["", "Claude counts all repos on this machine; Go $ is list-price (~); Luna is flat-fee ($0)."]
+    imgs = sum(r.get("images", 0) for r in rep["rows"])
+    if imgs:
+        lines.append(f"OpenAI img: {imgs} images, paid per token on the API.")
     lines += [f"? {n}" for n in rep["notes"]]
     return "\n".join(lines)
 
