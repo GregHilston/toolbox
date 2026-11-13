@@ -13,6 +13,7 @@ pkgs: {
     zsh
     file
     git
+    git-lfs # loser-picks art binaries
     htop
     jq
     rsync
