@@ -48,11 +48,27 @@ def api_key() -> str:
     return r.stdout.strip()
 
 
-def generate(prompt: str, quality: str, size: str, n: int) -> list[bytes]:
-    body = {"model": "gpt-image-2", "prompt": prompt, "quality": quality, "size": size, "n": n}
-    req = urllib.request.Request(URL, data=json.dumps(body).encode(), headers={
+def multipart(fields: dict, files: list[Path]) -> tuple[bytes, str]:
+    boundary = "openaiimage" + str(time.time_ns())
+    out = b""
+    for k, v in fields.items():
+        out += f'--{boundary}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode()
+    for f in files:
+        out += f'--{boundary}\r\nContent-Disposition: form-data; name="image[]"; filename="{f.name}"\r\nContent-Type: image/png\r\n\r\n'.encode()
+        out += f.read_bytes() + b"\r\n"
+    return out + f"--{boundary}--\r\n".encode(), f"multipart/form-data; boundary={boundary}"
+
+
+def generate(prompt: str, quality: str, size: str, n: int, refs: list[Path]) -> list[bytes]:
+    fields = {"model": "gpt-image-2", "prompt": prompt, "quality": quality, "size": size, "n": n}
+    if refs:
+        body, ctype = multipart(fields, refs)
+        url = URL.replace("generations", "edits")
+    else:
+        body, ctype, url = json.dumps(fields).encode(), "application/json", URL
+    req = urllib.request.Request(url, data=body, headers={
         "Authorization": "Bearer " + api_key(),
-        "Content-Type": "application/json",
+        "Content-Type": ctype,
     })
     try:
         with urllib.request.urlopen(req, timeout=300) as r:
@@ -76,6 +92,7 @@ def main() -> None:
     ap.add_argument("prompt")
     ap.add_argument("--quality", choices=("low", "medium", "high"), default="medium")
     ap.add_argument("--size", choices=SIZES, default="1536x1024")
+    ap.add_argument("--ref", type=Path, action="append", default=[], help="reference image to match the style of (repeatable); uses the edits endpoint")
     ap.add_argument("--n", type=int, default=1, help="variants from one call, saved as NAME-1.png, NAME-2.png, ...")
     ap.add_argument("--out", type=Path, help="directory to save into (default ~/Pictures/openai)")
     ap.add_argument("--name", help="file name without .png (default from the prompt and time)")
@@ -83,7 +100,7 @@ def main() -> None:
     out_dir = a.out or Path(os.environ.get("OPENAI_IMAGE_DIR", Path.home() / "Pictures" / "openai"))
     out_dir.mkdir(parents=True, exist_ok=True)
     name = a.name or (re.sub(r"[^a-z0-9]+", "-", a.prompt.lower())[-40:].strip("-") + time.strftime("-%H%M%S"))
-    images = generate(a.prompt, a.quality, a.size, a.n)
+    images = generate(a.prompt, a.quality, a.size, a.n, a.ref)
     for i, img in enumerate(images, 1):
         path = out_dir / (f"{name}.png" if len(images) == 1 else f"{name}-{i}.png")
         path.write_bytes(img)

@@ -14,11 +14,18 @@ front and no directory.
 openai-image.py 'PROMPT'                                        # medium, 1536x1024
 openai-image.py --size 1024x1536 'PROMPT'                       # portrait; 1024x1024 square
 openai-image.py --n 3 --out /abs/dir --name musket 'PROMPT'     # three variants, musket-1.png ...
+openai-image.py --ref /abs/approved.png 'PROMPT'               # match a reference image's style (edits endpoint)
 openai-image.py --quality high 'PROMPT'                         # about 4x the cost; only when asked
 ```
 
-Every call costs money: medium is about $0.04 an image at 1536x1024 and high
-about $0.17. Stay at medium unless Greg asks for high, and make only the
+The model has no transparent background; ask for a plain flat mid-grey one and
+key it out later. A reference image costs about 15 times the input tokens and,
+in the first test, matched what the prompt alone gave, so use it only when a
+prompt fails to hold the style.
+
+Every call costs money: medium measured 1,372 output tokens (about $0.04) at
+1536x1024 or 1024x1536 and 1,756 (about $0.05) at 1024x1024; high is about four
+times that. Stay at medium unless Greg asks for high, and make only the
 variants the task needs. The account has a spend cap; a 429 may mean it is
 reached, so say so rather than retrying.
 
