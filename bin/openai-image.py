@@ -8,7 +8,7 @@
 The paid API honours quality and size, so every image comes out the same way; the free
 ChatGPT Plus route picks low or medium at random and ignores both (measured 2026-11-12,
 loser-picks docs/art/image-models.md). The key comes from OPENAI_API_KEY or 1Password
-(op://Infra/OpenAI API/credential) and is never printed.
+("chatgpt loser picks art api key" in Infra) and is never printed.
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import NoReturn
 
 URL = "https://api.openai.com/v1/images/generations"
-OP_REF = "op://Infra/OpenAI API/credential"
+OP_REF = "op://Infra/big5y2jhb5cwfkvxfpmbpeiit4/credential"  # "chatgpt loser picks art api key"
 SIZES = ("1024x1024", "1536x1024", "1024x1536")
 
 
