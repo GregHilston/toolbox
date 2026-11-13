@@ -64,6 +64,7 @@ End every handoff with the exact message I paste to start the next chat, in a co
 
 ## Working with me
 
+- When I want to end a chat fast, the plan goes into tickets, not a handoff doc: file the planned work, write lessons where they're read, and give me the paste-in message pointing at the tickets (2026-11-13).
 - I often chat from my phone while you work: keep status updates to short bullets, lead with what changed, and give me decisions as `AskUserQuestion` picks with a recommended option first.
 - Answer a message I send mid-task in your very next reply, even if it's a short "got it, doing X after Y". I shouldn't have to repeat myself.
 - I may leave a question unanswered for hours. A pick blocks your whole session, so first start all the work that doesn't depend on it, and put a decision that can wait on its ticket instead; on 2026-11-02 an open pick idled a swarm for 1h 23m.

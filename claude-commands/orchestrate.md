@@ -554,6 +554,8 @@ Two details make it work:
   (1800000 for a gate that may queue for a slot); otherwise the harness
   backgrounds it after two minutes, and each stale watcher and poll wakes you
   (about 30 wakes in one night).
+- **Scale review to the ticket.** Size S or test/docs-only: one reviewer. Logic or M/L: two from different model families (Sonnet plus `pi-ask --model cloud-luna`), merged into one fix round. On loser-picks 2026-11-13 the second reviewer added real findings on every logic ticket, and once claimed an RNG bug the first had disproved with reference vectors: settle a disagreement by evidence, not vote.
+- **Rebase open branches the moment main moves, and keep counts out of union resolves.** Seven gate tickets all edited `verify.sh` and `gate_test.sh`; two needed a whole extra worker round to port main's lines back after a rebase, and a union resolve glued `50 54 61` into a one-number file. Better still, give a repo with a shared registry file one file per entry before running parallel tickets against it.
 - **Land on LAND, fix only on FIX.** A "LAND with follow-ups" verdict merges at
   once and its follow-ups become tickets; a fix round runs only on FIX, runs no
   full gate, and the recheck reads the fix commit. Budget a DeepSeek review 60
