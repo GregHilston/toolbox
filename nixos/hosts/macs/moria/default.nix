@@ -52,6 +52,7 @@ in {
   #               the desktop over Tailscale). Native Apple-Silicon Metal client.
   #   telegram  — the native macOS client, not the Qt `telegram-desktop`.
   #   anki      — flashcards; bin/anki/ scripts read its collection.
+  #   blender   — loser-picks model cleanup scripts (bpy, headless).
   # Note: the gaming apps' state (CrossOver bottles, Moonlight host pairing) is
   # runtime config, not declarative — same as oMLX model downloads.
   homebrew.casks = [
@@ -59,6 +60,7 @@ in {
     "moonlight"
     "telegram"
     "anki"
+    "blender"
   ];
 
   home-manager.users.${vars.user.name} = {
