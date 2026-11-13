@@ -32,7 +32,8 @@ magick montage <ids>-{a,b,c}.png -font /System/Library/Fonts/Supplemental/Arial.
   -pointsize 36 -set label '%t' -tile 3x -geometry 600x400+8+8 -background white grid.png
 ```
 
-Each image costs about $0.04; say the round's total and get Greg's OK first.
+Each image costs about $0.05 (24 cost $1.19 on 2026-11-13); say the round's
+total and get Greg's OK first.
 The folder holds every variant, `prompts.tsv` and `grid.png`: one labelled row
 per asset. Send the grid, then ask with one `AskUserQuestion` holding one
 question per asset: one option per variant, each described in a few words,
@@ -55,6 +56,10 @@ game-turntable.py art/assets/<id>                   # turntable.png, four views
 game-part.py art/assets/<id> --probe                # heights along the barrel, to find a part's box
 game-part.py art/assets/<id> Hammer --y -0.37 -0.20 --z-above 0.118
 ```
+
+Run each asset's `game-model.py` as its own background job, so each one
+reports when it's done; one loop over three assets hid a finished blunderbuss
+for 20 minutes (2026-11-13). ComfyUI runs them one at a time anyway.
 
 Cleanup comes before parts and motion: the parts, the `Muzzle` marker and the
 recoil are set on the final mesh, so decimating later would break them.
