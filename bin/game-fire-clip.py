@@ -3,12 +3,12 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Record a weapon firing in Godot, with sound, as <asset dir>/fire.mp4 for review.
+"""Record a weapon firing in Godot, with sound, as <asset dir>/<timeline>.mp4 for review.
 
-    game-fire-clip.py <asset dir> [--seconds S]
+    game-fire-clip.py <asset dir> [--timeline NAME]
 
-Reads model.glb, fire.json and sfx/*.wav from the asset folder. fire.json is a
-timeline: events at times, each with any of sound, rotate (a cut-out part),
+Reads model.glb, <timeline>.json and sfx/*.wav from the asset folder. A timeline is a
+JSON file of events at times, each with any of sound, rotate (a cut-out part),
 slide (a cut-out part to an offset from its rest, in the model's axes; -z is
 forward), emit (particles from a node for a while), burst (one-shot particle
 presets), light, recoil, bolt, move (the whole model flies by an offset,
@@ -79,7 +79,7 @@ script = ExtResource("1")
 """
 
 MAIN_GD = r'''extends Node3D
-## Plays fire.json against model.glb once per shot, then quits.
+## Plays timeline.json against model.glb once per shot, then quits.
 
 var fire: Dictionary
 var gun: Node3D
@@ -87,7 +87,7 @@ var lights: Array[OmniLight3D] = []
 
 
 func _ready() -> void:
-	fire = JSON.parse_string(FileAccess.get_file_as_string("res://fire.json"))
+	fire = JSON.parse_string(FileAccess.get_file_as_string("res://timeline.json"))
 	_stage()
 	await get_tree().create_timer(0.6).timeout
 	for shot in int(fire.get("shots", 1)):
@@ -289,7 +289,8 @@ def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("asset", type=Path, nargs="?", help="folder holding model.glb, fire.json and sfx/")
+    ap.add_argument("asset", type=Path, nargs="?", help="folder holding model.glb, <timeline>.json and sfx/")
+    ap.add_argument("--timeline", default="fire", help="timeline to record: reads <name>.json, writes <name>.mp4 (default fire)")
     ap.add_argument("--example", action="store_true", help="print an example fire.json (a musket) and exit")
     a = ap.parse_args()
     if a.example:
@@ -298,7 +299,7 @@ def main() -> None:
     if not a.asset:
         ap.error("give an asset folder, or --example")
     folder = a.asset.resolve()
-    for need in ("model.glb", "fire.json"):
+    for need in ("model.glb", f"{a.timeline}.json"):
         if not (folder / need).exists():
             sys.exit(f"missing {folder / need}")
     proj = CACHE / folder.name
@@ -307,16 +308,16 @@ def main() -> None:
     (proj / "main.tscn").write_text(SCENE)
     (proj / "main.gd").write_text(MAIN_GD)
     shutil.copy(folder / "model.glb", proj / "model.glb")
-    shutil.copy(folder / "fire.json", proj / "fire.json")
+    shutil.copy(folder / f"{a.timeline}.json", proj / "timeline.json")
     for wav in (folder / "sfx").glob("*.wav"):
         shutil.copy(wav, proj / "sfx" / wav.name)
     run([GODOT, "--headless", "--path", str(proj), "--import"], timeout=300)
-    avi = proj / "fire.avi"
+    avi = proj / f"{a.timeline}.avi"
     r = run([GODOT, "--path", str(proj), "--write-movie", str(avi), "--fixed-fps", "30", "--resolution", "960x540"], timeout=300)
     errors = [l for l in r.stderr.splitlines() + r.stdout.splitlines() if "SCRIPT ERROR" in l or "Assertion failed" in l]
     if errors:
         sys.exit("Godot script errors:\n" + "\n".join(errors[:10]))
-    out = folder / "fire.mp4"
+    out = folder / f"{a.timeline}.mp4"
     run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(avi), "-c:v", "libx264", "-pix_fmt", "yuv420p",
          "-c:a", "aac", "-b:a", "160k", str(out)], timeout=300)
     print(out)
