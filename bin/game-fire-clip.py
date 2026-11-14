@@ -9,8 +9,10 @@
 
 Reads model.glb, fire.json and sfx/*.wav from the asset folder. fire.json is a
 timeline: events at times, each with any of sound, rotate (a cut-out part),
-emit (particles from a node for a while), burst (one-shot particle presets),
-light, recoil, bolt, move (fly by an offset, spinning), hide; plus "presets" for the particles and "shots" and
+slide (a cut-out part to an offset from its rest, in the model's axes; -z is
+forward), emit (particles from a node for a while), burst (one-shot particle
+presets), light, recoil, bolt, move (the whole model flies by an offset,
+spinning), hide; plus "presets" for the particles and "shots" and
 "interval_s" to repeat. Example: game-fire-clip.py --example.
 
 Builds a throwaway Godot project in ~/.cache/game-fire-clip/<asset>, records
@@ -162,6 +164,19 @@ func _event(e: Dictionary) -> void:
 		var r: Dictionary = e["rotate"]
 		create_tween().tween_property(_node(r["node"]), "rotation_degrees:x", float(r["x_deg"]), float(r["s"])) \
 			.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	if e.has("slide"):
+		var sl: Dictionary = e["slide"]
+		var part := _node(sl["node"])
+		if not part.has_meta("rest"):
+			part.set_meta("rest", part.position)
+		var o: Array = sl["to"]
+		var goal: Vector3 = part.get_meta("rest") + Vector3(o[0], o[1], o[2])
+		var tw := create_tween().tween_property(part, "position", goal, float(sl["s"]))
+		match sl.get("ease", "out"):
+			"in": tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			"inout": tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+			"linear": tw.set_trans(Tween.TRANS_LINEAR)
+			_: tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	if e.has("light"):
 		var spec: Dictionary = e["light"]
 		var l: OmniLight3D = lights.pop_front()

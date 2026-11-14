@@ -82,8 +82,13 @@ game-fire-clip.py --example
 game-fire-clip.py art/assets/<id>
 ```
 
-`fire.json`'s `events` are one trigger pull, which the game replays per click or while held; `shots` is only the clip's repeat count. Leave throwing (Q) out: shared code does it for every weapon. `--example` prints a musket `fire.json`: timed events (sound, rotate a part,
-emit or burst particles, light, recoil, bolt) and particle presets. Write the
+`fire.json`'s `events` are one trigger pull, which the game replays per click or while held; `shots` is only the clip's repeat count. Leave throwing (Q) out: shared code does it for every weapon. `--example` prints a musket `fire.json`: timed events (sound, rotate or slide a part,
+emit or burst particles, light, recoil, bolt) and particle presets.
+`slide` moves a cut-out part to `to`, an `[x, y, z]` offset in metres from its
+rest position, in the model's axes (-z is forward, so a pump goes back with
++z), over `s` seconds, with `ease` of `out` (default), `in`, `inout` or
+`linear` (all quadratic). Slide back to `[0, 0, 0]` to return the part. `move`
+is not this: it flies the whole model. Write the
 asset's own `art/assets/<id>/fire.json` from it, then record. The clip lands
 at `art/assets/<id>/fire.mp4`. A different `--seed` is a different take of
 the same sound.
