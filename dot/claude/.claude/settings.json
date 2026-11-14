@@ -136,6 +136,10 @@
             "type": "command",
             "command": "~/Git/toolbox/bin/worktree-done-hook stop",
             "timeout": 120
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/shift-drain.py"
           }
         ]
       }
