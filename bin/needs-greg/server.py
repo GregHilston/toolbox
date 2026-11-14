@@ -25,6 +25,13 @@ An `ask` block is a fenced block tagged `ask` in the issue body:
 
 A value may continue on indented lines. A trailing comment needs two or more
 spaces before the `#`, so an issue number inside the ask survives.
+
+Trust: the server believes the Tailscale header and binds 127.0.0.1, so any
+local process on the host can call it. That is accepted on a single-user host.
+
+First start in a new checkout: Claude asks once whether to trust the folder.
+The start then fails with a message naming the pane; accept the prompt there
+and the next start works.
 """
 
 from __future__ import annotations
@@ -33,7 +40,6 @@ import argparse
 import json
 import re
 import shlex
-import socket
 import subprocess
 import sys
 import tomllib
@@ -69,7 +75,7 @@ class Ask:
     images: list[str] = field(default_factory=list)
 
 
-_FENCE = re.compile(r"^```ask[ \t]*\n(.*?)^```[ \t]*$", re.S | re.M)
+_FENCE = re.compile(r"\A\s*```ask[ \t]*\n(.*?)^```[ \t]*$", re.S | re.M)
 _KEYLINE = re.compile(r"^(" + "|".join(KEYS) + r"):[ \t]*(.*)$")
 
 
@@ -102,7 +108,7 @@ def _options(text: str) -> list[dict]:
 
 def parse_ask(body: str | None) -> Ask | None:
     """None when the body has no ask block; AskError when the block is bad."""
-    m = _FENCE.search(body or "")
+    m = _FENCE.search((body or "").replace("\r\n", "\n"))
     if not m:
         return None
     f = _fields(m.group(1))
@@ -140,10 +146,7 @@ class Config:
     port: int = 8765
     label: str = "needs-greg"
     herdr: str = "herdr"
-
-
-def _short(host: str) -> str:
-    return host.strip().lower().split(".")[0]
+    gh: str = "gh"
 
 
 def load_config(path: Path) -> Config:
@@ -163,13 +166,12 @@ def load_config(path: Path) -> Config:
         owner=raw["owner"], login=raw["login"], session_host=raw["session_host"],
         repos={str(k): str(v) for k, v in repos.items()},
         port=int(raw.get("port", 8765)), label=raw.get("label", "needs-greg"),
-        herdr=raw.get("herdr", "herdr"),
+        herdr=raw.get("herdr", "herdr"), gh=raw.get("gh", "gh"),
     )
 
 
-def session_is_local(cfg: Config, hostname: str | None = None) -> bool:
-    here = _short(hostname or socket.gethostname())
-    return _short(cfg.session_host) in (here, "local", "localhost")
+def session_is_local(cfg: Config) -> bool:
+    return cfg.session_host == "local"
 
 
 # ---- commands --------------------------------------------------------------
@@ -184,22 +186,23 @@ class Runner:
         self.cfg, self.dry_run, self.log = cfg, dry_run, log
         self.local_session = session_is_local(cfg)
 
-    def _exec(self, argv: list[str], stdin: str | None = None, timeout: int = 60) -> str:
+    def _exec(self, argv: list[str], timeout: int = 60, binary: bool = False):
         try:
-            p = subprocess.run(argv, input=stdin, capture_output=True, text=True, timeout=timeout)
+            p = subprocess.run(argv, capture_output=True, text=not binary, timeout=timeout)
         except FileNotFoundError as e:
             raise CommandError(f"{argv[0]} not found: {e}") from None
         except subprocess.TimeoutExpired:
             raise CommandError(f"timed out after {timeout}s: {argv[0]}") from None
         if p.returncode:
-            raise CommandError((p.stderr or p.stdout).strip() or f"{argv[0]} exited {p.returncode}")
+            err = p.stderr if isinstance(p.stderr, str) else p.stderr.decode(errors="replace")
+            raise CommandError(err.strip() or f"{argv[0]} exited {p.returncode}")
         return p.stdout
 
     def gh(self, args: list[str], write: bool = False) -> str:
         if write and self.dry_run:
             self.log("DRY gh " + shlex.join(args))
             return ""
-        return self._exec(["gh", *args])
+        return self._exec([self.cfg.gh, *args])
 
     def herdr(self, args: list[str], write: bool = False, timeout: int = 60) -> str:
         inner = [self.cfg.herdr, *args]
@@ -278,8 +281,23 @@ def answer(run: Runner, repo: str, number: int, kind: str, text: str = "", note:
         raise CommandError(f"unknown kind {kind!r}")
     target = f"{cfg.owner}/{repo}"
     run.gh(["issue", "comment", str(number), "--repo", target, "--body", body], write=True)
-    run.gh(["issue", "edit", str(number), "--repo", target, "--remove-label", cfg.label], write=True)
+    try:
+        run.gh(["issue", "edit", str(number), "--repo", target, "--remove-label", cfg.label], write=True)
+    except CommandError as e:
+        raise CommandError(f"the comment posted, but removing the label {cfg.label} failed: {e}") from None
     return {"ok": True, "comment": body}
+
+
+def _dig(run: Runner, obj: dict, *keys: str, placeholder: str) -> str:
+    """A write's JSON field; only a dry run may fall back to a placeholder."""
+    try:
+        for k in keys:
+            obj = obj[k]
+        return obj
+    except (KeyError, TypeError):
+        if run.dry_run:
+            return placeholder
+        raise CommandError(f"herdr's reply had no {'.'.join(keys)}") from None
 
 
 def start(run: Runner, repo: str, number: int, model: str, url: str | None = None) -> dict:
@@ -290,50 +308,78 @@ def start(run: Runner, repo: str, number: int, model: str, url: str | None = Non
     path, label = cfg.repos[repo], f"#{number}"
     url = url or f"https://github.com/{cfg.owner}/{repo}/issues/{number}"
     name = _slug(repo, number)
+    host = "this host" if run.local_session else cfg.session_host
+    pane = "?"
     try:
         spaces = json.loads(run.herdr(["workspace", "list"]))["result"]["workspaces"]
         ws = next((w["workspace_id"] for w in spaces if w["label"] == repo), None)
         if ws:
             res = json.loads(run.herdr(["tab", "create", "--workspace", ws, "--cwd", path,
                                         "--label", label, "--no-focus"], write=True) or "{}")
-            pane = res.get("result", {}).get("root_pane", {}).get("pane_id", "<pane>")
+            pane = _dig(run, res, "result", "root_pane", "pane_id", placeholder="<pane>")
         else:
             res = json.loads(run.herdr(["workspace", "create", "--cwd", path, "--label", repo,
-                                        "--no-focus"], write=True) or "{}").get("result", {})
-            pane = res.get("root_pane", {}).get("pane_id", "<pane>")
-            run.herdr(["tab", "rename", res.get("tab", {}).get("tab_id", "<tab>"), label], write=True)
-        run.herdr(["agent", "start", name, "--kind", "claude", "--pane", pane,
-                   "--", "--model", model], write=True, timeout=90)
+                                        "--no-focus"], write=True) or "{}")
+            pane = _dig(run, res, "result", "root_pane", "pane_id", placeholder="<pane>")
+            tab = _dig(run, res, "result", "tab", "tab_id", placeholder="<tab>")
+            run.herdr(["tab", "rename", tab, label], write=True)
+        try:
+            run.herdr(["agent", "start", name, "--kind", "claude", "--pane", pane,
+                       "--", "--model", model], write=True, timeout=90)
+        except CommandError as e:
+            if "agent_not_ready" in str(e) and "blocked" in str(e):
+                raise CommandError(f"Claude in pane {pane} on {host} is waiting on its folder-trust "
+                                   "prompt; accept it once, and the next start works") from None
+            raise
         run.herdr(["agent", "prompt", name,
                    f"Greg just unblocked #{number} ({url}). Read it with its comments and start on it."],
                   write=True)
     except (CommandError, KeyError, json.JSONDecodeError) as e:
-        where = "" if run.local_session else f" on {cfg.session_host}"
-        raise CommandError(f"could not start a session{where}: {e}") from None
+        msg = str(e)
+        raise CommandError(msg if "folder-trust" in msg else
+                           f"could not start a session on {host}: {msg}") from None
     return {"ok": True, "tab": label, "workspace": repo, "agent": name}
+
+
+MAX_IMAGE = 15 * 1024 * 1024
+IMAGE_TYPES = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+               "gif": "image/gif", "webp": "image/webp"}
+_IMAGE_PATH = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_ ./@+-]*\.(" + "|".join(IMAGE_TYPES) + ")", re.I)
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def _trusted_host(url: str) -> bool:
+    u = urlparse(url)
+    h = u.hostname or ""
+    return u.scheme == "https" and (h == "github.com" or h.endswith(".githubusercontent.com"))
 
 
 def fetch_image(run: Runner, repo: str, path: str) -> tuple[bytes, str]:
     cfg = run.cfg
     _check_repo(cfg, repo)
-    if ".." in Path(path).parts or path.startswith("/"):
-        raise CommandError("bad image path")
+    if not _IMAGE_PATH.fullmatch(path) or ".." in path.split("/"):
+        raise CommandError("images must be repo-relative png, jpg, gif or webp paths")
     target = f"repos/{cfg.owner}/{repo}/contents/{path}"
-    p = subprocess.run(["gh", "api", "-H", "Accept: application/vnd.github.raw", target],
-                       capture_output=True, timeout=60)
-    if p.returncode:
-        raise CommandError(p.stderr.decode(errors="replace").strip() or "gh api failed")
-    data = p.stdout
+    data = run._exec([cfg.gh, "api", "-H", "Accept: application/vnd.github.raw", target], binary=True)
     if data.startswith(LFS_MAGIC):
         meta = json.loads(run.gh(["api", target]))
-        token = run._exec(["gh", "auth", "token"]).strip()
-        req = urllib.request.Request(meta["download_url"], headers={"Authorization": f"token {token}"})
-        with urllib.request.urlopen(req, timeout=60) as r:
-            data = r.read()
-    ext = Path(path).suffix.lower().lstrip(".")
-    mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "gif": "image/gif",
-            "webp": "image/webp", "svg": "image/svg+xml"}.get(ext, "application/octet-stream")
-    return data, mime
+        url = meta.get("download_url") or ""
+        if not _trusted_host(url):
+            raise CommandError("image link is not on a GitHub host")
+        token = run._exec([cfg.gh, "auth", "token"]).strip()
+        req = urllib.request.Request(url, headers={"Authorization": f"token {token}"})
+        try:
+            with urllib.request.build_opener(_NoRedirect).open(req, timeout=60) as r:
+                data = r.read(MAX_IMAGE + 1)
+        except OSError as e:
+            raise CommandError(f"image download failed: {e}") from None
+    if len(data) > MAX_IMAGE:
+        raise CommandError("image is over 15 MB")
+    return data, IMAGE_TYPES[path.rsplit(".", 1)[1].lower()]
 
 
 # ---- http ------------------------------------------------------------------
@@ -346,11 +392,12 @@ def make_handler(run: Runner):
         def log_message(self, fmt, *args):
             run.log("%s %s" % (self.command, self.path))
 
-        def _send(self, status, body: bytes, ctype: str) -> None:
+        def _send(self, status, body: bytes, ctype: str, cache: str = "no-store") -> None:
             self.send_response(status)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
+            self.send_header("Cache-Control", cache)
+            self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
             self.wfile.write(body)
 
@@ -375,10 +422,10 @@ def make_handler(run: Runner):
                     self._json(200, {"asks": list_asks(run), "repos": sorted(cfg.repos)})
                 elif u.path == "/api/image":
                     data, mime = fetch_image(run, q.get("repo", ""), q.get("path", ""))
-                    self._send(200, data, mime)
+                    self._send(200, data, mime, "max-age=300")
                 else:
                     self._json(404, {"error": "not found"})
-            except CommandError as e:
+            except Exception as e:  # the page must always get a message
                 self._json(502, {"error": str(e)})
 
         def do_POST(self) -> None:
@@ -391,6 +438,8 @@ def make_handler(run: Runner):
                 return self._json(415, {"error": "json only"})
             try:
                 n = int(self.headers.get("Content-Length", "0"))
+                if not 0 <= n <= 64 * 1024:
+                    return self._json(413, {"error": "bad request size"})
                 req = json.loads(self.rfile.read(n) or b"{}")
                 number = int(req["number"])
                 if self.path == "/api/answer":
@@ -402,7 +451,7 @@ def make_handler(run: Runner):
                     return self._json(404, {"error": "not found"})
             except (KeyError, ValueError, TypeError) as e:
                 return self._json(400, {"error": f"bad request: {e}"})
-            except CommandError as e:
+            except Exception as e:  # the page must always get a message
                 return self._json(502, {"error": str(e)})
             self._json(200, out)
 

@@ -64,6 +64,14 @@ class ParseTest(unittest.TestCase):
         self.assertEqual([o["key"] for o in a.options], ["A", "B"])
         self.assertEqual(a.images, ["a.jpg", "b.jpg"])
 
+    def test_crlf_body(self) -> None:
+        body = "```ask\r\nask: Hi\r\ntype: done\r\n```\r\n\r\ntext"
+        self.assertEqual(ng.parse_ask(body).ask, "Hi")
+
+    def test_block_must_open_the_body(self) -> None:
+        self.assertEqual(ng.parse_ask("\n\n" + BLOCK.format("ask: x\ntype: done")).type, "done")
+        self.assertIsNone(ng.parse_ask("intro\n\n" + BLOCK.format("ask: x\ntype: done")))
+
     def test_bad_minutes(self) -> None:
         with self.assertRaisesRegex(ng.AskError, "minutes"):
             ng.parse_ask(BLOCK.format("ask: x\ntype: done\nminutes: soon"))
@@ -72,7 +80,7 @@ class ParseTest(unittest.TestCase):
 CONFIG = """
 owner = "owner"
 login = "user@example.com"
-session_host = "host-a"
+session_host = "local"
 [repos]
 repo-a = "/x/repo-a"
 """
@@ -105,11 +113,13 @@ class ConfigTest(unittest.TestCase):
 
     def test_local_versus_ssh(self) -> None:
         c = ng.load_config(write_config(CONFIG))
-        self.assertTrue(ng.session_is_local(c, "host-a"))
-        self.assertTrue(ng.session_is_local(c, "Host-A.local"))
-        self.assertFalse(ng.session_is_local(c, "host-b"))
-        c.session_host = "localhost"
-        self.assertTrue(ng.session_is_local(c, "host-b"))
+        self.assertTrue(ng.session_is_local(c))
+        c.session_host = "host-a"
+        self.assertFalse(ng.session_is_local(c))
+
+    def test_binary_paths(self) -> None:
+        c = ng.load_config(write_config('gh = "/opt/gh"\nherdr = "/opt/herdr"\n' + CONFIG))
+        self.assertEqual((c.gh, c.herdr), ("/opt/gh", "/opt/herdr"))
 
 
 class Recorder:
@@ -120,13 +130,11 @@ class Recorder:
         self.lines.append(msg)
 
 
-def runner(host: str = "host-a", here: str = "host-a", dry: bool = True) -> tuple:
+def runner(host: str = "local", dry: bool = True) -> tuple:
     cfg = ng.load_config(write_config(CONFIG))
     cfg.session_host = host
     rec = Recorder()
-    with mock.patch.object(ng.socket, "gethostname", return_value=here):
-        run = ng.Runner(cfg, dry_run=dry, log=rec)
-    return run, rec
+    return ng.Runner(cfg, dry_run=dry, log=rec), rec
 
 
 class CommandTest(unittest.TestCase):
@@ -179,7 +187,7 @@ class CommandTest(unittest.TestCase):
         self.assertIn("unblocked #12 (https://example.com/i/12)", rec.lines[2])
 
     def test_start_remote_goes_through_ssh(self) -> None:
-        run, rec = runner(host="host-b", here="host-a")
+        run, rec = runner(host="host-b")
         self._start(run, [{"workspace_id": "w1", "label": "repo-a"}])
         self.assertTrue(all(line.startswith("DRY ssh ") for line in rec.lines))
         self.assertIn(" host-b ", rec.lines[0])
@@ -191,10 +199,63 @@ class CommandTest(unittest.TestCase):
         self.assertIn("herdr tab rename", rec.lines[1])
 
     def test_start_reports_unreachable_host(self) -> None:
-        run, _ = runner(host="host-b", here="host-a", dry=False)
+        run, _ = runner(host="host-b", dry=False)
         with mock.patch.object(run, "_exec", side_effect=ng.CommandError("no route")):
             with self.assertRaisesRegex(ng.CommandError, "on host-b: no route"):
                 ng.start(run, "repo-a", 1, "sonnet")
+
+    def test_real_start_without_pane_id_raises(self) -> None:
+        run, _ = runner(dry=False)
+        replies = iter([json.dumps({"result": {"workspaces": [{"workspace_id": "w1", "label": "repo-a"}]}}),
+                        json.dumps({"result": {}})])
+        with mock.patch.object(run, "_exec", side_effect=lambda *a, **k: next(replies)) as ex:
+            with self.assertRaisesRegex(ng.CommandError, "no result.root_pane.pane_id"):
+                ng.start(run, "repo-a", 1, "sonnet")
+        self.assertEqual(ex.call_count, 2)
+
+    def test_start_names_the_folder_trust_prompt(self) -> None:
+        run, _ = runner(dry=False)
+        listing = json.dumps({"result": {"workspaces": [{"workspace_id": "w1", "label": "repo-a"}]}})
+        tab = json.dumps({"result": {"root_pane": {"pane_id": "w1:p2"}}})
+        blocked = ng.CommandError('{"error":{"code":"agent_not_ready","message":"blocked during startup"}}')
+        replies = iter([listing, tab, blocked])
+
+        def fake(*a, **k):
+            r = next(replies)
+            if isinstance(r, Exception):
+                raise r
+            return r
+        with mock.patch.object(run, "_exec", side_effect=fake):
+            with self.assertRaisesRegex(ng.CommandError, "pane w1:p2 on this host is waiting on its folder-trust"):
+                ng.start(run, "repo-a", 1, "sonnet")
+
+    def test_label_failure_says_the_comment_posted(self) -> None:
+        run, _ = runner(dry=False)
+        with mock.patch.object(run, "_exec", side_effect=["", ng.CommandError("denied")]):
+            with self.assertRaisesRegex(ng.CommandError, "comment posted, but removing the label"):
+                ng.answer(run, "repo-a", 1, "done")
+
+    def test_image_paths(self) -> None:
+        run, _ = runner(dry=False)
+        for bad in ("/etc/a.png", "../a.png", "a/../b.png", "a%2e.png", "a?x.png", "a#b.png",
+                    "a\\b.png", "pic.svg", "pic", "a.png.sh"):
+            with self.assertRaises(ng.CommandError, msg=bad):
+                ng.fetch_image(run, "repo-a", bad)
+        with mock.patch.object(run, "_exec", return_value=b"\x89PNG"):
+            self.assertEqual(ng.fetch_image(run, "repo-a", "art/a b.PNG"), (b"\x89PNG", "image/png"))
+
+    def test_lfs_token_only_goes_to_github_hosts(self) -> None:
+        self.assertTrue(ng._trusted_host("https://media.githubusercontent.com/x"))
+        self.assertTrue(ng._trusted_host("https://github.com/x"))
+        for bad in ("http://github.com/x", "https://evilgithub.com/x", "https://github.com.evil.io/x",
+                    "https://example.com/x", ""):
+            self.assertFalse(ng._trusted_host(bad), bad)
+        run, _ = runner(dry=False)
+        replies = [ng.LFS_MAGIC + b"\noid", ]
+        with mock.patch.object(run, "_exec", side_effect=replies), \
+                mock.patch.object(run, "gh", return_value=json.dumps({"download_url": "https://example.com/x"})):
+            with self.assertRaisesRegex(ng.CommandError, "not on a GitHub host"):
+                ng.fetch_image(run, "repo-a", "a.png")
 
     def test_start_rejects_opus_typo(self) -> None:
         run, _ = runner()
@@ -244,10 +305,21 @@ class HttpTest(unittest.TestCase):
         req = urllib.request.Request(self.base + "/api/asks")
         with self.assertRaises(urllib.error.HTTPError) as cm:
             urllib.request.urlopen(req)
+        cm.exception.close()
         self.assertEqual(cm.exception.code, 403)
 
     def test_index_served_to_the_right_login(self) -> None:
         self.assertEqual(self.call("/"), 200)
+
+    def test_unexpected_error_is_json_502(self) -> None:
+        with mock.patch.object(ng, "list_asks", side_effect=RuntimeError("kaput")):
+            self.assertEqual(self.call("/api/asks"), 502)
+
+    def test_content_length_bounds(self) -> None:
+        host = f"127.0.0.1:{self.srv.server_port}"
+        big = {"repo": "repo-a", "number": 1, "kind": "text", "text": "x" * 70000}
+        self.assertEqual(self.call("/api/answer", big, {"Content-Type": "application/json",
+                                                        "Origin": f"http://{host}"}), 413)
 
     def test_post_needs_same_origin_json(self) -> None:
         body = {"repo": "repo-a", "number": 1, "kind": "done"}

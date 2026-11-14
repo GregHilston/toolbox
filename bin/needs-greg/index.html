@@ -66,7 +66,7 @@ textarea, select { width: 100%; font: inherit; color: var(--fg); background: var
 <script>
 "use strict";
 const $ = (s) => document.querySelector(s);
-const state = { asks: [], repos: [], filter: "All", open: {} };
+const state = { asks: [], repos: [], filter: "All", open: {}, drafts: {} };
 
 function store(k, v) {
   try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) {}
@@ -94,7 +94,18 @@ async function api(path, body) {
 }
 
 function imgSrc(a, p) {
-  return /^https?:/.test(p) ? p : `/api/image?repo=${encodeURIComponent(a.repo)}&path=${encodeURIComponent(p)}`;
+  return `/api/image?repo=${encodeURIComponent(a.repo)}&path=${encodeURIComponent(p)}`;
+}
+
+const key = (a) => `${a.repo}#${a.number}`;
+const draft = (a) => (state.drafts[key(a)] ||= { text: "", note: "", chosen: null, model: "sonnet" });
+
+// a field that keeps its value in state across render()
+function field(a, prop, attrs) {
+  const t = el("textarea", attrs);
+  t.value = draft(a)[prop];
+  t.addEventListener("input", () => { draft(a)[prop] = t.value; });
+  return t;
 }
 
 function zoom(src) {
@@ -122,6 +133,7 @@ function answerControls(a, status) {
     try {
       await api("/api/answer", { repo: a.repo, number: a.number, kind, text, note });
       state.asks = state.asks.filter((x) => x !== a);
+      delete state.drafts[key(a)];
       render();
     } catch (e) {
       status.className = "status err"; status.textContent = e.message;
@@ -129,21 +141,23 @@ function answerControls(a, status) {
     }
   };
   if (a.type === "pick") {
-    let chosen = null;
-    const note = el("textarea", { rows: 2, placeholder: "Optional note" });
-    const submit = el("button", { class: "btn primary", disabled: true,
-      onclick: () => send("pick", chosen, note.value) }, "Send");
-    const btns = a.options.map((o) => el("button", { class: "btn", "aria-pressed": "false",
-      onclick: () => { chosen = o.key; btns.forEach((b) => b.setAttribute("aria-pressed", String(b === btn(o)))); submit.disabled = false; },
+    const d = draft(a);
+    const note = field(a, "note", { rows: 2, placeholder: "Optional note" });
+    const submit = el("button", { class: "btn primary", disabled: !d.chosen,
+      onclick: () => send("pick", d.chosen, d.note) }, "Send");
+    const btns = a.options.map((o) => el("button", { class: "btn", "aria-pressed": String(d.chosen === o.key),
+      onclick: () => {
+        d.chosen = o.key; submit.disabled = false;
+        btns.forEach((b, i) => b.setAttribute("aria-pressed", String(a.options[i].key === d.chosen)));
+      },
     }, `${o.key}: ${o.label}`));
-    const btn = (o) => btns[a.options.indexOf(o)];
     box.append(el("div", { class: "row" }, btns), note, el("div", { class: "row" }, submit));
   } else if (a.type === "text") {
-    const t = el("textarea", { rows: 3, placeholder: "Your answer" });
+    const t = field(a, "text", { rows: 3, placeholder: "Your answer" });
     box.append(t, el("div", { class: "row" },
       el("button", { class: "btn primary", onclick: () => t.value.trim() ? send("text", t.value) : null }, "Send")));
   } else {
-    const t = el("textarea", { rows: 2, placeholder: "Optional note" });
+    const t = field(a, "note", { rows: 2, placeholder: "Optional note" });
     box.append(t, el("div", { class: "row" },
       el("button", { class: "btn primary", onclick: () => send("done", "", t.value) }, "Done")));
   }
@@ -152,7 +166,9 @@ function answerControls(a, status) {
 
 function startPanel(a, status) {
   const model = el("select", {}, el("option", { value: "haiku" }, "Haiku"),
-    el("option", { value: "sonnet", selected: true }, "Sonnet"), el("option", { value: "opus" }, "Opus"));
+    el("option", { value: "sonnet" }, "Sonnet"), el("option", { value: "opus" }, "Opus"));
+  model.value = draft(a).model;
+  model.addEventListener("change", () => { draft(a).model = model.value; });
   const go = el("button", { class: "btn primary" }, "Start session");
   go.addEventListener("click", async () => {
     go.disabled = true; status.className = "status"; status.textContent = "Starting...";
@@ -169,8 +185,6 @@ function startPanel(a, status) {
     el("div", { class: "row" }, go,
       el("button", { class: "btn", onclick: () => { delete state.open[key(a)]; render(); } }, "Cancel")));
 }
-
-const key = (a) => `${a.repo}#${a.number}`;
 
 function card(a) {
   const status = el("div", { class: "status", "aria-live": "polite" });
