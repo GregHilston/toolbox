@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""PATH-first godot: a headless run gets a default time limit, so a hung import can't outlive its caller.
+
+GODOT_TIMEOUT=<seconds> overrides the 600 s default; 0 disables it. Without
+--headless this execs the real binary untouched. On expiry the whole process
+group dies and the exit code is 124, like timeout(1). GODOT_REAL names the
+real binary; otherwise it is the first `godot` on PATH that isn't this file.
+"""
+
+import os
+import signal
+import subprocess
+import sys
+
+DEFAULT_LIMIT = 600
+GRACE = 5  # SIGTERM to SIGKILL
+
+
+def real_godot():
+    me = os.path.realpath(__file__)
+    override = os.environ.get("GODOT_REAL")
+    if override:
+        return override
+    # A caller with a scrubbed PATH (a hermetic gate test) still finds it.
+    fallback = ["/opt/homebrew/bin", "/usr/local/bin", os.path.expanduser("~/.nix-profile/bin"),
+                "/etc/profiles/per-user/" + os.environ.get("USER", ""), "/run/current-system/sw/bin"]
+    for d in os.environ.get("PATH", "").split(os.pathsep) + fallback:
+        cand = os.path.join(d or ".", "godot")
+        if os.access(cand, os.X_OK) and os.path.isfile(cand) and os.path.realpath(cand) != me:
+            return cand
+    sys.exit("godot shim: no real godot on PATH (set GODOT_REAL)")
+
+
+def limit():
+    raw = os.environ.get("GODOT_TIMEOUT", "")
+    try:
+        return float(raw) if raw else DEFAULT_LIMIT
+    except ValueError:
+        sys.exit(f"godot shim: GODOT_TIMEOUT must be seconds, got {raw!r}")
+
+
+def main():
+    real = real_godot()
+    args = sys.argv[1:]
+    seconds = limit()
+    if "--headless" not in args or seconds <= 0:
+        os.execv(real, [real, *args])
+
+    proc = subprocess.Popen([real, *args], start_new_session=True)
+
+    def forward(signum, _frame):
+        try:
+            os.killpg(proc.pid, signum)
+        except ProcessLookupError:
+            pass
+
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, forward)
+    try:
+        code = proc.wait(timeout=seconds)
+    except subprocess.TimeoutExpired:
+        sys.stderr.write(f"godot shim: killed headless run after {seconds:g}s (GODOT_TIMEOUT; 0 disables)\n")
+        for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, None)):
+            try:
+                os.killpg(proc.pid, sig)
+                proc.wait(timeout=wait)
+                break
+            except subprocess.TimeoutExpired:
+                continue
+            except ProcessLookupError:
+                break
+        return 124
+    return code if code >= 0 else 128 - code
+
+
+if __name__ == "__main__":
+    sys.exit(main())

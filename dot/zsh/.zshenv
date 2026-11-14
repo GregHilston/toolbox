@@ -31,3 +31,5 @@ fi
 typeset -U path
 export TOOLBOX_HOME=~/Git/toolbox
 path+=($TOOLBOX_HOME/bin $TOOLBOX_HOME/bin/**/*(/N) $HOME/.local/bin(/N))
+# shims wrap a real tool, so they must come first.
+path=($TOOLBOX_HOME/shims $path)
