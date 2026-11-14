@@ -1,0 +1,12 @@
+# Copy to ~/.config/needs-greg/config.toml on the host that runs the server.
+owner = "owner"                 # GitHub user or org whose repos are scanned
+login = "user@example.com"      # only this Tailscale-User-Login is served
+port = 8765
+label = "needs-greg"
+session_host = "host-a"         # where Claude sessions start; the local host runs herdr directly
+# herdr = "/opt/homebrew/bin/herdr"   # when ssh's PATH lacks it
+
+# repo name = checkout path on session_host
+[repos]
+repo-a = "/home/user/repo-a"
+repo-b = "/home/user/repo-b"
