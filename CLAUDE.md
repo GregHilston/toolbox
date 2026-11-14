@@ -228,3 +228,7 @@ repo's own `.claude/settings.json`. Read that file's diff before committing it.
 ## NixOS / nix-darwin
 
 See `nixos/CLAUDE.md` for host management, deployment commands, and common mistakes.
+
+## Shims — `shims/`
+
+Wrappers that must beat the real tool on `PATH` (`.zshenv` and the Claude session-env hook put the dir first; `bin/` is last). `shims/godot` kills a `--headless` run after 600 s (`GODOT_TIMEOUT=<s>`, `0` disables) so a hung import can't hold a shift roll open.
