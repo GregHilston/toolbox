@@ -437,6 +437,22 @@ in {
     };
   };
 
+  # Port 443 is Caddy's; serve uses 10000.
+  # Runbook: home-lab/docs/runbooks/needs-greg.md.
+  launchd.user.agents.needs-greg = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/etc/profiles/per-user/${vars.user.name}/bin/uv"
+        "run"
+        "/Users/${vars.user.name}/Git/toolbox/bin/needs-greg/server.py"
+      ];
+      RunAtLoad = true;
+      KeepAlive = true;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/needs-greg.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/needs-greg.log";
+    };
+  };
+
   # Tier-1 backup: the ~210 MB of ${SERVER_CONFIG_BASE} that genuinely cannot be
   # regenerated — the Zigbee pairing database and coordinator NVRAM, zwave-js-ui's S2
   # security keys, Home Assistant's .storage, the *arr databases, Plex's Preferences.xml.
