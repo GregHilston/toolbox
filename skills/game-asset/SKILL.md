@@ -56,7 +56,7 @@ game-turntable.py art/assets/<id>                   # turntable.png, four views
 game-part.py art/assets/<id> --probe                # heights along the barrel, to find a part's box
 game-part.py art/assets/<id> Hammer --y -0.37 -0.20 --z-above 0.118
 game-part.py art/assets/<id> Mag --y 0.1 0.2 --z-above -0.3 --z-below -0.05   # under the barrel: pivot = top-centre of the cut
-game-part.py art/assets/<id> Mag ... --pivot X Y Z  # explicit pivot, Blender axes (Y along the barrel, Z up)
+game-part.py art/assets/<id> Mag ... --pivot X Y Z  # explicit pivot, Blender axes (Y along the barrel, Z up); still pass --z-above
 ```
 
 Run each asset's `game-model.py` as its own background job, so each one
@@ -82,7 +82,10 @@ game-sfx.py click art/assets/<id>/sfx/hammer.wav
 game-sfx.py pew art/assets/<id>/sfx/pew.wav --pitch 1.3
 game-fire-clip.py --example
 game-fire-clip.py art/assets/<id>
+game-fire-clip.py art/assets/<id> --timeline reload   # reads reload.json, writes reload.mp4
 ```
+
+`--timeline <name>` (default `fire`) reads `<name>.json` and writes `<name>.mp4`, so a reload clip can be recorded again.
 
 `fire.json`'s `events` are one trigger pull, which the game replays per click or while held; `shots` is only the clip's repeat count. Leave throwing (Q) out: shared code does it for every weapon. `--example` prints a musket `fire.json`: timed events (sound, rotate or slide a part,
 emit or burst particles, light, recoil, bolt) and particle presets.
