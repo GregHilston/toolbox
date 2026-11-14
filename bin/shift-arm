@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+"""Arm this Herdr pane's Claude Code session to roll over to a fresh context.
+
+Once armed, the Stop hook shift-drain.py tells the session to drain when its
+context passes the threshold, and `orchestrator-roll` then /clears it and
+submits the restart prompt. Run it from the session's own Bash tool, so
+HERDR_PANE_ID names its pane. The pane stays armed across rolls. Re-arming
+keeps the roll count, so a restarted session can't escape --max-rolls; `--off`
+resets it and cancels a queued roll.
+"""
+
+import argparse
+import json
+import os
+import sys
+
+import claude_shift
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--prompt", help="the fixed message the fresh session receives")
+    parser.add_argument("--threshold", type=int, default=250_000, help="drain at this many context tokens (default 250000)")
+    parser.add_argument("--max-rolls", type=int, default=8, help="refuse to roll past this many (default 8)")
+    parser.add_argument("--repo", default=os.getcwd(), help="the repo this orchestrator works in (default: cwd)")
+    parser.add_argument("--off", action="store_true", help="disarm this pane, reset its roll count, cancel a queued roll")
+    parser.add_argument("--status", action="store_true", help="print this pane's shift state")
+    args = parser.parse_args()
+
+    pane = claude_shift.pane()
+    if not pane:
+        print("shift-arm: HERDR_PANE_ID is unset; run this inside a Herdr pane.", file=sys.stderr)
+        return 1
+    with claude_shift.locked(pane):
+        if args.off:
+            claude_shift.state_path(pane).unlink(missing_ok=True)
+            print(f"Disarmed {pane}.")
+            return 0
+        try:
+            state = claude_shift.load(pane)
+        except claude_shift.Invalid as e:
+            if args.status or not args.prompt:
+                print(f"shift-arm: {pane}'s state file is corrupt ({e}); `shift-arm --off` resets it.", file=sys.stderr)
+                return 1
+            state = None
+        if args.status:
+            print(json.dumps(state, indent=1) if state else f"{pane} is not armed.")
+            return 0
+        if not args.prompt:
+            parser.error("--prompt is required to arm")
+        kept = {k: state[k] for k in claude_shift.RUNTIME} if state else dict(claude_shift.RUNTIME)
+        rolls = state["rolls"] if state else 0
+        claude_shift.save(pane, {
+            "pane": pane, "threshold": args.threshold, "prompt": args.prompt,
+            "max_rolls": args.max_rolls, "rolls": rolls, "repo": os.path.abspath(args.repo), **kept,
+        })  # fmt: skip
+    print(f"Armed {pane}: drain at {args.threshold} tokens, {rolls}/{args.max_rolls} rolls used.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
