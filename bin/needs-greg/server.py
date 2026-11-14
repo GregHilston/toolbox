@@ -159,6 +159,8 @@ def load_config(path: Path) -> Config:
     missing = [k for k in ("owner", "login", "session_host") if not raw.get(k)]
     if missing:
         raise ConfigError(f"config is missing: {', '.join(missing)}")
+    if str(raw["session_host"]).startswith("-"):
+        raise ConfigError("session_host must not start with '-'")
     repos = raw.get("repos")
     if not isinstance(repos, dict) or not repos:
         raise ConfigError("config needs a [repos] table of name = checkout path")
@@ -210,7 +212,7 @@ class Runner:
             argv = inner
         else:
             argv = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
-                    self.cfg.session_host, shlex.join(inner)]
+                    "--", self.cfg.session_host, shlex.join(inner)]
         if write and self.dry_run:
             self.log("DRY " + shlex.join(argv))
             return "{}"

@@ -117,6 +117,13 @@ class ConfigTest(unittest.TestCase):
         c.session_host = "host-a"
         self.assertFalse(ng.session_is_local(c))
 
+    def test_session_host_cannot_be_an_ssh_option(self) -> None:
+        with self.assertRaisesRegex(ng.ConfigError, "must not start"):
+            ng.load_config(write_config(CONFIG.replace('"local"', '"-oProxyCommand=x"')))
+        run, rec = runner(host="host-b")
+        run.herdr(["workspace", "create"], write=True)
+        self.assertIn("ssh -o BatchMode=yes -o ConnectTimeout=8 -- host-b ", rec.lines[0])
+
     def test_binary_paths(self) -> None:
         c = ng.load_config(write_config('gh = "/opt/gh"\nherdr = "/opt/herdr"\n' + CONFIG))
         self.assertEqual((c.gh, c.herdr), ("/opt/gh", "/opt/herdr"))
