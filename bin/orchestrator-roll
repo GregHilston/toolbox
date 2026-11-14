@@ -11,12 +11,16 @@ prompt is in. On failure the worker sends a Pushover, leaves the session as
 it is and re-opens the drain. `shift-arm --off` cancels a queued roll.
 Logs to ~/.cache/claude-shift/<hash>.log.
 
+While it waits on live background tasks it also reaps orphaned godot gate
+processes (bin/roll_reap.py); `--reap [--dry-run]` runs just that.
+
 Exit codes: 0 roll queued, 1 refused (the message says why), 2 bad arguments.
 """
 
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import subprocess
@@ -26,6 +30,7 @@ import uuid
 from pathlib import Path
 
 import claude_shift
+import roll_reap
 from claude_shift import log, notify, short
 
 HERDR = os.environ.get("HERDR_BIN_PATH") or "herdr"
@@ -34,6 +39,7 @@ DRAIN_TIMEOUT = 20 * 60
 CLEAR_TIMEOUT = 120
 POLL = 2
 SETTLE = 3  # idle must hold this long
+REAP_EVERY = 60
 
 
 class Failed(Exception):
@@ -73,13 +79,29 @@ def current(pane: str, token: str) -> dict:
     return state
 
 
+def reap_orphans(pane: str) -> None:
+    """Kill gate processes a finished agent left behind; they hold `busy` above 0."""
+    out = io.StringIO()
+    try:
+        roll_reap.reap(out=out)
+    except Exception as e:  # a reaper bug must not stall the roll
+        out.write(f"reaper failed: {short(e)}\n")
+    for line in out.getvalue().splitlines():
+        if not line.startswith("live:"):
+            log(pane, f"reap: {line}")
+
+
 def wait_stopped(pane: str, token: str, since: int) -> None:
     """Until a stop after `since` left nothing live and the agent has stayed idle."""
     deadline = time.monotonic() + DRAIN_TIMEOUT
     seen = None
+    next_reap = 0.0
     while time.monotonic() < deadline:
         with claude_shift.locked(pane):
             state = current(pane, token)
+        if state["busy"] and time.monotonic() >= next_reap:
+            next_reap = time.monotonic() + REAP_EVERY
+            reap_orphans(pane)
         if state["stops"] > since and state["busy"] == 0 and status(pane) in IDLE:
             if seen == state["stops"]:
                 return
@@ -175,11 +197,18 @@ def refuse(message: str) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--reap", action="store_true", help="list and kill orphaned gate processes, then exit")
+    parser.add_argument("--dry-run", action="store_true", help="with --reap: only say what would be killed")
     parser.add_argument("--worker", nargs=2, metavar=("PANE", "TOKEN"), help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.worker:
         worker(*args.worker)
         return 0
+    if args.reap:
+        roll_reap.reap(dry_run=args.dry_run)
+        return 0
+    if args.dry_run:
+        parser.error("--dry-run needs --reap")
 
     pane = claude_shift.pane()
     if not pane:
