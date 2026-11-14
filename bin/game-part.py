@@ -5,7 +5,7 @@
 # ///
 """Cut a moving part (a hammer, a trigger) out of model.glb into its own node.
 
-    game-part.py <asset dir> <Part> --y MIN MAX --z-above Z [--z-below Z]
+    game-part.py <asset dir> <Part> --y MIN MAX --z-above Z [--z-below Z] [--pivot X Y Z]
 
 Faces whose centre lies in the box (Blender axes: Y along the barrel, Z up)
 become a child object named <Part>, with its origin at the bottom-centre of
@@ -35,6 +35,7 @@ def main() -> None:
     ap.add_argument("--y", type=float, nargs=2)
     ap.add_argument("--z-above", type=float)
     ap.add_argument("--z-below", type=float, default=float("inf"))
+    ap.add_argument("--pivot", type=float, nargs=3, metavar=("X", "Y", "Z"), help="origin of the part, Blender axes")
     ap.add_argument("--probe", action="store_true", help="print the top and bottom of the mesh in 30 slices along Y")
     a = ap.parse_args()
     folder = a.asset.resolve()
@@ -69,7 +70,13 @@ def main() -> None:
         nf = part_bm.faces.new(verts)
         for lo, ln in zip(f.loops, nf.loops):
             ln[dst_col] = lo[src_col]
-    pivot = Vector((0.0, (a.y[0] + a.y[1]) / 2, a.z_above))
+    if a.pivot:
+        pivot = Vector(a.pivot)
+    elif a.z_below != float("inf"):
+        co = np.array([v.co[:] for v in part_bm.verts])
+        pivot = Vector(((co[:, 0].min() + co[:, 0].max()) / 2, (co[:, 1].min() + co[:, 1].max()) / 2, co[:, 2].max()))
+    else:
+        pivot = Vector((0.0, (a.y[0] + a.y[1]) / 2, a.z_above))
     bmesh.ops.translate(part_bm, verts=part_bm.verts[:], vec=-pivot)
     bmesh.ops.delete(bm, geom=picked, context="FACES_ONLY")
     bm.to_mesh(body.data)
@@ -87,7 +94,7 @@ def main() -> None:
     bpy.ops.export_scene.gltf(filepath=str(folder / "model.glb"), export_format="GLB", export_vertex_color="ACTIVE",
                               export_yup=True, export_extras=False)
     m = json.loads((folder / "asset.json").read_text())
-    box = {"y": a.y, "z_above": a.z_above} | ({"z_below": a.z_below} if a.z_below != float("inf") else {})
+    box = {"y": a.y, "z_above": a.z_above} | ({"z_below": a.z_below} if a.z_below != float("inf") else {}) | ({"pivot_arg": a.pivot} if a.pivot else {})
     m.setdefault("parts", {})[a.part] = box | {"faces": len(picked), "pivot": [round(c, 4) for c in pivot]}
     (folder / "asset.json").write_text(json.dumps(m, indent=2) + "\n")
     print(a.part, len(picked), "faces, pivot", [round(c, 4) for c in pivot])

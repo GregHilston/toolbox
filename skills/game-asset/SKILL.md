@@ -55,6 +55,8 @@ game-clean.py art/assets/<id> --length 1.5 --voxels 120   # rerun when the model
 game-turntable.py art/assets/<id>                   # turntable.png, four views
 game-part.py art/assets/<id> --probe                # heights along the barrel, to find a part's box
 game-part.py art/assets/<id> Hammer --y -0.37 -0.20 --z-above 0.118
+game-part.py art/assets/<id> Mag --y 0.1 0.2 --z-above -0.3 --z-below -0.05   # under the barrel: pivot = top-centre of the cut
+game-part.py art/assets/<id> Mag ... --pivot X Y Z  # explicit pivot, Blender axes (Y along the barrel, Z up)
 ```
 
 Run each asset's `game-model.py` as its own background job, so each one
