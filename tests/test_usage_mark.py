@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -80,3 +81,26 @@ class Luna(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ShiftLines(unittest.TestCase):
+    def test_context_and_shift_mode(self) -> None:
+        import os
+        from unittest import mock
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "bin"))
+        import claude_shift
+
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "p").mkdir()
+            entry = {"type": "assistant", "message": {"model": "claude-opus", "usage": {"input_tokens": 10, "cache_read_input_tokens": 150_000}}}
+            (root / "p" / "s1.jsonl").write_text(json.dumps(entry) + "\n")
+            env = {"CLAUDE_CODE_SESSION_ID": "s1", "HERDR_PANE_ID": "w:p1"}
+            with mock.patch.dict(os.environ, env), mock.patch.object(um, "PROJECTS", root), mock.patch.object(claude_shift, "STATE_DIR", root / "shift"):
+                self.assertEqual(um.shift_lines(), ["Context: 150k of 1M", "Shift: not armed; this session never rolls."])
+                state = {"pane": "w:p1", "threshold": 250_000, "prompt": "x", "max_rolls": 8, "rolls": 2, "repo": d, **claude_shift.RUNTIME}
+                claude_shift.save("w:p1", state)
+                self.assertEqual(um.shift_lines()[1], "Shift: taking work, 99k to the drain (roll 2 of 8).")
+                claude_shift.save("w:p1", {**state, "announced": "s1"})
+                self.assertIn("draining", um.shift_lines()[1])

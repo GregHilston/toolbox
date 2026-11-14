@@ -38,6 +38,7 @@ PROM = os.environ.get(
 )
 MARKS = Path(os.environ.get("USAGE_MARK_DIR", Path.home() / ".cache" / "usage-mark"))
 PROJECTS = Path(os.environ.get("USAGE_MARK_PROJECTS", Path.home() / ".claude" / "projects"))
+WINDOW = int(os.environ.get("USAGE_MARK_WINDOW", 1_000_000))
 GO_MODEL = "deepseek-v4.1-flash"
 LABELS = ("DS API", "Go", "Luna")
 # USD per 1M tokens (cache hit, miss, output) for Flash; peak doubles.
@@ -214,9 +215,33 @@ def build(name: str, mark: dict, claude: dict | None, ds: dict | None, now_g: di
     return {"name": name, "minutes": elapsed // 60, "rows": rows, "extra": extra, "notes": notes, "claude_ok": claude is not None}
 
 
+def shift_lines() -> list[str]:
+    """The calling session's context size, and whether its shift still takes work."""
+    session = os.environ.get("CLAUDE_CODE_SESSION_ID")
+    found = sorted(PROJECTS.glob(f"*/{session}.jsonl")) if session else []
+    if not found:
+        return []
+    import claude_shift
+
+    tokens = claude_shift.context_tokens(found[0])
+    window = f"{WINDOW / 1e6:g}M" if WINDOW >= 1_000_000 else f"{WINDOW // 1000}k"
+    context = f"Context: {tokens // 1000}k of {window}"
+    pane = claude_shift.pane()
+    state = claude_shift.load(pane) if pane else None
+    if not state:
+        return [context, "Shift: not armed; this session never rolls."]
+    context += f", drains at {state['threshold'] // 1000}k"
+    if state["announced"] != session and tokens < state["threshold"]:
+        left = (state["threshold"] - tokens) // 1000
+        return [context, f"Shift: taking work, {left}k to the drain (roll {state['rolls']} of {state['max_rolls']})."]
+    after = "stopping (roll cap reached)" if state["rolls"] >= state["max_rolls"] else "rolling to a fresh session"
+    return [context, f"Shift: draining. Starting nothing new; landing or parking, then {after}."]
+
+
 def render(rep: dict) -> str:
     """The Markdown table plus its footer lines."""
-    lines = [f"**{rep['name']}** +{rep['minutes']}m", "", "| src | in | out | c.read | c.write | $ |", "|---|--:|--:|--:|--:|--:|"]
+    shift = rep.get("shift") or []
+    lines = [f"**{rep['name']}** +{rep['minutes']}m", "", *shift, *([""] if shift else []), "| src | in | out | c.read | c.write | $ |", "|---|--:|--:|--:|--:|--:|"]
     for r in rep["rows"]:
         cost = "-" if r["cost"] is None else ("?" if r["cost"] == "?" else f"{'~' if r['est'] else ''}{r['cost']:.2f}")
         if r["in"] is None:
@@ -278,6 +303,10 @@ def report(name: str, as_json: bool) -> int:
         except Exception as exc:  # noqa: BLE001
             notes.append(f"DeepSeek/Go: gateway unreachable ({exc})")
     rep = build(name, mark, claude, ds, now_g, notes, _peak())
+    try:
+        rep["shift"] = shift_lines()
+    except Exception as exc:  # noqa: BLE001
+        rep["notes"].append(f"context unreadable: {exc}")
     print(json.dumps(rep, indent=2) if as_json else render(rep))
     return 0
 
