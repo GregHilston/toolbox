@@ -233,6 +233,14 @@ in {
       text = builtins.toJSON {inherit (cfg) searxngBaseUrl;};
     };
 
+    # Ghostty sends Shift+Enter as Alt+Enter.
+    home.file.".pi/agent/keybindings.json" = {
+      text = builtins.toJSON {
+        "tui.input.newLine" = ["shift+enter" "alt+enter" "ctrl+j"];
+        "app.message.followUp" = "ctrl+q";
+      };
+    };
+
     home.file.".pi/agent/settings.json" = {
       text = builtins.toJSON {
         defaultProvider =

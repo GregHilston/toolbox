@@ -45,6 +45,11 @@
       recursive = true;
     };
 
+    # Herdr drops Shift+Enter (herdrdev/herdr#5660); ESC+CR survives.
+    xdg.configFile."ghostty/config".text = ''
+      keybind = shift+enter=text:\x1b\r
+    '';
+
     custom.programs.pi.enable = true;
   };
 }

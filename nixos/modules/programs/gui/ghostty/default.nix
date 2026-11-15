@@ -14,6 +14,8 @@ _: {
         "super+v=paste_from_clipboard"
         "super+shift+c=copy_to_clipboard"
         "super+shift+v=paste_from_clipboard"
+        # Herdr drops Shift+Enter (herdrdev/herdr#5660); ESC+CR survives.
+        "shift+enter=text:\\x1b\\r"
       ];
     };
   };
