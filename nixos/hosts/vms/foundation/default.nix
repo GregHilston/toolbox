@@ -8,6 +8,7 @@
   ];
 
   networking.hostName = "foundation";
+  services.openssh.enable = true;
 
   # WSL has no kernel links; reboot check aborts.
   system.autoUpgrade.allowReboot = lib.mkForce false;
