@@ -16,6 +16,8 @@ is silent, saying which source each piece comes from.
 |---|---|
 | `llm/lucid-dreaming-laberge-curriculum.md` | The book: techniques, exercises and pages. Teach from this, not from memory. |
 | `llm/lucid-dreaming-recall-community.md` | Reddit, DreamViews and studies on recall and on journaling in the dark. |
+| `llm/lucid-dreaming-flying-wild-characters.md` | His three goals: flying, dream conversations, sleep paralysis into WILD. |
+| `llm/lucid-dreaming-simple-techniques.md` | Community techniques (DEILD, SSILD, short WBTB, naps, cues) with the study figures, and his restart plan. |
 | `lucid-dreaming-practice.md` | **The log you keep**: current stage, goals, nightly counts, dream signs, what was tried. |
 | `dream-journal.md` | Greg's dreams, one `##` per dream. Read it, never rewrite it. |
 | `dream-signs.md` | Greg's own dream sign notes. |
