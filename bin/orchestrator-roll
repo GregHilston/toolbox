@@ -12,7 +12,7 @@ it is and re-opens the drain. `shift-arm --off` cancels a queued roll.
 Logs to ~/.cache/claude-shift/<hash>.log.
 
 While it waits on live background tasks it also reaps orphaned godot gate
-processes (bin/roll_reap.py); `--reap [--dry-run]` runs just that.
+processes (bin/roll_reap.py), only the rolling repo's; `--reap [--dry-run] [--repo]` runs just that.
 
 Exit codes: 0 roll queued, 1 refused (the message says why), 2 bad arguments.
 """
@@ -79,11 +79,11 @@ def current(pane: str, token: str) -> dict:
     return state
 
 
-def reap_orphans(pane: str) -> None:
+def reap_orphans(pane: str, repo: str) -> None:
     """Kill gate processes a finished agent left behind; they hold `busy` above 0."""
     out = io.StringIO()
     try:
-        roll_reap.reap(out=out)
+        roll_reap.reap(repo, out=out)
     except Exception as e:  # a reaper bug must not stall the roll
         out.write(f"reaper failed: {short(e)}\n")
     for line in out.getvalue().splitlines():
@@ -101,7 +101,7 @@ def wait_stopped(pane: str, token: str, since: int) -> None:
             state = current(pane, token)
         if state["busy"] and time.monotonic() >= next_reap:
             next_reap = time.monotonic() + REAP_EVERY
-            reap_orphans(pane)
+            reap_orphans(pane, state["repo"])
         if state["stops"] > since and state["busy"] == 0 and status(pane) in IDLE:
             if seen == state["stops"]:
                 return
@@ -199,16 +199,21 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--reap", action="store_true", help="list and kill orphaned gate processes, then exit")
     parser.add_argument("--dry-run", action="store_true", help="with --reap: only say what would be killed")
+    parser.add_argument("--repo", help="with --reap: the repo whose gates to reap (default: this checkout)")
     parser.add_argument("--worker", nargs=2, metavar=("PANE", "TOKEN"), help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.worker:
         worker(*args.worker)
         return 0
     if args.reap:
-        roll_reap.reap(dry_run=args.dry_run)
+        git = roll_reap.common_dir(".")
+        repo = args.repo or (git and os.path.dirname(git))
+        if not repo:
+            parser.error("--reap needs --repo outside a git checkout")
+        roll_reap.reap(repo, dry_run=args.dry_run)
         return 0
-    if args.dry_run:
-        parser.error("--dry-run needs --reap")
+    if args.dry_run or args.repo:
+        parser.error("--dry-run and --repo need --reap")
 
     pane = claude_shift.pane()
     if not pane:

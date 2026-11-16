@@ -10,6 +10,8 @@ A process is reaped when all of these hold:
   - its program is godot, gate_test.sh or verify.sh (ROLL_REAP_NAMES adds more),
   - a Claude Code process is among its ancestors, or it was orphaned to init,
   - its cwd is a scratchpad or sits under a `worktrees/` directory,
+  - that cwd belongs to the rolling repo: its checkout or one of its git
+    worktrees (same git common dir), or one of its Claude scratchpads,
   - it is older than ROLL_REAP_GRACE seconds (default 900),
   - its cwd is under ROLL_REAP_ROOT, when that is set.
 """
@@ -86,6 +88,24 @@ def claude_ancestor(procs: dict[int, Proc], proc: Proc) -> int | None:
     return None
 
 
+def slug(path: str) -> str:
+    """Claude Code's project folder name for a path."""
+    return re.sub(r"[^A-Za-z0-9]", "-", path)
+
+
+def common_dir(path: str) -> str | None:
+    out = subprocess.run(["git", "-C", path, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                         capture_output=True, text=True)  # fmt: skip
+    return os.path.realpath(out.stdout.strip()) if out.returncode == 0 else None
+
+
+def belongs(cwd: str, repo: str, repo_git: str | None) -> bool:
+    """Whether a gate running in `cwd` is the rolling repo's."""
+    if SCRATCH.search(cwd):
+        return f"/{slug(repo)}/" in cwd + "/"
+    return repo_git is not None and common_dir(cwd) == repo_git
+
+
 def cwds(pids: list[int]) -> dict[int, str]:
     if not pids:
         return {}
@@ -113,17 +133,20 @@ def running_agent(now: float) -> Path | None:
     return newest[1] if newest else None
 
 
-def candidates(procs: dict[int, Proc]) -> list[Proc]:
+def candidates(procs: dict[int, Proc], repo: str) -> list[Proc]:
     mine = {os.getpid(), os.getppid()}
     found = [p for p in procs.values() if p.pid not in mine and program(p.command)]
     where = cwds([p.pid for p in found])
+    repo = os.path.realpath(repo)
+    repo_git = common_dir(repo)
     keep = []
     for p in found:
         p.cwd = where.get(p.pid, "")
         p.owner = claude_ancestor(procs, p)
         if ROOT and not (p.cwd + "/").startswith(ROOT.rstrip("/") + "/"):
             continue
-        if (p.owner or p.ppid == 1) and (SCRATCH.search(p.cwd) or "/worktrees/" in p.cwd + "/"):
+        if (p.owner or p.ppid == 1) and (SCRATCH.search(p.cwd) or "/worktrees/" in p.cwd + "/") \
+                and belongs(p.cwd, repo, repo_git):
             keep.append(p)
     return keep
 
@@ -142,10 +165,11 @@ def kill_group(p: Proc, procs: dict[int, Proc]) -> None:
         pass
 
 
-def reap(dry_run: bool = False, out=sys.stdout) -> int:
-    """Returns how many processes were (or would be) killed."""
+def reap(repo: str, dry_run: bool = False, out=sys.stdout) -> int:
+    """Kill `repo`'s orphaned gates; returns how many were (or would be) killed."""
     procs = snapshot()
-    live = candidates(procs)
+    live = candidates(procs, repo)
+    print(f"scope: {os.path.realpath(repo)}", file=out)
     for p in sorted(live, key=lambda p: -p.age):
         print(f"live: pid {p.pid} {program(p.command)} age {p.age // 60}m owner "
               f"{'claude ' + str(p.owner) if p.owner else 'none (orphan)'} cwd {p.cwd}", file=out)  # fmt: skip
