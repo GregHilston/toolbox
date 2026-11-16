@@ -454,7 +454,7 @@ def run_agent(args, harness: str, model: str | None, prompt: str, log: Path,
             cmd += ["--tools", "read,grep,find,ls" + (",bash" if bash else "")]
         if model in CLOUD:
             cmd += ["--provider", "litellm"]
-            model = os.environ.get("PI_CLOUD_MODEL", "cloud")  # cloud-go, cloud-luna or cloud-deepseek pins one
+            model = os.environ.get("PI_CLOUD_MODEL", "cloud")  # cloud-zro, cloud-go, cloud-luna or cloud-deepseek pins one
     shown = model or "default"
     if model:
         cmd[1:1] = ["--model", model]

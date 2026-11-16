@@ -28,8 +28,8 @@ in `~/Git/toolbox/dot/pi/CLAUDE.md`.
 
 ### Where workers run
 
-Flash workers call the gateway's `cloud`: OpenCode Go, then GPT-5.6 Luna on ChatGPT Plus,
-then DeepSeek's API when both refuse. `PI_CLOUD_MODEL=cloud-go`, `cloud-luna` or
+Flash workers call the gateway's `cloud`: Zro's free plan, then OpenCode Go, then GPT-5.6 Luna on
+ChatGPT Plus, then DeepSeek's API when all three refuse. `PI_CLOUD_MODEL=cloud-zro`, `cloud-go`, `cloud-luna` or
 `cloud-deepseek` pins one vendor, which fails rather than overflow. The gateway has no Pro alias, so `--model pro` stays direct, with
 `--provider deepseek --model deepseek-v4-pro`, and bills the DeepSeek key. Overflow
 bills it too, so the balance check below still matters. A worker's reported cost is
