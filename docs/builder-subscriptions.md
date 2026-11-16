@@ -263,3 +263,8 @@ complaint is speed: GLM 5.2 on Z.ai's coding endpoint ran at 12–55 tok/s
   plan without API access" and answers 403 `upgrade_required`
   ([provider docs](https://commandcode.ai/docs/provider)).
 - **No DeepInfra.** Greg dropped it on 2026-11-16; DeepSeek's API stays the paid tail.
+- **Order:** Zro, GOAT, Go, Luna, DeepSeek. At DeepSeek's peak, Luna moves before GOAT:
+  GOAT and Go draw their dollar allowances at the doubled peak price, and Luna's limits ignore
+  the hour. DeepSeek stays last at every hour, since it doubles too. Routing on DeepSeek's
+  half price alone saves nothing, because the plans meter at the same ratio. Built in home-lab
+  [#181](https://github.com/GregHilston/home-lab/pull/181).
