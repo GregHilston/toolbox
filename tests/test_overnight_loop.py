@@ -1006,7 +1006,10 @@ class TestCostLabels(LoopTest):
         out = self.run_loop("--harness", "pi", "--reviewer", "claude")
         costs = [float(c) for c in re.findall(r"pi/cloud \$([\d.]+)", out.stdout)]
         self.assertEqual(len(costs), 2, out.stdout + out.stderr)
-        self.assertIn(f"Real: ~${sum(costs):.2f} at DeepSeek's list price", out.stdout)
+        real = re.search(r"Real: ~\$([\d.]+) at DeepSeek's list price", out.stdout)
+        self.assertIsNotNone(real, out.stdout)
+        # Labels are rounded; the total sums unrounded costs.
+        self.assertAlmostEqual(float(real[1]), sum(costs), delta=0.005 * len(costs) + 0.005)
 
     def test_the_shared_gateway_counter_is_not_the_real_cost(self):
         # Two lanes share one counter; each reads all of it.

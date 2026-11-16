@@ -24,7 +24,6 @@ const PORTED: Record<string, string> = {
 };
 
 const CLAUDE_ONLY = [
-	"Pixel 8 (Termux)",
 	"Documentation Philosophy",
 	"Ending a chat",
 	"Picking a model for delegated work",

@@ -67,7 +67,7 @@ class Base(unittest.TestCase):
         self.status.write_text("idle")
         pushover = script(self.tmp / "pushover", FAKE_PUSHOVER)
         self.env = os.environ | {
-            "CLAUDE_SHIFT_DIR": str(self.tmp), "HERDR_PANE_ID": PANE, "PUSHOVER_BIN": pushover,
+            "CLAUDE_SHIFT_DIR": str(self.tmp), "HERDR_PANE_ID": PANE, "PUSHOVER_BIN": pushover, "TOOLBOX_HOME": str(ROOT),
             "CALLS": str(self.calls), "PUSHES": str(self.pushes), "STATUS": str(self.status),
         }  # fmt: skip
         self.patch(claude_shift, "STATE_DIR", self.tmp)
