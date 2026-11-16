@@ -12,8 +12,10 @@ Claude tokens come from every transcript under ~/.claude/projects on this
 machine, all repos included (Claude is on a subscription, so cost shows "-").
 DeepSeek API and OpenCode Go come from the LiteLLM gateway's counters in
 Prometheus, read through Grafana's datasource proxy. The gateway tells them
-apart by model: `deepseek-v4.1-flash` is Go, any other `deepseek-*` is the API,
-and `gpt-*` from the `chatgpt` provider is Luna on ChatGPT Plus (flat fee, $0).
+apart by model: `zro/deepseek-v4.1-flash` is Zro (free, $0),
+`deepseek/deepseek-v4.1-flash` is Command Code GOAT, `deepseek-v4.1-flash` is Go,
+any other `deepseek-*` is the API, and `gpt-*` from the `chatgpt` provider is
+Luna on ChatGPT Plus (flat fee, $0). Go and GOAT show list price.
 Work that bypasses the gateway shows only in the balance change.
 OpenAI Images API spend comes from the ledger `openai-image.py` appends per call.
 Above the table, each Go and Luna quota window's reset time, in
@@ -42,8 +44,9 @@ PROM = os.environ.get(
 MARKS = Path(os.environ.get("USAGE_MARK_DIR", Path.home() / ".cache" / "usage-mark"))
 PROJECTS = Path(os.environ.get("USAGE_MARK_PROJECTS", Path.home() / ".claude" / "projects"))
 WINDOW = int(os.environ.get("USAGE_MARK_WINDOW", 1_000_000))
-GO_MODEL = "deepseek-v4.1-flash"
-LABELS = ("DS API", "Go", "Luna")
+ROUTES = {"zro/deepseek-v4.1-flash": "Zro", "deepseek/deepseek-v4.1-flash": "GOAT", "deepseek-v4.1-flash": "Go"}
+LABELS = ("DS API", "Zro", "GOAT", "Go", "Luna")
+FREE = ("Zro", "Luna")
 # USD per 1M tokens (cache hit, miss, output) for Flash; peak doubles.
 FLASH = {"off": (0.003, 0.15, 0.60), "peak": (0.006, 0.30, 1.20)}
 FIELDS = ("in", "out", "cread", "cwrite")
@@ -187,10 +190,10 @@ def counter_delta(now: dict[str, dict[str, float]], base: dict[str, dict[str, fl
 
 
 def deepseek_rows(delta: dict[str, dict[str, float]], peak: bool) -> dict[str, dict]:
-    """Fold gateway deltas into `DS API`, `Go` and `Luna` rows."""
+    """Fold gateway deltas into one row per route."""
     rows: dict[str, dict] = {}
     for model, d in delta.items():
-        label = "Luna" if model.startswith("gpt-") else "Go" if model == GO_MODEL else "DS API"
+        label = "Luna" if model.startswith("gpt-") else ROUTES.get(model, "DS API")
         hit, total, out = d.get("cread", 0.0), d.get("total_in", 0.0), d.get("out", 0.0)
         if not (hit or total or out):
             continue
@@ -199,9 +202,9 @@ def deepseek_rows(delta: dict[str, dict[str, float]], peak: bool) -> dict[str, d
         r["out"] += int(out)
         r["cread"] += int(hit)
         spend = d.get("spend", 0.0)
-        if label == "Luna":  # flat plan; no list price to estimate
+        if label in FREE:
             spend = 0.0
-        elif spend <= 0:  # Go bills a flat plan, so its dollars are list price
+        elif spend <= 0:  # flat plans: dollars are list price
             rate = FLASH["peak" if peak else "off"]
             spend = (hit * rate[0] + (total - hit) * rate[1] + out * rate[2]) / 1e6
             r["est"] = True
@@ -295,7 +298,7 @@ def render(rep: dict) -> str:
         bits.append(f"DS balance {x['balance_change']:+.2f}")
     if bits:
         lines += ["", "; ".join(bits)]
-    lines += ["", "Claude counts all repos on this machine; Go $ is list-price (~); Luna is flat-fee ($0)."]
+    lines += ["", "Claude counts all repos on this machine; Go and GOAT $ is list-price (~); Zro is free, Luna flat-fee ($0)."]
     imgs = sum(r.get("images", 0) for r in rep["rows"])
     if imgs:
         lines.append(f"OpenAI img: {imgs} images, paid per token on the API.")
@@ -332,13 +335,13 @@ def report(name: str, as_json: bool) -> int:
         notes.append(f"Claude transcripts unreadable: {exc}")
     ds = now_g = None
     if mark.get("counters") is None:
-        notes.append("DeepSeek/Go: no gateway baseline at start")
+        notes.append("gateway: no baseline at start")
     else:
         try:
             ds = deepseek_rows(counter_delta(gateway_counters(), mark["counters"]), peak=_peak())
             now_g = gauges()
         except Exception as exc:  # noqa: BLE001
-            notes.append(f"DeepSeek/Go: gateway unreachable ({exc})")
+            notes.append(f"gateway unreachable ({exc})")
     rep = build(name, mark, claude, ds, now_g, notes, _peak())
     try:
         rep["shift"] = shift_lines()

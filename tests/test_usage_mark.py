@@ -46,7 +46,7 @@ class Deltas(unittest.TestCase):
 
     def test_rows_split_go_from_api_and_estimate_go_cost(self) -> None:
         delta = {
-            um.GO_MODEL: {"total_in": 1_000_000.0, "cread": 400_000.0, "out": 100_000.0, "spend": 0.0},
+            "deepseek-v4.1-flash": {"total_in": 1_000_000.0, "cread": 400_000.0, "out": 100_000.0, "spend": 0.0},
             "deepseek-flash": {"total_in": 10.0, "cread": 4.0, "out": 2.0, "spend": 0.25},
         }
         rows = um.deepseek_rows(delta, peak=False)
@@ -55,6 +55,18 @@ class Deltas(unittest.TestCase):
         self.assertAlmostEqual(rows["Go"]["cost"], (400_000 * 0.003 + 600_000 * 0.15 + 100_000 * 0.60) / 1e6)
         self.assertEqual(rows["DS API"]["cost"], 0.25)
         self.assertFalse(rows["DS API"]["est"])
+
+    def test_zro_and_goat_get_their_own_rows(self) -> None:
+        delta = {
+            "zro/deepseek-v4.1-flash": {"total_in": 1000.0, "cread": 900.0, "out": 10.0, "spend": 0.0},
+            "deepseek/deepseek-v4.1-flash": {"total_in": 1_000_000.0, "cread": 0.0, "out": 0.0, "spend": 0.0},
+        }
+        rows = um.deepseek_rows(delta, peak=False)
+        self.assertEqual(set(rows), {"Zro", "GOAT"})
+        self.assertEqual(rows["Zro"]["cost"], 0.0)
+        self.assertFalse(rows["Zro"]["est"])
+        self.assertTrue(rows["GOAT"]["est"])
+        self.assertAlmostEqual(rows["GOAT"]["cost"], 0.15)
 
     def test_fmt(self) -> None:
         self.assertEqual((um.fmt(950), um.fmt(1200), um.fmt(3_400_000), um.fmt(None)), ("950", "1.2k", "3.4M", "?"))
