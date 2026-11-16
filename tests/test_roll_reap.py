@@ -22,7 +22,7 @@ class TestReap(unittest.TestCase):
         self.cwd.mkdir(parents=True)
         self.projects = base / "projects"
         self.projects.mkdir()
-        self.env = dict(os.environ, ROLL_REAP_NAMES="sleep", ROLL_REAP_GRACE="1",
+        self.env = dict(os.environ, ROLL_REAP_NAMES="sleep", ROLL_REAP_GRACE="1", ROLL_REAP_ROOT=str(base.resolve()),
                         ROLL_AGENT_QUIET="60", CLAUDE_PROJECTS_DIR=str(self.projects))  # fmt: skip
         # Orphaned to init, as a process left by a finished agent is.
         subprocess.run(["sh", "-c", f"cd {self.cwd} && (sleep 47 </dev/null >/dev/null 2>&1 &)"], check=True)

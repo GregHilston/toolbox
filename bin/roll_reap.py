@@ -10,7 +10,8 @@ A process is reaped when all of these hold:
   - its program is godot, gate_test.sh or verify.sh (ROLL_REAP_NAMES adds more),
   - a Claude Code process is among its ancestors, or it was orphaned to init,
   - its cwd is a scratchpad or sits under a `worktrees/` directory,
-  - it is older than ROLL_REAP_GRACE seconds (default 900).
+  - it is older than ROLL_REAP_GRACE seconds (default 900),
+  - its cwd is under ROLL_REAP_ROOT, when that is set.
 """
 
 from __future__ import annotations
@@ -29,6 +30,8 @@ AGENT_QUIET = int(os.environ.get("ROLL_AGENT_QUIET", 120))
 NAMES = {"godot", "gate_test.sh", "verify.sh", *filter(None, os.environ.get("ROLL_REAP_NAMES", "").split(","))}
 SCRATCH = re.compile(r"(^|/)(claude-\d+|scratchpad)(/|$)")
 PROJECTS = Path(os.environ.get("CLAUDE_PROJECTS_DIR") or Path.home() / ".claude/projects")
+# Tests set it: unscoped, they reaped live lanes.
+ROOT = os.environ.get("ROLL_REAP_ROOT", "")
 
 
 @dataclass
@@ -118,6 +121,8 @@ def candidates(procs: dict[int, Proc]) -> list[Proc]:
     for p in found:
         p.cwd = where.get(p.pid, "")
         p.owner = claude_ancestor(procs, p)
+        if ROOT and not (p.cwd + "/").startswith(ROOT.rstrip("/") + "/"):
+            continue
         if (p.owner or p.ppid == 1) and (SCRATCH.search(p.cwd) or "/worktrees/" in p.cwd + "/"):
             keep.append(p)
     return keep
