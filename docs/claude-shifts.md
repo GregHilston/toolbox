@@ -46,6 +46,8 @@ orchestrator-roll          # what the drain message tells the model to run
 
 ## Known limits
 
+- `shift-arm` refuses to arm when the Stop hook can't run: the hook file is missing or not executable, or no `hooks.Stop` command in `settings.json` names it (`CLAUDE_CONFIG_DIR` moves the `~/.claude` it checks).
+- `orchestrator-roll` refuses when `stops` is 0, meaning the Stop hook has never fired on this pane. Re-arming keeps `stops`, so the check means "never fired since the pane was first armed"; `--off` resets it.
 - State files are locked (`fcntl`) and validated. A corrupt file is moved aside with one Pushover, and the pane counts as unarmed until re-armed.
 - The worker holds the lock while it sends `/clear`, for up to 60 s, which stalls that pane's Stop hook for the same time.
 

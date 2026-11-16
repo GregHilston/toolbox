@@ -224,8 +224,60 @@ class Cli(Base):
         claude_shift.state_path(PANE).write_text("{")
         self.assertIn("corrupt", self.run_roll().stderr)
 
+    def test_no_stop_ever_counted_refuses(self) -> None:
+        self.arm(stops=0)
+        out = self.run_roll()
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("Stop hook has never run", out.stderr)
+
+    def test_a_counted_stop_passes_the_hook_check(self) -> None:
+        self.arm(stops=1)
+        self.assertNotIn("never run", self.run_roll().stderr)
+
     def test_unknown_argument_exits_2(self) -> None:
         self.assertEqual(self.run_roll("--bogus").returncode, 2)
+
+
+class ArmCli(Base):
+    def setUp(self) -> None:
+        super().setUp()
+        self.config = self.tmp / "claude"
+        (self.config / "hooks").mkdir(parents=True)
+        self.env |= {"CLAUDE_CONFIG_DIR": str(self.config)}
+
+    def install(self, executable: bool = True, listed: bool = True) -> None:
+        hook = self.config / "hooks/shift-drain.py"
+        hook.write_text("#!/bin/sh\n")
+        hook.chmod(0o755 if executable else 0o644)
+        command = str(hook) if listed else "other.py"
+        settings = {"hooks": {"Stop": [{"hooks": [{"type": "command", "command": command}]}]}}
+        (self.config / "settings.json").write_text(json.dumps(settings))
+
+    def arm_cli(self) -> subprocess.CompletedProcess:
+        return subprocess.run([sys.executable, ROOT / "bin/shift-arm", "--prompt", "go"], capture_output=True, text=True, env=self.env)
+
+    def test_missing_hook_file_refuses_to_arm(self) -> None:
+        out = self.arm_cli()
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("shift-drain.py is missing", out.stderr)
+        self.assertIsNone(claude_shift.load(PANE))
+
+    def test_hook_not_executable_refuses(self) -> None:
+        self.install(executable=False)
+        self.assertEqual(self.arm_cli().returncode, 1)
+
+    def test_hook_not_in_settings_refuses(self) -> None:
+        self.install(listed=False)
+        out = self.arm_cli()
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("names shift-drain.py", out.stderr)
+        self.assertIsNone(claude_shift.load(PANE))
+
+    def test_installed_hook_arms(self) -> None:
+        self.install()
+        out = self.arm_cli()
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIsNotNone(claude_shift.load(PANE))
 
 
 if __name__ == "__main__":

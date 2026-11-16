@@ -31,6 +31,22 @@ SCHEMA = {
 RUNTIME = {"announced": None, "tokens": None, "stops": 0, "busy": 0, "roll_id": None, "roll_stops": 0, "worker_pid": None}
 
 
+def hook_problem() -> str | None:
+    """What is missing for the Stop hook to run, or None."""
+    config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
+    hook = config / "hooks/shift-drain.py"
+    if not hook.is_file() or not os.access(hook, os.X_OK):
+        return f"{hook} is missing or not executable"
+    try:
+        stops = json.loads((config / "settings.json").read_text())["hooks"]["Stop"]
+        commands = [h.get("command", "") for group in stops for h in group["hooks"]]
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        commands = []
+    if not any("shift-drain.py" in c for c in commands):
+        return f"no hooks.Stop command in {config / 'settings.json'} names shift-drain.py"
+    return None
+
+
 class Invalid(Exception):
     pass
 

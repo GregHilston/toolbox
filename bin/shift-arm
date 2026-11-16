@@ -48,6 +48,9 @@ def main() -> int:
             return 0
         if not args.prompt:
             parser.error("--prompt is required to arm")
+        if problem := claude_shift.hook_problem():
+            print(f"shift-arm: not armed; the Stop hook can't run: {problem}.", file=sys.stderr)
+            return 1
         kept = {k: state[k] for k in claude_shift.RUNTIME} if state else dict(claude_shift.RUNTIME)
         rolls = state["rolls"] if state else 0
         claude_shift.save(pane, {

@@ -224,6 +224,10 @@ def main() -> int:
         if state["rolls"] >= state["max_rolls"]:
             return refuse(f"{state['rolls']}/{state['max_rolls']} rolls used. Send Greg one Pushover "
                           "saying the shift limit is reached, and stop.")  # fmt: skip
+        if state["stops"] == 0:
+            return refuse("the Stop hook has never run on this pane (no Stop counted). Check "
+                          "~/.claude/hooks/shift-drain.py exists and is listed under hooks.Stop in "
+                          "~/.claude/settings.json, and tell Greg.")  # fmt: skip
         if state["roll_id"] and alive(state["worker_pid"]):
             return refuse("a roll is already queued; end your turn and it will go ahead.")
         try:
