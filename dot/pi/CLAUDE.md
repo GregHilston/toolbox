@@ -153,6 +153,9 @@ cheap-worker/thorough-review the structure to reach for.
 
 ### Pricing — and pi's catalog is stale, so its own numbers are wrong
 
+Other ways to buy Flash, and which free models don't train:
+`docs/builder-subscriptions.md`.
+
 **DeepSeek repriced at 16:00 UTC on 2026-08-16 and introduced peak/off-peak
 rates. pi 0.84.3's built-in catalog predates that**, so the `cost` object on
 every `message_end` event — and therefore everything downstream of it: the
