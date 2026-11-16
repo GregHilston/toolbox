@@ -76,7 +76,7 @@ export const DEFAULT_RULES: Required<Guardrails> = {
 		{
 			// `(\s|$)` not `\b`: `\b` matches before a dot, so `git checkout main.py`
 			// - a real file in this repo - was refused as "leaving your branch".
-			pattern: String.raw`^git\s+(checkout|switch)\s+(main|master)(\s|$)`,
+			pattern: `^git\\s+${GIT_FLAGS}(checkout|switch)\\s+(main|master)(\\s|$)`,
 			reason:
 				"Never leave your branch. You are in a worktree; main is checked out " +
 				"elsewhere and this cannot succeed. The orchestrator merges.",
@@ -84,7 +84,7 @@ export const DEFAULT_RULES: Required<Guardrails> = {
 		{
 			// Same trap: `\b` here refused the read-only `git merge-base` and
 			// `git merge-tree`. `--abort` and `--quit` are recovery, not merging.
-			pattern: String.raw`^git\s+(merge|rebase)(\s+(?!--abort|--quit|--continue)|$)`,
+			pattern: `^git\\s+${GIT_FLAGS}(merge|rebase)(\\s+(?!--abort|--quit|--continue)|$)`,
 			reason: "Never merge or rebase. The orchestrator does that after reviewing your diff.",
 		},
 		{

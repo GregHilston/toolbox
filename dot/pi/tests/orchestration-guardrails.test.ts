@@ -86,6 +86,9 @@ test("blocks the other ways out of a worktree", () => {
 	assert.ok(bash("git checkout main"), "leaving the branch");
 	assert.ok(bash("git merge issue-65-run-over-close"), "merging is the orchestrator's job");
 	assert.ok(bash("git rebase main"), "as is rebasing");
+	assert.ok(bash("git -C /repo rebase origin/main"), "-C sits between git and its verb");
+	assert.ok(bash("git --git-dir=/r/.git merge topic"), "so does --git-dir");
+	assert.ok(bash("git -C /repo checkout main"), "and leaving the branch the same way");
 });
 
 test("blocks --no-verify in both spellings", () => {
@@ -171,6 +174,8 @@ test("does NOT block read-only merge plumbing, or recovery from a rebase", () =>
 	assert.equal(bash("git merge-base --is-ancestor main HEAD"), null, "read-only and idiomatic");
 	assert.equal(bash("git merge-tree a b"), null, "also read-only");
 	assert.equal(bash("git rebase --abort"), null, "the only way out of a rebase");
+	assert.equal(bash("git -C /repo rebase --continue"), null, "finishing one the orchestrator started");
+	assert.equal(bash("git -C /repo merge-base main HEAD"), null, "read-only plumbing behind -C");
 });
 
 test("does NOT block a commit message that talks about the hooks", () => {
