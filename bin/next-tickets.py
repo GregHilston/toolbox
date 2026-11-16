@@ -40,10 +40,23 @@ def labels_of(issue: dict) -> list[str]:
     return [label["name"] for label in issue["labels"]]
 
 
+def first_sentence(text: str) -> str:
+    """Up to the first `.` or `;` outside parentheses, before whitespace or the end."""
+    depth = 0
+    for i, ch in enumerate(text):
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth = max(0, depth - 1)
+        elif ch in ".;" and depth == 0 and (i + 1 == len(text) or text[i + 1].isspace()):
+            return text[:i]
+    return text
+
+
 def deps_of(issue: dict) -> list[int]:
     found: list[int] = []
     for line in DEPENDS.findall(issue.get("body") or ""):
-        found += [int(n) for n in re.findall(r"#(\d+)", line)]
+        found += [int(n) for n in re.findall(r"#(\d+)", first_sentence(line))]
     return sorted(set(found))
 
 
@@ -137,6 +150,9 @@ def classify(issues: list[dict], queue_labels: list[str], hold: list[str], ready
 def render(buckets: dict) -> str:
     counts = ", ".join(f"{len(buckets[b])} {b.replace('_', ' ')}" for b in BUCKETS)
     lines = [counts]
+    unlabelled = sorted(r["number"] for b in BUCKETS for r in buckets[b] if r["priority"] == NO_PRIORITY)
+    if unlabelled:
+        lines.insert(0, f"{len(unlabelled)} tickets have no priority label: " + " ".join(f"#{n}" for n in unlabelled))
     for b in BUCKETS:
         rows = buckets[b]
         if not rows:
@@ -146,7 +162,7 @@ def render(buckets: dict) -> str:
         if b == "unreadied":
             lines.append("!! Nobody started these. Read each body, add the ready label if the spec is full.")
         for r in rows:
-            prio = "P-" if r["priority"] == NO_PRIORITY else f"P{r['priority']}"
+            prio = "P?" if r["priority"] == NO_PRIORITY else f"P{r['priority']}"
             title = r["title"] if len(r["title"]) <= 70 else r["title"][:69] + "…"
             note = "; ".join(r["notes"])
             lines.append(f"#{r['number']:<5} {prio:<3} {r['size'].removeprefix('size:'):<2} {title:<70}  {note}".rstrip())
