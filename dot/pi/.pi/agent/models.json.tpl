@@ -35,7 +35,67 @@
         },
         {
           "id": "cloud",
-          "name": "cloud: OpenCode Go, overflowing to Luna, then DeepSeek",
+          "name": "cloud: Zro, then GOAT, Go, Luna, DeepSeek (Luna before GOAT at peak)",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "minimal": null,
+            "low": "low",
+            "medium": null,
+            "high": "high",
+            "max": "max"
+          },
+          "contextWindow": 1000000,
+          "maxTokens": 384000,
+          "input": ["text", "image"],
+          "cost": { "input": 0.3, "output": 1.2, "cacheRead": 0.006, "cacheWrite": 0 },
+          "compat": {
+            "supportsStore": false,
+            "supportsDeveloperRole": false,
+            "maxTokensField": "max_tokens",
+            "requiresReasoningContentOnAssistantMessages": true,
+            "thinkingFormat": "deepseek",
+            "supportsStrictMode": true,
+            "supportsReasoningEffort": true
+          },
+          "inputLimits": {
+            "images": {
+              "resize": { "maxWidth": 2000, "maxHeight": 2000, "maxBytes": 4718592, "jpegQuality": 80 }
+            }
+          }
+        },
+        {
+          "id": "cloud-zro",
+          "name": "cloud-zro: Flash on Zro's free plan only",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "minimal": null,
+            "low": "low",
+            "medium": null,
+            "high": "high",
+            "max": "max"
+          },
+          "contextWindow": 1000000,
+          "maxTokens": 384000,
+          "input": ["text", "image"],
+          "cost": { "input": 0.3, "output": 1.2, "cacheRead": 0.006, "cacheWrite": 0 },
+          "compat": {
+            "supportsStore": false,
+            "supportsDeveloperRole": false,
+            "maxTokensField": "max_tokens",
+            "requiresReasoningContentOnAssistantMessages": true,
+            "thinkingFormat": "deepseek",
+            "supportsStrictMode": true,
+            "supportsReasoningEffort": true
+          },
+          "inputLimits": {
+            "images": {
+              "resize": { "maxWidth": 2000, "maxHeight": 2000, "maxBytes": 4718592, "jpegQuality": 80 }
+            }
+          }
+        },
+        {
+          "id": "cloud-goat",
+          "name": "cloud-goat: Flash on Command Code GOAT only (flat fee, ZDR)",
           "reasoning": true,
           "thinkingLevelMap": {
             "minimal": null,
