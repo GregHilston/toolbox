@@ -250,7 +250,7 @@ proceeding.
 - **Serialize issues that touch the same subsystem.** Two agents editing the same
   screen or module will conflict at merge. Sequence them; parallelize across
   unrelated areas.
-- **Start the largest issue first** so it has the most wall-clock.
+- **Start the highest priority first.** If the repo labels tickets `priority:0` to `priority:3` (0 urgent, 1 the current epic and bugs users hit, 2 default, 3 nice-to-have), refill every slot from the lowest number still ready; within one priority, dependency order, then the largest issue first so it has the most wall-clock.
 - **Run rolling, not in batches.** Refill a slot the moment one finishes rather
   than waiting for the whole cohort. Strict batches waste hours when a 10-minute
   issue is paired with a 3-hour one. With `--workers N`, the invariant is: while
