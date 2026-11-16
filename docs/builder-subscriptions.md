@@ -41,7 +41,14 @@ cached and 290 output tokens), at DeepSeek's off-peak list price = 1x:
   - Send `x-cmd-zdr: 1` for no retention or training. It answers 422
     `cmd_zdr_no_providers` rather than leak.
   - **Unknown: whether Flash under ZDR keeps the $100 boost.** "Extra"-cost ZDR
-    models meter at the default $20, so check `/models` before buying.
+    models meter at the default $20. The docs don't classify Flash, and the
+    public `/models` list has no ZDR field. Only a paid key can tell: send
+    `x-cmd-zdr: 1` and watch what the allowance shows. Model id
+    `deepseek/deepseek-v4.1-flash`.
+  - One blog saw about 50% cache hits for DeepSeek via Command Code from
+    OpenCode, which puts a timestamp at the front of the prompt
+    ([post](https://www.80aj.com/2026/09/02/opencode-deepseek-cache-issue/),
+    snippet only). Check pi's hit rate in the first hour.
   - [Terms](https://commandcode.ai/terms) (2026-10-29) neither allow nor ban
     orchestrated agents. The FAQ says "integrate GOAT with any other agent".
   - The status code at a cap is undocumented.
@@ -52,12 +59,28 @@ cached and 290 output tokens), at DeepSeek's off-peak list price = 1x:
   circumvent usage limits" ([ToS](https://opencode.ai/legal/terms-of-service)).
 - **Leave Go's Extra Usage off.** It bills Zen's flat rate, which is DeepSeek's
   peak price even off-peak.
-- **Replace `cloud-deepseek` with OpenRouter pinned to DeepInfra Flex.** It costs
-  less than DeepSeek even off-peak, keeps no data, and runs fp8. Pin one provider
-  (`provider.order` with `allow_fallbacks: false`) so the cache stays warm.
-  OpenRouter adds a fee on credit purchases (about 5.5%, unverified). Prices come
-  from `https://openrouter.ai/api/v1/models/deepseek/deepseek-v4.1-flash/endpoints`,
+- **Replace `cloud-deepseek` with DeepInfra Flex.** It costs less than DeepSeek
+  even off-peak, keeps no data, and runs fp8. Prices come from
+  `https://openrouter.ai/api/v1/models/deepseek/deepseek-v4.1-flash/endpoints`,
   and zero retention from `https://openrouter.ai/api/v1/endpoints/zdr`.
+- **OpenRouter does hose the cache unless you pin it.** By default it picks a
+  provider at random, weighted by price and speed, and every provider keeps its
+  own cache. "Sticky routing" holds a warm provider for 60 idle minutes, but it is
+  dropped on any failure and turned off by `provider.order`
+  ([prompt caching](https://openrouter.ai/docs/features/prompt-caching),
+  [routing](https://openrouter.ai/docs/features/provider-routing)). One write-up
+  measured 39x cost from that drift. To pin it, set
+  `provider: {only: ["deepinfra/fp8/flex"], allow_fallbacks: false, zdr: true}`
+  through LiteLLM's `extra_body`, so an outage returns 502 or 503 and LiteLLM's
+  chain takes over.
+- **Simpler: call DeepInfra directly.** It charges the same list price, so we
+  save OpenRouter's 5.5% credit fee and remove the routing layer. Caching is
+  automatic by prefix, with a TTL it doesn't publish
+  ([caching](https://docs.deepinfra.com/chat/prompt-caching)). Its privacy page
+  says "We will not store, sell, or train using this data unless we have your
+  explicit consent" ([privacy](https://deepinfra.com/privacy)). How to request
+  the Flex tier directly is unverified. Measure `cached_tokens` over a 20-turn
+  session before switching.
 - **Go's 10x applies only to Flash.** V4 Pro, GLM-5.3 and Kimi K3 get $15
   each on Go, about 1.5x. `cloud-go` already pins Flash. Every limit has its own
   windows: 20% per 5 hours, 50% per week, 100% per month.
@@ -121,7 +144,7 @@ Claims from the thread that did not hold up:
 
 | Provider | Free models worth having | Limits | Trains? | Builder? |
 |---|---|---|---|---|
-| **OpenCode Zen free** | GLM-5.3-Flash, V4.1 Flash, MiniMax M3.1 Flash | unpublished; promotional | No for these | Partial: may work only inside OpenCode |
+| **OpenCode Zen free** | GLM-5.3-Flash, V4.1 Flash, MiniMax M3.1 Flash | unpublished; promotional | No for these | No: refuses non-OpenCode clients (429, tested) |
 | **OpenRouter `:free`** | mostly Nemotron, ERNIE, Cohere North Mini Code | 20 RPM; 1,000/day after $10 lifetime credit | per provider; account switch excludes trainers | Side jobs |
 | Cerebras trial | gpt-oss-120b, Qwen3.8-27B | $5, expires in 30 days, card needed | No (secondary source) | Side jobs |
 | Groq | gpt-oss-120b, Qwen3.8-27B | 8K TPM | not retained by default | No: context too big |
@@ -134,18 +157,30 @@ Claims from the thread that did not hold up:
 
 The gateway's chain is one LiteLLM rule, `fallbacks: cloud: [cloud-luna,
 cloud-deepseek]` in home-lab's `litellm/config.yaml`, so a free route would be
-one more entry. Measured 2026-11-16, there is nothing worth adding yet:
+one more entry. The test is "does not train". Keeping data, such as 30-day abuse
+logs, is acceptable. Checked 2026-11-16:
 
-- **OpenRouter:** 14 `:free` models, and only 1 has a zero-retention endpoint
-  (`inclusionai/ling-3.2-flash:free`, a weak model). The others may log or train.
-  Check it with the `/api/v1/models` ids ending `:free`, intersected with
-  `/api/v1/endpoints/zdr`.
-- **OpenCode Zen:** `/inference/v1/models` lists free `deepseek-v4.1-flash-free`,
-  `glm-5.3-flash-free` and `minimax-m3.1-flash-free`, which don't train or retain
-  data. But the Zen page says "Free-tier chat models require OpenCode. Other
-  clients should use paid models or Go." One plain request from the gateway would
-  show whether that is enforced. Untested, and don't fake OpenCode's headers.
-- **If either changes:**
+| Route | Model | Trains? | Callable from the gateway? |
+|---|---|---|---|
+| **Zro free plan** | DeepSeek V4.1 Flash | No, and keeps no requests ([privacy](https://zro.moonmath.ai/docs/privacy)) | Yes. OpenAI API at `https://zro.moonmath.ai/v1`, and pi is a listed integration. Daily allowance unpublished |
+| OpenRouter `particle-ai/particle-1:free` | post-trained on V4.1 Flash | No, and ZDR by default ([policy](https://particle.ai/privacy/)) | Yes. 50/day, or 1,000/day after $10 credit. No benchmarks |
+| OpenRouter `inclusionai/ling-3.2-flash:free` | Ling 3.2 Flash, 1M context | No ([Ant policy](https://maas-global.oss-ap-southeast-1.aliyuncs.com/Privacy%20Policy%20Legal.pdf)). The only free model with a ZDR endpoint | Yes. Same limits. Unproven on coding |
+| Kilo `reflection/beam-free` | Beam | No, keeps 30 days (per Zen) | Yes. 200 requests/hour/IP ([Kilo](https://kilo.ai/docs/gateway/usage-and-billing)) |
+| OpenCode Zen free Flash and GLM-5.3-Flash | | No | **No.** Our key got HTTP 429 `FreeUsageLimitError` "Free models work in OpenCode" on its first call |
+
+Excluded because they train or say nothing: the NVIDIA Nemotron free models
+(NVIDIA's trial terms collect content "to improve … AI models"), Inkling 2
+Small, Flint, Cohere North Mini Code (trial terms), Gemma via Google AI Studio,
+ERNIE, Dots, LFM, and Kilo `kilo-auto/free`. Groq, SambaNova and Cloudflare
+don't train, but their free limits (8K TPM, 20 requests/day, 10k neurons/day)
+can't hold a 50k-token call.
+
+Zro's paid plans are poor value. Its Flash rate is $0.30 in / $1.10 out / $0.01
+cache read ([models](https://zro.moonmath.ai/docs/models)), about 2.6x DeepSeek
+off-peak per builder request. Pro's $40 budget for $20 still comes out worse
+than DeepSeek direct. Use only the free plan.
+
+- **If one of these joins the chain:**
   - Put the free route first.
   - Treat 429 as a short cooldown, honouring `Retry-After`.
   - Treat 402, 404 and "no endpoints" as the promo having ended: drop the route
@@ -212,8 +247,6 @@ complaint is speed: GLM 5.2 on Z.ai's coding endpoint ran at 12–55 tok/s
 
 ## Not checked
 
-- Command Code's Terms page.
-- Whether Zen's free models answer a plain key from pi.
 - Synthetic's quantization page.
 - Kimi and Z.ai Pro prices from the vendors themselves.
 - Measured tok/s and cache hit rate on Go versus DeepSeek's API.
