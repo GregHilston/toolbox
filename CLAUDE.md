@@ -47,7 +47,7 @@ RTK hook: `nixos/CLAUDE.md` → "Claude Code on each host".
 - **Clobber guard:** `link_repo` refuses to overwrite a *real* file and only warns. Move the
   file into `dot/claude/.claude/`, delete the original, re-run home-manager.
 - The global gitignore ignores `.claude/`, so a new file under `dot/claude/.claude/` needs
-  `git add -f`. Check `git show --stat`.
+  `git add -f`. Check `git show --stat`; `tests/test_settings_hooks_tracked.py` fails CI on a hook `settings.json` runs but git lacks (2026-11-16: shift-drain.py, a week of red CI).
 - `settings.json` sets `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE=1`: Claude Code's
   `CLAUDE_CODE_CHILD_SESSION=1` marker leaks into relaunched terminals and silently drops
   transcripts. Cost: `claude -p` runs spawned by an agent save one too.
