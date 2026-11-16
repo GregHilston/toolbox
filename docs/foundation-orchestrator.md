@@ -34,3 +34,27 @@ Put `LITELLM_API_KEY` in the shell from `nixos/secrets/.env` (run `just secrets`
 - `usage-mark.py report`, `shift-arm`, `orchestrator-roll` and `pushover.py` on PATH (the toolbox `.zshenv` adds `bin/`).
 - `cd ~/Git/gridkeep && ./verify.sh` or gridkeep's own gate passes on Linux.
 - Open a gridkeep workspace on foundation from moria's Herdr, run `/orchestrate`, finish one small pi-built ticket.
+
+## Gridkeep tools (replaces ~/lptools, 2026-11-16)
+
+`nixos/hosts/vms/foundation/gridkeep-tools.nix` declares godot 4.7.2 (nixpkgs wraps the X11, GL and audio libraries, so the old `LD_LIBRARY_PATH` wrapper in `~/lptools/harness-bin/godot` goes), gdscript-formatter 0.27.0, gdlint and gdformat (gdtoolkit 4.5.0), sqlite, and a `--no-folding` stow of `dot/pi` that runs before the pi npm install (so bash-guard gets `shell-quote`). A build assertion fails if nixpkgs moves off godot 4.7.2 or gdscript-formatter 0.27.0.
+
+Greg runs, in order:
+
+1. `rm ~/.pi/agent/extensions/pi-permission-system/config.json` (the hand-made link; stow refuses to replace it).
+2. `cd ~/Git/toolbox/nixos && just ft foundation`, then `just fr foundation`.
+3. Take `~/lptools/bin` and `~/lptools/harness-bin` off `PATH` (`~/.zshenv` or wherever they were added), then check: `godot --version` says `4.7.2.stable`, `gdscript-formatter --version` says 0.27.0, `gdlint --version`, `sqlite3 --version`, all from `/etc/profiles` or `~/.nix-profile`, not `~/lptools`.
+4. Check pi: `ls ~/.pi/agent/extensions/bash-guard/node_modules/shell-quote`, then start `pi` and confirm no extension load error.
+5. Screenshot harness (needs a display or its software-GL setup): run gridkeep's harness once without `~/lptools/harness-bin` on `PATH`. If godot misses a library, add it to a `buildFHSEnv` or `programs.nix-ld.libraries`; the nixpkgs build was only checked headless.
+6. Claude Code sandbox: gridkeep's `.claude/settings.local.json` (untracked, not toolbox) lists Mac paths under `sandbox.filesystem.allowWrite`. Add the Linux equivalents there:
+
+```json
+"/home/ghilston/.cache/uv",
+"/home/ghilston/.cache/pre-commit",
+"/home/ghilston/.cache/usage-mark",
+"/home/ghilston/.cache/pi-ask",
+"/home/ghilston/.cache/gate-slots",
+"/home/ghilston/Git/gridkeep-worktrees"
+```
+
+Then `~/lptools` can go.
