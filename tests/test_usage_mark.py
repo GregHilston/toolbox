@@ -79,6 +79,24 @@ class Luna(unittest.TestCase):
         assert "Luna quota 5h 3% / wk 0%" in out, f"no Luna quota line in:\n{out}"
 
 
+class Resets(unittest.TestCase):
+    def test_until_drops_leading_zero_units(self) -> None:
+        self.assertEqual(um.until(59), "0m")
+        self.assertEqual(um.until(5 * 3600 + 60), "5h 1m")
+        self.assertEqual(um.until(14 * 86400 + 6 * 3600 + 39 * 60), "2w 0d 6h 39m")
+
+    def test_lines_in_eastern_time_above_the_table(self) -> None:
+        now = 1_794_818_380.0  # Mon 2026-11-16 03:39:40 EST
+        g = {"go_reset_rolling": now + 5 * 3600, "go_reset_weekly": now - 60, "luna_reset_5h": now + 90 * 60}
+        self.assertEqual(um.reset_lines(g, now), [
+            "Go resets: 5h Mon Nov 16 08:39 EST (5h 0m) · wk reset",
+            "Luna resets: 5h Mon Nov 16 05:09 EST (1h 30m)",
+        ])  # fmt: skip
+        rep = um.build("x", {"t": 0}, {}, {}, {"luna_reset_5h": 4e9}, [], peak=False)
+        out = um.render(rep)
+        self.assertLess(out.index("Luna resets: 5h"), out.index("| src |"), out)
+
+
 if __name__ == "__main__":
     unittest.main()
 

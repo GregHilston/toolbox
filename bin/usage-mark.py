@@ -16,6 +16,8 @@ apart by model: `deepseek-v4.1-flash` is Go, any other `deepseek-*` is the API,
 and `gpt-*` from the `chatgpt` provider is Luna on ChatGPT Plus (flat fee, $0).
 Work that bypasses the gateway shows only in the balance change.
 OpenAI Images API spend comes from the ledger `openai-image.py` appends per call.
+Above the table, each Go and Luna quota window's reset time, in
+New York time with a countdown, from the exporters' resets_at gauges.
 
 Columns: in is fresh input (DeepSeek cache misses), c.read is cache hits,
 c.write is Claude's cache creation. A source that cannot answer prints `?`
@@ -32,6 +34,7 @@ import sys
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 PROM = os.environ.get(
     "USAGE_MARK_PROM", "https://grafana.grehg2.xyz/api/datasources/proxy/uid/prometheus/api/v1/query"
@@ -44,6 +47,12 @@ LABELS = ("DS API", "Go", "Luna")
 # USD per 1M tokens (cache hit, miss, output) for Flash; peak doubles.
 FLASH = {"off": (0.003, 0.15, 0.60), "peak": (0.006, 0.30, 1.20)}
 FIELDS = ("in", "out", "cread", "cwrite")
+EASTERN = ZoneInfo("America/New_York")
+# (gauge prefix, row label, Prometheus window, short name)
+RESET_WINDOWS = (
+    ("go", "Go", "rolling", "5h"), ("go", "Go", "weekly", "wk"), ("go", "Go", "monthly", "mo"),
+    ("luna", "Luna", "5h", "5h"), ("luna", "Luna", "weekly", "wk"),
+)  # fmt: skip
 IMAGE_LEDGER = Path(os.environ.get("OPENAI_IMAGE_LEDGER", Path.home() / ".cache" / "openai-image" / "ledger.jsonl"))
 
 
@@ -139,7 +148,33 @@ def gauges() -> dict[str, float]:
         out["go_" + r["metric"]["window"]] = float(r["value"][1])
     for r in prom("homelab_chatgpt_usage_percent"):
         out["luna_" + r["metric"]["window"]] = float(r["value"][1])
+    for r in prom("homelab_opencode_go_usage_resets_at_seconds"):
+        out["go_reset_" + r["metric"]["window"]] = float(r["value"][1])
+    for r in prom("homelab_chatgpt_usage_resets_at_seconds"):
+        out["luna_reset_" + r["metric"]["window"]] = float(r["value"][1])
     return out
+
+
+def until(seconds: float) -> str:
+    """A countdown as 2w 1d 3h 4m, dropping leading zero units."""
+    m = int(seconds // 60)
+    parts = [(m // 10080, "w"), (m // 1440 % 7, "d"), (m // 60 % 24, "h"), (m % 60, "m")]
+    while len(parts) > 1 and parts[0][0] == 0:
+        parts.pop(0)
+    return " ".join(f"{n}{u}" for n, u in parts)
+
+
+def reset_lines(g: dict[str, float], now: float) -> list[str]:
+    """When each quota window resets, in Eastern time with a countdown."""
+    lines: dict[str, list[str]] = {}
+    for prefix, label, window, short_name in RESET_WINDOWS:
+        at = g.get(f"{prefix}_reset_{window}")
+        if at is None:
+            continue
+        # Lapsed windows keep their old time.
+        when = "reset" if at <= now else dt.datetime.fromtimestamp(at, EASTERN).strftime("%a %b %d %H:%M %Z") + f" ({until(at - now)})"
+        lines.setdefault(label, []).append(f"{short_name} {when}")
+    return [f"{label} resets: " + " · ".join(parts) for label, parts in lines.items()]
 
 
 def counter_delta(now: dict[str, dict[str, float]], base: dict[str, dict[str, float]]) -> dict[str, dict[str, float]]:
@@ -211,8 +246,9 @@ def build(name: str, mark: dict, claude: dict | None, ds: dict | None, now_g: di
             extra["go_" + w] = now_g.get("go_" + w)
         for w in ("5h", "weekly"):
             extra["luna_" + w] = now_g.get("luna_" + w)
-    elapsed = int(dt.datetime.now().timestamp() - mark["t"])
-    return {"name": name, "minutes": elapsed // 60, "rows": rows, "extra": extra, "notes": notes, "claude_ok": claude is not None}
+    now = dt.datetime.now().timestamp()
+    resets = reset_lines(now_g, now) if now_g else []
+    return {"name": name, "minutes": int(now - mark["t"]) // 60, "rows": rows, "extra": extra, "resets": resets, "notes": notes, "claude_ok": claude is not None}
 
 
 def shift_lines() -> list[str]:
@@ -241,7 +277,8 @@ def shift_lines() -> list[str]:
 def render(rep: dict) -> str:
     """The Markdown table plus its footer lines."""
     shift = rep.get("shift") or []
-    lines = [f"**{rep['name']}** +{rep['minutes']}m", "", *shift, *([""] if shift else []), "| src | in | out | c.read | c.write | $ |", "|---|--:|--:|--:|--:|--:|"]
+    above = [*shift, *rep.get("resets", [])]
+    lines = [f"**{rep['name']}** +{rep['minutes']}m", "", *above, *([""] if above else []), "| src | in | out | c.read | c.write | $ |", "|---|--:|--:|--:|--:|--:|"]
     for r in rep["rows"]:
         cost = "-" if r["cost"] is None else ("?" if r["cost"] == "?" else f"{'~' if r['est'] else ''}{r['cost']:.2f}")
         if r["in"] is None:
