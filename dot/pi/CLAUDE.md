@@ -13,9 +13,11 @@ gateway's aliases, never an oMLX model, and the gateway decides where each runs:
 | `local-small` | moria's oMLX when awake, else dungeon's | the default |
 | `local-lab` | dungeon only | automation that must not wake moria |
 | `local-big` | moria's Strata, Qwen3.8-Flash-Next; fails in ~7 s when moria is away | harder work while moria is up; text only, slow to first token |
-| `cloud` | OpenCode Go (Flash), then Luna, then DeepSeek's API | flat fees, then metered; never a fallback for a `local-` alias |
+| `cloud` | Zro (Flash, free), then Command Code GOAT, OpenCode Go, Luna, DeepSeek's API; Luna before GOAT at DeepSeek's peak | free and flat fees, then metered; never a fallback for a `local-` alias |
+| `cloud-zro` | Zro's free plan (Flash) only; 2 calls at once per key | free |
+| `cloud-goat` | Command Code GOAT (Flash, zero retention) only; fails when GOAT refuses | flat fee |
 | `cloud-go` | OpenCode Go (Flash) only; fails when Go refuses | flat fee |
-| `cloud-luna` | GPT-5.6 Luna on ChatGPT Plus only; fails when it refuses | flat fee; `cloud`'s first overflow |
+| `cloud-luna` | GPT-5.6 Luna on ChatGPT Plus only; fails when it refuses | flat fee |
 | `cloud-deepseek` | DeepSeek's API (Flash) | metered; `cloud`'s last overflow |
 
 The `local-` prefix means the prompt stays on the tailnet; `cloud` leaves the
