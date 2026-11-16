@@ -1,6 +1,6 @@
 # foundation as a second orchestrator host
 
-Loser-picks #187. foundation is NixOS-on-WSL2 on Greg's gaming PC, reached with `ssh -p 2222 foundation`. Its config is `nixos/hosts/vms/foundation/default.nix`; change tools there, never by hand.
+Loser-picks #187. foundation is NixOS-on-WSL2 on Greg's gaming PC, reached with `ssh foundation` (LAN) or `ssh foundationts` (tailnet). Its config is `nixos/hosts/vms/foundation/default.nix`; change tools there, never by hand.
 
 ## State on 2026-11-15
 
@@ -10,7 +10,7 @@ Loser-picks #187. foundation is NixOS-on-WSL2 on Greg's gaming PC, reached with 
 
 ## Steps only Greg can do
 
-1. Sign in to Claude Code: `ssh -p 2222 foundation`, then `claude` and follow the login.
+1. Sign in to Claude Code: `ssh foundation`, then `claude` and follow the login.
 2. Sign in to `gh`: `gh auth login -h github.com -p ssh` and pick the browser or token flow.
 3. Check the GitHub SSH key already works: `ssh -T git@github.com`. If it ever fails, add `~/.ssh/id_ed25519.pub` to GitHub under Settings, SSH keys.
 4. Approve and run the rebuild below, in a window when he isn't gaming.

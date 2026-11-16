@@ -974,7 +974,7 @@ which pipes `bin/nix-prebuild.sh` to moria over ssh (`moriats`, the tailnet name
 that host's system from `github:` at the same commit and uploads it, so the deploy only
 downloads. It is skipped,
 and the host builds for itself, when the checkout has changes GitHub lacks or moria is
-unreachable. A host without a key for moria (citadel, on purpose) gets asked for moria's
+unreachable. A host without a key for moria gets asked for moria's
 password at a terminal; with no terminal it fails fast and builds itself. `just diff <host>` on moria uploads too.
 Not `attic watch-store`: it crashed on the first new path (upstream issue #226, open).
 
