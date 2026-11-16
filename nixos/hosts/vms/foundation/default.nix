@@ -43,6 +43,9 @@
     targets.plymouth.enable = false; # WSL has no boot splash screen
   };
 
+  # uv's standalone Python misses NixOS's CA bundle.
+  environment.variables.SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt";
+
   # Second orchestrator host (loser-picks #187): pi reaches the LiteLLM
   # gateway, op reads the service-account token from ~/.config/op.
   home-manager.users.${vars.user.name} = {pkgs, ...}: {
