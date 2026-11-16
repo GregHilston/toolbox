@@ -64,6 +64,13 @@
     # dot/karabiner/README.md for why, and how to recover if it already exists.
     if [ -d "$DOTFILES" ]; then
       cd "$DOTFILES"
+      # Links into an old home-manager-files generation block stow, and the
+      # current generation no longer manages these names (foundation, Apr 2026).
+      for f in .zshenv .zshrc; do
+        case "$(readlink "$HOME/$f" 2>/dev/null)" in
+          /nix/store/*-home-manager-files/"$f") rm -f "$HOME/$f" ;;
+        esac
+      done
       for pkg in zsh aerospace tmux ${lib.optionalString pkgs.stdenv.isDarwin "karabiner"}; do
         ${pkgs.stow}/bin/stow -v -t "$HOME" "$pkg" 2>&1 \
           || echo "stow: conflict for $pkg — backup conflicting dotfiles in ~ then re-run home-manager"
