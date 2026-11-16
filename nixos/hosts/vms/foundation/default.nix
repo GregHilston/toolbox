@@ -42,4 +42,15 @@
     targets.console.enable = false;
     targets.plymouth.enable = false; # WSL has no boot splash screen
   };
+
+  # Second orchestrator host (loser-picks #187): pi reaches the LiteLLM
+  # gateway, op reads the service-account token from ~/.config/op.
+  home-manager.users.${vars.user.name} = {pkgs, ...}: {
+    imports = [../../../modules/programs/tui/pi.nix];
+    home.packages = with pkgs; [pi-coding-agent _1password-cli];
+    custom.programs.pi = {
+      enable = true;
+      generateModelsJson = true;
+    };
+  };
 }
