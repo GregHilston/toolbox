@@ -153,6 +153,7 @@ Herdr runs on every host: Homebrew on Macs, nix on NixOS, config in `dot/herdr/`
 - `zj <name>` opens Herdr in tab 1 through `bin/zj-herdr-tab.sh` and a hook above p10k's instant prompt in `.zshrc`. Anything that takes the terminal belongs above that block: on 2026-11-12, a Herdr started below it never drew.
 - To test a TUI in zellij, open a real window (`open -na Ghostty --args -e /bin/zsh -lic '…'`) and read it with `zellij -s <s> action dump-screen --pane-id terminal_0`. A Python pty can't answer Herdr's terminal queries, and from inside Herdr, strip `HERDR_*` first, or Herdr refuses to nest.
 - Why, with results: `~/Git/notes/llm/herdr-rollout-plan.md` and `herdr-trial.md`.
+- The Herdr phone app can't see TUI panes; phone access is Termux + `ssh` + `zj`. Options weighed: `docs/phone-control.md`.
 
 ## Hermes — runs on dungeon, Desktop clients here
 
