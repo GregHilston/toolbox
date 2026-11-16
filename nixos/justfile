@@ -248,6 +248,16 @@ secrets:
     strip="$strip/^DEEPSEEK_API_KEY=/d;/^OPENCODE_API_KEY=/d;"
   fi
   sed "$strip" secrets/.env.tpl | op inject -f -o secrets/.env
+  # Work keys reach citadel only, never the session env.
+  # The untracked .tpl keeps its op:// refs private.
+  if [ "$(hostname -s)" = "citadel" ]; then
+    if [ -f secrets/work.env.tpl ]; then
+      op inject -f -i secrets/work.env.tpl -o secrets/work.env
+      chmod 600 secrets/work.env
+    else
+      echo "==> citadel: no secrets/work.env.tpl; skipping work keys"
+    fi
+  fi
   echo "Secrets generated. Run 'just dr <host>' to deploy."
 
 # Install and start PI WEB on this host (one time, moria only)
