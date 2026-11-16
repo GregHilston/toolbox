@@ -258,8 +258,11 @@ complaint is speed: GLM 5.2 on Z.ai's coding endpoint ran at 12–55 tok/s
   `cloud-zro`: 2 calls at once per key, 99% cache hits on a repeated prompt, daily
   allowance still unmeasured (home-lab `docs/llm-gateway.md` → Zro).
 - **Command Code GOAT, a one-month trial** after Go, with `x-cmd-zdr: 1` on and key
-  `op://Infra/CommandCode/credential`. Cancel it if Flash's allowance under ZDR
-  reads $20 rather than $100. The $1 Go plan is no cheaper test: it is "the only
+  `op://Infra/commandcode goat api key/credential`. **Flash keeps the $100 under
+  ZDR:** on 2026-11-16, $0.56 of ZDR Flash read 3% of the $20 5-hour limit, where
+  the $4 default would have read 14%. Even at $20 it would have been worth keeping,
+  at half DeepSeek's list price and with no training. Review at renewal on Dec 16,
+  using `usage-mark.py`'s GOAT and DS API rows. The $1 Go plan is no cheaper test: it is "the only
   plan without API access" and answers 403 `upgrade_required`
   ([provider docs](https://commandcode.ai/docs/provider)).
 - **No DeepInfra.** Greg dropped it on 2026-11-16; DeepSeek's API stays the paid tail.
