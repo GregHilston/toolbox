@@ -31,3 +31,17 @@ jobs:
         run: |
           brew install just
           just test
+
+      - name: Pushover on failure
+        if: failure() && github.ref == 'refs/heads/main'
+        env:
+          PUSHOVER_API_TOKEN: ${{ secrets.PUSHOVER_API_TOKEN }}
+          PUSHOVER_USER_KEY: ${{ secrets.PUSHOVER_USER_KEY }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -sS --fail-with-body https://api.pushover.net/1/messages.json \
+            --form-string "token=$PUSHOVER_API_TOKEN" \
+            --form-string "user=$PUSHOVER_USER_KEY" \
+            --form-string "title=toolbox Tests failed on ${GITHUB_REF_NAME}" \
+            --form-string "message=${GITHUB_SHA::7}: $(git log -1 --format=%s)" \
+            --form-string "url=$RUN_URL"
