@@ -250,3 +250,12 @@ complaint is speed: GLM 5.2 on Z.ai's coding endpoint ran at 12–55 tok/s
 - Synthetic's quantization page.
 - Kimi and Z.ai Pro prices from the vendors themselves.
 - Measured tok/s and cache hit rate on Go versus DeepSeek's API.
+
+## Decided 2026-11-16
+
+- **Zro free plan goes first in the `cloud` chain**, key `op://Infra/Zro/credential`.
+- **Command Code GOAT, a one-month trial** after Go, with `x-cmd-zdr: 1` on and key
+  `op://Infra/CommandCode/credential`. Cancel it if Flash's allowance under ZDR
+  reads $20 rather than $100.
+- **DeepInfra replaces DeepSeek's API as the paid fallback** if a 20-turn session
+  holds about 95% cache hits. Key `op://Infra/DeepInfra/credential`.
