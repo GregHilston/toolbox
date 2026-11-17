@@ -18,6 +18,13 @@
 
   networking.hostName = "citadel";
 
+  # Otari is Mozilla's: only the work laptop has the key.
+  environment.systemPackages = [
+    (pkgs.writeShellScriptBin "otari-ask" ''
+      exec /Users/${vars.user.name}/Git/toolbox/bin/otari-ask.py "$@"
+    '')
+  ];
+
   # Display never sleeps on the power adapter (System Settings → Lock Screen →
   # "Turn display off on power adapter when inactive" = Never). Battery keeps
   # common.nix's power.sleep.display.
