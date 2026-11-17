@@ -6,8 +6,11 @@ canned stream-json events, so nothing touches the network or a real model.
 
 from __future__ import annotations
 
+import io
 import json
 import os
+import pty
+import select
 import signal
 import subprocess
 import tempfile
@@ -15,6 +18,8 @@ import textwrap
 import time
 import unittest
 from pathlib import Path
+
+from _loader import load
 
 REPO = Path(__file__).resolve().parent.parent
 SCRIPT = REPO / "bin" / "otari-ask.py"
@@ -45,12 +50,16 @@ TOOL = {"type": "assistant", "message": {"id": "m1", "usage": {"input_tokens": 0
     {"type": "tool_use", "name": "Read", "input": {"file_path": "src/gate.ts"}}]}}
 DELTA = {"type": "stream_event", "event": {"type": "message_delta", "usage": {
     "input_tokens": 1000, "output_tokens": 10, "cost_usd": "0.0123"}}}
-TEXT_DELTA = {"type": "stream_event", "event": {"type": "content_block_delta", "delta": {"text": "No"}}}
+TEXT_DELTA = {"type": "stream_event", "event": {"type": "content_block_delta",
+                                                "delta": {"type": "text_delta", "text": "No premium "}}}
+TEXT_DELTA_2 = {"type": "stream_event", "event": {"type": "content_block_delta",
+                                                  "delta": {"type": "text_delta", "text": "gate remains."}}}
 ANSWER = {"type": "assistant", "message": {"id": "m2", "content": [
     {"type": "text", "text": "No premium gate remains."}]}}
 RESULT = {"type": "result", "subtype": "success", "is_error": False, "num_turns": 7,
           "result": "No premium gate remains.", "session_id": "sess-1"}
-OK = stream(INIT, TOOL, DELTA, TEXT_DELTA, ANSWER, RESULT)
+THINKING = {"type": "system", "subtype": "thinking_tokens", "estimated_tokens": 840}
+OK = stream(INIT, TOOL, DELTA, TEXT_DELTA, TEXT_DELTA_2, ANSWER, RESULT)
 
 
 class TestOtariAsk(unittest.TestCase):
@@ -86,6 +95,29 @@ class TestOtariAsk(unittest.TestCase):
     def ask(self, *args: str, **env: str) -> subprocess.CompletedProcess:
         return subprocess.run(["python3", str(SCRIPT), *args], env=self.fake({**self.env, **env}),
                               capture_output=True, text=True, timeout=60)
+
+    def ask_tty(self, *args: str, **env: str) -> tuple[int, str]:
+        """Run it with stdout on a terminal, as a human would."""
+        main, sub = pty.openpty()
+        proc = subprocess.Popen(["python3", str(SCRIPT), *args], env=self.fake({**self.env, **env}),
+                                stdout=sub, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL)
+        os.close(sub)
+        out = b""
+        while True:
+            ready, _, _ = select.select([main], [], [], 30)
+            if not ready:
+                break
+            try:
+                chunk = os.read(main, 65536)
+            except OSError:  # the other end closed
+                break
+            if not chunk:
+                break
+            out += chunk
+        os.close(main)
+        code = proc.wait(timeout=30)
+        proc.stderr.close()
+        return code, out.decode().replace("\r\n", "\n")
 
     def first(self, *extra: str, **env: str) -> subprocess.CompletedProcess:
         return self.ask("--session", "inv-1", "--dir", str(self.repo), *extra, "where is the gate?", **env)
@@ -300,10 +332,156 @@ class TestOtariAsk(unittest.TestCase):
             proc.wait(timeout=30)
             proc.stdout.close()
 
+    def test_no_session_names_one(self):
+        out = self.ask("q")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertRegex(out.stdout, r'--session ask-\d{4}-\d{6} "\.\.\."')
+        self.assertTrue(list(self.cache.glob("ask-*.json")))
+
+    def test_continue_follows_up_the_last_terminal_session(self):
+        code, _ = self.ask_tty("--session", "mine", "q")
+        self.assertEqual(code, 0)
+        code, out = self.ask_tty("-c", "and?")
+        self.assertEqual(code, 0, out)
+        argv = self.last_call()["argv"]
+        self.assertEqual(argv[argv.index("--resume") + 1], "sess-1")
+        self.assertIn("--session mine", out)
+
+    def test_a_piped_run_leaves_the_last_session_alone(self):
+        self.ask_tty("--session", "mine", "q")
+        self.ask("--session", "agent", "q")
+        self.assertEqual((self.cache / "last").read_text().strip(), "mine")
+
+    def test_continue_with_no_last_session_is_refused(self):
+        out = self.ask("-c", "q")
+        self.assertEqual(out.returncode, 2)
+        self.assertIn("pass --session", out.stderr)
+        self.assertFalse(self.calls.exists())
+
+    def test_a_terminal_gets_the_answer_streamed(self):
+        code, out = self.ask_tty("--session", "s", "q")
+        self.assertEqual(code, 0, out)
+        self.assertIn("→ Read src/gate.ts", out)
+        self.assertIn("No premium gate remains.\n", out)
+        self.assertEqual(out.count("No premium gate remains."), 1, "streamed, not printed twice")
+        self.assertIn("=== done (s: 7 turns", out)
+
+    def test_a_pipe_gets_only_the_answer(self):
+        out = self.first()
+        self.assertNotIn("→", out.stdout)
+        self.assertIn("=== answer (inv-1", out.stdout)
+
+    def test_no_stream_turns_it_off_in_a_terminal(self):
+        code, out = self.ask_tty("--session", "s", "--no-stream", "q")
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("→", out)
+        self.assertIn("=== answer (s", out)
+
+    def chat(self, *args: str, replies: tuple[str, ...]) -> tuple[int, str]:
+        """Run it on a terminal, typing each reply at a > prompt."""
+        main, sub = pty.openpty()
+        proc = subprocess.Popen(["python3", str(SCRIPT), *args], env=self.fake(dict(self.env)),
+                                stdin=sub, stdout=sub, stderr=subprocess.PIPE)
+        os.close(sub)
+        out, todo = b"", list(replies)
+        while True:
+            ready, _, _ = select.select([main], [], [], 30)
+            if not ready:
+                break
+            try:
+                chunk = os.read(main, 65536)
+            except OSError:
+                break
+            if not chunk:
+                break
+            out += chunk
+            if out.rstrip().endswith(b">\x1b[0m") and todo:
+                os.write(main, todo.pop(0).encode())
+                out += b"<typed>"
+        os.close(main)
+        code = proc.wait(timeout=30)
+        proc.stderr.close()
+        return code, out.decode(errors="replace").replace("\r\n", "\n")
+
+    def test_a_terminal_chats_until_ctrl_d(self):
+        code, out = self.chat("--session", "talk", "q", replies=("and why?\n", "\x04"))
+        self.assertEqual(code, 0, out)
+        calls = [json.loads(line)["argv"] for line in self.calls.read_text().splitlines()]
+        self.assertEqual(len(calls), 2, out)
+        self.assertEqual(calls[1][-1], "and why?")
+        self.assertEqual(calls[1][calls[1].index("--resume") + 1], "sess-1")
+        self.assertEqual(out.count("=== follow up"), 1, "once, on the way out")
+
+    def test_an_empty_line_ends_the_chat(self):
+        code, _ = self.chat("--session", "talk", "q", replies=("\n",))
+        self.assertEqual(code, 0)
+        self.assertEqual(len(self.calls.read_text().splitlines()), 1)
+
+    def test_once_skips_the_prompt(self):
+        code, out = self.chat("--session", "talk", "--once", "q", replies=())
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("<typed>", out)
+        self.assertIn("=== follow up", out)
+
+    def test_no_dir_turns_web_on(self):
+        self.ask("--session", "w", "q")
+        argv = self.last_call()["argv"]
+        self.assertIn("WebSearch", argv[argv.index("--tools") + 1])
+        self.first()
+        argv = self.last_call()["argv"]
+        self.assertEqual(argv[argv.index("--tools") + 1], "Read,Bash")
+
+    def test_a_terminal_sees_thinking_but_the_log_does_not(self):
+        code, out = self.ask_tty("--session", "t", "q", FAKE_CLAUDE_OUT=stream(INIT, THINKING, DELTA, ANSWER, RESULT))
+        self.assertEqual(code, 0, out)
+        self.assertIn("thinking… 840 tokens", out)
+        self.assertNotIn("thinking_tokens", (self.cache / "t.jsonl").read_text())
+
+    def test_no_repo_tells_the_worker_not_to_explore(self):
+        self.ask("--session", "w", "q")
+        argv = self.last_call()["argv"]
+        brief = Path(argv[argv.index("--append-system-prompt-file") + 1]).read_text()
+        self.assertIn("Do not explore", brief)
+        self.assertNotIn("working directory is the repo", brief)
+        self.first()
+        argv = self.last_call()["argv"]
+        brief = Path(argv[argv.index("--append-system-prompt-file") + 1]).read_text()
+        self.assertIn("working directory is the repo", brief)
+
     def test_a_bad_name_is_refused(self):
         out = self.ask("--session", "../etc", "q")
         self.assertEqual(out.returncode, 2)
         self.assertFalse(self.calls.exists())
+
+
+class TestMarkdownBlocks(unittest.TestCase):
+    otari = load("otari-ask.py")
+
+    def test_a_blank_line_ends_a_block(self):
+        self.assertEqual(self.otari.split_blocks("# Hi\n\nSome te"), (["# Hi"], "Some te"))
+
+    def test_a_blank_line_in_a_fence_does_not(self):
+        text = "```sh\na\n\nb\n```\n\nafter"
+        self.assertEqual(self.otari.split_blocks(text), (["```sh\na\n\nb\n```"], "after"))
+
+    def test_an_open_fence_waits(self):
+        self.assertEqual(self.otari.split_blocks("```\na\n\n"), ([], "```\na\n\n"))
+
+    def test_live_shows_whole_blocks_then_the_rest(self):
+        shown, out = [], io.StringIO()
+        live = self.otari.Live(out, shown.append)
+        for chunk in ("Para", " one.\n", "\n- a\n- b", "\n\nTail"):
+            live.text(chunk)
+        self.assertEqual(shown, ["Para one.", "- a\n- b"])
+        live.end()
+        self.assertEqual(shown[-1], "Tail")
+
+    def test_status_gives_way_to_text(self):
+        out = io.StringIO()
+        live = self.otari.Live(out)
+        live.status("thinking… 5 tokens")
+        live.text("Hi")
+        self.assertTrue(out.getvalue().endswith("\r\x1b[KHi"))
 
 
 if __name__ == "__main__":
