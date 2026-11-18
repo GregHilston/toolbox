@@ -69,6 +69,18 @@ Strata). **Rolled back to 4b9e05a2 (v0.2.6, 65536) because the no-hint CRUD rule
   | v0.2.15 | 0 (15/16, `ui_create`) | 1 (two `better-sqlite3` build failures) |
   So the eval did not drift with Node: v0.2.6 still passes 6 of 6. v0.2.15 regresses,
   and real sampling adds the `better-sqlite3` pick on top.
+- **Cause found (bisect, later the same day): fp16 decode windows.** v0.2.13 made `STRATA_METAL_F16`
+  default on for a resident pack whose GGUF name holds `-IQ3_S-` (upstream commit `af9f44e52`, "+9 to
+  +12%, top-1 agreement 96.2%, mean KL 0.016"). Greedy text then drifts from v0.2.6, and the model
+  writes a form behind a "+ Add Book" button that the grader's `ui_create` step does not click.
+  Temp-0 round 0 on 127.0.0.1:8091 (port 8090 was taken), byte-compared: v0.2.6, 0.2.8, 0.2.11, 0.2.12 are
+  16/16 and the same text; 0.2.13, 0.2.14, 0.2.15 are 15/16 (`ui_create`). On v0.2.15,
+  `STRATA_METAL_F16=0` in `strata.json` `env` gives 3 of 3 (16/16, text identical to v0.2.6); the default gives
+  0 of 3. Route tail skip off, drafter off, suffix draft off and no reasoning-budget hold all stay 15/16.
+  Cost of `=0` (`bench.py` median, same session): decode 37.5 tok/s against 41.7 with fp16 (v0.2.6: 37.6);
+  prefill unchanged (about 300 tok/s at 32K). The grader is noisy: the same text scored 16, 13 and 11 of 16
+  in three runs, so compare the response text, not only the score. No upstream issue matches (#5818 names the
+  flag for another pack).
 - Branch `strata-v0215` in `~/Git/toolbox-worktrees/strata-v0215` holds the pin and the
   context line for a retry. The live service is on v0.2.6 at 65536.
 
