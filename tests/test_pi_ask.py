@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
+import datetime as dt
+import io
 import json
 import os
 import signal
@@ -11,7 +14,10 @@ import tempfile
 import textwrap
 import time
 import unittest
+from unittest import mock
 from pathlib import Path
+
+from _loader import load
 
 SCRIPT = Path(__file__).resolve().parent.parent / "bin" / "pi-ask.py"
 
@@ -91,7 +97,7 @@ class TestPiAsk(unittest.TestCase):
 
     def start(self, *args: str, **env: str) -> subprocess.Popen:
         # stdin stays an open pipe, as in the shell that hung pi.
-        return subprocess.Popen([sys.executable, str(SCRIPT), *args], env=self.env | env,
+        return subprocess.Popen([sys.executable, str(SCRIPT), "--allow-peak", *args], env=self.env | env,
                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                 text=True)
 
@@ -105,6 +111,22 @@ class TestPiAsk(unittest.TestCase):
             proc.stdin.close()
             proc.stdout.close()
         return subprocess.CompletedProcess(proc.args, proc.returncode, output, "")
+
+    def test_refuses_at_peak_with_exit_75_unless_allowed(self):
+        peak = dt.datetime(2026, 11, 18, 9, 30, tzinfo=dt.timezone.utc)  # a Wednesday
+        pi_ask = load("pi-ask.py")
+        for argv, code in (([], 75), (["--allow-peak"], None)):
+            with mock.patch.object(pi_ask.preflight, "now", return_value=peak), \
+                    mock.patch.object(sys, "argv", ["pi-ask.py", "--session", "t-peak", *argv, "x"]), \
+                    mock.patch.object(pi_ask.preflight, "peak_refusal", wraps=pi_ask.preflight.peak_refusal) as gate, \
+                    contextlib.redirect_stderr(io.StringIO()) as err:
+                if code is None:
+                    gate.assert_not_called()
+                    self.assertIsNone(pi_ask.preflight.peak_refusal("cloud", peak, True))
+                    continue
+                self.assertEqual(pi_ask.main(), code)
+                self.assertIn("PEAK: refused (cloud). Off-peak starts 2026-11-18T10:00:00Z, in 0d 0h 30m 0s.",
+                              err.getvalue())
 
     def test_prints_the_answer_and_its_cost(self):
         out = self.ask("--session", "t1", "--dir", self.tmp.name, "hello")

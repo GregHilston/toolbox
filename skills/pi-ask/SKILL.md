@@ -41,10 +41,14 @@ did; `pi-ask.py` handles both.
   worker; 3 silent for
   `--idle` seconds (default 300) and killed; 4 stopped past `--max-cost`
   (default $0.50) or `--max-turns` (default 100); 5 that session is already
-  running, so wait for it. 129, 130 and 143 mean it was interrupted. After 3
+  running, so wait for it; 75 peak hours (below). 129, 130 and 143 mean it was interrupted. After 3
   or 4, ask again with the same name to carry on. Stop it with Ctrl-C or a
   plain `kill`, never `kill -9`: that leaves pi running on its own with no
   cost cap.
+- **Peak refusal: exit 75 means wait and retry.** At DeepSeek's peak (01-04 and
+  06-10 UTC, Mon-Fri) every model but `local-*` and `cloud-luna` is refused, on
+  stderr, with the off-peak start time. Sleep until then and rerun. Only Greg
+  adds `--allow-peak`; never add it yourself.
 - **It runs on the gateway's `cloud` model**: OpenCode Go, then GPT-5.6 Luna on
   ChatGPT Plus, then DeepSeek. `--model cloud-go`, `cloud-luna` or `cloud-deepseek`
   runs only that one, failing when it refuses. The answer header gives the cost at

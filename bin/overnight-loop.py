@@ -617,6 +617,16 @@ def peak_soon(now: datetime, margin: int) -> bool:
     return preflight.is_peak(now) or preflight.minutes_until_peak(now) < margin
 
 
+def peak_refused(args) -> str | None:
+    """Refusal text if a pi phase would run at peak, unless a flag waives it."""
+    if args.off_peak:
+        return None
+    for harness, model in ((args.harness, args.model), (args.reviewer, args.reviewer_model)):
+        if harness == "pi" and (text := preflight.peak_refusal(model, preflight.now(), args.allow_peak)):
+            return text
+    return None
+
+
 def stop_reason(args, tried: set[int], fails: int, cost: float, deadline: float) -> str | None:
     if Path(".overnight/STOP").exists():
         return "STOP file"
@@ -818,6 +828,8 @@ def main() -> None:
                         "only on classifier retries)")
     p.add_argument("--off-peak", action="store_true",
                    help="work only in DeepSeek's off-peak hours, waiting through peak; weekends are all off-peak")
+    p.add_argument("--allow-peak", action="store_true",
+                   help="start and keep working at DeepSeek's double-price peak (default: exit 75 instead)")
     p.add_argument("--off-peak-margin", type=int, default=20,
                    help="minutes before peak to stop starting issues (default 20)")
     p.add_argument("--board", type=int, help="GitHub project number to keep in sync with board-sync.py")
@@ -833,6 +845,9 @@ def main() -> None:
     phases = [(args.harness, args.model)] + ([(args.reviewer, args.reviewer_model)] if args.reviewer != "none" else [])
     # A claude worker the classifier blocks retries on the gateway's pi.
     args.gateway_used = args.harness == "claude" or any(h == "pi" and m in CLOUD for h, m in phases)
+    if refusal := peak_refused(args):
+        print(refusal, file=sys.stderr)
+        sys.exit(preflight.EX_TEMPFAIL)
     wait_for_turn(float(os.environ.get("LANE_START_AT", "0")),
                   float(os.environ.get("LANE_MAX_LOAD") or 2.0 * (os.cpu_count() or 1)))
     begun = time.time()
@@ -895,6 +910,7 @@ def main() -> None:
     tried: set[int] = set()
     claude_list, estimate, fails, why = 0.0, 0.0, 0, "an error"
     current: tuple[int, str] | None = None  # the issue in hand, and its base
+    peak_stop = False
     try:
         waiting = False
         while not (why := stop_reason(args, tried, fails, claude_list + estimate, deadline)):
@@ -905,6 +921,11 @@ def main() -> None:
                 time.sleep(300)
                 continue
             waiting = False
+            if refusal := peak_refused(args):
+                print(refusal, file=sys.stderr)
+                why = "peak hours"
+                peak_stop = True
+                break
             issue = next_issue(args.label, tried, set(done))
             if not issue:
                 why = "queue empty"
@@ -953,6 +974,8 @@ def main() -> None:
         summary(args, why, f"{start}..{branch}", claude_list, estimate, done, parked)
     if why == "interrupted":
         sys.exit(130)
+    if peak_stop:
+        sys.exit(preflight.EX_TEMPFAIL)
 
 
 def summary(args, why: str, commits: str, claude_list: float, estimate: float,

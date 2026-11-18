@@ -238,6 +238,8 @@ def main() -> int:
     p.add_argument("--idle", type=int, default=300, help="kill after N silent seconds")
     p.add_argument("--max-cost", type=float, default=0.50, help="stop past $N at DeepSeek's prices (default 0.50)")
     p.add_argument("--max-turns", type=int, default=100, help="stop past N model turns (default 100)")
+    p.add_argument("--allow-peak", action="store_true",
+                   help="run at DeepSeek's double-price peak anyway (otherwise exit 75: wait and retry)")
     p.add_argument("prompt", help="the question, or @file to read it from")
     args = p.parse_args()
     # A worker sees this skill and PATH too.
@@ -254,6 +256,9 @@ def main() -> int:
             prompt = Path(prompt[1:]).expanduser().read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as e:
             p.error(f"cannot read the prompt file {prompt[1:]}: {e}")
+    if refusal := preflight.peak_refusal(args.model, preflight.now(), args.allow_peak):
+        print(refusal, file=sys.stderr)
+        return preflight.EX_TEMPFAIL
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     prune_logs()
     # Two runs at once fork pi's session and mix their logs.
@@ -332,6 +337,7 @@ def main() -> int:
         # A permission prompt or lost stream often clears on a second go.
         retry = ["--session", args.session, "--dir", str(workdir), "--model", args.model,
                  "--idle", str(args.idle), "--max-cost", str(args.max_cost), "--max-turns", str(args.max_turns),
+                 *(["--allow-peak"] if args.allow_peak else []),
                  "Your last attempt stalled with no answer. Carry on from where you stopped, "
                  "and write your answer now.\n\n" + prompt]
         print(f"pi-ask: {args.session} stalled; retrying once", flush=True)

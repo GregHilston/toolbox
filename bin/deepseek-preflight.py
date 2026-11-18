@@ -24,7 +24,7 @@ It also prints OpenCode Go's and ChatGPT Plus's quotas, which never change the e
 the gateway's `cloud` overflows by itself, from Go to Luna to DeepSeek.
 
 Exit codes: 0 clear, 1 something wants a human's attention, 2 could not tell
-(no key, network down). 1 and 2 are deliberately different: "you are nearly out
+(no key, network down). The launchers import `peak_refusal` and exit 75 at peak. 1 and 2 are deliberately different: "you are nearly out
 of money" and "I could not reach the API" call for different reactions.
 """
 
@@ -100,6 +100,46 @@ def minutes_until_peak(when: dt.datetime) -> int | None:
         if is_peak(cursor + step * minute):
             return minute
     return None
+
+
+EX_TEMPFAIL = 75  # "wait and retry", not a failure
+# Flat-fee, so peak costs nothing extra.
+PEAK_EXEMPT = ("cloud-luna",)
+
+
+def now() -> dt.datetime:
+    return dt.datetime.now(dt.timezone.utc)
+
+
+def next_off_peak(when: dt.datetime) -> dt.datetime:
+    """When the current peak window ends; `when` itself if not at peak."""
+    if not is_peak(when):
+        return when
+    cursor = when.astimezone(dt.timezone.utc).replace(second=0, microsecond=0)
+    while is_peak(cursor):
+        cursor += dt.timedelta(minutes=1)
+    return cursor
+
+
+def countdown(seconds: float) -> str:
+    d, rest = divmod(max(int(seconds), 0), 86400)
+    h, rest = divmod(rest, 3600)
+    m, s = divmod(rest, 60)
+    return f"{d}d {h}h {m}m {s}s"
+
+
+def peak_refusal(model: str | None, when: dt.datetime, allow: bool) -> str | None:
+    """The refusal text for a launch at peak, or None to go ahead.
+
+    An unknown model is gated: it may well bill double.
+    """
+    alias = (model or "cloud").rsplit("/", 1)[-1]
+    if allow or not is_peak(when) or alias.startswith("local-") or alias in PEAK_EXEMPT:
+        return None
+    end = next_off_peak(when)
+    return (f"PEAK: refused ({model or 'cloud'}). Off-peak starts {end:%Y-%m-%dT%H:%M:%SZ}, "
+            f"in {countdown((end - when).total_seconds())}. "
+            "Rerun with --allow-peak to run at peak anyway.")
 
 
 def fetch_balance(key: str, timeout: float = 10.0) -> tuple[float, str]:

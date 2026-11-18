@@ -174,3 +174,34 @@ class TestLunaSummary(unittest.TestCase):
     def test_no_gauges_is_unknown(self) -> None:
         line = pf.luna_summary({})
         self.assertTrue(line.startswith("unknown"), f"got {line!r}, want unknown")
+
+
+class TestPeakGate(unittest.TestCase):
+    # 2026-11-20 is a Friday.
+    def test_refuses_at_peak_with_the_off_peak_time_and_countdown(self):
+        self.assertEqual(
+            pf.peak_refusal("cloud", utc(2026, 11, 20, 9, 30), False),
+            "PEAK: refused (cloud). Off-peak starts 2026-11-20T10:00:00Z, in 0d 0h 30m 0s. "
+            "Rerun with --allow-peak to run at peak anyway.")
+
+    def test_the_flag_off_peak_and_weekends_go_ahead(self):
+        self.assertIsNone(pf.peak_refusal("cloud", utc(2026, 11, 20, 9, 30), True))
+        self.assertIsNone(pf.peak_refusal("cloud", utc(2026, 11, 20, 23), False), "Friday night")
+        self.assertIsNone(pf.peak_refusal("cloud", utc(2026, 11, 21, 7), False), "Saturday")
+
+    def test_local_and_luna_models_are_exempt_and_the_rest_gated(self):
+        peak = utc(2026, 11, 18, 7)
+        for model in ("local-small", "local-big", "litellm/local-x", "cloud-luna"):
+            self.assertIsNone(pf.peak_refusal(model, peak, False), model)
+        for model in (None, "cloud", "cloud-go", "cloud-goat", "cloud-zro", "deepseek/deepseek-flash", "mystery"):
+            self.assertIn("PEAK: refused", pf.peak_refusal(model, peak, False), model)
+
+    def test_next_off_peak_is_the_window_end(self):
+        self.assertEqual(pf.next_off_peak(utc(2026, 11, 20, 9, 30)), utc(2026, 11, 20, 10))
+        self.assertEqual(pf.next_off_peak(utc(2026, 11, 18, 1)), utc(2026, 11, 18, 4))
+        quiet = utc(2026, 11, 20, 23)
+        self.assertEqual(pf.next_off_peak(quiet), quiet)
+
+    def test_countdown_formats_days_hours_minutes_seconds(self):
+        self.assertEqual(pf.countdown(0), "0d 0h 0m 0s")
+        self.assertEqual(pf.countdown(2 * 86400 + 3 * 3600 + 4 * 60 + 5), "2d 3h 4m 5s")

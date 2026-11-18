@@ -361,7 +361,7 @@ class LoopTest(unittest.TestCase):
 
     def run_loop(self, *args: str, timeout: float = 60, no_sleep: bool = False,
                  **env: str) -> subprocess.CompletedProcess:
-        cmd = [sys.executable, str(SCRIPT), *args]
+        cmd = [sys.executable, str(SCRIPT), "--allow-peak", *args]
         if no_sleep:  # gh retries back off for most of a minute
             cmd = [sys.executable, "-c", "import runpy, sys, time; time.sleep = lambda s: None; "
                    f"sys.argv = sys.argv[1:]; runpy.run_path(sys.argv[0], run_name='__main__')", *cmd[1:]]
@@ -753,6 +753,38 @@ class TestOffPeak(unittest.TestCase):
             self.assertIsNone(loop.stop_reason(args, set(), 0, 0.0, time.time() + 3600))
 
 
+class TestPeakGate(unittest.TestCase):
+    def args(self, **kw):
+        base = dict(harness="pi", model=None, reviewer="none", reviewer_model=None,
+                    off_peak=False, allow_peak=False)
+        return argparse.Namespace(**(base | kw))
+
+    def at(self, when, **kw):
+        with mock.patch.object(loop.preflight, "now", return_value=when):
+            return loop.peak_refused(self.args(**kw))
+
+    def test_refuses_a_pi_worker_at_peak(self):
+        self.assertIn("PEAK: refused (cloud)", self.at(utc(13, 2)))
+
+    def test_either_flag_or_a_quiet_hour_lets_it_start(self):
+        self.assertIsNone(self.at(utc(13, 2), allow_peak=True))
+        self.assertIsNone(self.at(utc(13, 2), off_peak=True))
+        self.assertIsNone(self.at(utc(13, 4)))
+
+    def test_a_claude_worker_with_no_pi_reviewer_is_not_gated(self):
+        self.assertIsNone(self.at(utc(13, 2), harness="claude"))
+        self.assertIn("PEAK", self.at(utc(13, 2), harness="claude", reviewer="pi"))
+
+    def test_main_exits_75_at_peak(self):
+        with mock.patch.object(loop.preflight, "now", return_value=utc(13, 2)), \
+                mock.patch.object(sys, "argv", ["overnight-loop.py", "--harness", "pi"]), \
+                mock.patch.object(loop, "wait_for_turn") as wait, \
+                self.assertRaises(SystemExit) as raised:
+            loop.main()
+        self.assertEqual(raised.exception.code, 75)
+        wait.assert_not_called()
+
+
 class TestClaudeCost(LoopTest):
     def test_counts_cost_when_stderr_follows_the_result(self):
         out = self.run_loop("--harness", "claude", "--reviewer", "none", FAKE_CLAUDE_STDERR="1")
@@ -897,7 +929,7 @@ class TestInterrupt(LoopTest):
     def interrupt(self, sig: int, mode: str = "hang") -> tuple[str, int]:
         env = self.env | {"FAKE_WORK_1": mode}
         started = 2 if mode == "leftoverhang" else 1
-        proc = subprocess.Popen([sys.executable, str(SCRIPT), "--harness", "pi", "--reviewer", "none"],
+        proc = subprocess.Popen([sys.executable, str(SCRIPT), "--allow-peak", "--harness", "pi", "--reviewer", "none"],
                                 cwd=self.repo, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         try:
             deadline = time.monotonic() + 120

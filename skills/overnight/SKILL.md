@@ -55,6 +55,9 @@ start when that key's balance is under $2.
 `--off-peak` works only in DeepSeek's half-price hours: it waits from 20
 minutes before peak until peak ends, then carries on until `--hours` is up.
 Weekends are off-peak all day; on a weeknight the off-peak windows are short.
+Without `--off-peak`, a launch at peak exits 75 ("wait and retry") with the off-peak
+start time, and a run that reaches peak between issues finishes its issue, then exits 75.
+`--allow-peak` runs through peak anyway; only Greg adds it.
 
 ## Before starting
 
