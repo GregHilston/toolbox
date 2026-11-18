@@ -36,6 +36,10 @@
     # removed from nixpkgs-unstable on 2026-03-03. Let it use its own pinned nixpkgs.
     claude-desktop.inputs.flake-utils.follows = "flake-utils";
 
+    # crit: browser review of agent plans and diffs (not in nixpkgs)
+    crit.url = "github:tomasz-tomczyk/crit";
+    crit.inputs.nixpkgs.follows = "nixpkgs";
+
     # nix-darwin for macOS support
     darwin.url = "github:LnL7/nix-darwin";
     darwin.inputs.nixpkgs.follows = "nixpkgs";

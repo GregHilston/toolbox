@@ -26,7 +26,21 @@ in {
 
   # nixpkgs config (overlays + allowUnfree) comes from the system via
   # home-manager.useGlobalPkgs (set in flake-modules/hosts.nix).
-  home.packages = basePackages.homePackages;
+  home.packages =
+    basePackages.homePackages
+    # crit: review agent plans and diffs in a browser
+    ++ [inputs.crit.packages.${pkgs.stdenv.hostPlatform.system}.default];
+
+  # Empty share_targets disables uploads to crit.md.
+  # force: crit's atomic writes replace the link.
+  home.file.".crit.config.json" = {
+    force = true;
+    text = builtins.toJSON {
+      share_targets = [];
+      no_update_check = true;
+      no_integration_check = true;
+    };
+  };
 
   # Searxngr config — single source of truth is dot/searxngr-config, stowed on
   # both platforms so the two never drift. The binary itself is installed via

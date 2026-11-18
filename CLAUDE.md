@@ -209,6 +209,10 @@ at session start: enabling later re-prefills the conversation. `dot/pi/CLAUDE.md
 visible and steerable; `-h` documents each. Design: `dot/pi/CLAUDE.md` → "Seeing what an
 unattended worker is doing".
 
+## Crit — review agent plans and diffs in a browser
+
+Package from its flake in `nixos/modules/home/workstation.nix`, Claude plugin in `settings.json`. Sharing to crit.md is off: `share_targets = []` in that module, and `shims/crit` refuses `share` and `auth`, since `--share-url` beats the config. crit has no auth, so it stays on loopback; `crit-remote.py <host>` opens another host's review over an SSH tunnel.
+
 ## Thread Fetchers — Search & Convert HN & Reddit to Markdown/JSON
 
 `reddit-search.py` and `fetch-thread.py`, no login needed; see the `reddit` skill and

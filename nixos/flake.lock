@@ -89,6 +89,26 @@
         "type": "github"
       }
     },
+    "crit": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795012330,
+        "narHash": "sha256-Z/on0F7o9agxcgdf/OYDxpFmHp/23yJpGfvTdOmizZ8=",
+        "owner": "tomasz-tomczyk",
+        "repo": "crit",
+        "rev": "7ef418470de45af4f43e6aa1c0b01b5942ce94ad",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tomasz-tomczyk",
+        "repo": "crit",
+        "type": "github"
+      }
+    },
     "darwin": {
       "inputs": {
         "nixpkgs": [
@@ -532,6 +552,7 @@
     "root": {
       "inputs": {
         "claude-desktop": "claude-desktop",
+        "crit": "crit",
         "darwin": "darwin",
         "flake-parts": "flake-parts",
         "flake-utils": "flake-utils",

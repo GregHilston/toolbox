@@ -1,0 +1,18 @@
+#!/bin/sh
+# PATH-first crit: refuses `share` and `auth`, which reach crit.md.
+# --share-url beats share_targets in ~/.crit.config.json.
+case "$1" in share | auth)
+  echo "crit $1 is disabled" >&2
+  exit 1
+  ;;
+esac
+me=$(realpath "$0")
+IFS=:
+for d in $PATH; do
+  c="$d/crit"
+  if [ -x "$c" ] && [ "$(realpath "$c")" != "$me" ]; then
+    exec "$c" "$@"
+  fi
+done
+echo "crit: real binary not found on PATH" >&2
+exit 127
