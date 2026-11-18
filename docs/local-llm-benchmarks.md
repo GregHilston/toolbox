@@ -62,6 +62,13 @@ Strata). **Rolled back to 4b9e05a2 (v0.2.6, 65536) because the no-hint CRUD rule
   check at v0.2.15, so this is not sampling alone.
 - 0.2.6's CRUD ran on an older Node; moria is on Node 26.13.1 now, where `better-sqlite3`
   11 fails to compile. Re-run both versions on the same Node before blaming the engine.
+- **Control, same day, same Node 26.13.1, no-hint passes of 3:**
+  | | temp 0 | temp 1.0 |
+  |---|---|---|
+  | v0.2.6 | 3 (16/16 each) | 3 (16/16 each; sampling ignored, still greedy) |
+  | v0.2.15 | 0 (15/16, `ui_create`) | 1 (two `better-sqlite3` build failures) |
+  So the eval did not drift with Node: v0.2.6 still passes 6 of 6. v0.2.15 regresses,
+  and real sampling adds the `better-sqlite3` pick on top.
 - Branch `strata-v0215` in `~/Git/toolbox-worktrees/strata-v0215` holds the pin and the
   context line for a retry. The live service is on v0.2.6 at 65536.
 
