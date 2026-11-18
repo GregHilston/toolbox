@@ -40,6 +40,7 @@ Run these tasks after initial deployment on a new Mac.
 - [ ] **Discord** - Sign in
 - [ ] **Spotify** - Sign in
 - [ ] **Claude** - Sign in
+- [ ] **Herdr** - Open Herdr.app, leave its integrations unchecked, and pick "Install it for me" for herdr-core. Not nix: it installs a signed `Herdr Core.app`, and `hc update` keeps terminals alive.
 
 ## Repositories
 - [ ] Clone notes repo: `git clone git@github.com:<user>/notes.git ~/Notes`
