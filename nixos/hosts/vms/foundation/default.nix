@@ -31,6 +31,8 @@
     enable = true;
     defaultUser = vars.user.name;
     startMenuLaunchers = true;
+    # Links /usr/lib/wsl/lib's CUDA and NVML into /run/opengl-driver.
+    useWindowsDriver = true;
     wslConf = {
       automount.root = "/mnt";
       network.generateResolvConf = true;
