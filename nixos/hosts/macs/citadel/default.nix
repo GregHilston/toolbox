@@ -18,6 +18,10 @@
 
   networking.hostName = "citadel";
 
+  # Outbound only: nothing may SSH into citadel.
+  services.openssh.enable = false;
+  users.users.${vars.user.name}.openssh.authorizedKeys.keys = lib.mkForce [];
+
   # Otari is Mozilla's: only the work laptop has the key.
   environment.systemPackages = [
     (pkgs.writeShellScriptBin "otari-ask" ''
