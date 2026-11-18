@@ -50,14 +50,6 @@ if [[ -o interactive && ! -f ~/.hide-zj-motd ]]; then
   fi
 fi
 
-# Above instant prompt: it captures the terminal.
-# Every pane inherits ZJ_HERDR; pane 0 acts.
-if [[ -n ${ZJ_HERDR-} && ${ZELLIJ_PANE_ID-} == 0 ]]; then
-  unset ZJ_HERDR
-  zj-herdr-tab.sh
-fi
-unset ZJ_HERDR
-
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -257,14 +249,7 @@ zj() {
 
   if [[ -z $name ]]; then
     zellij list-sessions
-    return
-  fi
-
-  # A new session's first pane runs Herdr; see the hook below zj.
-  env -u ZELLIJ -u ZELLIJ_SESSION_NAME -u ZELLIJ_PANE_ID ZJ_HERDR=1 \
-    zellij attach --create-background "$name"
-
-  if [[ -n $ZELLIJ ]]; then
+  elif [[ -n $ZELLIJ ]]; then
     # Already in a session: hand this client over. zellij refuses to nest, and
     # switch-session creates or resurrects the target the same way attach -c
     # does (it is what the session-manager's own new-session flow calls).
