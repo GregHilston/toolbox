@@ -9,6 +9,7 @@ dependency wait, worker, review, fix round, ready, landing, hold), its gate
 runs by where they ran, and the waits ranked by minutes with a fix for each.
 `--since` drops earlier events from a log shared with an older run, and
 `--pilot` reads lane queue times from a pilot.log the pilot never logged.
+A run with `land_step` events ends with each ticket's seconds per landing step.
 
 Each ticket's time is split by intervals (its phase_start/phase_end, gates,
 tests, landing), and whatever no interval covers is unexplained. "queue" is a
@@ -727,6 +728,26 @@ def worker_block(by_ticket: dict[str, list[dict]]) -> str:
     return "\n".join([table(["worker time", "total"] + WORKER_CATS, rows), "", *hung_lines(by_ticket), *tops])
 
 
+LAND_STEPS = ["precheck", "rebase", "land_check", "push"]
+
+
+def landing_steps(events: list[dict]) -> str:
+    """Seconds in each `land_step` per ticket (else lane), a step that failed marked red."""
+    rows: dict[str, dict[str, list]] = {}
+    for event in events:
+        if event["kind"] != "land_step":
+            continue
+        row = rows.setdefault(ticket_of(event) or lane_of(event) or "?", {})
+        spent = row.setdefault(str(event.get("step")), [0.0, True])
+        spent[0] += float(event.get("seconds") or 0)
+        spent[1] = spent[1] and event.get("ok") is not False
+    body = []
+    for key, row in rows.items():
+        cells = [human(row[s][0]) + ("" if row[s][1] else " red") if s in row else "-" for s in LAND_STEPS]
+        body.append([f"#{key}" if key.isdigit() else key, *cells, human(sum(v[0] for v in row.values()))])
+    return table(["landing steps", *LAND_STEPS, "total"], body) if body else ""
+
+
 def log_events(path: Path) -> list[dict]:
     """A lane log's steps as run-log events, from step lines or an older raw pi stream."""
     return log_events_text(path.read_text(errors="replace"), path.stem)
@@ -785,6 +806,8 @@ def main(argv: list[str]) -> int:
     for name, path in zip(names, map(find_log, names)):
         if block := worker_block(worker_steps(read(path))):
             print(f"\n{name} worker time\n{block}")
+        if block := landing_steps(read(path)):
+            print(f"\n{name}\n{block}")
     return 0
 
 

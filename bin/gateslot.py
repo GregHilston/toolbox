@@ -11,10 +11,11 @@ Each slot is a flock'd file, so a crashed holder frees its slot by dying.
         gate.code = 0
 
     gateslot.py [--land] [--kind K] -- ./verify.sh   # same, from a shell
-    gateslot.py --report [hours]           # gate wait as a share of ticket time
+    gateslot.py --report [hours]           # gate wait as a share of ticket time, then gates by ticket
 
 GATE_SLOTS sets the count (default 2); 0 turns the queue off. Callers set
 `gate.code` on the yielded object so the run log can record how it ended.
+Each row names its ticket: `RUN_LOG_TICKET`, else the newest `(#N)` in unpushed commits.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -52,6 +54,19 @@ def tree_id(cwd=".") -> str:
     return head[:12] + (hashlib.sha1(diff).hexdigest()[:8] if diff else "")
 
 
+def ticket_of(cwd=".") -> str:
+    """RUN_LOG_TICKET, else the newest `(#N)` in commits no remote holds, so a branch names its ticket."""
+    if os.environ.get("RUN_LOG_TICKET"):
+        return os.environ["RUN_LOG_TICKET"]
+    try:
+        subjects = subprocess.run(["git", "log", "--format=%s", "HEAD", "--not", "--remotes"], cwd=cwd,
+                                  capture_output=True, text=True).stdout
+    except OSError:
+        return ""
+    found = re.search(r"\(#(\d+)\)", subjects)
+    return found.group(1) if found else ""
+
+
 def mark_passed(cwd=".") -> None:
     """Record that the gate passed on this clean tree."""
     PASSED.mkdir(parents=True, exist_ok=True)
@@ -75,8 +90,9 @@ def report(lines: list[str], since: float = 0.0) -> str:
     events = [json.loads(line) for line in lines]
     tickets = [e for e in events if e["kind"] == "ticket" and e["started"] >= since]
     gates = [e for e in events if e["kind"] == "gate" and e["asked"] >= since]
+    named = by_ticket(gates)
     if not tickets:
-        return f"no tickets in the log; {len(gates)} gates"
+        return f"no tickets in the log; {len(gates)} gates" + named
     span = max(t["ended"] for t in tickets) - min(t["started"] for t in tickets)
     ticket_time = sum(t["ended"] - t["started"] for t in tickets)
     wait = sum(g["got"] - g["asked"] for g in gates
@@ -84,7 +100,21 @@ def report(lines: list[str], since: float = 0.0) -> str:
     land = [g["got"] - g["asked"] for g in gates if g["land"]]
     return (f"{len(tickets)} tickets in {span / 3600:.1f} h ({len(tickets) / max(span / 3600, 0.01):.1f} an hour); "
             f"gate wait {wait / 60:.0f} min of {ticket_time / 60:.0f} min ticket time ({wait / ticket_time:.0%}); "
-            f"{len(gates)} gates, {len(land)} landing, landing wait {sum(land) / 60:.0f} min")
+            f"{len(gates)} gates, {len(land)} landing, landing wait {sum(land) / 60:.0f} min" + named)
+
+
+def by_ticket(gates: list[dict]) -> str:
+    """One line naming each ticket's gates, landings, wait and run minutes; empty when no row names one."""
+    per: dict[str, list[dict]] = {}
+    for g in gates:
+        if g.get("ticket"):
+            per.setdefault(str(g["ticket"]), []).append(g)
+    if not per:
+        return ""
+    return "\nby ticket: " + "; ".join(
+        f"#{t} {len(gs)} gates ({sum(1 for g in gs if g['land'])} landing), "
+        f"wait {sum(g['got'] - g['asked'] for g in gs) / 60:.0f} min, run {sum(g['ended'] - g['got'] for g in gs) / 60:.0f} min"
+        for t, gs in per.items())
 
 
 class Gate:
@@ -117,6 +147,7 @@ def slot(land: bool = False, poll: float = 2.0, kind: str | None = None, full: b
                 time.sleep(poll)
     gate.got = time.time()
     tree = tree_id()
+    ticket = ticket_of()
     runlog.emit("gate_slot", wait=round(gate.got - gate.asked, 3), land=land, gate_kind=gate.kind)
     try:
         yield gate
@@ -124,7 +155,8 @@ def slot(land: bool = False, poll: float = 2.0, kind: str | None = None, full: b
         if held:
             held.close()
         if n > 0:
-            record(kind="gate", cwd=os.getcwd(), land=land, asked=gate.asked, got=gate.got, ended=time.time())
+            record(kind="gate", cwd=os.getcwd(), land=land, asked=gate.asked, got=gate.got, ended=time.time(),
+                   **({"ticket": ticket} if ticket else {}))
         extra = {"tree": tree} if tree else {}
         if full is not None:
             extra["full"] = full

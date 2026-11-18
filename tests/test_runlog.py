@@ -465,6 +465,19 @@ class ReportTest(Case):
         self.assertIn("r1", header)
         self.assertIn("r2", header)
 
+    def test_landing_steps_print_per_ticket_with_a_red_step_marked(self) -> None:
+        steps = [event(T0 + 10, "land_step", lane="gk-7", ticket="7", step=s, seconds=n, ok=True)
+                 for s, n in (("precheck", 30), ("rebase", 2), ("land_check", 400), ("push", 3))]
+        steps.append(event(T0 + 20, "land_step", lane="gk-8", ticket="8", step="land_check", seconds=50, ok=False))
+        path = self.root / "logs" / "fakerepo" / "steps.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\n".join(json.dumps(e) for e in FAKE + steps) + "\n")
+        lines = self.printed("steps").splitlines()
+        row = next((line for line in lines if line.startswith("#7 ")), "")
+        self.assertEqual(row.split(), ["#7", "30s", "2s", "7m", "3s", "7m"], f"lines {lines}")
+        row = next((line for line in lines if line.startswith("#8 ")), "")
+        self.assertEqual(row.split(), ["#8", "-", "-", "50s", "red", "-", "50s"], f"lines {lines}")
+
 
 if __name__ == "__main__":
     unittest.main()

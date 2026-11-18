@@ -36,6 +36,13 @@ class ReportTest(unittest.TestCase):
         out = gateslot.report([ticket("/a", 0, 10), gate("/a", 1, 2)], since=100)
         self.assertEqual(out, "no tickets in the log; 0 gates")
 
+    def test_gates_are_named_by_ticket_even_with_no_ticket_rows(self) -> None:
+        rows = [json.loads(gate("/a", 0, 60)), json.loads(gate("/a", 200, 200, land=True)), json.loads(gate("/b", 0, 0))]
+        rows[0]["ticket"] = rows[1]["ticket"] = "1564"
+        out = gateslot.report([json.dumps(r) for r in rows])
+        self.assertIn("no tickets in the log; 3 gates", out)
+        self.assertIn("#1564 2 gates (1 landing), wait 1 min, run 3 min", out)
+
 
 class Python39Test(unittest.TestCase):
     @unittest.skipUnless(Path("/usr/bin/python3").exists(), "no /usr/bin/python3")
@@ -87,6 +94,17 @@ class SlotCase(unittest.TestCase):
         os.chdir(repo)
         self.addCleanup(os.chdir, cwd)
         return repo
+
+    def test_the_row_names_the_ticket_from_the_environment_or_unpushed_commits(self) -> None:
+        repo = self.repo()
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty",
+                        "-m", "feat: a thing (#1564)"], cwd=repo, check=True)
+        with mock.patch.dict(os.environ, {"RUN_LOG_TICKET": "77"}):
+            gateslot.main(["--", "./verify.sh"])
+        with mock.patch.dict(os.environ, {"RUN_LOG_TICKET": ""}):
+            gateslot.main(["--", "./verify.sh"])
+        rows = [json.loads(line) for line in gateslot.LOG.read_text().splitlines()]
+        self.assertEqual([r.get("ticket") for r in rows], ["77", "1564"], rows)
 
     def test_a_whole_gate_on_a_clean_tree_marks_it_passed(self) -> None:
         self.repo()
