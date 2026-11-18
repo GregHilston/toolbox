@@ -11,8 +11,12 @@ touches the network or the real clock.
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
+import io
+import sys
 import unittest
+from unittest import mock
 
 from _loader import load
 
@@ -205,3 +209,10 @@ class TestPeakGate(unittest.TestCase):
     def test_countdown_formats_days_hours_minutes_seconds(self):
         self.assertEqual(pf.countdown(0), "0d 0h 0m 0s")
         self.assertEqual(pf.countdown(2 * 86400 + 3 * 3600 + 4 * 60 + 5), "2d 3h 4m 5s")
+
+    def test_gate_flag_exits_75_at_peak_and_0_otherwise(self):
+        for when, code in ((utc(2026, 11, 20, 9, 30), 75), (utc(2026, 11, 20, 23), 0)):
+            with mock.patch.object(pf, "now", return_value=when), \
+                    mock.patch.object(sys, "argv", ["deepseek-preflight.py", "--gate", "cloud"]), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(pf.main(), code)

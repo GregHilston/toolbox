@@ -249,9 +249,15 @@ def main() -> int:
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument("--skip-balance", action="store_true",
                     help="check the clock only; makes no network call")
+    ap.add_argument("--gate", metavar="MODEL",
+                    help="only check the peak gate for MODEL: exit 75 with the refusal, else 0")
     args = ap.parse_args()
-
-    now = dt.datetime.now(dt.timezone.utc)
+    if args.gate is not None:
+        if refusal := peak_refusal(args.gate, now(), False):
+            print(refusal, file=sys.stderr)
+            return EX_TEMPFAIL
+        return 0
+    now_utc = now()
     balance: float | None = None
     currency = "USD"
     unreachable: str | None = None
@@ -288,7 +294,7 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001 - it never decides the verdict
             luna = f"unknown - {exc}"
 
-    verdict = evaluate(balance, now, args.min_balance, args.warn_minutes)
+    verdict = evaluate(balance, now_utc, args.min_balance, args.warn_minutes)
     verdict["currency"] = currency
     verdict["unreachable"] = unreachable
     verdict["go"] = go
