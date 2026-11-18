@@ -12,9 +12,9 @@ set -euo pipefail
 IFS=$'\n\t'
 
 DIR="${STRATA_DIR:-$HOME/Git/strata}"
-# v0.2.6. A release commit, not a branch: releases land daily, and 2.x broke
+# v0.2.15. A release commit, not a branch: releases land daily, and 2.x broke
 # LAN auth. How to move it: docs/strata.md, Upgrading.
-REF="${STRATA_REF:-4b9e05a2a806a3fe24f7b2560d98626c37dade35}"
+REF="${STRATA_REF:-c77572806996349b49995e4f98d41b5294d36a21}"
 AGENT="gui/$(id -u)/org.nixos.strata"
 
 case "${1:-}" in
@@ -41,7 +41,8 @@ build=()
 # Setup rewrites the config on every run, so these go back on after it.
 config=$(ls "$DIR"/strata-*.json | head -1)
 jq '. + {lazy_load: true, idle_unload_s: 1800, reasoning_effort: "medium",
-         reasoning_budget_tokens: 16384}' "$config" >"$config.tmp"
+         reasoning_budget_tokens: 16384}
+        | .args |= (index("--max-context") as $i | .[$i + 1] = "262144")' "$config" >"$config.tmp"
 mv "$config.tmp" "$config"
 ln -sfn "$config" "$DIR/strata.json"
 echo "✓ config $config"
