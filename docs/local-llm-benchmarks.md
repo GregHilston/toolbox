@@ -41,12 +41,12 @@ unchanged.
 
 ---
 
-## 2026-11-18: Strata 0.2.15 on moria, 262144 context — rolled back to 0.2.6
+## 2026-11-18: Strata 0.2.15 on moria, 262144 context — adopted with STRATA_METAL_F16=0
 Strata `c7757280` (v0.2.15), served at `--max-context 262144` (the engine reports `n_ctx`
 262144; setup's wizard keeps 65536 and notes "measured on the Mac up to 32768"). Same
 IQ3_S pack, no new download. Run from a copy of `dot/omlx/bench/` pointed at port 8080,
 cold prompts with a nonce, swap steady at 11.8 of 13.3 GB for every run (other apps, not
-Strata). **Rolled back to 4b9e05a2 (v0.2.6, 65536) because the no-hint CRUD rule failed.**
+Strata). First rolled back to 4b9e05a2 (v0.2.6, 65536) because the no-hint CRUD rule failed; **adopted the same day with `STRATA_METAL_F16=0`**, which restores v0.2.6's output (the cause, below).
 | measure | v0.2.6 (2026-10-26/27) | v0.2.15 |
 |---|---|---|
 | prefill 64K | 240 tok/s (287-317 quiet) | 506 tok/s, TTFT 126 s |
@@ -82,7 +82,7 @@ Strata). **Rolled back to 4b9e05a2 (v0.2.6, 65536) because the no-hint CRUD rule
   in three runs, so compare the response text, not only the score. No upstream issue matches (#5818 names the
   flag for another pack).
 - Branch `strata-v0215` in `~/Git/toolbox-worktrees/strata-v0215` holds the pin and the
-  context line for a retry. The live service is on v0.2.6 at 65536.
+  context line for a retry. The live service later moved to v0.2.15 at 262144 with `STRATA_METAL_F16=0`.
 
 ## 2026-10-26: Strata, Qwen3.8-Flash-Next IQ3_S — adopted as the heavy model
 
