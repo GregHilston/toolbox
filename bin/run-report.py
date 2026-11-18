@@ -732,14 +732,26 @@ LAND_STEPS = ["precheck", "rebase", "land_check", "push"]
 
 
 def landing_steps(events: list[dict]) -> str:
-    """Seconds in each `land_step` per ticket (else lane), a step that failed marked red."""
+    """Seconds in each `land_step` per ticket, a step that failed marked red.
+
+    A step with no ticket takes its lane's ticket from another step, else is
+    its own lane's (or worktree's) row; one with neither is skipped, as is a
+    `seconds` that is not a number.
+    """
+    steps = [e for e in events if e["kind"] == "land_step"]
+    lane_ticket = {lane_of(e): ticket_of(e) for e in steps if lane_of(e) and ticket_of(e)}
     rows: dict[str, dict[str, list]] = {}
-    for event in events:
-        if event["kind"] != "land_step":
+    for event in steps:
+        key = ticket_of(event) or lane_ticket.get(lane_of(event)) or lane_of(event) \
+            or Path(str(event.get("worktree") or "")).name
+        try:
+            seconds = float(event.get("seconds") or 0)
+        except (TypeError, ValueError):
             continue
-        row = rows.setdefault(ticket_of(event) or lane_of(event) or "?", {})
-        spent = row.setdefault(str(event.get("step")), [0.0, True])
-        spent[0] += float(event.get("seconds") or 0)
+        if not key:
+            continue
+        spent = rows.setdefault(key, {}).setdefault(str(event.get("step")), [0.0, True])
+        spent[0] += seconds
         spent[1] = spent[1] and event.get("ok") is not False
     body = []
     for key, row in rows.items():
@@ -777,7 +789,7 @@ def main(argv: list[str]) -> int:
         block = worker_block(worker_steps(log_events(Path(argv[1]))))
         print(block or f"run-report.py: no timed steps in {argv[1]}")
         return 0 if block else 1
-    names, summaries, missing, extra = [], [], [], []
+    names, summaries, missing, extra, landings = [], [], [], [], []
     for name in argv:
         path = find_log(name)
         if path is None:
@@ -792,6 +804,7 @@ def main(argv: list[str]) -> int:
         names.append(name)
         summaries.append(summarise(events))
         extra.append(lifecycle_report(events))
+        landings.append(landing_steps(events))
     for name in missing:
         now = runlog.current()
         hint = (f"; this repo's current run is {now!r}, and events land there until something runs "
@@ -806,7 +819,8 @@ def main(argv: list[str]) -> int:
     for name, path in zip(names, map(find_log, names)):
         if block := worker_block(worker_steps(read(path))):
             print(f"\n{name} worker time\n{block}")
-        if block := landing_steps(read(path)):
+    for name, block in zip(names, landings):
+        if block:
             print(f"\n{name}\n{block}")
     return 0
 

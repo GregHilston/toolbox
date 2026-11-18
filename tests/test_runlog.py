@@ -478,6 +478,35 @@ class ReportTest(Case):
         row = next((line for line in lines if line.startswith("#8 ")), "")
         self.assertEqual(row.split(), ["#8", "-", "-", "50s", "red", "-", "50s"], f"lines {lines}")
 
+    def landing(self, steps: list[dict], *args: str) -> list[str]:
+        path = self.root / "logs" / "fakerepo" / "steps.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\n".join(json.dumps(e) for e in FAKE + steps) + "\n")
+        lines = self.printed("steps", *args).splitlines()
+        return lines[next(i for i, line in enumerate(lines) if line.startswith("landing steps")) + 1:]
+
+    def test_a_ticketless_step_joins_its_lanes_ticket_and_lanes_never_merge(self) -> None:
+        rows = self.landing([
+            event(T0 + 10, "land_step", lane="gk-7", ticket="7", step="precheck", seconds=30, ok=True),
+            event(T0 + 11, "land_step", lane="gk-7", step="push", seconds=3, ok=True),
+            event(T0 + 12, "land_step", lane="train1", step="land_check", seconds=40, ok=True),
+            event(T0 + 13, "land_step", lane="train2", step="land_check", seconds=50, ok=True),
+            event(T0 + 14, "land_step", lane="", step="push", seconds=5, ok=True)])
+        self.assertEqual([r.split()[0] for r in rows], ["#7", "train1", "train2", "wt"], rows)
+        self.assertEqual(rows[0].split(), ["#7", "30s", "-", "-", "3s", "33s"], rows)
+
+    def test_a_bad_seconds_value_skips_the_step(self) -> None:
+        rows = self.landing([
+            event(T0 + 10, "land_step", ticket="7", step="precheck", seconds="n/a", ok=True),
+            event(T0 + 11, "land_step", ticket="7", step="push", seconds=3, ok=True)])
+        self.assertEqual(rows[0].split(), ["#7", "-", "-", "-", "3s", "3s"], rows)
+
+    def test_since_drops_older_landing_steps(self) -> None:
+        rows = self.landing([
+            event(T0 + 10, "land_step", ticket="7", step="push", seconds=3, ok=True),
+            event(T0 + 9000, "land_step", ticket="8", step="push", seconds=4, ok=True)], "--since", str(T0 + 5000))
+        self.assertEqual([r.split()[0] for r in rows], ["#8"], rows)
+
 
 if __name__ == "__main__":
     unittest.main()

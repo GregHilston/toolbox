@@ -41,7 +41,13 @@ class ReportTest(unittest.TestCase):
         rows[0]["ticket"] = rows[1]["ticket"] = "1564"
         out = gateslot.report([json.dumps(r) for r in rows])
         self.assertIn("no tickets in the log; 3 gates", out)
-        self.assertIn("#1564 2 gates (1 landing), wait 1 min, run 3 min", out)
+        self.assertIn("by ticket: #1564 2 gates (1 landing), wait 1 min, run 3 min", out)
+        self.assertEqual(out.count("#"), 1, f"a ticketless gate was named: {out}")
+
+    def test_an_int_ticket_names_its_gates(self) -> None:
+        row = json.loads(gate("/a", 0, 0))
+        row["ticket"] = 7
+        self.assertIn("#7 1 gates (0 landing)", gateslot.report([json.dumps(row)]))
 
 
 class Python39Test(unittest.TestCase):
@@ -95,16 +101,25 @@ class SlotCase(unittest.TestCase):
         self.addCleanup(os.chdir, cwd)
         return repo
 
-    def test_the_row_names_the_ticket_from_the_environment_or_unpushed_commits(self) -> None:
+    def test_the_row_names_the_newest_unpushed_ticket_or_none(self) -> None:
         repo = self.repo()
-        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty",
-                        "-m", "feat: a thing (#1564)"], cwd=repo, check=True)
+        git = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
+        remote = self.root / "remote.git"
+        subprocess.run([*git, "init", "-q", "--bare", str(remote)], check=True)
+        subprocess.run([*git, "remote", "add", "origin", str(remote)], cwd=repo, check=True)
+        for msg in ("feat: pushed (#5)", "push", "feat: older (#6)", "fix: newer (#9)", "chore: no ticket"):
+            cmd = ["push", "-q", "origin", "HEAD:refs/heads/main"] if msg == "push" else \
+                ["commit", "-q", "--allow-empty", "-m", msg]
+            subprocess.run([*git, *cmd], cwd=repo, check=True)
         with mock.patch.dict(os.environ, {"RUN_LOG_TICKET": "77"}):
             gateslot.main(["--", "./verify.sh"])
         with mock.patch.dict(os.environ, {"RUN_LOG_TICKET": ""}):
             gateslot.main(["--", "./verify.sh"])
+            subprocess.run([*git, "push", "-q", "origin", "HEAD:refs/heads/main"], cwd=repo, check=True)
+            gateslot.main(["--", "./verify.sh"])
         rows = [json.loads(line) for line in gateslot.LOG.read_text().splitlines()]
-        self.assertEqual([r.get("ticket") for r in rows], ["77", "1564"], rows)
+        self.assertEqual([r.get("ticket") for r in rows], ["77", "9", None], rows)
+        self.assertNotIn("ticket", rows[2], f"a pushed branch wrote a ticket key: {rows[2]}")
 
     def test_a_whole_gate_on_a_clean_tree_marks_it_passed(self) -> None:
         self.repo()

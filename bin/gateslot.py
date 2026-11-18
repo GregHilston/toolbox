@@ -15,7 +15,11 @@ Each slot is a flock'd file, so a crashed holder frees its slot by dying.
 
 GATE_SLOTS sets the count (default 2); 0 turns the queue off. Callers set
 `gate.code` on the yielded object so the run log can record how it ended.
-Each row names its ticket: `RUN_LOG_TICKET`, else the newest `(#N)` in unpushed commits.
+Each row names its ticket where it can: `RUN_LOG_TICKET`, else the newest `(#N)`
+in unpushed commits (git log lists newest first). Rows from before this, and
+gates on a branch with no such commit, name none. A landing gate on a local
+main that holds unpushed merges takes the last merged ticket. Only this file's
+`--report` reads the field; run-report.py still names gates by worktree.
 """
 
 from __future__ import annotations
