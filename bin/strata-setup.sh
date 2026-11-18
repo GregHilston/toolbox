@@ -40,8 +40,10 @@ build=()
 
 # Setup rewrites the config on every run, so these go back on after it.
 config=$(ls "$DIR"/strata-*.json | head -1)
+# fp16 Metal decode (v0.2.13 default) changes answers.
 jq '. + {lazy_load: true, idle_unload_s: 1800, reasoning_effort: "medium",
          reasoning_budget_tokens: 16384}
+        | .env += {STRATA_METAL_F16: "0"}
         | .args |= (index("--max-context") as $i | .[$i + 1] = "262144")' "$config" >"$config.tmp"
 mv "$config.tmp" "$config"
 ln -sfn "$config" "$DIR/strata.json"
