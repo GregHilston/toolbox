@@ -46,9 +46,15 @@ fi
 # This works universally across Cocoa, Electron, and other app frameworks — unlike
 # the per-app AppleScript scripting bridge (e.g. `miniaturized` only works in apps
 # like Firefox that implement the NSWindow scripting dictionary).
+# Over SSH, System Events never answers.
+if [[ -n ${SSH_CONNECTION-} ]]; then
+  echo "[aerospace] over ssh, skipping minimized windows"
+  echo "[]" > "$MINIMIZED_FILE"
+else
 osascript -e '
 set output to "["
 set needComma to false
+with timeout of 10 seconds
 tell application "System Events"
   set allProcs to every process whose background only is false
   repeat with proc in allProcs
@@ -66,9 +72,11 @@ tell application "System Events"
     end try
   end repeat
 end tell
+end timeout
 set output to output & "]"
 return output
 ' > "$MINIMIZED_FILE" 2>/dev/null || echo "[]" > "$MINIMIZED_FILE"
+fi
 
 # Save focused workspace so we can return the user to where they were
 FOCUSED=$(aerospace list-workspaces --focused 2>/dev/null || echo "")
