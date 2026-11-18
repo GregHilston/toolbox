@@ -50,6 +50,7 @@ in {
       obsidian
       vlc
       godot_4
+      herdr-desktop
       xclip # X11 clipboard utility
 
       # Voice input — hold Caps Lock to dictate. Local speech-to-text (Whisper /

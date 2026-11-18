@@ -60,6 +60,7 @@
     casks = [
       # Core
       "ghostty"
+      "herdr-app" # Herdr desktop app; the herdr brew is the TUI
       "firefox"
       "visual-studio-code"
       "1password"
