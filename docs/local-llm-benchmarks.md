@@ -41,6 +41,30 @@ unchanged.
 
 ---
 
+## 2026-11-18: Strata 0.2.15 on moria, 262144 context — rolled back to 0.2.6
+Strata `c7757280` (v0.2.15), served at `--max-context 262144` (the engine reports `n_ctx`
+262144; setup's wizard keeps 65536 and notes "measured on the Mac up to 32768"). Same
+IQ3_S pack, no new download. Run from a copy of `dot/omlx/bench/` pointed at port 8080,
+cold prompts with a nonce, swap steady at 11.8 of 13.3 GB for every run (other apps, not
+Strata). **Rolled back to 4b9e05a2 (v0.2.6, 65536) because the no-hint CRUD rule failed.**
+| measure | v0.2.6 (2026-10-26/27) | v0.2.15 |
+|---|---|---|
+| prefill 64K | 240 tok/s (287-317 quiet) | 506 tok/s, TTFT 126 s |
+| prefill 128K | not run | 392 tok/s, TTFT 326 s |
+| prefill 200K | not run | 405 tok/s, TTFT 493 s |
+| `bench.py` decode median | 59.7 quiet (35.6 swapped) | 52.4 (code 55.2, prose 48.5, qa 53.6) |
+| CRUD, no hints, temp 1.0 | 3 of 3 (greedy, `node:sqlite`) | 1 of 3; the other two hit `better-sqlite3` 11 failing to build on Node 26, 16/16 after one hint |
+| CRUD, no hints, temp 0 | not run | 0 of 3 (15/16, `ui_create`); 16/16 after one or two hints |
+| same-conversation prefix reuse | not measured | 60K prompt TTFT 119 s, plus one short turn 0.41 s |
+| sampling (temp 1.0, seeds 1 and 2) | identical (greedy) | different outputs |
+- Sampling works on the Mac now, so the 2026-10-26 "3 of 3" was greedy luck: those runs
+  never saw the `better-sqlite3` trap that the A3B hit. The temp-0 runs still miss one UI
+  check at v0.2.15, so this is not sampling alone.
+- 0.2.6's CRUD ran on an older Node; moria is on Node 26.13.1 now, where `better-sqlite3`
+  11 fails to compile. Re-run both versions on the same Node before blaming the engine.
+- Branch `strata-v0215` in `~/Git/toolbox-worktrees/strata-v0215` holds the pin and the
+  context line for a retry. The live service is on v0.2.6 at 65536.
+
 ## 2026-10-26: Strata, Qwen3.8-Flash-Next IQ3_S — adopted as the heavy model
 
 Not oMLX: [Strata](https://github.com/Niko1221/Strata) at `4b9e05a2`, a llama.cpp/ggml fork
