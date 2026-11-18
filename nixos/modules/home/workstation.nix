@@ -41,6 +41,16 @@ in {
       no_integration_check = true;
     };
   };
+  # GitHub-like reading; variables only, per crit's README.
+  # Palettes set code bg to page bg; mix one apart.
+  home.file.".crit/custom.css".text = ''
+    :root {
+      --crit-font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    }
+    :root[data-crit-palette] {
+      --crit-editor-code-bg: color-mix(in srgb, var(--crit-palette-fg) 7%, var(--crit-palette-bg));
+    }
+  '';
 
   # Searxngr config — single source of truth is dot/searxngr-config, stowed on
   # both platforms so the two never drift. The binary itself is installed via

@@ -17,6 +17,14 @@
   # the same everywhere.
   npmPrefix = "${config.home.homeDirectory}/.npm-global";
   ccstatuslineBin = "${npmPrefix}/bin/ccstatusline";
+
+  # Each must also be in settings.json enabledPlugins.
+  claudePlugins = [
+    {
+      id = "crit@crit";
+      repo = "tomasz-tomczyk/crit";
+    }
+  ];
 in {
   # Declaratively symlink Claude Code user-level config from the toolbox repo so
   # any host that runs home-manager gets the same commands, skills, settings,
@@ -77,6 +85,25 @@ in {
       echo "Installing Claude Code via native installer (https://claude.ai/install.sh)…"
       ${pkgs.curl}/bin/curl -fsSL https://claude.ai/install.sh | ${pkgs.bash}/bin/bash \
         || echo "WARNING: Claude Code native install failed (offline?). Re-run later: curl -fsSL https://claude.ai/install.sh | bash" >&2
+    fi
+  '';
+
+  # settings.json enables plugins but never installs them.
+  home.activation.claudePluginsInstall = lib.hm.dag.entryAfter ["claudeCodeInstall" "claudeCodeSetup"] ''
+    claude=""
+    for c in "${claudeBin}" "/etc/profiles/per-user/$USER/bin/claude" "$HOME/.nix-profile/bin/claude"; do
+      [ -x "$c" ] && claude="$c" && break
+    done
+    installed="${claudeDir}/plugins/installed_plugins.json"
+    if [ -n "$claude" ]; then
+      ${lib.concatMapStrings (p: ''
+        if ! ${pkgs.jq}/bin/jq -e '.plugins["${p.id}"]' "$installed" >/dev/null 2>&1; then
+          echo "Installing Claude Code plugin ${p.id}…"
+          { "$claude" plugin marketplace add ${p.repo} && "$claude" plugin install ${p.id}; } >/dev/null \
+            || echo "WARNING: plugin ${p.id} install failed (offline?). Re-run: claude plugin install ${p.id}" >&2
+        fi
+      '')
+      claudePlugins}
     fi
   '';
 
