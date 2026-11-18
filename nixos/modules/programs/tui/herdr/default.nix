@@ -1,7 +1,8 @@
 # nixos/modules/programs/tui/herdr/default.nix
 #
 # Config only. The binary comes from Homebrew on Macs and systemPackages on
-# NixOS. Config is stow-managed from dot/herdr.
+# NixOS. Config is stow-managed from dot/herdr and,
+# for the desktop app on Macs, dot/herdr-app.
 {
   lib,
   pkgs,
@@ -15,6 +16,12 @@
       # ~/.config/herdr, which must not land in this repo's working tree.
       ${pkgs.stow}/bin/stow -v --no-folding -t "$HOME" herdr 2>&1 \
         || echo "stow: conflict for herdr: remove ~/.config/herdr/config.toml then re-run home-manager"
+    fi
+    # Desktop app keys are cmd-based: Macs only.
+    if [ "$(uname)" = Darwin ] && [ -d "$DOTFILES/herdr-app" ]; then
+      cd "$DOTFILES"
+      ${pkgs.stow}/bin/stow -v --no-folding -t "$HOME" herdr-app 2>&1 \
+        || echo "stow: conflict for herdr-app: remove ~/.config/herdr-app/keys.json then re-run home-manager"
     fi
   '';
 }

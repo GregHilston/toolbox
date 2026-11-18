@@ -1,0 +1,3 @@
+# herdr-app check writes these.
+jsconfig.json
+*.d.ts

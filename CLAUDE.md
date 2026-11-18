@@ -148,6 +148,7 @@ Herdr runs on every host: Homebrew on Macs, nix on NixOS, config in `dot/herdr/`
 - `dot/claude/.claude/hooks/herdr-subagent.sh` gives each Agent-tool subagent a tab and sidebar row. It exits at once outside Herdr. Its task and model come from Claude's undocumented `subagents/agent-<id>.meta.json`.
 - Subagent tabs only show a transcript. For a session agents can message, `skills/herdr` wraps `herdr --skill` (`agent start`, `agent prompt`, `agent read`).
 - Never leave Herdr's integrations checked on its first-run screen or run `herdr integration install`: they write through the symlinks into this repo. `onboarding = false` in the config hides that screen.
+- The desktop app's keys and the `Ctrl+B` prefix mod (`tmux-prefix`, zellij's tmux mode) live in `dot/herdr-app/`, stowed on Macs only. The app recreates a missing `keys.json` at once, so replace a real one with `ln -sfh` then `mv -f`, not `rm` then stow.
 - Restart the server after changing `keys.prefix`; `herdr server reload-config` did not make a new prefix work on 2026-10-30.
 - Before binding a key, check `dot/aerospace/.aerospace.toml` and `dot/zellij/` for it. AeroSpace owns `Alt` and `Alt+Shift`, zellij owns `Ctrl+B`, so Herdr's direct keys are `Ctrl+Alt`. `Ctrl+Alt+/` pops up `cheatsheet.txt`; update it with each binding.
 - Anything in `.zshrc` that takes the terminal belongs above p10k's instant prompt: on 2026-11-12, a Herdr started below it never drew.
