@@ -495,6 +495,18 @@ class ReportTest(Case):
         self.assertEqual([r.split()[0] for r in rows], ["#7", "train1", "train2", "wt"], rows)
         self.assertEqual(rows[0].split(), ["#7", "30s", "-", "-", "3s", "33s"], rows)
 
+    def test_a_lane_with_two_tickets_keeps_a_ticketless_step_on_its_own_row(self) -> None:
+        rows = self.landing([
+            event(T0 + 10, "land_step", lane="gk", ticket="5", step="precheck", seconds=30, ok=True),
+            event(T0 + 11, "land_step", lane="gk", ticket="9", step="precheck", seconds=20, ok=True),
+            event(T0 + 12, "land_step", lane="gk", step="push", seconds=3, ok=True)])
+        self.assertEqual([r.split()[0] for r in rows], ["#5", "#9", "gk"], rows)
+        self.assertEqual(rows[1].split(), ["#9", "20s", "-", "-", "-", "20s"], rows)
+
+    def test_an_unknown_step_gets_its_own_column(self) -> None:
+        lines = self.landing([event(T0 + 10, "land_step", ticket="7", step="import", seconds=8, ok=False)])
+        self.assertEqual(lines[0].split(), ["#7", "-", "-", "-", "-", "8s", "red", "8s"], lines)
+
     def test_a_bad_seconds_value_skips_the_step(self) -> None:
         rows = self.landing([
             event(T0 + 10, "land_step", ticket="7", step="precheck", seconds="n/a", ok=True),

@@ -734,12 +734,16 @@ LAND_STEPS = ["precheck", "rebase", "land_check", "push"]
 def landing_steps(events: list[dict]) -> str:
     """Seconds in each `land_step` per ticket, a step that failed marked red.
 
-    A step with no ticket takes its lane's ticket from another step, else is
+    A step with no ticket takes its lane's ticket when the lane has exactly one, else is
     its own lane's (or worktree's) row; one with neither is skipped, as is a
-    `seconds` that is not a number.
+    `seconds` that is not a number. Steps outside LAND_STEPS get columns after them.
     """
     steps = [e for e in events if e["kind"] == "land_step"]
-    lane_ticket = {lane_of(e): ticket_of(e) for e in steps if lane_of(e) and ticket_of(e)}
+    seen: dict[str, set] = {}
+    for e in steps:
+        if lane_of(e) and ticket_of(e):
+            seen.setdefault(lane_of(e), set()).add(ticket_of(e))
+    lane_ticket = {lane: next(iter(t)) for lane, t in seen.items() if len(t) == 1}
     rows: dict[str, dict[str, list]] = {}
     for event in steps:
         key = ticket_of(event) or lane_ticket.get(lane_of(event)) or lane_of(event) \
@@ -753,11 +757,12 @@ def landing_steps(events: list[dict]) -> str:
         spent = rows.setdefault(key, {}).setdefault(str(event.get("step")), [0.0, True])
         spent[0] += seconds
         spent[1] = spent[1] and event.get("ok") is not False
+    names = LAND_STEPS + [s for s in dict.fromkeys(k for row in rows.values() for k in row) if s not in LAND_STEPS]
     body = []
     for key, row in rows.items():
-        cells = [human(row[s][0]) + ("" if row[s][1] else " red") if s in row else "-" for s in LAND_STEPS]
+        cells = [human(row[s][0]) + ("" if row[s][1] else " red") if s in row else "-" for s in names]
         body.append([f"#{key}" if key.isdigit() else key, *cells, human(sum(v[0] for v in row.values()))])
-    return table(["landing steps", *LAND_STEPS, "total"], body) if body else ""
+    return table(["landing steps", *names, "total"], body) if body else ""
 
 
 def log_events(path: Path) -> list[dict]:
