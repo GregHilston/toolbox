@@ -46,9 +46,10 @@ fi
 # This works universally across Cocoa, Electron, and other app frameworks — unlike
 # the per-app AppleScript scripting bridge (e.g. `miniaturized` only works in apps
 # like Firefox that implement the NSWindow scripting dictionary).
-# Over SSH, System Events never answers.
-if [[ -n ${SSH_CONNECTION-} ]]; then
-  echo "[aerospace] over ssh, skipping minimized windows"
+# Outside the GUI session (ssh, remote Herdr)
+# System Events never answers.
+if [[ $(launchctl managername 2>/dev/null) != Aqua ]]; then
+  echo "[aerospace] no GUI session, skipping minimized windows"
   echo "[]" > "$MINIMIZED_FILE"
 else
 osascript -e '
