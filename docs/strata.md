@@ -5,6 +5,8 @@ experts, 6B active) on moria, behind the gateway's `local-big`. It is a llama.cp
 with its own Metal engine, not MLX. Why this model and engine: `docs/model-evaluation.md`
 and the 2026-10-26 section of `docs/local-llm-benchmarks.md`.
 
+**Role (2026-11-18):** interactive pi, home-lab jobs and Hermes only, never a gridkeep or loser-picks lane: too slow, one request at a time. Why: `~/Git/notes/llm/local-lane-strata-basalt.md`.
+
 ## Layout
 
 | what | where |
