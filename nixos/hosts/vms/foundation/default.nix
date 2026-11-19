@@ -10,9 +10,10 @@
   networking.hostName = "foundation";
   services.openssh.enable = true;
 
-  # The Herdr phone app's key.
+  # The Pixel's keys: Herdr app, then Termux.
   users.users.${vars.user.name}.openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEi4FZc245nOdNzPYKSB7tRczEpApiiVlFWUr57w1TVI herdr-mobile"
+    "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCWQLGTzFnal+22+gs8mfvgXKpafO7SPvl3loiQ+O9M+TX8CvNNyMoksfbxVq73h/mRBqdzYkRxIIYGvIRBIrpbLjM3bwqa/jZqvVliohrmJdhPP6xDc5J4qbwc4Qr8atHxYAN0f8JiW3D68wipcgbNdZs2b/V9qA1JXMMOvZEEGYYmMqCbXxFJTOmbAnELxy8qon/D98N5BAy3FpD/WFl4CGfdeU5G4mhX6fM68fc1WbMIwcwJRRwU5F/jA3PrvkhapO3xaCSVSxd4JxV1EaQ+6D1Ru9JjWNk2Objas7CMz+N6eSd699LFAmFxoA9FUGOBY8iupdvbci9BA4GXsN2ZfhYOACMQoaNyLsqf/LnFHXluA8ALe0DPatfznyKD7fltDyYf5GDLlTybg2a5GebUFCHkiLptLW2I94eBil3L6kH+MCnZHPiHCzkeObs1Brd4T/yi18G6n+cvUD8zvL/5BqB4YUxtBR2eqOVWZpUpeEbp8mEtbZUe/CZZd6Bg+J8= pixel 8"
   ];
 
   # WSL has no kernel links; reboot check aborts.
