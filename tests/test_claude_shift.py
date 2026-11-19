@@ -256,6 +256,15 @@ class Cli(Base):
         self.arm(stops=1)
         self.assertNotIn("never run", self.run_roll().stderr)
 
+    def test_desktop_terminal_passes_the_visibility_check(self) -> None:
+        hc = script(self.tmp / "hc", FAKE_HC)
+        claude_shift.save("hc:t1", {"pane": "hc:t1", "threshold": 1000, "prompt": "go", "max_rolls": 2, "rolls": 0,
+                                    "repo": "/r", **claude_shift.RUNTIME, "stops": 1})  # fmt: skip
+        env = self.env | {"HERDR_BIN_PATH": roll.HERDR, "HC_BIN_PATH": hc, "HERDR_PANE_ID": "", "HC_TERMINAL_ID": "t1"}
+        out = subprocess.run([sys.executable, ROOT / "bin/orchestrator-roll"], capture_output=True, text=True, env=env)
+        self.assertNotIn("can't see", out.stderr)
+        self.assertIn("get t1", self.calls.read_text())
+
     def test_unknown_argument_exits_2(self) -> None:
         self.assertEqual(self.run_roll("--bogus").returncode, 2)
 
