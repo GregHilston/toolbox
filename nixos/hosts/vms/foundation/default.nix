@@ -10,6 +10,11 @@
   networking.hostName = "foundation";
   services.openssh.enable = true;
 
+  # The Herdr phone app's key.
+  users.users.${vars.user.name}.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEi4FZc245nOdNzPYKSB7tRczEpApiiVlFWUr57w1TVI herdr-mobile"
+  ];
+
   # WSL has no kernel links; reboot check aborts.
   system.autoUpgrade.allowReboot = lib.mkForce false;
 
