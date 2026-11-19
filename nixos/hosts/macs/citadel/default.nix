@@ -83,6 +83,7 @@
 
       # File transfer CLI (formula, not a cask)
       "magic-wormhole"
+
     ];
 
     casks = [
@@ -167,7 +168,95 @@
       "npm:pi-powerline-footer"
       # Runlayer MCPs, work machine only. Servers below.
       "npm:pi-mcp-adapter"
+      # Rules below. A Flash omp session read auth.json (2026-11-19).
+      "npm:@gotgenes/pi-permission-system"
     ];
+
+    # citadel's own rules: dot/pi is not stowed here, and the shared
+    # config would block headless workers on other hosts. Last match wins;
+    # toJSON sorts keys, and "*" sorts first.
+    home.file.".pi/agent/extensions/pi-permission-system/config.json".text = let
+      ask = patterns: lib.genAttrs patterns (_: "ask");
+      deny = patterns: lib.genAttrs patterns (_: "deny");
+    in
+      builtins.toJSON {
+        # Nobody answers in pi -p; deny instead of hanging.
+        promptTimeoutMs = 120000;
+        permission = {
+          "*" = "allow";
+          external_directory."*" = "ask";
+          external_directory_read = {
+            "~/Git/*" = "allow";
+            "~/.pi/agent/*" = "allow";
+          };
+          path =
+            {"*" = "allow";}
+            // deny [
+              "*.env"
+              "*.env.*"
+              "*.pem"
+              "*.key"
+              "~/.ssh/*"
+              "~/.netrc"
+              "~/.config/op/*"
+              "~/.config/gcloud/*"
+              "~/.pi/agent/auth.json"
+              "~/.omp/*"
+              "~/.claude.json"
+              "~/.claude/.credentials.json"
+              "~/Git/toolbox/nixos/secrets/*"
+            ]
+            // {"*.env.example" = "allow";};
+          write."*" = "ask";
+          bash =
+            {"*" = "allow";}
+            // ask [
+              "git commit*"
+              "git push*"
+              "gh pr create*"
+              "gh pr comment*"
+              "gh pr review*"
+              "gh pr merge*"
+              "gh pr edit*"
+              "gh issue *"
+              "gh api *"
+              "gh release *"
+              # Another agent would run outside these rules.
+              "claude *"
+              "omp *"
+              "pi *"
+              "security *"
+              # Inline code hides its paths from the gate.
+              "python -c*"
+              "python3 -c*"
+              "node -e*"
+              "node --eval*"
+              "ruby -e*"
+              "perl -e*"
+              "osascript*"
+            ]
+            // deny ["jira-rank.py*" "op *"];
+          # Reads run; anything else (send, create, edit) asks.
+          mcp =
+            {"*" = "ask";}
+            // lib.genAttrs [
+              "mcp_status"
+              "mcp_list"
+              "mcp_search"
+              "mcp_describe"
+              "*search*"
+              "*Search*"
+              "*get*"
+              "*Get*"
+              "*fetch*"
+              "*list*"
+              "*List*"
+              "*read*"
+              "*lookup*"
+              "*UserInfo*"
+            ] (_: "allow");
+        };
+      };
 
     # pi-mcp-adapter's config: the Runlayer servers Claude Code has in
     # ~/.claude.json, over the same HTTP proxy URLs. pi OAuths to Runlayer
