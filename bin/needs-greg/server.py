@@ -146,6 +146,8 @@ class Config:
     port: int = 8765
     label: str = "needs-greg"
     herdr: str = "herdr"
+    hc: str = "hc"
+    sessions: str = "hc"
     gh: str = "gh"
 
 
@@ -164,11 +166,14 @@ def load_config(path: Path) -> Config:
     repos = raw.get("repos")
     if not isinstance(repos, dict) or not repos:
         raise ConfigError("config needs a [repos] table of name = checkout path")
+    if raw.get("sessions", "hc") not in ("hc", "herdr"):
+        raise ConfigError('sessions must be "hc" or "herdr"')
     return Config(
         owner=raw["owner"], login=raw["login"], session_host=raw["session_host"],
         repos={str(k): str(v) for k, v in repos.items()},
         port=int(raw.get("port", 8765)), label=raw.get("label", "needs-greg"),
-        herdr=raw.get("herdr", "herdr"), gh=raw.get("gh", "gh"),
+        herdr=raw.get("herdr", "herdr"), hc=raw.get("hc", "hc"),
+        sessions=raw.get("sessions", "hc"), gh=raw.get("gh", "gh"),
     )
 
 
@@ -207,7 +212,13 @@ class Runner:
         return self._exec([self.cfg.gh, *args])
 
     def herdr(self, args: list[str], write: bool = False, timeout: int = 60) -> str:
-        inner = [self.cfg.herdr, *args]
+        return self._session(self.cfg.herdr, args, write, timeout)
+
+    def hc(self, args: list[str], write: bool = False, timeout: int = 60) -> str:
+        return self._session(self.cfg.hc, args, write, timeout)
+
+    def _session(self, binary: str, args: list[str], write: bool, timeout: int) -> str:
+        inner = [binary, *args]
         if self.local_session:
             argv = inner
         else:
@@ -311,6 +322,9 @@ def start(run: Runner, repo: str, number: int, model: str, url: str | None = Non
     url = url or f"https://github.com/{cfg.owner}/{repo}/issues/{number}"
     name = _slug(repo, number)
     host = "this host" if run.local_session else cfg.session_host
+    prompt = f"Greg just unblocked #{number} ({url}). Read it with its comments and start on it."
+    if cfg.sessions == "hc":
+        return _start_hc(run, repo, number, model, path, label, name, prompt, host)
     pane = "?"
     try:
         spaces = json.loads(run.herdr(["workspace", "list"]))["result"]["workspaces"]
@@ -333,13 +347,23 @@ def start(run: Runner, repo: str, number: int, model: str, url: str | None = Non
                 raise CommandError(f"Claude in pane {pane} on {host} is waiting on its folder-trust "
                                    "prompt; accept it once, and the next start works") from None
             raise
-        run.herdr(["agent", "prompt", name,
-                   f"Greg just unblocked #{number} ({url}). Read it with its comments and start on it."],
-                  write=True)
+        run.herdr(["agent", "prompt", name, prompt], write=True)
     except (CommandError, KeyError, json.JSONDecodeError) as e:
         msg = str(e)
         raise CommandError(msg if "folder-trust" in msg else
                            f"could not start a session on {host}: {msg}") from None
+    return {"ok": True, "tab": label, "workspace": repo, "agent": name}
+
+
+def _start_hc(run: Runner, repo: str, number: int, model: str, path: str,
+              label: str, name: str, prompt: str, host: str) -> dict:
+    # No parent: the session must outlive this server's terminal.
+    try:
+        run.hc(["run", "--json", "--bg", "--no-parent", "--no-notify", "--name", name,
+                "--cwd", path, "--label", f"repo={repo}", "--label", f"ticket={label}",
+                "claude", "--model", model, prompt], write=True, timeout=90)
+    except CommandError as e:
+        raise CommandError(f"could not start a session on {host}: {e}") from None
     return {"ok": True, "tab": label, "workspace": repo, "agent": name}
 
 

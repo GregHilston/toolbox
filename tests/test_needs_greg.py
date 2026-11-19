@@ -186,6 +186,7 @@ class CommandTest(unittest.TestCase):
 
     def test_start_local_uses_herdr_directly(self) -> None:
         run, rec = runner()
+        run.cfg.sessions = "herdr"
         out = self._start(run, [{"workspace_id": "w1", "label": "repo-a"}])
         self.assertEqual(out["tab"], "#12")
         self.assertEqual(rec.lines[0], "DRY herdr tab create --workspace w1 --cwd /x/repo-a --label '#12' --no-focus")
@@ -193,14 +194,36 @@ class CommandTest(unittest.TestCase):
         self.assertIn("herdr agent prompt repo-a-12", rec.lines[2])
         self.assertIn("unblocked #12 (https://example.com/i/12)", rec.lines[2])
 
+    def test_start_hc_runs_claude_with_the_prompt(self) -> None:
+        run, rec = runner()
+        out = ng.start(run, "repo-a", 12, "haiku", "https://example.com/i/12")
+        self.assertEqual((out["agent"], out["tab"]), ("repo-a-12", "#12"))
+        self.assertEqual(len(rec.lines), 1)
+        self.assertTrue(rec.lines[0].startswith(
+            "DRY hc run --json --bg --no-parent --no-notify --name repo-a-12 --cwd /x/repo-a "))
+        self.assertIn("claude --model haiku 'Greg just unblocked #12 (https://example.com/i/12)", rec.lines[0])
+
+    def test_start_hc_remote_goes_through_ssh(self) -> None:
+        run, rec = runner(host="host-b")
+        ng.start(run, "repo-a", 12, "haiku")
+        self.assertIn("DRY ssh ", rec.lines[0])
+        self.assertIn(" host-b ", rec.lines[0])
+
+    def test_sessions_defaults_to_hc_and_rejects_others(self) -> None:
+        self.assertEqual(ng.load_config(write_config(CONFIG)).sessions, "hc")
+        with self.assertRaisesRegex(ng.ConfigError, "sessions"):
+            ng.load_config(write_config('sessions = "tmux"\n' + CONFIG))
+
     def test_start_remote_goes_through_ssh(self) -> None:
         run, rec = runner(host="host-b")
+        run.cfg.sessions = "herdr"
         self._start(run, [{"workspace_id": "w1", "label": "repo-a"}])
         self.assertTrue(all(line.startswith("DRY ssh ") for line in rec.lines))
         self.assertIn(" host-b ", rec.lines[0])
 
     def test_start_creates_missing_workspace(self) -> None:
         run, rec = runner()
+        run.cfg.sessions = "herdr"
         self._start(run, [])
         self.assertIn("herdr workspace create --cwd /x/repo-a --label repo-a --no-focus", rec.lines[0])
         self.assertIn("herdr tab rename", rec.lines[1])
@@ -213,6 +236,7 @@ class CommandTest(unittest.TestCase):
 
     def test_real_start_without_pane_id_raises(self) -> None:
         run, _ = runner(dry=False)
+        run.cfg.sessions = "herdr"
         replies = iter([json.dumps({"result": {"workspaces": [{"workspace_id": "w1", "label": "repo-a"}]}}),
                         json.dumps({"result": {}})])
         with mock.patch.object(run, "_exec", side_effect=lambda *a, **k: next(replies)) as ex:
@@ -222,6 +246,7 @@ class CommandTest(unittest.TestCase):
 
     def test_start_names_the_folder_trust_prompt(self) -> None:
         run, _ = runner(dry=False)
+        run.cfg.sessions = "herdr"
         listing = json.dumps({"result": {"workspaces": [{"workspace_id": "w1", "label": "repo-a"}]}})
         tab = json.dumps({"result": {"root_pane": {"pane_id": "w1:p2"}}})
         blocked = ng.CommandError('{"error":{"code":"agent_not_ready","message":"blocked during startup"}}')
