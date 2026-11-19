@@ -42,6 +42,7 @@ When I say I'm ending the chat, or ask for a handoff, read `~/Git/toolbox/docs/c
 ## Working with me
 
 - **Sessions are ephemeral; tickets and docs are the memory.** I hate auto-compact, so never turn it on or lean on it. A long orchestrator runs in shifts (`~/Git/toolbox/docs/claude-shifts.md`): arm it with `shift-arm`, keep ticket state true as you go (`stage:*`, `needs-greg`), and when the drain message comes, park and roll rather than push on. One session reached 457k tokens on 2026-11-13 before I asked for this.
+- **Enforce a limit in code, not a prompt:** a hook, setting, label or check with a test. A prompt line is only a stopgap until that ticket lands; on 2026-11-18 and 11-19 two prompt rules didn't hold.
 - I often chat from my phone while you work: keep status updates to short bullets, lead with what changed, and give me decisions as `AskUserQuestion` picks with a recommended option first.
 - Answer a message I send mid-task in your very next reply, even if it's a short "got it, doing X after Y". I shouldn't have to repeat myself.
 - I may leave a question unanswered for hours. A pick blocks your whole session, so first start all the work that doesn't depend on it, and put a decision that can wait on its ticket instead; on 2026-11-02 an open pick idled a swarm for 1h 23m. Once I've said I'm going to bed, never use `AskUserQuestion`: take the recommended option if it can be undone, otherwise put the pick on its ticket (ask block plus Pushover), and keep going. On 2026-11-15 a late pick held a shift's roll while I slept.

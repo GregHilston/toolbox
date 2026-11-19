@@ -47,6 +47,14 @@ Toolbox changes still need Greg's OK, asked per change. While he sleeps, file th
 - A load rule names a threshold, not a host. "Keep everything on moria" put 19 Godot runs
   there, at load 50, while foundation sat at load 4.
 - Check a subagent's surprising claim before relaying it. "Luna gets no cache" was wrong.
+- Read a ticket's body before naming it as the vehicle for a plan. On 2026-11-19 "#327 is
+  the two-host pool" was wrong, and the real ticket (#355) started an hour late.
+- The watcher (`.scratch/commander-script/alerts.sh`, dungeon) exits on its first alert and
+  after its 2-hour timeout: re-arm it every time it ends. It alerts on "Needs you
+  (Commander)" and saves a `ps` snapshot on load over 32.
+- `shift-start.md` re-runs `shift-arm`, which resets the roll count, so `max_rolls` never
+  binds: a CAG that reads "roll 8/8" keeps rolling.
+- A slot cap counts sessions, not cores: watch load, not the builder count.
 - Greg asleep: no `AskUserQuestion`. Take the recommended option if it can be undone, follow
   the standing orders for money, and Pushover only what he must act on.
 
