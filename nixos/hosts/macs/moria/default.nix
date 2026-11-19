@@ -18,6 +18,7 @@ in {
     # measured 86-87 GB steady with the builder and orchestrator models both
     # resident, so nine gigabytes from a wall oMLX cannot see.
     ../../../modules/darwin/gpu-wired-limit.nix
+    ../../../modules/darwin/awake-on-ac.nix
     # FluidVoice: Caps Lock dictates; Shift/Option pick Command/Write Mode.
     ../../../modules/darwin/fluidvoice.nix
     # PI WEB — supervise pi sessions from a browser. moria only: it is the
@@ -178,4 +179,7 @@ in {
     enable = true;
     reserveGb = 16;
   };
+
+  # Orchestrators run here overnight, often lid closed.
+  custom.system.awakeOnAc.enable = true;
 }
