@@ -73,6 +73,7 @@ Read on demand, each when its trigger comes up:
 - `~/Git/toolbox/docs/claude-network-changes.md`: before any router, DHCP, DNS or Omada change (write the current value, the new one and a rollback first).
 - `~/Git/toolbox/docs/claude-herdr-and-machines.md`: starting a Herdr pane, where Claude runs, phone chats and `/resume`, citadel, moria and dungeon detail, Tailscale fixes.
 - `~/Git/toolbox/docs/claude-decision-picks.md`: visual-option grids, screenshots on tickets, pick wording, "think about it and propose".
+- `~/Git/toolbox/docs/commander.md`: when you watch orchestrators for me (commander). Every fix gets a root cause and a guard.
 
 ## Picking a model for delegated work
 
