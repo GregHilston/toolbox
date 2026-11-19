@@ -259,7 +259,7 @@ def main() -> int:
         if state["roll_id"] and alive(state["worker_pid"]):
             return refuse("a roll is already queued; end your turn and it will go ahead.")
         try:
-            herdr("agent", "get", pane)
+            status(pane)
         except (Failed, OSError, subprocess.TimeoutExpired) as e:
             return refuse(f"Herdr can't see this pane's agent: {e.args[-1]}")
         state.update(roll_id=token, roll_stops=state["stops"], worker_pid=None)
