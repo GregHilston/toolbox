@@ -12,10 +12,10 @@ An orchestrator session works in **shifts**. When its context reaches a threshol
 
 ## How it works
 
-1. **Arm.** The orchestrator runs `shift-arm --prompt '<restart message>'` from its own Bash tool. That writes `~/.cache/claude-shift/<pane>.json`, keyed by `$HERDR_PANE_ID`, which survives `/clear` while the session id does not. Defaults: drain at 250,000 tokens, at most 8 rolls. Unarmed sessions are never touched.
+1. **Arm.** The orchestrator runs `shift-arm --prompt '<restart message>'` from its own Bash tool. That writes `~/.cache/claude-shift/<pane>.json`, keyed by `$HERDR_PANE_ID` (TUI) or `hc:$HC_TERMINAL_ID` (desktop app), which survives `/clear` while the session id does not. Defaults: drain at 250,000 tokens, at most 8 rolls. Unarmed sessions are never touched.
 2. **Measure.** `dot/claude/.claude/hooks/shift-drain.py` is a Stop hook. On every stop of an armed pane it reads the transcript's tail and takes the last assistant message's `usage` (input plus cache read plus cache creation) as the context size. It costs tens of milliseconds.
 3. **Drain.** At the threshold it blocks the stop once, with instructions: start nothing new; land or park every in-flight ticket (background subagents die with `/clear`); write lessons into the repo docs and status onto the tickets; file a ticket for every bug, follow-up or unfinished piece the shift found, and split a blocked ticket's Greg-free build into its own ready ticket; then run `orchestrator-roll`. Only if, after that filing, every open ticket in the milestone needs Greg, send one Pushover listing them and stop instead (2026-11-14: a shift stopped while three spikes held agent-buildable work behind a manual step).
-4. **Roll.** `orchestrator-roll` checks the cap and launches a detached worker. It exits 0 when the roll is queued, 1 when it refuses (with the reason), and 2 for bad arguments. The worker holds `/clear` until three things are true: a Stop newer than the roll, no live `background_tasks` or `session_crons` in that Stop, and an agent that has stayed idle for 3 seconds. That way `/clear` never kills a running subagent. Then it submits `/clear` with `herdr agent prompt`, waits, and submits the restart message.
+4. **Roll.** `orchestrator-roll` checks the cap and launches a detached worker. It exits 0 when the roll is queued, 1 when it refuses (with the reason), and 2 for bad arguments. The worker holds `/clear` until three things are true: a Stop newer than the roll, no live `background_tasks` or `session_crons` in that Stop, and an agent that has stayed idle for 3 seconds. That way `/clear` never kills a running subagent. Then it submits `/clear` with `herdr agent prompt` (`hc send` in the desktop app), waits, and submits the restart message.
    - **Counting:** the roll counts only once the restart prompt is delivered.
    - **Failure:** a Herdr error body, or 20 minutes of waiting, sends a Pushover and leaves the session alone. The next Stop drains again, and the cap bounds the retries.
    - **Reaper:** while `busy` stays above 0, the worker runs `bin/roll_reap.py` every minute and logs each kill. Claude Code's task list is invisible to it, so it works on processes: a `godot`, `gate_test.sh` or `verify.sh` older than 15 min (`ROLL_REAP_GRACE`) under a scratchpad or `worktrees/` dir, descended from `claude` or orphaned, dies with its process group. Any subagent transcript written in the last 2 min (`ROLL_AGENT_QUIET`) stops all reaping. `orchestrator-roll --reap --dry-run` lists first.
@@ -41,7 +41,7 @@ orchestrator-roll          # what the drain message tells the model to run
 ## How it was checked
 
 - Opus built it on 2026-11-13. DeepSeek, Luna and Sonnet reviewed it independently, and their merged findings went into one fix round.
-- `tests/test_claude_shift.py` has 15 tests with stand-in `herdr` and `pushover` scripts.
+- `tests/test_claude_shift.py` has tests with stand-in `herdr`, `hc` and `pushover` scripts.
 - The live run used a throwaway Haiku pane: two rolls, a third block refused by the cap, and a background job that held `/clear` for 45 s until it ended.
 
 ## Known limits

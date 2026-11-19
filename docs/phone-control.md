@@ -27,8 +27,8 @@ anything that attaches to the pane survives one.
 ## herdr-core (`hc`), for the record
 
 - The Herdr TUI does not need `hc`. citadel and foundation run the TUI without it.
-- `hc` buys only the phone and desktop apps. Its `run/read/send/wait` duplicate the
-  `herdr` skill but act on `hc` terminals, so the skill stays on the TUI.
+- `hc` buys only the phone and desktop apps. Its `run/read/send/wait` do what the
+  `herdr` skill does in the TUI; the skill uses `hc` when `HC_TERMINAL_ID` is set.
 - It installs by curl into `~/.local`, outside nix, and self-updates. The phone's key
   (`herdr-mobile`) can log in to every machine that accepts it.
 - 2026-11-16: the phone app was uninstalled. `hc` was left running on moria and dungeon,

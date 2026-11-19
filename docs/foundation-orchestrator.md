@@ -14,7 +14,7 @@ Loser-picks #187. foundation is NixOS-on-WSL2 on Greg's gaming PC, reached with 
 2. Sign in to `gh`: `gh auth login -h github.com -p ssh` and pick the browser or token flow.
 3. Check the GitHub SSH key already works: `ssh -T git@github.com`. If it ever fails, add `~/.ssh/id_ed25519.pub` to GitHub under Settings, SSH keys.
 4. Approve and run the rebuild below, in a window when he isn't gaming.
-5. Join Herdr to moria's server: run `herdr machine add` as the Herdr docs say, on moria for foundation.
+5. Join Herdr to moria's server: run `hc machine add` (desktop app) or `herdr machine add` (TUI) as the Herdr docs say, on moria for foundation.
 6. Keep WSL awake and Windows from sleeping, from PowerShell (see `nixos/docs/foundation-remote.md`): `Register-ScheduledTask -TaskName "WSL keepalive" -Action (New-ScheduledTaskAction -Execute "wsl.exe" -Argument "-d NixOS --exec sleep infinity") -Trigger (New-ScheduledTaskTrigger -AtLogOn)` and `powercfg /change standby-timeout-ac 0`.
 
 ## Rebuild (heavy, not while gaming)
