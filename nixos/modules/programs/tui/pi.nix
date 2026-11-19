@@ -98,6 +98,26 @@ in {
       '';
     };
 
+    # Mozilla's gateway, via its own pi package. citadel only: the key is work's.
+    otari = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Start pi on Otari through @mozilla-ai/pi-otari, with `otariModels` in
+        the Ctrl+P cycle. The key is a one-time `/login otari`.
+      '';
+    };
+
+    otariModels = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {
+        "deepseek/deepseek-v4.1-flash" = "low";
+        "deepseek/deepseek-v4-pro" = "high";
+        "moonshotai/kimi-k3.1-pro" = "high";
+      };
+      description = "Otari model ids in the Ctrl+P cycle, each with its starting thinking level.";
+    };
+
     # models.json normally comes from stow + `just secrets`, which injects the
     # gateway key as a literal. A host with no stowed dot/pi declares it here
     # instead, and pi reads the key from the environment at request time.
@@ -244,37 +264,45 @@ in {
     home.file.".pi/agent/settings.json" = {
       text = builtins.toJSON {
         defaultProvider =
-          if cfg.gateway
+          if cfg.otari
+          then "otari"
+          else if cfg.gateway
           then "litellm"
           else "omlx";
         inherit (cfg) defaultModel;
         lastChangelogVersion = "0.67.6";
-        inherit (cfg) packages;
+        packages = cfg.packages ++ lib.optional cfg.otari "npm:@mozilla-ai/pi-otari";
 
         # Which models Ctrl+P cycles through. Provider globs, same format as
         # the --models flag. `defaultProvider`/`defaultModel` above still decide
         # what a bare `pi` starts on — this only widens what you can switch TO
         # without restarting. Of the direct `omlx` provider only `localModel`
         # is cycled; the rest stay in /model.
+        # pi-otari's /scoped-models step, declared: this file is read-only.
         enabledModels =
-          if cfg.gateway
-          then
-            map (m: "litellm/${m.id}") (builtins.filter (m: !lib.hasPrefix "cloud" m.id) modelsTemplate.providers.litellm.models)
-            ++ lib.optionals (cfg.localModel != null) (
-              ["omlx/${cfg.localModel}"]
-              # 262k profile: the way round a down gateway.
-              ++ lib.optional cfg.wideFallback "omlx/${lib.removeSuffix ":lab" cfg.localModel}"
-            )
-            ++ lib.optionals cfg.deepseek ["litellm/cloud" "deepseek/*"]
-          else ["omlx/*"] ++ lib.optionals cfg.deepseek ["deepseek/*"];
+          lib.optionals cfg.otari (map (id: "otari/${id}") (builtins.attrNames cfg.otariModels))
+          ++ (
+            if cfg.gateway
+            then
+              map (m: "litellm/${m.id}") (builtins.filter (m: !lib.hasPrefix "cloud" m.id) modelsTemplate.providers.litellm.models)
+              ++ lib.optionals (cfg.localModel != null) (
+                ["omlx/${cfg.localModel}"]
+                # 262k profile: the way round a down gateway.
+                ++ lib.optional cfg.wideFallback "omlx/${lib.removeSuffix ":lab" cfg.localModel}"
+              )
+              ++ lib.optionals cfg.deepseek ["litellm/cloud" "deepseek/*"]
+            else ["omlx/*"] ++ lib.optionals cfg.deepseek ["deepseek/*"]
+          );
 
         # Local Qwen models have no reasoning flag, so pi sends no level.
         defaultThinkingLevel = "off";
-        modelThinkingLevels = lib.optionalAttrs cfg.deepseek ({
-            "deepseek/deepseek-flash" = "low";
-            "deepseek/deepseek-v4-pro" = "high";
-          }
-          // lib.optionalAttrs cfg.gateway {"litellm/cloud" = "low";});
+        modelThinkingLevels =
+          lib.optionalAttrs cfg.deepseek ({
+              "deepseek/deepseek-flash" = "low";
+              "deepseek/deepseek-v4-pro" = "high";
+            }
+            // lib.optionalAttrs cfg.gateway {"litellm/cloud" = "low";})
+          // lib.optionalAttrs cfg.otari (lib.mapAttrs' (id: level: lib.nameValuePair "otari/${id}" level) cfg.otariModels);
 
         compaction.modelOverrides = lib.genAttrs smallWindowModels (_: {
           reserveTokens = 8192;

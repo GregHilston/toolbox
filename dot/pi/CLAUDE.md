@@ -611,6 +611,10 @@ citadel does not use the home lab's LiteLLM gateway at all: `custom.programs.pi.
 provider from its `models.json`. The gateway's master key can reach DeepSeek, so
 keeping it off citadel is what keeps that path closed too.
 
+### citadel starts on Otari instead
+
+`custom.programs.pi.otari = true` (citadel only) loads Mozilla.ai's `@mozilla-ai/pi-otari` and starts pi on `otari/deepseek/deepseek-v4.1-flash`, on Mozilla's bill. `otariModels` in pi.nix lists the Ctrl+P models; the package's `/scoped-models` step is declared there because `settings.json` is read-only. The key is a one-time `/login otari`, stored in `auth.json`, which is gitignored and exists only on citadel. That is not the DeepSeek `/login` trap below: this key has no other home. The package also brings Otari-run web search and `.otari/guardrails.yml` hooks (only when the `otari` CLI is on `PATH`). pi has no OS sandbox here, so whatever it reads goes to Otari: keep it out of repos with live secrets until a canary passes.
+
 ### Do not `/login deepseek`
 
 Credential resolution is `--api-key` → `auth.json` → env var → `models.json`. A
