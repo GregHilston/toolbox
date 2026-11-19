@@ -364,7 +364,8 @@ in {
           # future extensions' output too, not just this one's.
           layout = {
             left = ["model" "thinking" "shell_mode" "queue"];
-            right = ["context_pct" "token_in" "token_out"];
+            # Otari bills, so citadel shows it.
+            right = ["context_pct" "token_in" "token_out"] ++ lib.optional cfg.otari "cost";
             secondary = ["extension_statuses"];
           };
         };
