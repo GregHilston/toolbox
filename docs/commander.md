@@ -16,12 +16,15 @@ it got stuck, and makes that harder or impossible to happen again.
    setting you can change. "It was idle" is a symptom; "its wait depended on a notification
    that a Claude restart drops" is a cause. Check it against evidence (screen, logs, code)
    before writing it down.
-3. **Add a guard,** the strongest one that's cheap enough:
-   - a code fix with a test that fails first (best);
-   - a ticket in the repo that owns the cause, at a priority that matches the cost of a
-     stall, with the evidence in its body;
-   - a line in the repo's orchestrator docs or the restart prompt (weakest: on 2026-11-18,
-     a prompt rule against high load didn't hold).
+3. **Add a guard in code, not in a prompt.** Greg, 2026-11-19: enforce a limit in code
+   rather than by telling an orchestrator. In order of preference:
+   - a code fix with a test that fails first;
+   - a ticket in the repo that owns the cause for that fix, at a priority that matches the
+     cost of a stall, with the evidence in its body. Hooks, settings, labels and checks in
+     the status call all count as code;
+   - a line in the orchestrator docs or the restart prompt, only as a stopgap until that
+     ticket lands, never on its own. Prompt rules failed twice in one night: high load on
+     2026-11-18, holding builders for a gate on 2026-11-19.
 4. **Record it** in the table below, and in the night's lessons file.
 
 Toolbox changes still need Greg's OK, asked per change. While he sleeps, file them in
