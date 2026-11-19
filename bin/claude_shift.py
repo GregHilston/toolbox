@@ -52,7 +52,11 @@ class Invalid(Exception):
 
 
 def pane() -> str | None:
-    return os.environ.get("HERDR_PANE_ID") or None
+    # the desktop app's terminals set HC_*, not HERDR_*
+    if os.environ.get("HERDR_PANE_ID"):
+        return os.environ["HERDR_PANE_ID"]
+    terminal = os.environ.get("HC_TERMINAL_ID")
+    return f"hc:{terminal}" if terminal else None
 
 
 def state_path(pane_id: str) -> Path:

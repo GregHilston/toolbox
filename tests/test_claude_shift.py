@@ -36,6 +36,13 @@ case "$1 $2" in
   echo '{"result":{"type":"ok"}}' ;;
 esac
 """
+FAKE_HC = """#!/bin/sh
+echo "$*" >> "$CALLS"
+case "$1" in
+get) printf '{"address":"%s","status":{"app":"claude-code","state":"%s"}}\\n' "$2" "$(cat "$STATUS")" ;;
+send) echo '{"ok":true}' ;;
+esac
+"""
 FAKE_PUSHOVER = """#!/bin/sh
 echo "$2" >> "$PUSHES"
 echo '<Response [200]>'
@@ -210,6 +217,21 @@ class Worker(Base):
         claude_shift.state_path(PANE).unlink()
         self.assertFalse(any("prompt" in c for c in self.run_worker()))
         self.assertEqual(self.pushes.read_text(), "")
+
+
+class HcWorker(Base):
+    def test_desktop_terminal_rolls_through_hc(self) -> None:
+        self.patch(roll, "HC", script(self.tmp / "hc", FAKE_HC))
+        self.patch(os.environ, "HERDR_PANE_ID", "", item=True)
+        self.patch(os.environ, "HC_TERMINAL_ID", "t1", item=True)
+        pane = claude_shift.pane()
+        self.assertEqual(pane, "hc:t1")
+        base = {"pane": pane, "threshold": 1000, "prompt": "go", "max_rolls": 2, "rolls": 0, "repo": "/r", **claude_shift.RUNTIME}
+        claude_shift.save(pane, base | {"roll_id": TOKEN, "roll_stops": 1, "stops": 2, "announced": "s1", "tokens": 5000})
+        roll.worker(pane, TOKEN)
+        sends = [c for c in self.calls.read_text().splitlines() if c.startswith("send")]
+        self.assertEqual(sends, ["send t1 /clear --json", "send t1 go --json"])
+        self.assertEqual(claude_shift.load(pane)["rolls"], 1)
 
 
 class Cli(Base):

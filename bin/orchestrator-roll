@@ -34,6 +34,7 @@ import roll_reap
 from claude_shift import log, notify, short
 
 HERDR = os.environ.get("HERDR_BIN_PATH") or "herdr"
+HC = os.environ.get("HC_BIN_PATH") or "hc"
 IDLE = ("idle", "done")
 DRAIN_TIMEOUT = 20 * 60
 CLEAR_TIMEOUT = 120
@@ -64,8 +65,31 @@ def herdr(*args: str, timeout: float = 60) -> dict:
     return body
 
 
+def hc(*args: str, timeout: float = 120) -> dict:
+    """Run hc (the Herdr desktop app's CLI) and return its JSON."""
+    out = subprocess.run([HC, *args, "--json"], capture_output=True, text=True, timeout=timeout)
+    text = (out.stdout or out.stderr).strip()
+    if out.returncode:
+        raise Failed("hc", short(f"hc {' '.join(args[:2])}: {text}"))
+    try:
+        return json.loads(text) if text else {}
+    except ValueError:
+        return {}
+
+
 def status(pane: str) -> str:
+    if pane.startswith("hc:"):
+        return (hc("get", pane[3:]).get("status") or {}).get("state", "")
     return herdr("agent", "get", pane)["result"]["agent"]["agent_status"]
+
+
+def prompt(pane: str, text: str, wait: bool = False) -> None:
+    if pane.startswith("hc:"):
+        hc("send", pane[3:], text)
+    elif wait:
+        herdr("agent", "prompt", pane, text, "--wait", "--until", "working", "--timeout", "30000", timeout=60)
+    else:
+        herdr("agent", "prompt", pane, text)
 
 
 def current(pane: str, token: str) -> dict:
@@ -139,7 +163,7 @@ def worker(pane: str, token: str) -> None:
         with claude_shift.locked(pane):
             current(pane, token)  # --off may have cancelled
             log(pane, step)
-            herdr("agent", "prompt", pane, "/clear")
+            prompt(pane, "/clear")
             state = current(pane, token)
             drained = f"{state['tokens'] // 1000}k tokens" if state["tokens"] else "unknown tokens"
             state.update(announced=None, tokens=None, busy=0)
@@ -149,8 +173,7 @@ def worker(pane: str, token: str) -> None:
         step = "sending the restart prompt"
         log(pane, step)
         try:
-            herdr("agent", "prompt", pane, state["prompt"], "--wait", "--until", "working",
-                  "--timeout", "30000", timeout=60)  # fmt: skip
+            prompt(pane, state["prompt"], wait=True)
         except Failed as e:
             if e.args[0] not in ("timeout", "agent_prompt_stalled"):
                 raise
@@ -217,7 +240,7 @@ def main() -> int:
 
     pane = claude_shift.pane()
     if not pane:
-        return refuse("HERDR_PANE_ID is unset; run this inside the armed Herdr pane.")
+        return refuse("HERDR_PANE_ID and HC_TERMINAL_ID are unset; run this inside the armed Herdr pane or hc terminal.")
     token = uuid.uuid4().hex
     with claude_shift.locked(pane):
         try:

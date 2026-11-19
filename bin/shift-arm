@@ -4,7 +4,7 @@
 Once armed, the Stop hook shift-drain.py tells the session to drain when its
 context passes the threshold, and `orchestrator-roll` then /clears it and
 submits the restart prompt. Run it from the session's own Bash tool, so
-HERDR_PANE_ID names its pane. The pane stays armed across rolls. Re-arming
+HERDR_PANE_ID (or the desktop app's HC_TERMINAL_ID) names its pane. The pane stays armed across rolls. Re-arming
 keeps the roll count, so a restarted session can't escape --max-rolls; `--off`
 resets it and cancels a queued roll.
 """
@@ -29,7 +29,7 @@ def main() -> int:
 
     pane = claude_shift.pane()
     if not pane:
-        print("shift-arm: HERDR_PANE_ID is unset; run this inside a Herdr pane.", file=sys.stderr)
+        print("shift-arm: HERDR_PANE_ID and HC_TERMINAL_ID are unset; run this inside a Herdr pane or hc terminal.", file=sys.stderr)
         return 1
     with claude_shift.locked(pane):
         if args.off:
