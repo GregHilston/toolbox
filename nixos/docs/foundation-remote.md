@@ -18,3 +18,12 @@ foundation is NixOS-on-WSL2 on Greg's Windows gaming PC (Ryzen 7 5800X, 64 GB, R
 5. Once Tailscale in WSL works, remove the portproxy (`netsh interface portproxy delete v4tov4 listenport=2222 listenaddress=0.0.0.0`) and the 2222 firewall rule, update the loser-picks `CLAUDE.md` "Machines" line, and drop `sshPort` from foundation in `config/vars.nix`.
 
 Untested as a whole; the parts are standard WSL and Windows features.
+
+## Herdr desktop app on the Windows side (2026-11-18)
+
+The Windows app runs its own `hc`, which lists three machines, all added with `--via`:
+
+- `foundation-wsl`: `wsl.exe -d NixOS -e sh -lc`, a pipe into WSL that needs no network or sshd.
+- `moria`, `dungeon`: scoop's `ssh.exe -o BatchMode=yes <host>`, over Windows' own Tailscale. Short names resolve on Windows; the `*ts` aliases don't.
+
+Windows had no SSH client, so `scoop install openssh` added one. `hc machine add moria` (plain ssh) still failed with "program not found" after that, even after a server restart, so the full ssh path goes in `--via`. The key is `C:\Users\ghilston\.ssh\id_rsa`, the same `foundation` key WSL uses. citadel is left out: it accepts no inbound SSH.
