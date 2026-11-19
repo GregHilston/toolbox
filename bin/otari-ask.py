@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["rich"]
+# dependencies = []
 # ///
 """Ask a sandboxed DeepSeek worker on Mozilla's Otari gateway, in a session you can ask again.
 
@@ -9,15 +9,9 @@
     otari-ask.py --session review-42 "Defend finding 3 or drop it"
     otari-ask.py --session pg-18 --web "What changed in PostgreSQL 18 logical replication?"
     otari-ask.py "How do I start aerospace in the background?"    # names the session for you
-    otari-ask.py -c "And at login?"                               # follows up your last one
 
-In a terminal the answer streams in, rendered as markdown a paragraph at a
-time, with tool calls dimmed and a status line while it thinks; piped, as
-under Claude Code, only the final answer prints. Only terminal runs set the
-session -c continues, so agents never move it. When stdin is a terminal too,
-a > prompt follows each answer: type a follow-up, or Ctrl-D to quit;
-Ctrl-C stops an answer and returns to the prompt. No --dir means --web: an
-empty scratch dir has nothing to leak.
+For agents. To chat with Otari yourself, run pi: on citadel it starts there.
+No --dir means --web: an empty scratch dir has nothing to leak.
 
 Citadel only: headless Claude Code on Otari with the work key, from
 $OTARI_API_KEY or nixos/secrets/work.env (`just secrets`). The worker gets its
@@ -83,8 +77,6 @@ NOT_SECRET = ("*.example", "*.sample", "*.template", "*.dist", "*.defaults", "*.
 SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", ".next", "dist", "build", "target"}
 # WebFetch runs here: keep it off the tailnet.
 PRIVATE_DOMAINS = ("grehg2.xyz", "*.grehg2.xyz", "*.ts.net", "*.local", "*.lan", "*.internal", "*.home.arpa")
-# The session -c continues.
-LAST_FILE = "last"
 # Nothing personal reaches the worker.
 KEPT_ENV = ("PATH", "LANG", "LC_ALL", "TERM", "USER", "LOGNAME", "SHELL", "TZ")
 
@@ -230,99 +222,11 @@ def brief(value, width: int = 100) -> str:
     return text if len(text) <= width else text[: width - 1] + "…"
 
 
-def split_blocks(text: str) -> tuple[list[str], str]:
-    """Finished markdown blocks, and the unfinished rest."""
-    blocks, block, fence = [], [], None
-    *lines, rest = text.split("\n")
-    for line in lines:
-        mark = line.lstrip()[:3]
-        if mark in ("```", "~~~") and (fence is None or mark == fence):
-            fence = None if fence else mark
-        if not line.strip() and fence is None:
-            if block:
-                blocks.append("\n".join(block))
-            block = []
-        else:
-            block.append(line)
-    return blocks, "\n".join([*block, rest])
-
-
-def markdown_printer(out):
-    """Print a block as rendered markdown, if rich is installed."""
-    try:
-        from rich.console import Console
-        from rich.markdown import Markdown
-    except ImportError:
-        return None
-    console = Console(file=out, highlight=False)
-
-    def show(block: str) -> None:
-        console.print(Markdown(block))
-        console.print()
-
-    return show
-
-
-class Live:
-    """Stream the answer to a terminal as it comes."""
-
-    def __init__(self, out, show=None) -> None:
-        self.out = out
-        self.show = show
-        self.pending = ""
-        self.at_start = True
-        self.wrote = False
-        self.has_status = False
-
-    def _clear(self) -> None:
-        if self.has_status:
-            self.out.write("\r\x1b[K")
-            self.has_status = False
-
-    def status(self, text: str) -> None:
-        """A dim line that the next output replaces."""
-        if self.at_start and not self.pending:
-            self.out.write(f"\r\x1b[2m{text}\x1b[0m\x1b[K")
-            self.out.flush()
-            self.has_status = True
-
-    def text(self, chunk: str) -> None:
-        self._clear()
-        self.wrote = True
-        if not self.show:
-            self.out.write(chunk)
-            self.out.flush()
-            self.at_start = chunk.endswith("\n")
-            return
-        blocks, self.pending = split_blocks(self.pending + chunk)
-        for block in blocks:
-            self.show(block)
-
-    def _flush(self) -> None:
-        if self.pending.strip():
-            self.show(self.pending)
-        self.pending = ""
-
-    def line(self, text: str, dim: bool = True) -> None:
-        self.end()
-        self.out.write(f"\x1b[2m{text}\x1b[0m\n" if dim else f"{text}\n")
-        self.out.flush()
-
-    def end(self) -> None:
-        self._clear()
-        self._flush()
-        if not self.at_start:
-            self.out.write("\n")
-            self.at_start = True
-        self.out.flush()
-
-
 class Tally:
     """The run's answer, cost and narration, from claude's stream-json events."""
 
-    def __init__(self, narrate, live: Live | None = None) -> None:
+    def __init__(self, narrate) -> None:
         self.narrate = narrate
-        self.live = live
         self.session_id: str | None = None
         self.result: dict | None = None
         self.text = ""
@@ -336,14 +240,8 @@ class Tally:
             inner = event.get("event") or {}
             if inner.get("type") == "message_delta" and inner.get("usage"):
                 self.cost += turn_cost(inner["usage"])
-            delta = inner.get("delta") or {}
-            if self.live and inner.get("type") == "content_block_delta" and delta.get("type") == "text_delta":
-                self.live.text(delta.get("text", ""))
         elif kind == "system" and event.get("subtype") == "init":
             self.session_id = event.get("session_id")
-        elif kind == "system" and event.get("subtype") == "thinking_tokens":
-            if self.live:
-                self.live.status(f"thinking… {event.get('estimated_tokens', 0)} tokens")
         elif kind == "assistant":
             message = event.get("message") or {}
             for block in message.get("content") or []:
@@ -450,31 +348,18 @@ def on_signal(signum: int, _frame) -> None:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    which = p.add_mutually_exclusive_group()
-    which.add_argument("--session", help="name; reuse it to follow up (default: a new ask-MMDD-HHMMSS)")
-    which.add_argument("-c", "--continue", dest="resume_last", action="store_true",
-                       help="follow up the last session run from a terminal")
+    p.add_argument("--session", help="name; reuse it to follow up (default: a new ask-MMDD-HHMMSS)")
     p.add_argument("--dir", help="repo to work in; a follow-up reuses the first turn's (default: an empty dir)")
     p.add_argument("--web", action="store_true", help="add web search (~$0.01 each) and WebFetch")
     p.add_argument("--model", default=MODEL, help=f"Otari model id (default $OTARI_MODEL, else {MODEL})")
     p.add_argument("--idle", type=int, default=300, help="kill after N silent seconds")
     p.add_argument("--max-cost", type=float, default=0.50, help="stop past $N of Otari spend (default 0.50)")
     p.add_argument("--max-turns", type=int, default=80, help="stop past N model turns (default 80)")
-    p.add_argument("--stream", action=argparse.BooleanOptionalAction, default=None,
-                   help="stream the answer as it comes (default: on in a terminal)")
-    p.add_argument("--once", action="store_true", help="answer and exit; no > prompt for a follow-up")
     p.add_argument("prompt", help="the task, or @file to read it from")
     args = p.parse_args()
 
-    tty = sys.stdout.isatty()
-    stream = tty if args.stream is None else args.stream
     cache = cache_dir()
-    if args.resume_last:
-        try:
-            args.session = (cache / LAST_FILE).read_text().strip()
-        except OSError:
-            p.error("no last session to continue; pass --session")
-    elif args.session is None:
+    if args.session is None:
         args.session = time.strftime("ask-%m%d-%H%M%S")
     if not pi_ask.SESSION_NAME.fullmatch(args.session):
         p.error("--session takes letters, digits, '.', '_' and '-', starting and ending alphanumeric")
@@ -544,130 +429,78 @@ def main() -> int:
     log_path = cache / f"{args.session}.log"
     events_path = cache / f"{args.session}.jsonl"
     log = log_path.open("a", encoding="utf-8")
-    chat = tty and stream and sys.stdin.isatty() and not args.once
-    live = Live(sys.stdout, markdown_printer(sys.stdout)) if stream else None
 
     def narrate(mark: str, text: str) -> None:
         log.write(f"{time.strftime('%H:%M:%S')} {mark} {text}\n")
         log.flush()
-        # The text itself already streamed.
-        if live and mark in "→✗":
-            live.line(f"{mark} {text}")
 
     def alert(text: str) -> None:
         narrate("!", text)
-        if live:
-            live.line(f"! {text}", dim=False)
-        else:
-            print(f"! {text}", flush=True)
+        print(f"! {text}", flush=True)
 
-    def footer() -> None:
-        again = ', or -c "..."' if tty else ""
-        print(f'=== follow up: otari-ask.py --session {args.session} "..."{again} (it runs in {workdir}) ===')
-        print(f"=== logs: {log_path} (narration), {events_path} (claude's events) ===")
-
-    def turn(prompt: str, first: bool) -> int:
-        """Run one question to its answer."""
-        global _armed, _caught
-        _caught = None
-        resuming = state.get("session_id")
-        # "--": a prompt may start with -.
-        cmd = base_cmd + (["--resume", resuming] if resuming else ["--session-id", str(uuid.uuid4())]) + ["--", prompt]
-        narrate("■", f"{'follow-up' if resuming else 'first turn'} in {workdir}{' with web' if web else ''}")
-        for sig in SIGNALS:
-            signal.signal(sig, on_signal)
-        # DEVNULL: claude -p reads piped stdin first.
-        proc = subprocess.Popen(cmd, cwd=workdir, env=worker_env(key, args.session, args.model, home, web),
-                                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=log, start_new_session=True)
-        if first:
-            print(f"otari-ask: {args.session} running in {workdir}; narration in {log_path}", flush=True)
-        if live:
-            live.status("starting…")
-            live.wrote = False
-        tally = Tally(narrate, live)
-        cut_short = None
-        started = time.monotonic()
-        try:
-            with events_path.open("ab") as raw:
-                _armed = True
-                if _caught:
-                    raise Interrupted(_caught)
-                cut_short = pump(proc, raw, tally, args, alert)
-        except Interrupted as e:
-            alert(f"{signal.Signals(e.signum).name}; stopping the worker")
-        finally:
-            _armed = False
-            # The worker has its own group, so pass our death on.
-            pi_ask.kill_group(proc)
-        code = proc.wait()
-        secs = round(time.monotonic() - started)
-        if tally.session_id:
-            state.update({"dir": str(workdir), "session_id": tally.session_id, "web": web})
-            state_path.write_text(json.dumps(state) + "\n")
-            if tty:
-                (cache / LAST_FILE).write_text(args.session + "\n")
-
-        result = tally.result or {}
-        text = result.get("result") or tally.text
-        error = None
-        if result.get("subtype") == "error_max_turns":
-            cut_short = cut_short or f"over --max-turns {args.max_turns}"
-        elif result.get("is_error") or (code and not cut_short and not _caught):
-            error = (result.get("result") or "").splitlines()[0][:200] if result.get("is_error") and result.get("result") \
-                else f"claude exited {code}; see {log_path}"
-        turns = result.get("num_turns", "?")
-        searches = f", {tally.searches} searches" if tally.searches else ""
-        narrate("■", f"done: {turns} turns{searches}, {secs}s, ${tally.cost:.4f}")
-
-        stats = f"{args.session}: {turns} turns{searches}, {secs}s, ${tally.cost:.4f} on Otari"
-        if live:
-            live.end()
-        if live and live.wrote:
-            print(f"\n=== done ({stats}) ===")
-        else:
-            print(f"\n=== answer ({stats}) ===")
-            print(text or "(no answer)")
-        if error:
-            print(f"=== the worker failed: {error} ===")
-        if cut_short:
-            print(f"=== stopped: {cut_short} ===")
-        if not chat:
-            footer()
-        if _caught:
-            if not chat:
-                print(f"=== stopped by {signal.Signals(_caught).name} ===")
-            return 128 + _caught
-        if cut_short == "stalled":
-            return 3
-        if cut_short:
-            return 4
-        if error or not text:
-            return 1
-        return 0
-
-    code = turn(prompt, first=True)
-    while chat and code != 128 + signal.SIGTERM and code != 128 + signal.SIGHUP:
-        nxt = ask_next()
-        if not nxt:
-            footer()
-            break
-        code = turn(nxt, first=False)
-    return code
-
-
-def ask_next() -> str | None:
-    """Read a follow-up at a > prompt; None ends the chat."""
-    import readline  # noqa: F401  line editing for input()
-
-    signal.signal(signal.SIGINT, signal.default_int_handler)
-    for sig in (signal.SIGTERM, signal.SIGHUP):
-        signal.signal(sig, signal.SIG_DFL)
+    global _armed
+    resuming = state.get("session_id")
+    # "--": a prompt may start with -.
+    cmd = base_cmd + (["--resume", resuming] if resuming else ["--session-id", str(uuid.uuid4())]) + ["--", prompt]
+    narrate("■", f"{'follow-up' if resuming else 'first turn'} in {workdir}{' with web' if web else ''}")
+    for sig in SIGNALS:
+        signal.signal(sig, on_signal)
+    # DEVNULL: claude -p reads piped stdin first.
+    proc = subprocess.Popen(cmd, cwd=workdir, env=worker_env(key, args.session, args.model, home, web),
+                            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=log, start_new_session=True)
+    print(f"otari-ask: {args.session} running in {workdir}; narration in {log_path}", flush=True)
+    tally = Tally(narrate)
+    cut_short = None
+    started = time.monotonic()
     try:
-        line = input("\n\x1b[1m>\x1b[0m ").strip()
-    except (EOFError, KeyboardInterrupt):
-        print()
-        return None
-    return line or None
+        with events_path.open("ab") as raw:
+            _armed = True
+            if _caught:
+                raise Interrupted(_caught)
+            cut_short = pump(proc, raw, tally, args, alert)
+    except Interrupted as e:
+        alert(f"{signal.Signals(e.signum).name}; stopping the worker")
+    finally:
+        _armed = False
+        # The worker has its own group, so pass our death on.
+        pi_ask.kill_group(proc)
+    code = proc.wait()
+    secs = round(time.monotonic() - started)
+    if tally.session_id:
+        state.update({"dir": str(workdir), "session_id": tally.session_id, "web": web})
+        state_path.write_text(json.dumps(state) + "\n")
+
+    result = tally.result or {}
+    text = result.get("result") or tally.text
+    error = None
+    if result.get("subtype") == "error_max_turns":
+        cut_short = cut_short or f"over --max-turns {args.max_turns}"
+    elif result.get("is_error") or (code and not cut_short and not _caught):
+        error = (result.get("result") or "").splitlines()[0][:200] if result.get("is_error") and result.get("result") \
+            else f"claude exited {code}; see {log_path}"
+    turns = result.get("num_turns", "?")
+    searches = f", {tally.searches} searches" if tally.searches else ""
+    narrate("■", f"done: {turns} turns{searches}, {secs}s, ${tally.cost:.4f}")
+
+    print(f"\n=== answer ({args.session}: {turns} turns{searches}, {secs}s, ${tally.cost:.4f} on Otari) ===")
+    print(text or "(no answer)")
+    if error:
+        print(f"=== the worker failed: {error} ===")
+    if cut_short:
+        print(f"=== stopped: {cut_short} ===")
+    print(f'=== follow up: otari-ask.py --session {args.session} "..." (it runs in {workdir}) ===')
+    print(f"=== logs: {log_path} (narration), {events_path} (claude's events) ===")
+    if _caught:
+        print(f"=== stopped by {signal.Signals(_caught).name} ===")
+        return 128 + _caught
+    if cut_short == "stalled":
+        return 3
+    if cut_short:
+        return 4
+    if error or not text:
+        return 1
+    return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
