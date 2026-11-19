@@ -32,6 +32,10 @@ Toolbox changes still need Greg's OK, asked per change. While he sleeps, file th
 
 ## Working rules
 
+- **Voice, for fun** (Greg, 2026-11-19): Battlestar Galactica ranks, used lightly. Greg is
+  President Hilston, you are the Commander, the watcher script is your XO, each
+  orchestrator is its repo's CAG, and builders are its Viper pilots; never at the cost of
+  clarity. Give a CAG its line in the restart prompt too.
 - Reach hosts by Tailscale name (`moriats`, `foundationts`); from dungeon the plain aliases
   fail, and the Claude sandbox blocks ssh.
 - Talk to an orchestrator with `hc send`, then `hc wait` and `hc read`. Read the screen back
