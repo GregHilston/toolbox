@@ -48,7 +48,7 @@ sleeps, file them in `.scratch/` and list them in the morning report.
 - The XO is `bin/control-loop.sh` (env `XO_HOST`, `XO_TERM`, `XO_REPO`; loser-picks on moria
   by default). It runs as its own detached process, not a Claude background task, and types
   `XO: ...` into the commander's pane: see "Commander shifts". It alerts once an hour per event
-  on a blocked or missing CAG, a question to the Commander, lost tasks, a failed roll, load over
+  on a blocked or missing CAG, a CAG idle over 20 min, a question to the Commander, lost tasks, a failed roll, load over
   32, 90 min with nothing landed, a GitHub quota under 500, and a red main open 20 min. Tickets to
   watch go in `~/.cache/control-loop/<name>/closes`, one number a line.
 - To answer a blocked pick: read the screen, move with `hc keys <t> down…`, then
@@ -151,3 +151,4 @@ second leak failed the next train; a delegated script spent the shared GitHub qu
 | 11-20 02:18 | foundation at load 0 four hours into the two-host trial | `hostpool.py` keeps every whole verify on moria (it writes counts into that tree), and builders' runs are almost all whole verifies: 5 of 806 launches went far | lp #378 (P0). Check a plan's vehicle against the ledger within its first hour, not only its ticket body |
 | 11-20 04:20 | GitHub API quota 0 of 5000 on Greg's account until 05:03, so orchestrator `gh` calls fail | The commander's subagent tested `ticket-lanes.py` (about 400 timeline calls a run) several times in an hour; nothing counted the quota the orchestrators share | `ticket-lanes` `7227530`: refuses a run that would leave under 1,500, with a test. The XO alerts once per window under 500. A delegated script that calls an API gets told the shared quota |
 | 11-20 07:30 | loser-picks landed one commit in 80 min after adopting gridkeep's landing model | Its canary holds every landing while main is red (`b9c79172`); gridkeep's never does: it bisects, files `fix(train)`, puts it first and keeps landing. No green sha was recorded, so nothing bisected | lp #393 (no hold), #394 (green sha, bisect), #395 (light check runs the count checks art and data touch). When a repo copies the other's process, diff the copy against the source's code, not its summary |
+| 11-20 13:13 | loser-picks CAG idle 82 min while three pi lanes finished | Lanes started with `nohup … &` wake nobody on exit; loser-picks has no Chief yet (lp #397, P0, unstarted), and the XO never checked for an idle CAG | `70fed5b`: the XO alerts on a CAG idle over 20 min, with a test. #397 ordered first. Watchers watch each other: `.scratch/fleet-watchers/` |
