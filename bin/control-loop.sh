@@ -113,12 +113,13 @@ while :; do
   out=$(timeout 60 ssh -o ConnectTimeout=10 "$host" "
     load=\$(uptime | sed -E 's/.*load averages?: *([0-9.]+).*/\1/')
     hc get $term --json 2>/dev/null | python3 -c '
-import json,sys
+import json,sys,time
 d=json.load(sys.stdin); s=d.get(\"status\") or {}
 load=float(sys.argv[1])
 if d.get(\"state\")!=\"live\": print(\"XO $repo: terminal\",d.get(\"state\"))
 elif s.get(\"state\")==\"blocked\": print(\"XO $repo: blocked:\",(s.get(\"msg\") or \"\")[:200])
 elif s.get(\"app\")!=\"claude-code\": print(\"XO $repo: no claude in terminal\")
+elif s.get(\"state\") in (\"done\",\"idle\") and time.time()*1000-d.get(\"status_ms\",0)>1200000: print(\"XO $repo: CAG idle over 20 min\")
 if load>32: print(\"XO $repo: load\",load)
 ' \"\$load\"
     hc read $term 2>/dev/null | tail -40 | grep -q 'Needs you (Commander)' && echo 'XO $repo: asks the commander'
