@@ -120,7 +120,8 @@ def fetch(repo, since, include_open, now):
                 keep.append(i)
         elif include_open and parse(i["createdAt"]) >= since - timedelta(days=60):
             keep.append(i)
-    check_quota(len(keep))
+    # Measured: paginated timelines cost about 3 calls each.
+    check_quota(3 * len(keep))
 
     def one(i):
         raw = json.loads(gh("api", f"repos/{slug}/issues/{i['number']}/timeline",
