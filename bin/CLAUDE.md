@@ -121,3 +121,9 @@ The `reddit` skill is the agent-facing entry.
 branch as a PR diff) are Mac-only; flags are in the root `README.md`. Our `difit.sh`
 defaults a missing target to `.` (all uncommitted changes), where upstream would show the
 last commit.
+
+## GitHub API
+
+A script that reads many issues, PRs or timelines pages through GraphQL and checks the
+shared quota first; never loop a REST call per issue. Why, and a GraphQL paging trap:
+`docs/github-api.md`.

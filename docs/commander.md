@@ -28,7 +28,9 @@ it got stuck, and makes that harder or impossible to happen again.
 4. **Record it** in the table below, and in the night's lessons file.
 
 A commander may edit and push this file without asking (Greg, 2026-11-19): root causes,
-rules and lessons. Other toolbox changes still need Greg's OK, asked per change. While he
+rules and lessons. Since 2026-11-20 a commander may also merge and push its own toolbox
+changes without asking (Greg: "approved to merge, not just this but all things"). A bulk
+GitHub read follows `docs/github-api.md`: the API quota is for development. Other toolbox changes still need Greg's OK, asked per change. While he
 sleeps, file them in `.scratch/` and list them in the morning report.
 
 ## Working rules
