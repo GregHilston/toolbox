@@ -27,8 +27,9 @@ it got stuck, and makes that harder or impossible to happen again.
      2026-11-18, holding builders for a gate on 2026-11-19.
 4. **Record it** in the table below, and in the night's lessons file.
 
-Toolbox changes still need Greg's OK, asked per change. While he sleeps, file them in
-`.scratch/` and list them in the morning report.
+A commander may edit and push this file without asking (Greg, 2026-11-19): root causes,
+rules and lessons. Other toolbox changes still need Greg's OK, asked per change. While he
+sleeps, file them in `.scratch/` and list them in the morning report.
 
 ## Working rules
 
@@ -79,3 +80,4 @@ Toolbox changes still need Greg's OK, asked per change. While he sleeps, file th
 | 11-19 10:50 | moria's load rose and loser-picks' third builder slot closed | #345's builder exited and left its load-test burners (`yes`) running: they had left the builder's process group, so `tools/pi_build.sh`'s kill on exit missed them | lp #350: a builder's exit stops every run its worktree still has, with a test |
 | 11-19 12:00 | loser-picks waited 45 min on a question to the commander | The watcher checked only `blocked`, and a question on screen leaves the terminal `working`; the orchestrator asked about a reopen rule it could have applied itself | `alerts.sh` alerts on "Needs you (Commander)"; the orchestrator reopens the slot itself after 15 min under load 24 |
 | 11-19 14:02 | moria offline 6 min, with loser-picks' orchestrator and builders on it | Its only monitor was switched off with the lid closed, so macOS clamshell-slept on AC; Vorssaint and caffeinate block only idle sleep | toolbox `d441983`: a root daemon sets `disablesleep 1` on AC and 0 on battery |
+| 11-19 16:23 | train-r1700 failed `test_gate_pool.sh` on foundation at every prefix holding lp #339 for 2.5 h; the CAG blamed Linux or load | The outer `gate_test.sh` exports `GATE_TEST_PLANT_SHARDS` (3 on 16 cores) and the untouched copy's nested test inherited it; the CAG's moria repro had no outer gate, so it passed | lp `c9e542bf`: `gate()` strips the variable from a plant's verify, with a test that fails with it set. Reproduce a gate-only failure under the gate's own env before blaming the host |
