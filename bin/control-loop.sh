@@ -151,8 +151,9 @@ if load>32: print(\"XO $repo: load\",load)
   done
   # Search ignores punctuation, so filter on the title's start.
   # A red main open 20 min means its fix is not moving (2026-11-20: two such held landings an hour each).
-  red=$(gh issue list -R "$slug" --state open --search 'in:title "fix(train):"' --json number,createdAt,title \
-    -q '.[]|select(.title|startswith("fix(train):"))|"\(.number) \(.createdAt)"' 2>/dev/null || true)
+  # CAGs also title tool bugs fix(train).
+  red=$(gh issue list -R "$slug" --state open --search 'in:title "fix(train): main is red"' --json number,createdAt,title \
+    -q '.[]|select(.title|startswith("fix(train): main is red"))|"\(.number) \(.createdAt)"' 2>/dev/null || true)
   while IFS=" " read -r n at; do
     [ -n "$n" ] || continue
     age=$(((now - $(date -j -u -f '%Y-%m-%dT%H:%M:%SZ' "$at" +%s 2>/dev/null || echo "$now")) / 60))
