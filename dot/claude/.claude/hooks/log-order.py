@@ -22,11 +22,12 @@ def main() -> None:
     if not pane:
         return
     # unlocked: shift-arm replaces the file atomically
-    log = json.loads(claude_shift.state_path(pane).read_text()).get("log")
+    state = json.loads(claude_shift.state_path(pane).read_text())
+    log = state.get("log")
     if not log:
         return
     prompt = json.load(sys.stdin).get("prompt") or ""
-    who = "XO" if prompt.startswith("XO:") else "Greg"
+    who = "restart" if prompt == state.get("prompt") else "XO" if prompt.startswith("XO:") else "Greg"
     with open(log, "a") as f:
         f.write(f"\n### {datetime.now():%Y-%m-%d %H:%M} {who}\n\n{prompt}\n")
 

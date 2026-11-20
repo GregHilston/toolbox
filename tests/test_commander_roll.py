@@ -72,6 +72,11 @@ class OrderHook(Commander):
         self.assertIn("\nkeep going\n", text)
         self.assertIn("\nXO: loser-picks: blocked\n", text)
 
+    def test_the_restart_prompt_is_not_an_order(self) -> None:
+        self.arm(log=str(self.logfile), prompt="Fresh shift.")
+        self.submit("Fresh shift.")
+        self.assertIn(" restart\n", self.logfile.read_text())
+
     def test_unarmed_or_logless_panes_write_nothing(self) -> None:
         self.submit("hello")
         self.arm()

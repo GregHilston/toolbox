@@ -10,9 +10,25 @@
 
 import argparse
 import os
+from pathlib import Path
 
 import requests
 from loguru import logger
+
+
+def secrets_file() -> dict[str, str]:
+    """KEY=value pairs from nixos/secrets/.env, for a process started without them."""
+    # A detached roll worker never sourced .zshrc.
+    path = Path(os.environ.get("TOOLBOX_HOME") or Path.home() / "Git/toolbox") / "nixos/secrets/.env"
+    pairs = {}
+    try:
+        for line in path.read_text().splitlines():
+            key, sep, value = line.removeprefix("export ").partition("=")
+            if sep:
+                pairs[key.strip()] = value.strip().strip("'\"")
+    except OSError:
+        pass
+    return pairs
 
 
 def send_pushover_notification(
@@ -21,10 +37,11 @@ def send_pushover_notification(
     pushover_work_api_key: str | None = None,
     priority: int = 0,
 ):
+    secrets = secrets_file()
     if not pushover_user_key:
-        pushover_user_key = os.environ.get("PUSHOVER_USER_KEY")
+        pushover_user_key = os.environ.get("PUSHOVER_USER_KEY") or secrets.get("PUSHOVER_USER_KEY")
     if not pushover_work_api_key:
-        pushover_work_api_key = os.environ.get("PUSHOVER_WORK_API_KEY")
+        pushover_work_api_key = os.environ.get("PUSHOVER_WORK_API_KEY") or secrets.get("PUSHOVER_WORK_API_KEY")
 
     if not pushover_user_key or not pushover_work_api_key:
         logger.error(
