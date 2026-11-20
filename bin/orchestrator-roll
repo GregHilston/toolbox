@@ -181,6 +181,8 @@ def worker(pane: str, token: str) -> None:
         with claude_shift.locked(pane):
             state = current(pane, token)
             state.update(rolls=state["rolls"] + 1, roll_id=None, worker_pid=None)
+            if "roll_hash" in state:
+                state["log_hash"] = state.pop("roll_hash")
             claude_shift.save(pane, state)
         log(pane, f"{label}: done")
         notify(pane, f"Claude rolled shift {state['rolls']}/{state['max_rolls']} at {drained} "

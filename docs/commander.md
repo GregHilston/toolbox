@@ -2,7 +2,7 @@
 
 A commander is a Claude session that keeps one or more orchestrators working while Greg is
 away: gridkeep's on foundation, loser-picks' on moria, or any repo run by `/orchestrate`.
-Its XO, a script that wakes it only on a problem, is `bin/commander-xo.sh`. The first night's lessons and numbers are in
+Its XO, a control loop that wakes it only on a problem, is `bin/control-loop.sh`. The first night's lessons and numbers are in
 `~/Git/notes/llm/commander-lessons-2026-11-18.md`.
 
 ## The rule: every fix gets a root cause and a guard
@@ -43,11 +43,12 @@ sleeps, file them in `.scratch/` and list them in the morning report.
 - Talk to an orchestrator with `hc send`, then `hc wait` and `hc read`. Read the screen back
   to prove the message landed. A send to a working terminal can vanish (2026-11-19 20:55):
   grep the screen for it and resend.
-- The XO is `bin/commander-xo.sh` (env `XO_HOST`, `XO_TERM`, `XO_REPO`; loser-picks on moria
-  by default). Run it in the background (sandbox off, 2 h timeout), `XO_CLOSES="<n> ..."` to
-  wake on a ticket closing, and re-arm it after every exit. It alerts once per event on a
-  blocked or missing CAG, a question to the Commander, lost tasks, a failed roll, load over
-  32, 90 min with nothing landed, a GitHub quota under 500, and a red main open 20 min.
+- The XO is `bin/control-loop.sh` (env `XO_HOST`, `XO_TERM`, `XO_REPO`; loser-picks on moria
+  by default). It runs as its own detached process, not a Claude background task, and types
+  `XO: ...` into the commander's pane: see "Commander shifts". It alerts once an hour per event
+  on a blocked or missing CAG, a question to the Commander, lost tasks, a failed roll, load over
+  32, 90 min with nothing landed, a GitHub quota under 500, and a red main open 20 min. Tickets to
+  watch go in `~/.cache/control-loop/<name>/closes`, one number a line.
 - To answer a blocked pick: read the screen, move with `hc keys <t> down…`, then
   `hc send --force` for a typed answer.
 - Put standing orders in the orchestrator's restart prompt too
@@ -57,11 +58,45 @@ sleeps, file them in `.scratch/` and list them in the morning report.
 - Check a subagent's surprising claim before relaying it. "Luna gets no cache" was wrong.
 - Read a ticket's body before naming it as the vehicle for a plan. On 2026-11-19 "#327 is
   the two-host pool" was wrong, and the real ticket (#355) started an hour late.
-- `shift-start.md` re-runs `shift-arm`, which resets the roll count, so `max_rolls` never
-  binds: a CAG that reads "roll 8/8" keeps rolling.
+- Re-running `shift-arm` keeps the roll count (and `--drain`, `--log`), so `max_rolls` binds
+  across restarts; only `shift-arm --off` resets it.
 - A slot cap counts sessions, not cores: watch load, not the builder count.
 - Greg asleep: no `AskUserQuestion`. Take the recommended option if it can be undone, follow
   the standing orders for money, and Pushover only what he must act on.
+
+## Commander shifts
+
+A commander rolls like an orchestrator, but its orders live in a run log, not in the repo's
+tickets. Arm it from its own pane (Opus):
+
+```
+shift-arm --threshold 250000 --max-rolls 50 --log <run log> \
+  --drain 'Rewrite the ## Current block of your run log: orders with expiries, watch list, incidents, questions, running subagents.' \
+  --prompt 'Fresh shift. Read <run log>: its ## Current block and the last few ## Journal entries. Restart the control loop if its heartbeat is stale, then carry on.'
+```
+
+- **Run log.** A markdown file in a repo. `## Current` is rewritten at each roll: orders in
+  force (each with an expiry), watch list, open incidents, open questions, running subagents.
+  `## Journal` is append-only and dated, across dates. A restart reads Current and the last
+  few Journal entries.
+- **Orders are recorded in code.** The `log-order.py` UserPromptSubmit hook appends every
+  prompt the commander receives to the log as `### <date time> Greg` (or `XO` when it starts
+  with `XO:`).
+- **`commander-roll`** is what the drain message tells a logged pane to run, in place of `orchestrator-roll`. It refuses
+  unless `## Current` changed since the last roll, commits and pushes only the log (a push
+  failure is printed, the roll goes on), then runs `orchestrator-roll`. It does not stop
+  working subagents; the roll waits for them.
+- **Control loop.** Start it detached, once per commander (a second one on the same name
+  refuses and prints the holder's pid):
+
+  ```
+  nohup control-loop.sh --wake hc:<terminal> > ~/.cache/control-loop/xo.out 2>&1 &
+  ```
+
+  `--wake herdr:<pane>` for a Herdr pane. It waits for the target to go idle and for a queued
+  roll to finish, types the alerts, and retypes once if the text is not on screen. `--once`
+  prints one pass of alerts and wakes nobody. Its state is `~/.cache/control-loop/<name>/`
+  (nothing-landed clock, alert keys, `heartbeat`).
 
 ## Check that a change did its job
 

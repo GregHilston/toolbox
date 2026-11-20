@@ -34,6 +34,7 @@ An orchestrator session works in **shifts**. When its context reaches a threshol
 ```
 shift-arm --prompt '<restart message>' [--threshold 250000] [--max-rolls 8] [--repo PATH]
 shift-arm --status
+shift-arm ... [--drain TEXT] [--log RUN_LOG]  # a commander's drain text and run log (docs/commander.md); both kept on re-arm
 shift-arm --off            # disarm and reset the roll count
 orchestrator-roll          # what the drain message tells the model to run
 ```

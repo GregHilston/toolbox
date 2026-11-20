@@ -24,6 +24,7 @@ def main() -> int:
     parser.add_argument("--max-rolls", type=int, default=8, help="refuse to roll past this many (default 8)")
     parser.add_argument("--repo", default=os.getcwd(), help="the repo this orchestrator works in (default: cwd)")
     parser.add_argument("--drain", help="what to do at the limit instead of the orchestrator steps (kept on re-arm)")
+    parser.add_argument("--log", help="a commander's run log; log-order.py appends orders to it, commander-roll checks it (kept on re-arm)")
     parser.add_argument("--off", action="store_true", help="disarm this pane, reset its roll count, cancel a queued roll")
     parser.add_argument("--status", action="store_true", help="print this pane's shift state")
     args = parser.parse_args()
@@ -57,7 +58,9 @@ def main() -> int:
         claude_shift.save(pane, {
             "pane": pane, "threshold": args.threshold, "prompt": args.prompt,
             "max_rolls": args.max_rolls, "rolls": rolls, "repo": os.path.abspath(args.repo), **kept,
-            **({"drain": d} if (d := args.drain or (state or {}).get("drain")) else {}),
+            **{k: v for k in ("drain", "log") if (v := getattr(args, k) or (state or {}).get(k))},
+            **({"log": os.path.abspath(args.log)} if args.log else {}),
+            **({"log_hash": state["log_hash"]} if state and "log_hash" in state else {}),
         })  # fmt: skip
     print(f"Armed {pane}: drain at {args.threshold} tokens, {rolls}/{args.max_rolls} rolls used.")
     return 0

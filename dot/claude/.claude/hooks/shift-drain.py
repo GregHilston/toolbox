@@ -25,8 +25,9 @@ def reason(tokens: int, state: dict) -> str:
     rolls, cap = state["rolls"], state["max_rolls"]
     limit = (f"Shift drain: this session's context is {tokens // 1000}k tokens, past this pane's "
              f"{state['threshold'] // 1000}k shift limit. ")
+    roller = "commander-roll" if state.get("log") else "orchestrator-roll"
     if state.get("drain"):
-        text = (limit + state["drain"] + " Then run `orchestrator-roll` and end your turn; it clears "
+        text = (limit + state["drain"] + f" Then run `{roller}` and end your turn; it clears "
                 "this session once idle and restarts it with the fixed prompt.")
     else:
         text = (
@@ -46,7 +47,7 @@ def reason(tokens: int, state: dict) -> str:
         )
     if rolls >= cap:
         text += (
-            f" This pane has used all {cap} rolls, so `orchestrator-roll` will refuse: after "
+            f" This pane has used all {cap} rolls, so `{roller}` will refuse: after "
             "draining, send one Pushover saying the shift limit is reached, and stop."
         )
     return text
