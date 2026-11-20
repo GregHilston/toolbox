@@ -144,6 +144,14 @@ class Hook(Base):
         self.assertIsNotNone(self.stop("s2"))
         self.assertEqual(self.state()["stops"], 6)
 
+    def test_drain_keeps_detached_lanes_running(self) -> None:
+        # 2026-11-20: two drains stopped every pi builder, idling 6 slots.
+        self.arm()
+        self.write(assistant(5000))
+        text = self.stop()["reason"]
+        self.assertIn("A detached builder", text)
+        self.assertIn("keeps running", text)
+
     def test_records_live_work(self) -> None:
         self.arm()
         self.write(assistant(5))
