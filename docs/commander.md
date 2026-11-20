@@ -2,8 +2,7 @@
 
 A commander is a Claude session that keeps one or more orchestrators working while Greg is
 away: gridkeep's on foundation, loser-picks' on moria, or any repo run by `/orchestrate`.
-The design for a cheaper commander (an XO script that wakes it only on a problem) is in
-`.scratch/commander-script/` on dungeon. The first night's lessons and numbers are in
+Its XO, a script that wakes it only on a problem, is `bin/commander-xo.sh`. The first night's lessons and numbers are in
 `~/Git/notes/llm/commander-lessons-2026-11-18.md`.
 
 ## The rule: every fix gets a root cause and a guard
@@ -44,9 +43,11 @@ sleeps, file them in `.scratch/` and list them in the morning report.
 - Talk to an orchestrator with `hc send`, then `hc wait` and `hc read`. Read the screen back
   to prove the message landed. A send to a working terminal can vanish (2026-11-19 20:55):
   grep the screen for it and resend.
-- The XO for loser-picks is `.scratch/commander-script/xo-lp.sh` on dungeon. Run it in the
-  background (sandbox off, 2 h timeout), `XO_CLOSES="<n> ..."` to wake on a ticket closing,
-  and re-arm it after every exit.
+- The XO is `bin/commander-xo.sh` (env `XO_HOST`, `XO_TERM`, `XO_REPO`; loser-picks on moria
+  by default). Run it in the background (sandbox off, 2 h timeout), `XO_CLOSES="<n> ..."` to
+  wake on a ticket closing, and re-arm it after every exit. It alerts once per event on a
+  blocked or missing CAG, a question to the Commander, lost tasks, a failed roll, load over
+  32, 90 min with nothing landed, a GitHub quota under 500, and a red main open 20 min.
 - To answer a blocked pick: read the screen, move with `hc keys <t> down…`, then
   `hc send --force` for a typed answer.
 - Put standing orders in the orchestrator's restart prompt too
@@ -56,14 +57,34 @@ sleeps, file them in `.scratch/` and list them in the morning report.
 - Check a subagent's surprising claim before relaying it. "Luna gets no cache" was wrong.
 - Read a ticket's body before naming it as the vehicle for a plan. On 2026-11-19 "#327 is
   the two-host pool" was wrong, and the real ticket (#355) started an hour late.
-- The watcher (`.scratch/commander-script/alerts.sh`, dungeon) exits on its first alert and
-  after its 2-hour timeout: re-arm it every time it ends. It alerts on "Needs you
-  (Commander)" and saves a `ps` snapshot on load over 32.
 - `shift-start.md` re-runs `shift-arm`, which resets the roll count, so `max_rolls` never
   binds: a CAG that reads "roll 8/8" keeps rolling.
 - A slot cap counts sessions, not cores: watch load, not the builder count.
 - Greg asleep: no `AskUserQuestion`. Take the recommended option if it can be undone, follow
   the standing orders for money, and Pushover only what he must act on.
+
+## Check that a change did its job
+
+Every slip on 2026-11-19/20 was a change that landed and did something other than the plan
+assumed, found hours later: the two-host pool sent 5 of 806 launches far (4 h); the copied
+landing model held every landing on a red canary (2 h); a fix covered one copy kind and a
+second leak failed the next train; a delegated script spent the shared GitHub quota.
+
+- **Within an hour of a plan's change landing, measure the number it was for** (the ledger's
+  host share, landings per hour, time per stage with `ticket-lanes.py`) and write it in the
+  night's lessons. If no number moved, find out why before anything else. Where a script
+  can see the failure, add it to the XO.
+- **When one repo copies another's process, diff the behaviour, not the summary.** The
+  ticket names the source's files and functions, and lists each behaviour the copy must
+  match, including what happens on failure. Before it lands, read the source's code for
+  every failure path and check the copy does the same, or names the difference as a
+  decision. `land_branch.sh` held on red; gridkeep's `pilot.sh` never does.
+- **A fix covers the class, not the instance.** Reproduce in every variant the failure can
+  take (each copy kind, each host, each env), and when a second instance turns up, guard
+  the class in code (lp #368).
+- **A delegated task that touches a shared resource is told the budget**: the GitHub quota
+  (`docs/github-api.md`), cores and load, Claude and DeepSeek spend. The brief says how much
+  it may use and what to check before a bulk call.
 
 ## Root causes found so far
 
