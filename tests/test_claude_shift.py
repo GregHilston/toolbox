@@ -152,6 +152,14 @@ class Hook(Base):
         self.stop(background_tasks=None)
         self.assertEqual(self.state()["busy"], -1)
 
+    def test_custom_drain_replaces_the_orchestrator_steps(self) -> None:
+        self.arm(drain="Write the run log, then TaskStop the XO.")
+        self.write(assistant(5000))
+        text = self.stop()["reason"]
+        self.assertIn("Write the run log, then TaskStop the XO.", text)
+        self.assertIn("orchestrator-roll", text)
+        self.assertNotIn("milestone", text)
+
     def test_spent_rolls_say_stop(self) -> None:
         self.arm(rolls=2)
         self.write(assistant(5000))

@@ -23,21 +23,27 @@ import claude_shift  # noqa: E402
 
 def reason(tokens: int, state: dict) -> str:
     rolls, cap = state["rolls"], state["max_rolls"]
-    text = (
-        f"Shift drain: this session's context is {tokens // 1000}k tokens, past this pane's "
-        f"{state['threshold'] // 1000}k shift limit. Wind the shift down now. Start no new "
-        "tickets. Finish and land, or park, all in-flight work, and let every background "
-        "subagent, Monitor, cron and Bash job end: /clear kills them, and the roll waits until "
-        "none is left. A subagent's `until grep` wait loop or an artifact Monitor outlives it, "
-        "so TaskStop every leftover one.Write lessons to the repo docs and each ticket's status to its ticket; "
-        "the fresh session reads only those. File a ticket for every bug, follow-up or "
-        "unfinished piece this shift found, and split any blocked ticket whose build needs no "
-        "Greg into its own ready ticket. Then run `orchestrator-roll` and end your turn; it "
-        "clears this session once idle and restarts it with the fixed prompt. The pane stays "
-        "armed across the roll (`shift-arm` keeps the count if run again). Only if, after "
-        "that filing, every open milestone ticket needs Greg, send one Pushover listing them "
-        "(`pushover.py -m '...'`) and stop instead of rolling."
-    )
+    limit = (f"Shift drain: this session's context is {tokens // 1000}k tokens, past this pane's "
+             f"{state['threshold'] // 1000}k shift limit. ")
+    if state.get("drain"):
+        text = (limit + state["drain"] + " Then run `orchestrator-roll` and end your turn; it clears "
+                "this session once idle and restarts it with the fixed prompt.")
+    else:
+        text = (
+            f"Shift drain: this session's context is {tokens // 1000}k tokens, past this pane's "
+            f"{state['threshold'] // 1000}k shift limit. Wind the shift down now. Start no new "
+            "tickets. Finish and land, or park, all in-flight work, and let every background "
+            "subagent, Monitor, cron and Bash job end: /clear kills them, and the roll waits until "
+            "none is left. A subagent's `until grep` wait loop or an artifact Monitor outlives it, "
+            "so TaskStop every leftover one.Write lessons to the repo docs and each ticket's status to its ticket; "
+            "the fresh session reads only those. File a ticket for every bug, follow-up or "
+            "unfinished piece this shift found, and split any blocked ticket whose build needs no "
+            "Greg into its own ready ticket. Then run `orchestrator-roll` and end your turn; it "
+            "clears this session once idle and restarts it with the fixed prompt. The pane stays "
+            "armed across the roll (`shift-arm` keeps the count if run again). Only if, after "
+            "that filing, every open milestone ticket needs Greg, send one Pushover listing them "
+            "(`pushover.py -m '...'`) and stop instead of rolling."
+        )
     if rolls >= cap:
         text += (
             f" This pane has used all {cap} rolls, so `orchestrator-roll` will refuse: after "
