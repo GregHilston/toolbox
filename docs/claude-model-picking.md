@@ -21,7 +21,7 @@ When Claude usage has room, builders are Claude subagents: Sonnet for size M or 
 
 ## Local models
 
-- **No local model runs orchestration lanes** (2026-11-18): Strata on moria decodes about 37 tok/s, one request at a time, so a median gridkeep or loser-picks lane spends about 75 min in the model against about 21 on DeepSeek, and foundation is worse. Strata is for interactive pi, home-lab jobs and Hermes; the A3B stays the default for interactive use and scripts. When cloud credits run out, top up DeepSeek. Numbers: `~/Git/notes/llm/local-lane-strata-basalt.md`.
+- **No local model runs orchestration lanes** (2026-11-18): Strata on moria decodes about 37 tok/s, one request at a time, so a median gridkeep or loser-picks lane spends about 75 min in the model against about 21 on DeepSeek, and foundation is worse. Strata is for interactive pi, home-lab jobs and Hermes; the A3B stays the default for interactive use and scripts. When cloud credits run out, top up DeepSeek. This covers DeepSeek V4 Flash on ds4 and the Qwen A3B too (2026-11-19: slower still). Numbers: `~/Git/notes/llm/local-lane-strata-basalt.md`.
 - **Bulk LLM generation** (playtest cohorts, batch labelling) runs on the free local model through oMLX. Luna's ChatGPT allowance is for small samples: run a 5-10 item pilot, read its gauge with `deepseek-preflight.py`, and keep a batch under 20% of the weekly allowance (2026-11-08).
 
 ## Briefing a delegated task
