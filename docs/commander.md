@@ -40,7 +40,11 @@ sleeps, file them in `.scratch/` and list them in the morning report.
 - Reach hosts by Tailscale name (`moriats`, `foundationts`); from dungeon the plain aliases
   fail, and the Claude sandbox blocks ssh.
 - Talk to an orchestrator with `hc send`, then `hc wait` and `hc read`. Read the screen back
-  to prove the message landed.
+  to prove the message landed. A send to a working terminal can vanish (2026-11-19 20:55):
+  grep the screen for it and resend.
+- The XO for loser-picks is `.scratch/commander-script/xo-lp.sh` on dungeon. Run it in the
+  background (sandbox off, 2 h timeout), `XO_CLOSES="<n> ..."` to wake on a ticket closing,
+  and re-arm it after every exit.
 - To answer a blocked pick: read the screen, move with `hc keys <t> down…`, then
   `hc send --force` for a typed answer.
 - Put standing orders in the orchestrator's restart prompt too
