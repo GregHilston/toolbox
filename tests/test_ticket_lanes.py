@@ -98,7 +98,7 @@ class Drift(unittest.TestCase):
 class Quota(unittest.TestCase):
     def run_with(self, remaining, calls):
         real = tl.gh
-        tl.gh = lambda *a: '{"resources": {"core": {"remaining": %d, "reset": 0}}}' % remaining
+        tl.gh = lambda *a: '{"resources": {"graphql": {"remaining": %d, "reset": 0}}}' % remaining
         try:
             tl.check_quota(calls)
         finally:

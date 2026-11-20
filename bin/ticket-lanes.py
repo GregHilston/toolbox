@@ -25,7 +25,6 @@ import subprocess
 import sys
 import time
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 OWNER = "GregHilston"
@@ -95,44 +94,69 @@ def gh(*args):
 
 
 RESERVE = 1500
+# 100 a page returns stale nested timelines, silently.
+QUERY = """
+query($owner: String!, $name: String!, $since: DateTime!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    issues(first: 25, after: $after, filterBy: {since: $since}) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        number closedAt createdAt
+        timelineItems(first: 100, itemTypes: [LABELED_EVENT, UNLABELED_EVENT]) {
+          nodes {
+            __typename
+            ... on LabeledEvent { createdAt label { name } }
+            ... on UnlabeledEvent { createdAt label { name } }
+          }
+        }
+      }
+    }
+  }
+}
+"""
 
 
 def check_quota(calls):
     """Exit 2 rather than spend the orchestrators' shared GitHub quota."""
     # rate_limit itself costs no quota.
-    core = json.loads(gh("api", "rate_limit"))["resources"]["core"]
-    if core["remaining"] - calls < RESERVE:
-        reset = datetime.fromtimestamp(core["reset"]).strftime("%H:%M")
-        print(f"ticket-lanes: {calls} calls would leave {core['remaining'] - calls} of the "
-              f"GitHub quota, under the {RESERVE} orchestrators keep; retry after {reset}",
+    left = json.loads(gh("api", "rate_limit"))["resources"]["graphql"]
+    if left["remaining"] - calls < RESERVE:
+        reset = datetime.fromtimestamp(left["reset"]).strftime("%H:%M")
+        print(f"ticket-lanes: {calls} calls would leave {left['remaining'] - calls} of the "
+              f"GitHub GraphQL quota, under the {RESERVE} orchestrators keep; retry after {reset}",
               file=sys.stderr)
         sys.exit(2)
 
 
+def as_events(nodes):
+    kind = {"LabeledEvent": "labeled", "UnlabeledEvent": "unlabeled"}
+    return [{"event": kind[n["__typename"]], "created_at": n["createdAt"], "label": n["label"]}
+            for n in nodes if n.get("__typename") in kind and n.get("label")]
+
+
 def fetch(repo, since, include_open, now):
-    slug = f"{OWNER}/{repo}"
-    issues = json.loads(gh("issue", "list", "-R", slug, "--state", "all", "--limit", "2000",
-                           "--json", "number,state,closedAt,createdAt"))
-    keep = []
-    for i in issues:
-        if i["closedAt"]:
-            if parse(i["closedAt"]) >= since:
-                keep.append(i)
-        elif include_open and parse(i["createdAt"]) >= since - timedelta(days=60):
-            keep.append(i)
-    # Measured: paginated timelines cost about 3 calls each.
-    check_quota(3 * len(keep))
-
-    def one(i):
-        raw = json.loads(gh("api", f"repos/{slug}/issues/{i['number']}/timeline",
-                            "--paginate", "--slurp"))
-        events = [e for page in raw for e in page if e.get("event") in ("labeled", "unlabeled")]
-        closed = parse(i["closedAt"]) if i["closedAt"] else None
-        return {"number": i["number"], "closed_at": closed,
-                "stats": ticket_stats(events, closed, now), "events": events}
-
-    with ThreadPoolExecutor(8) as ex:
-        return list(ex.map(one, keep))
+    check_quota(40)
+    # filterBy.since is update time, a superset of the window.
+    floor = since - timedelta(days=60) if include_open else since
+    keep, after = [], None
+    while True:
+        args = ["api", "graphql", "-f", f"query={QUERY}", "-F", f"owner={OWNER}",
+                "-F", f"name={repo}", "-f", f"since={floor.strftime('%Y-%m-%dT%H:%M:%SZ')}"]
+        if after:
+            args += ["-f", f"after={after}"]
+        page = json.loads(gh(*args))["data"]["repository"]["issues"]
+        for i in page["nodes"]:
+            closed = parse(i["closedAt"]) if i["closedAt"] else None
+            if closed and closed < since:
+                continue
+            if not closed and not (include_open and parse(i["createdAt"]) >= floor):
+                continue
+            events = as_events(i["timelineItems"]["nodes"])
+            keep.append({"number": i["number"], "closed_at": closed,
+                         "stats": ticket_stats(events, closed, now), "events": events})
+        if not page["pageInfo"]["hasNextPage"]:
+            return keep
+        after = page["pageInfo"]["endCursor"]
 
 
 def pstat(vals):
