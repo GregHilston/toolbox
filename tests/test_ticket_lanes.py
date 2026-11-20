@@ -95,5 +95,23 @@ class Drift(unittest.TestCase):
         self.assertEqual(self.lines(rows), [])
 
 
+class Quota(unittest.TestCase):
+    def run_with(self, remaining, calls):
+        real = tl.gh
+        tl.gh = lambda *a: '{"resources": {"core": {"remaining": %d, "reset": 0}}}' % remaining
+        try:
+            tl.check_quota(calls)
+        finally:
+            tl.gh = real
+
+    def test_refuses_under_reserve(self):
+        with self.assertRaises(SystemExit) as stop:
+            self.run_with(1800, 400)
+        self.assertEqual(stop.exception.code, 2)
+
+    def test_runs_with_room(self):
+        self.run_with(5000, 400)
+
+
 if __name__ == "__main__":
     unittest.main()

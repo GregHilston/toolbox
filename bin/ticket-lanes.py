@@ -94,6 +94,21 @@ def gh(*args):
     sys.exit(2)  # 1 is reserved for drift found
 
 
+RESERVE = 1500
+
+
+def check_quota(calls):
+    """Exit 2 rather than spend the orchestrators' shared GitHub quota."""
+    # rate_limit itself costs no quota.
+    core = json.loads(gh("api", "rate_limit"))["resources"]["core"]
+    if core["remaining"] - calls < RESERVE:
+        reset = datetime.fromtimestamp(core["reset"]).strftime("%H:%M")
+        print(f"ticket-lanes: {calls} calls would leave {core['remaining'] - calls} of the "
+              f"GitHub quota, under the {RESERVE} orchestrators keep; retry after {reset}",
+              file=sys.stderr)
+        sys.exit(2)
+
+
 def fetch(repo, since, include_open, now):
     slug = f"{OWNER}/{repo}"
     issues = json.loads(gh("issue", "list", "-R", slug, "--state", "all", "--limit", "2000",
@@ -105,6 +120,7 @@ def fetch(repo, since, include_open, now):
                 keep.append(i)
         elif include_open and parse(i["createdAt"]) >= since - timedelta(days=60):
             keep.append(i)
+    check_quota(len(keep))
 
     def one(i):
         raw = json.loads(gh("api", f"repos/{slug}/issues/{i['number']}/timeline",
