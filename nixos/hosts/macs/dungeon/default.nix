@@ -669,6 +669,26 @@ in {
     };
   };
 
+  # Daily lab sweep (home-lab scripts/lab-sweep.sh): a shell gate, then Claude only for
+  # alerts no sweep has reported this week; Sundays run ungated. Rationale: home-lab #197.
+  launchd.user.agents.lab-sweep = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/lab-sweep.sh"
+      ];
+      RunAtLoad = false;
+      StartCalendarInterval = [
+        {
+          Hour = 9;
+          Minute = 40;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/lab-sweep.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/lab-sweep.log";
+    };
+  };
+
   # Off: RAM goes to the model (home-lab docs/local-llms.md)
   # The symlink + jq-merge + restart logic lives in modules/darwin/omlx.nix.
   services.omlxDeploy = {
