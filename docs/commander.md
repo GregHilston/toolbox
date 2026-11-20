@@ -1,5 +1,7 @@
 # Commander: watching orchestrators overnight
 
+How the whole fleet fits together, and why: `docs/fleet.md`.
+
 A commander is a Claude session that keeps one or more orchestrators working while Greg is
 away: gridkeep's on foundation, loser-picks' on moria, or any repo run by `/orchestrate`.
 Its XO, a control loop that wakes it only on a problem, is `bin/control-loop.sh`. The first night's lessons and numbers are in
