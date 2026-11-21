@@ -35,6 +35,7 @@ import datetime as dt
 import json
 import os
 import sys
+from pathlib import Path
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -42,6 +43,7 @@ import urllib.request
 BALANCE_URL = "https://api.deepseek.com/user/balance"
 # Undocumented; anomalyco/opencode#43983 names it.
 GO_USAGE_URL = "https://opencode.ai/zen/go/v1/usage"
+GATEWAY = os.environ.get("LITELLM_URL", "https://llm.grehg2.xyz")
 PROMETHEUS_URL = os.environ.get("PROMETHEUS_URL", "http://dungeon:9090")
 
 # (start_hour, end_hour) in UTC, Monday-Friday only. End is exclusive.
@@ -156,6 +158,23 @@ def fetch_balance(key: str, timeout: float = 10.0) -> tuple[float, str]:
     return float(info["total_balance"]), str(info.get("currency", "USD"))
 
 
+def cap_from_budgets(payload: dict) -> tuple[float, float]:
+    """(limit, spend) of the gateway's DeepSeek cap from a /provider/budgets body."""
+    ds = payload["providers"]["deepseek"]
+    return float(ds["budget_limit"]), float(ds["spend"])
+
+
+def fetch_cap(timeout: float = 10.0) -> tuple[float, float]:
+    """The gateway's DeepSeek cap. Raises on transport or shape trouble."""
+    key = os.environ.get("LITELLM_API_KEY")
+    if not key:  # pi's config already holds the gateway key
+        models = json.loads((Path.home() / ".pi/agent/models.json").read_text())
+        key = models["providers"]["litellm"]["apiKey"]
+    req = urllib.request.Request(GATEWAY + "/provider/budgets", headers={"Authorization": f"Bearer {key}"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return cap_from_budgets(json.load(resp))
+
+
 def fetch_go_usage(key: str, timeout: float = 10.0) -> dict:
     """Return Go's rolling, weekly and monthly windows. Raises on transport or shape trouble."""
     req = urllib.request.Request(
@@ -205,7 +224,8 @@ def _eastern(when: dt.datetime) -> str:
         return "(Eastern unavailable: no tzdata)"
 
 
-def evaluate(balance: float | None, when: dt.datetime, min_balance: float, warn_minutes: int):
+def evaluate(balance: float | None, when: dt.datetime, min_balance: float, warn_minutes: int,
+             cap: tuple[float, float] | None = None):
     """Decide what to say. Pure, so the tests never touch the network or a clock."""
     peak_now = is_peak(when)
     until = minutes_until_peak(when)
@@ -216,6 +236,12 @@ def evaluate(balance: float | None, when: dt.datetime, min_balance: float, warn_
         problems.append(
             f"balance ${balance:.2f} is under the ${min_balance:.2f} floor - "
             "top up, or a worker will die mid-flight on a 402 with its work uncommitted"
+        )
+    if cap is not None and balance is not None and cap[0] - cap[1] < balance:
+        problems.append(
+            f"gateway cap leaves ${cap[0] - cap[1]:.2f} (${cap[1]:.2f} of ${cap[0]:.2f} spent) "
+            f"but the balance is ${balance:.2f} - builders stop at the cap; "
+            "raise CLOUD_BUDGET_USD (home-lab runbook llm-cloud-budget)"
         )
     if peak_now:
         problems.append(
@@ -232,6 +258,7 @@ def evaluate(balance: float | None, when: dt.datetime, min_balance: float, warn_
         "min_balance": min_balance,
         "utc": when.astimezone(dt.timezone.utc).strftime("%a %Y-%m-%d %H:%M UTC"),
         "eastern": _eastern(when),
+        "cap": None if cap is None else {"limit": cap[0], "spend": cap[1]},
         "peak_now": peak_now,
         "minutes_until_peak": until,
         "peak_soon": soon,
@@ -294,7 +321,15 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001 - it never decides the verdict
             luna = f"unknown - {exc}"
 
-    verdict = evaluate(balance, now_utc, args.min_balance, args.warn_minutes)
+    cap: tuple[float, float] | None = None
+    cap_note: str | None = None
+    if not args.skip_balance:
+        try:
+            cap = fetch_cap()
+        except Exception as exc:  # noqa: BLE001 - it never blocks, only warns
+            cap_note = f"unknown - {exc}"
+
+    verdict = evaluate(balance, now_utc, args.min_balance, args.warn_minutes, cap)
     verdict["currency"] = currency
     verdict["unreachable"] = unreachable
     verdict["go"] = go
@@ -315,6 +350,10 @@ def main() -> int:
             print(f"  balance  unknown - {unreachable}")
         else:
             print(f"  balance  ${balance:.2f} {currency}   (floor ${args.min_balance:.2f})")
+        if cap:
+            print(f"  cap      ${cap[1]:.2f} of ${cap[0]:.2f} spent this window")
+        elif cap_note:
+            print(f"  cap      {cap_note}")
         if go:
             print(f"  go       {go}")
         if luna:

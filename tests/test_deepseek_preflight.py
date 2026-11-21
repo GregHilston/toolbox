@@ -162,6 +162,29 @@ class TestGoSummary(unittest.TestCase):
         self.assertIn("rolling 100% (rate-limited)", pf.go_summary(usage))
 
 
+
+class TestCapVsBalance(unittest.TestCase):
+    BUDGETS = {"providers": {"deepseek": {"spend": 3.5, "budget_limit": 10.0}}}
+
+    def verdict(self, budgets, balance):
+        cap = pf.cap_from_budgets(budgets)
+        return pf.evaluate(balance, utc(2026, 11, 20, 23), 2.0, 90, cap)
+
+    def test_parses_limit_and_spend(self):
+        self.assertEqual(pf.cap_from_budgets(self.BUDGETS), (10.0, 3.5))
+
+    def test_cap_headroom_below_balance_warns(self):
+        v = self.verdict(self.BUDGETS, 40.0)
+        self.assertFalse(v["ok"])
+        self.assertTrue(any("cap" in p and "$6.50" in p for p in v["problems"]), v["problems"])
+
+    def test_cap_headroom_above_balance_is_quiet(self):
+        v = self.verdict({"providers": {"deepseek": {"spend": 3.5, "budget_limit": 50.0}}}, 40.0)
+        self.assertTrue(v["ok"], v["problems"])
+
+    def test_no_cap_reading_adds_no_warning(self):
+        self.assertTrue(pf.evaluate(40.0, utc(2026, 11, 20, 23), 2.0, 90)["ok"])
+
 if __name__ == "__main__":
     unittest.main()
 
