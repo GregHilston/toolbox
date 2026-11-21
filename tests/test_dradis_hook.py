@@ -90,6 +90,27 @@ class DradisHook(unittest.TestCase):
             out = subprocess.run([str(HOOK), "wake"], input=self.payload(self.repo), capture_output=True, env=env, check=False).stdout
         self.assertEqual(out.decode().split(), ["moriats/t9", self.url])
 
+    def test_wake_script_gets_the_hook_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as home:
+            script = Path(home) / "hooks/wake.sh"
+            script.parent.mkdir()
+            script.write_text("#!/bin/sh\ncat\n")
+            script.chmod(0o755)
+            env = os.environ | {"DRADIS_HOME": home}
+            out = subprocess.run([str(HOOK), "wake"], input=self.payload(self.repo), capture_output=True, env=env, check=False).stdout
+        self.assertEqual(out, self.payload(self.repo))
+
+    def test_wake_exit_code_reaches_claude_and_nothing_posts(self) -> None:
+        with tempfile.TemporaryDirectory() as home:
+            script = Path(home) / "hooks/wake.sh"
+            script.parent.mkdir()
+            script.write_text("#!/bin/sh\nexit 2\n")
+            script.chmod(0o755)
+            env = os.environ | {"DRADIS_HOME": home, "DRADIS_URL": self.url}
+            done = subprocess.run([str(HOOK), "wake"], input=self.payload(self.repo), env=env, check=False)
+        self.assertEqual(done.returncode, 2)
+        self.assertEqual(Core.seen, [])
+
     def test_wake_without_a_dradis_checkout_passes(self) -> None:
         env = os.environ | {"DRADIS_HOME": "/nonexistent", "DRADIS_HOST": "foundation"}
         self.assertEqual(subprocess.run([str(HOOK), "wake"], input=self.payload(self.repo), env=env, check=False).returncode, 0)

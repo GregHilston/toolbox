@@ -30,7 +30,8 @@ terminal=
 if [[ $event == wake ]]; then
   script="${DRADIS_HOME:-$HOME/Git/dradis}/hooks/wake.sh"
   [[ -x $script ]] || exit 0
-  HC_TERMINAL_ID=$terminal DRADIS_URL=$url exec "$script"
+  printf %s "$input" | HC_TERMINAL_ID=$terminal DRADIS_URL=$url "$script"
+  exit
 fi
 
 # Only these two answer with something Claude acts on.
