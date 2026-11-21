@@ -38,6 +38,11 @@ HC = os.environ.get("HC_BIN_PATH") or "hc"
 IDLE = ("idle", "done")
 DRAIN_TIMEOUT = 20 * 60
 CLEAR_TIMEOUT = 120
+NUDGE = (
+    "Shift roll waited {minutes} min: {busy} background task(s) still live. A wait on a detached job "
+    "is not live work: it survives /clear. TaskStop every background shell, subagent and Monitor "
+    "(note any pid on its ticket), then run orchestrator-roll and end your turn."
+)
 POLL = 2
 SETTLE = 3  # idle must hold this long
 REAP_EVERY = 60
@@ -134,6 +139,8 @@ def wait_stopped(pane: str, token: str, since: int) -> None:
             continue
         seen = None
         time.sleep(POLL)
+    if state["busy"] and status(pane) in IDLE:
+        prompt(pane, NUDGE.format(minutes=DRAIN_TIMEOUT // 60, busy=state["busy"]))
     raise Failed("drain", f"no idle stop with nothing live within {DRAIN_TIMEOUT // 60} min "
                  f"(busy {state['busy']}, status {status(pane)})")  # fmt: skip
 
