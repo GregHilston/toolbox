@@ -41,6 +41,10 @@ hc run --json --bg --no-parent --no-notify --name <name> --cwd <dir> \
   still prompted on every Bash call, and the five burn sessions sat blocked until restarted.
   Pair it with hard limits in the prompt: branches only, no merges, delete nothing, no AI
   attribution, builds on another host.
+- The bypass flag does not skip every prompt: Claude Code still asks "can't be sure it read
+  this command … dangerous removal" for odd shell, such as a long heredoc over `ssh`, and the
+  child sits `blocked`. Greg answers it in the phone app; a parent in auto mode may be refused
+  when it tries `hc keys <name> enter`.
 - Interactive, not `claude -p`: headless runs drain the 5-hour window 1.8-2.9x faster.
 
 Check it started right: `hc read <name> | grep -o 'Opus[^|]*\|Sonnet[^|]*\|bypass permissions\|/remote-control is active'`.
@@ -51,6 +55,8 @@ All three must show; a banner stuck on `/rc connecting…` won't reach the Claud
 - The task goes last, as one quoted string. Build a shared preamble in a shell variable and
   append each child's item.
 - Say it runs unattended: never ask Greg, take the safe default, note it in the report.
+- Tell it to keep shell simple: no long heredocs over `ssh`; write files with the Write tool and
+  copy them across. That avoids the prompt the bypass flag can't skip.
 - Ask for a result file (`llm/<run>-report-<item>.md`) rather than scraping the screen.
 - An orchestrator gets its CAG line and standing orders here, then arms its own shift with
   `shift-arm --prompt` so a roll keeps them (`docs/commander.md`, "Put standing orders in the
