@@ -109,6 +109,14 @@ def belongs(cwd: str, repo: str, repo_git: str | None) -> bool:
 def cwds(pids: list[int]) -> dict[int, str]:
     if not pids:
         return {}
+    if Path("/proc/self/cwd").exists():  # foundation has no lsof
+        found = {}
+        for pid in pids:
+            try:
+                found[pid] = os.path.realpath(os.readlink(f"/proc/{pid}/cwd"))
+            except OSError:
+                pass
+        return found
     out = subprocess.run(["lsof", "-a", "-d", "cwd", "-Fpn", "-p", ",".join(map(str, pids))],
                          capture_output=True, text=True).stdout  # fmt: skip
     found, pid = {}, 0
