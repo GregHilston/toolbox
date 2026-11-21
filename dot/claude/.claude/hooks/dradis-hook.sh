@@ -5,7 +5,7 @@
 # Not an HTTP hook: Claude Code refuses tailnet addresses (100.64/10) and
 # allows only loopback, so moria and foundation cannot reach the core with one.
 event=${1:?event}
-url=${DRADIS_URL:-https://dungeon.tail1b9d9.ts.net:10000/factory}
+url=${DRADIS_URL:-https://dungeon.tail1b9d9.ts.net:10000}
 
 # Only these repos feed the factory; a worktree counts as its main repo.
 repos=${DRADIS_REPOS:-gridkeep loser-picks toolbox notes dradis}
