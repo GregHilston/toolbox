@@ -153,6 +153,10 @@ if load>32: print(\"XO $repo: load\",load)
   while read -r line; do
     [ -n "$line" ] && fresh "$line" && alerts="$alerts$line"$'\n'
   done < <(timeout 30 "$(dirname "$0")/xo-deepseek.py" 2>/dev/null || true)
+  # Fast-forwards each host's toolbox; alerts only when it cannot (2026-11-21: two stale hosts).
+  while read -r line; do
+    [ -n "$line" ] && fresh "$line" && alerts="$alerts$line"$'\n'
+  done < <(timeout 400 "$(dirname "$0")/xo-toolbox.py" "$dir/toolbox-stamp" 2>/dev/null || true)
   # Search ignores punctuation, so filter on the title's start.
   # A red main open 20 min means its fix is not moving (2026-11-20: two such held landings an hour each).
   # CAGs also title tool bugs fix(train).

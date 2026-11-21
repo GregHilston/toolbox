@@ -53,7 +53,7 @@ sleeps, file them in `.scratch/` and list them in the morning report.
   by default). It runs as its own detached process, not a Claude background task, and types
   `XO: ...` into the commander's pane: see "Commander shifts". It alerts once an hour per event
   on a blocked or missing CAG, a CAG idle over 20 min, a ticket approved but unlanded 30 min, free slots beside a ready P0 for 20 min (`bin/xo-work.py`), a question to the Commander, lost tasks, a failed roll, load over
-  32, 90 min with nothing landed, a GitHub quota under 500, and a red main open 20 min. Tickets to
+  32, 90 min with nothing landed, a GitHub quota under 500, and a red main open 20 min. Every 10 min it also fast-forwards `~/Git/toolbox` on moriats, foundationts and the local host, and alerts when one can't (`bin/xo-toolbox.py`). Tickets to
   watch go in `~/.cache/control-loop/<name>/closes`, one number a line.
 - To answer a blocked pick: read the screen, move with `hc keys <t> down…`, then
   `hc send --force` for a typed answer.
