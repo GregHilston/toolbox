@@ -1,7 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "env": {
-    "CLAUDE_CODE_FORCE_SESSION_PERSISTENCE": "1"
+    "CLAUDE_CODE_FORCE_SESSION_PERSISTENCE": "1",
+    "DRADIS_URL": "https://dungeon.tail1b9d9.ts.net:10000/factory"
   },
   "attribution": {
     "commit": "",
@@ -43,6 +44,11 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/session-env.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/dradis-hook.sh SessionStart",
+            "timeout": 2
           }
         ]
       }
@@ -83,6 +89,16 @@
             "command": "~/.claude/hooks/pushover-quota-stall.sh"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/dradis-hook.sh Notification",
+            "timeout": 2,
+            "async": true
+          }
+        ]
       }
     ],
     "SubagentStart": [
@@ -91,6 +107,12 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/herdr-subagent.sh start",
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/dradis-hook.sh SubagentStart",
+            "timeout": 2,
             "async": true
           }
         ]
@@ -103,6 +125,12 @@
             "type": "command",
             "command": "~/.claude/hooks/herdr-subagent.sh stop",
             "async": true
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/dradis-hook.sh SubagentStop",
+            "timeout": 2,
+            "async": true
           }
         ]
       }
@@ -113,6 +141,11 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/herdr-subagent.sh end"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/dradis-hook.sh SessionEnd",
+            "timeout": 2
           }
         ]
       }
@@ -123,6 +156,12 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/log-order.py"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/dradis-hook.sh UserPromptSubmit",
+            "timeout": 2,
+            "async": true
           }
         ]
       }
@@ -150,6 +189,28 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/shift-drain.py"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/dradis-hook.sh Stop",
+            "timeout": 2
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/dradis-hook.sh wake",
+            "timeout": 86400,
+            "asyncRewake": true
+          }
+        ]
+      }
+    ],
+    "PostToolBatch": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/dradis-hook.sh PostToolBatch",
+            "timeout": 2
           }
         ]
       }

@@ -559,6 +559,11 @@ activation (`just fr <host>` or `just dr <host>`), on every host that imports
   `rtk init` used to generate treated rtk's "rewrite, advisory" exit code as "no rewrite", so
   `git status`, `pytest`, `docker ps` and most other commands went through unfiltered while
   `rtk gain` still read 74% saved. `rtk` owns the hook now; `rtk gain` warns when it is outdated.
+- The dradis core hears every session through `hooks/dradis-hook.sh` (one command hook per
+  event, plus the idle wake) and `DRADIS_URL` in `settings.json` `env`. It is a command hook, not
+  an HTTP hook, because Claude Code refuses tailnet addresses. It prefixes `$HC_TERMINAL_ID` with
+  the machine name dungeon's `hc` uses (`moriats/`, `foundationts/`); a new host needs a line in
+  its `case`.
 - `settings.json` sets `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE=1`. Claude Code marks every shell
   it spawns with `CLAUDE_CODE_CHILD_SESSION=1` and saves no transcript for a `claude` started
   under that marker. The marker leaks: a terminal app relaunched from a Claude Bash call hands
