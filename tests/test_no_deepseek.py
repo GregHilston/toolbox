@@ -93,6 +93,10 @@ class XoAlert(Switch):
         self.assertEqual(self.run_main(lambda q: []), "")
         self.assertEqual(self.run_main(lambda q: [{"metric": {}, "value": [0, "0.2"]}]), "")
 
+    def test_quiet_on_a_stray_call(self):
+        self.on()
+        self.assertEqual(self.run_main(lambda q: [{"metric": {}, "value": [0, "3"]}]), "")
+
     def test_quiet_when_prometheus_fails(self):
         self.on()
         def boom(q):

@@ -25,11 +25,15 @@ def load(name: str, file: str):
     return mod
 
 
+MIN_REQUESTS = 10
+
+
 def alert(rows: list[dict], reason: str) -> str | None:
     """rows: Prometheus instant-vector results."""
     counted = [(float(r["value"][1]), r["metric"]) for r in rows]
     total = sum(n for n, _ in counted)
-    if total < 1:
+    # A lane makes dozens; one call is noise.
+    if total < MIN_REQUESTS:
         return None
     n, top = max(counted, key=lambda c: c[0])
     return (f"XO deepseek: {total:.0f} requests in 15 min under no-deepseek ({reason}); "
