@@ -470,6 +470,8 @@ in {
         "127.0.0.1"
         "--port"
         "8767"
+        "--root-path"
+        "/factory"
       ];
       EnvironmentVariables = {
         DRADIS_DB = "/Users/${vars.user.name}/home-lab-config/dradis/dradis.db";
