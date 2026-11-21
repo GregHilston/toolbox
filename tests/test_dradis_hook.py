@@ -37,20 +37,34 @@ class DradisHook(unittest.TestCase):
         self.addCleanup(self.server.server_close)
         self.addCleanup(self.server.shutdown)
         self.url = f"http://127.0.0.1:{self.server.server_port}/factory"
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name).resolve()
+        self.repo = self.make_repo("dradis")
 
-    def run_hook(self, event: str, host: str, terminal: str | None = "t1k", url: str | None = None):
+    def make_repo(self, name: str) -> Path:
+        path = self.tmp / name
+        subprocess.run(["git", "init", "-q", str(path)], check=True)
+        subprocess.run(["git", "-C", str(path), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "i"], check=True)
+        return path
+
+    @staticmethod
+    def payload(cwd: Path | str) -> bytes:
+        return json.dumps({"session_id": "s", "cwd": str(cwd)}).encode()
+
+    def run_hook(self, event: str, host: str, terminal: str | None = "t1k", url: str | None = None, cwd: Path | str | None = None):
         env = {k: v for k, v in os.environ.items() if k != "HC_TERMINAL_ID"}
         env |= {"DRADIS_URL": url or self.url, "DRADIS_HOST": host}
         if terminal:
             env["HC_TERMINAL_ID"] = terminal
-        return subprocess.run([str(HOOK), event], input=b'{"session_id":"s"}', capture_output=True, env=env, check=False)
+        return subprocess.run([str(HOOK), event], input=self.payload(cwd or self.repo), capture_output=True, env=env, check=False)
 
     def test_remote_terminals_carry_the_machine_prefix(self) -> None:
         for host, want in [("moria", "moriats/t1k"), ("foundation", "foundationts/t1k"), ("dungeon", "t1k")]:
             self.run_hook("UserPromptSubmit", host)
             self.assertEqual(Core.seen[-1]["terminal"], want)
             self.assertEqual(Core.seen[-1]["path"], "/factory/hooks/UserPromptSubmit")
-            self.assertEqual(Core.seen[-1]["body"], b'{"session_id":"s"}')
+            self.assertEqual(json.loads(Core.seen[-1]["body"])["session_id"], "s")
 
     def test_no_terminal_sends_no_header(self) -> None:
         self.run_hook("Notification", "moria", terminal=None)
@@ -73,12 +87,52 @@ class DradisHook(unittest.TestCase):
             script.write_text('#!/bin/sh\necho "$HC_TERMINAL_ID $DRADIS_URL"\n')
             script.chmod(0o755)
             env = os.environ | {"DRADIS_HOME": home, "DRADIS_HOST": "moria", "HC_TERMINAL_ID": "t9", "DRADIS_URL": self.url}
-            out = subprocess.run([str(HOOK), "wake"], capture_output=True, env=env, check=False).stdout
+            out = subprocess.run([str(HOOK), "wake"], input=self.payload(self.repo), capture_output=True, env=env, check=False).stdout
         self.assertEqual(out.decode().split(), ["moriats/t9", self.url])
 
     def test_wake_without_a_dradis_checkout_passes(self) -> None:
         env = os.environ | {"DRADIS_HOME": "/nonexistent", "DRADIS_HOST": "foundation"}
-        self.assertEqual(subprocess.run([str(HOOK), "wake"], env=env, check=False).returncode, 0)
+        self.assertEqual(subprocess.run([str(HOOK), "wake"], input=self.payload(self.repo), env=env, check=False).returncode, 0)
+
+    def test_a_repo_outside_the_list_sends_nothing(self) -> None:
+        other = self.make_repo("scratch")
+        result = self.run_hook("Stop", "dungeon", cwd=other)
+        self.assertEqual((result.returncode, result.stdout, Core.seen), (0, b"", []))
+
+    def test_a_cwd_outside_any_repo_sends_nothing(self) -> None:
+        bare = self.tmp / "plain"
+        bare.mkdir()
+        result = self.run_hook("Stop", "dungeon", cwd=bare)
+        self.assertEqual((result.returncode, result.stdout, Core.seen), (0, b"", []))
+
+    def test_a_worktree_of_a_listed_repo_posts(self) -> None:
+        wt = self.tmp / "dradis-wt-foo"
+        subprocess.run(["git", "-C", str(self.repo), "worktree", "add", "-q", str(wt), "-b", "foo"], check=True)
+        self.run_hook("Stop", "dungeon", cwd=wt)
+        self.assertEqual(len(Core.seen), 1)
+
+    def test_a_subdirectory_of_a_listed_repo_posts(self) -> None:
+        sub = self.repo / "src"
+        sub.mkdir()
+        self.run_hook("Stop", "dungeon", cwd=sub)
+        self.assertEqual(len(Core.seen), 1)
+
+    def test_DRADIS_REPOS_overrides_the_list(self) -> None:
+        other = self.make_repo("scratch")
+        env = os.environ | {"DRADIS_URL": self.url, "DRADIS_REPOS": "scratch"}
+        subprocess.run([str(HOOK), "Stop"], input=self.payload(other), capture_output=True, env=env, check=False)
+        self.assertEqual(len(Core.seen), 1)
+
+    def test_wake_in_a_repo_outside_the_list_does_not_run(self) -> None:
+        other = self.make_repo("scratch")
+        with tempfile.TemporaryDirectory() as home:
+            script = Path(home) / "hooks/wake.sh"
+            script.parent.mkdir()
+            script.write_text("#!/bin/sh\necho ran\n")
+            script.chmod(0o755)
+            env = os.environ | {"DRADIS_HOME": home}
+            out = subprocess.run([str(HOOK), "wake"], input=self.payload(other), capture_output=True, env=env, check=False).stdout
+        self.assertEqual(out, b"")
 
 
 if __name__ == "__main__":
