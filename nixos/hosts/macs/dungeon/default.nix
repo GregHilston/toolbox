@@ -453,6 +453,29 @@ in {
     };
   };
 
+  # 8767: 8765 is OrbStack's, 8766 needs-greg's. Never bind 0.0.0.0: the login header
+  # is only trustworthy behind `tailscale serve`, which is a manual command (runbook).
+  # PATH: the ingester shells out to `hc`, which lives in ~/.local/bin.
+  # The database dir is the one backup-tier1 captures; SQLite will not create it.
+  # Runbook: home-lab/docs/runbooks/dradis.md.
+  launchd.user.agents.dradis = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/sh"
+        "-c"
+        "/bin/mkdir -p /Users/${vars.user.name}/home-lab-config/dradis && exec /etc/profiles/per-user/${vars.user.name}/bin/uv run --project /Users/${vars.user.name}/Git/dradis factory serve --host 127.0.0.1 --port 8767"
+      ];
+      EnvironmentVariables = {
+        DRADIS_DB = "/Users/${vars.user.name}/home-lab-config/dradis/dradis.db";
+        PATH = "/Users/${vars.user.name}/.local/bin:/etc/profiles/per-user/${vars.user.name}/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin";
+      };
+      RunAtLoad = true;
+      KeepAlive = true;
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/dradis.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/dradis.log";
+    };
+  };
+
   # Tier-1 backup: the ~210 MB of ${SERVER_CONFIG_BASE} that genuinely cannot be
   # regenerated — the Zigbee pairing database and coordinator NVRAM, zwave-js-ui's S2
   # security keys, Home Assistant's .storage, the *arr databases, Plex's Preferences.xml.
