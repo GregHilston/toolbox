@@ -437,23 +437,7 @@ in {
     };
   };
 
-  # Port 443 is Caddy's; serve uses 10000.
-  # Runbook: home-lab/docs/runbooks/needs-greg.md.
-  launchd.user.agents.needs-greg = {
-    serviceConfig = {
-      ProgramArguments = [
-        "/etc/profiles/per-user/${vars.user.name}/bin/uv"
-        "run"
-        "/Users/${vars.user.name}/Git/toolbox/bin/needs-greg/server.py"
-      ];
-      RunAtLoad = true;
-      KeepAlive = true;
-      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/needs-greg.log";
-      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/needs-greg.log";
-    };
-  };
-
-  # 8767: 8765 is OrbStack's, 8766 needs-greg's. Never bind 0.0.0.0: the login header
+  # 8767: 8765 is OrbStack's. Never bind 0.0.0.0: the login header
   # is only trustworthy behind `tailscale serve`, which is a manual command (runbook).
   # PATH: the ingester shells out to `hc`, which lives in ~/.local/bin.
   # Runbook: home-lab/docs/runbooks/dradis.md.
@@ -470,8 +454,6 @@ in {
         "127.0.0.1"
         "--port"
         "8767"
-        "--root-path"
-        "/factory"
       ];
       EnvironmentVariables = {
         DRADIS_DB = "/Users/${vars.user.name}/home-lab-config/dradis/dradis.db";
