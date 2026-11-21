@@ -1,0 +1,35 @@
+#!/bin/bash
+# xo-due add HH:MM TEXT [--name N]   the XO types "XO due: TEXT" into the commander at HH:MM
+# xo-due pop FILE                    print and drop every item now due (the XO calls this)
+# xo-due list [--name N]             what is still to come
+# A commander only runs when woken, so a promised check needs a timer here.
+set -euo pipefail
+cmd=${1-} name=loser-picks
+file() { echo "${CONTROL_LOOP_DIR:-$HOME/.cache/control-loop}/$name/due"; }
+case $cmd in
+  add)
+    at=$2 text=$3
+    [ "${4-}" = --name ] && name=$5
+    when=$(date -j -f '%H:%M' "$at" +%s 2>/dev/null || date -d "$at" +%s)
+    # A time already past today means tomorrow.
+    [ "$when" -le "$(date +%s)" ] && when=$((when + 86400))
+    mkdir -p "$(dirname "$(file)")"
+    printf '%s %s\n' "$when" "$text" >> "$(file)"
+    echo "due $(date -r "$when" '+%a %H:%M' 2>/dev/null || date -d "@$when" '+%a %H:%M'): $text"
+    ;;
+  pop)
+    f=$2 now=$(date +%s)
+    [ -s "$f" ] || exit 0
+    awk -v now="$now" '$1 <= now { $1 = ""; sub(/^ /, ""); print }' "$f"
+    awk -v now="$now" '$1 > now' "$f" > "$f.new"
+    mv "$f.new" "$f"
+    ;;
+  list)
+    [ "${2-}" = --name ] && name=$3
+    [ -s "$(file)" ] || { echo "nothing due"; exit 0; }
+    while read -r when text; do
+      echo "$(date -r "$when" '+%a %H:%M' 2>/dev/null || date -d "@$when" '+%a %H:%M') $text"
+    done < "$(file)"
+    ;;
+  *) sed -n 2,5p "$0"; exit 2 ;;
+esac

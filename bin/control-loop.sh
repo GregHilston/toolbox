@@ -167,6 +167,9 @@ if load>32: print(\"XO $repo: load\",load)
       fi
     done < "$watch"
   fi
+  while read -r item; do
+    [ -n "$item" ] && alerts="${alerts}XO due: $item"$'\n'
+  done < <("$(dirname "$0")/xo-due" pop "$dir/due" || true)
   touch "$dir/heartbeat"
   if [ -n "$(echo "$alerts" | tr -d '[:space:]')" ]; then
     if [ "$once" = 1 ]; then
