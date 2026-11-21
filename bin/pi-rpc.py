@@ -69,6 +69,9 @@ if _spec is None or _spec.loader is None:  # pragma: no cover - a broken checkou
     raise SystemExit(f"pi-rpc.py needs {_NARRATE_PATH}, which is missing")
 narrate = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(narrate)
+_pf = importlib.util.spec_from_file_location("_preflight", _NARRATE_PATH.with_name("deepseek-preflight.py"))
+preflight = importlib.util.module_from_spec(_pf)
+_pf.loader.exec_module(preflight)
 
 # How long a client waits for pi to answer a command. Generous, because the
 # reader thread may be busy draining a burst of streaming deltas first.
@@ -554,6 +557,10 @@ def cmd_run(args: argparse.Namespace) -> int:
         print("pi-rpc: refusing to start a worker with an empty prompt", file=sys.stderr)
         return 2
 
+    # pi's model comes from its config, so a local model cannot be told apart.
+    if refusal := preflight.no_deepseek_refusal():
+        print(f"pi-rpc: {refusal}", file=sys.stderr)
+        return preflight.EX_NO_DEEPSEEK
     raw = None
     alerts = None
     if args.raw:

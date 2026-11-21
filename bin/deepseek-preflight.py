@@ -23,6 +23,10 @@ overnight run. 01:00 UTC Monday is 21:00 Eastern on *Sunday*.
 It also prints OpenCode Go's and ChatGPT Plus's quotas, which never change the exit code:
 the gateway's `cloud` overflows by itself, from Go to Luna to DeepSeek.
 
+Fleet switch: the file ~/.config/fleet/no-deepseek (override: $NO_DEEPSEEK_FILE) means
+"no DeepSeek": `no_deepseek_refusal` gives the launchers a reason and they exit 76.
+Only `local-*` models are exempt.
+
 Exit codes: 0 clear, 1 something wants a human's attention, 2 could not tell
 (no key, network down). The launchers import `peak_refusal` and exit 75 at peak. 1 and 2 are deliberately different: "you are nearly out
 of money" and "I could not reach the API" call for different reactions.
@@ -35,6 +39,7 @@ import datetime as dt
 import json
 import os
 import sys
+from pathlib import Path
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -103,6 +108,7 @@ def minutes_until_peak(when: dt.datetime) -> int | None:
 
 
 EX_TEMPFAIL = 75  # "wait and retry", not a failure
+EX_NO_DEEPSEEK = 76  # the fleet switch is on: do not retry
 # Flat-fee, so peak costs nothing extra.
 PEAK_EXEMPT = ("cloud-luna",)
 
@@ -126,6 +132,25 @@ def countdown(seconds: float) -> str:
     h, rest = divmod(rest, 3600)
     m, s = divmod(rest, 60)
     return f"{d}d {h}h {m}m {s}s"
+
+
+def no_deepseek_file() -> Path:
+    return Path(os.environ.get("NO_DEEPSEEK_FILE") or Path.home() / ".config" / "fleet" / "no-deepseek")
+
+
+def no_deepseek_refusal(model: str | None = None) -> str | None:
+    """The refusal text while the fleet switch file exists, else None."""
+    alias = (model or "cloud").rsplit("/", 1)[-1]
+    if alias.startswith("local-"):
+        return None
+    f = no_deepseek_file()
+    try:
+        reason = f.read_text().strip()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        reason = ""
+    return f"NO DEEPSEEK: refused ({model or 'cloud'}) by {f}: {reason or 'no reason given'}"
 
 
 def peak_refusal(model: str | None, when: dt.datetime, allow: bool) -> str | None:

@@ -693,6 +693,8 @@ def work_issue(args, n: int, title: str, branch: str,
         blocked = "blocked: classifier\n" + "\n".join(x for x in run.text.splitlines() if CLASSIFIER.search(x))
         with log.open("a") as f:
             f.write(blocked + "\n")
+        if refusal := preflight.no_deepseek_refusal():
+            sys.exit(refusal)  # the retry would start pi on DeepSeek
         allow_pi_writes()
         run = run_agent(args, "pi", None, prompt + RETRY.format(base=base[:12], blocked=blocked), log,
                         session=session, phase="retry")
@@ -845,6 +847,10 @@ def main() -> None:
     phases = [(args.harness, args.model)] + ([(args.reviewer, args.reviewer_model)] if args.reviewer != "none" else [])
     # A claude worker the classifier blocks retries on the gateway's pi.
     args.gateway_used = args.harness == "claude" or any(h == "pi" and m in CLOUD for h, m in phases)
+    for harness, model in ((args.harness, args.model), (args.reviewer, args.reviewer_model)):
+        if harness == "pi" and (refusal := preflight.no_deepseek_refusal(model)):
+            print(refusal, file=sys.stderr)
+            sys.exit(preflight.EX_NO_DEEPSEEK)
     if refusal := peak_refused(args):
         print(refusal, file=sys.stderr)
         sys.exit(preflight.EX_TEMPFAIL)

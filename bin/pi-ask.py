@@ -256,6 +256,9 @@ def main() -> int:
             prompt = Path(prompt[1:]).expanduser().read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as e:
             p.error(f"cannot read the prompt file {prompt[1:]}: {e}")
+    if refusal := preflight.no_deepseek_refusal(args.model):
+        print(refusal, file=sys.stderr)
+        return preflight.EX_NO_DEEPSEEK
     if refusal := preflight.peak_refusal(args.model, preflight.now(), args.allow_peak):
         print(refusal, file=sys.stderr)
         return preflight.EX_TEMPFAIL

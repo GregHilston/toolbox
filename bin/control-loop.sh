@@ -149,6 +149,10 @@ if load>32: print(\"XO $repo: load\",load)
       alerts="${alerts}XO github: $b quota at ${q% *}, resets $(date -r "${q#* }" +%H:%M)"$'\n'
     fi
   done
+  # The check is silent without the switch file, or on a Prometheus failure.
+  while read -r line; do
+    [ -n "$line" ] && fresh "$line" && alerts="$alerts$line"$'\n'
+  done < <(timeout 30 "$(dirname "$0")/xo-deepseek.py" 2>/dev/null || true)
   # Search ignores punctuation, so filter on the title's start.
   # A red main open 20 min means its fix is not moving (2026-11-20: two such held landings an hour each).
   # CAGs also title tool bugs fix(train).

@@ -40,6 +40,9 @@ sleeps, file them in `.scratch/` and list them in the morning report.
   President Hilston, you are the Commander, the watcher script is your XO, each
   orchestrator is its repo's CAG, and builders are its Viper pilots; never at the cost of
   clarity. Give a CAG its line in the restart prompt too.
+- **No-DeepSeek switch:** `~/.config/fleet/no-deepseek` (its text is the reason) makes `pi-ask.py`,
+  `overnight-loop.py` and `pi-rpc.py` exit 76 on a DeepSeek model, and the XO alerts hourly when
+  DeepSeek requests rose in 15 min (`bin/xo-deepseek.py`). Create it on every host for a Claude-only order.
 - Reach hosts by Tailscale name (`moriats`, `foundationts`); from dungeon the plain aliases
   fail, and the Claude sandbox blocks ssh.
 - Talk to an orchestrator with `hc send`, then `hc wait` and `hc read`. Read the screen back
@@ -165,3 +168,4 @@ second leak failed the next train; a delegated script spent the shared GitHub qu
 | 11-20 07:30 | loser-picks landed one commit in 80 min after adopting gridkeep's landing model | Its canary holds every landing while main is red (`b9c79172`); gridkeep's never does: it bisects, files `fix(train)`, puts it first and keeps landing. No green sha was recorded, so nothing bisected | lp #393 (no hold), #394 (green sha, bisect), #395 (light check runs the count checks art and data touch). When a repo copies the other's process, diff the copy against the source's code, not its summary |
 | 11-20 13:13 | loser-picks CAG idle 82 min while three pi lanes finished | Lanes started with `nohup … &` wake nobody on exit; loser-picks has no Chief yet (lp #397, P0, unstarted), and the XO never checked for an idle CAG | `70fed5b`: the XO alerts on a CAG idle over 20 min, with a test. #397 ordered first. Watchers watch each other: `.scratch/fleet-watchers/` |
 | 11-21 03:20 | gridkeep roll FAILED, busy 1 after 20 min; CAG idle | The roll reaper never ran on foundation: it called `lsof` (missing there) and treated only pid 1 as init, while Linux orphans go to the `systemd --user` subreaper. 11-19 03:29 named the `lsof` gap, and nothing fixed it | `roll_reap.py` reads `/proc/<pid>/cwd` and counts a systemd parent as orphaned; its 7 tests failed 4 on foundation, now pass there and on moria |
+| 11-21 08:30 | DeepSeek spend under a Claude-only order | The order lived in prompts; gk's `review_lane.sh` defaults to pi-ask and nothing checked spend | The switch file plus the XO alert (`bin/xo-deepseek.py`) |
