@@ -159,6 +159,10 @@ if load>32: print(\"XO $repo: load\",load)
     age=$(((now - $(date -j -u -f '%Y-%m-%dT%H:%M:%SZ' "$at" +%s 2>/dev/null || echo "$now")) / 60))
     if [ "$age" -ge 20 ] && once "red-$repo-$n"; then alerts="${alerts}XO $repo: main red for $age min, #$n still open"$'\n'; fi
   done <<< "$red"
+  # A CAG waiting on a background agent reads "working".
+  while read -r line; do
+    [ -n "$line" ] && fresh "$line" && alerts="$alerts$line"$'\n'
+  done < <(timeout 90 "$(dirname "$0")/xo-work.py" --repo "$slug" --state "$dir/work.json" --cap "${XO_CAP:-6}" 2>/dev/null || true)
   if [ -r "$watch" ]; then
     while read -r n; do
       [ -n "$n" ] || continue

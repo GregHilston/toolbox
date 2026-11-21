@@ -49,7 +49,7 @@ sleeps, file them in `.scratch/` and list them in the morning report.
 - The XO is `bin/control-loop.sh` (env `XO_HOST`, `XO_TERM`, `XO_REPO`; loser-picks on moria
   by default). It runs as its own detached process, not a Claude background task, and types
   `XO: ...` into the commander's pane: see "Commander shifts". It alerts once an hour per event
-  on a blocked or missing CAG, a CAG idle over 20 min, a question to the Commander, lost tasks, a failed roll, load over
+  on a blocked or missing CAG, a CAG idle over 20 min, a ticket approved but unlanded 30 min, free slots beside a ready P0 for 20 min (`bin/xo-work.py`), a question to the Commander, lost tasks, a failed roll, load over
   32, 90 min with nothing landed, a GitHub quota under 500, and a red main open 20 min. Tickets to
   watch go in `~/.cache/control-loop/<name>/closes`, one number a line.
 - To answer a blocked pick: read the screen, move with `hc keys <t> down…`, then
