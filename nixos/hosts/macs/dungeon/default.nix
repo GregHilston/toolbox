@@ -476,6 +476,7 @@ in {
       EnvironmentVariables = {
         DRADIS_DB = "/Users/${vars.user.name}/home-lab-config/dradis/dradis.db";
         DRADIS_GITHUB_CONFIG = "/Users/${vars.user.name}/Git/dradis/deploy/github.toml";
+        DRADIS_LOGINS_FILE = "/Users/${vars.user.name}/.config/dradis/logins";
         PATH = "/Users/${vars.user.name}/.local/bin:/etc/profiles/per-user/${vars.user.name}/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin";
       };
       RunAtLoad = true;
