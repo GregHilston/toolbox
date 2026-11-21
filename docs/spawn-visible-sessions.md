@@ -34,8 +34,7 @@ hc run --json --bg --no-parent --no-notify --name <name> --cwd <dir> \
   otherwise end the child. The cost is no wake-up on exit, so watch it (below).
 - `--name`: 1-32 of `a-z 0-9 - _`, unique among live terminals; the phone apps show it.
 - `--cwd` picks which project's `CLAUDE.md` it loads.
-- `--on moriats` or `--on foundationts` starts it on another machine; its address becomes
-  `moriats/t7`. Use the Tailscale names (`hc machine ls`).
+- `--on` starts it on another machine: see "Other machines".
 - `--model` is required. Pick it by `docs/claude-model-picking.md`: Opus only when Greg asked.
 - `--dangerously-skip-permissions` for anything nobody watches: `--permission-mode acceptEdits`
   still prompted on every Bash call, and the five burn sessions sat blocked until restarted.
@@ -49,6 +48,21 @@ hc run --json --bg --no-parent --no-notify --name <name> --cwd <dir> \
 
 Check it started right: `hc read <name> | grep -o 'Opus[^|]*\|Sonnet[^|]*\|bypass permissions\|/remote-control is active'`.
 All three must show; a banner stuck on `/rc connecting…` won't reach the Claude app.
+
+## Other machines
+
+`--on moriats` or `--on foundationts` (Tailscale names, from `hc machine ls`) starts the child
+there from any machine, and it shows in both phone apps like a local one; both hosts showed
+`/remote-control is active` on 2026-11-21. Its address becomes `moriats/t7`.
+
+- **Always pass `--cwd`** with a folder already trusted on that host. Without it the child
+  starts in `$HOME`, which Claude does not trust, and stops at "Yes, I trust this folder".
+- Foundation is WSL with an older `claude`; check the banner for the flags you rely on.
+- Address and kill a remote child by address (`hc kill foundationts/t8`), not by name: a name
+  lookup from another machine said "not found" and left the name held.
+- Moria's Claude login expires about every 3 days (`/login` renews it), and an expired login
+  stops Remote Control. Check each host's banner after spawning.
+- Citadel has no `hc` and takes no inbound SSH: never spawn there.
 
 ## The task prompt
 
