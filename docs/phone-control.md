@@ -20,7 +20,7 @@ anything that attaches to the pane survives one.
 | Termux → `ssh ghilston@moria.tail1b9d9.ts.net` → `zj <name>` | **Best available.** Real sessions, any pane, rolls fine, nothing new installed (moria already accepts the Pixel's key). Cramped at ~50 columns, and zellij shrinks the desktop's shared tab to the phone's size ([#5624](https://github.com/zellij-org/zellij/issues/5624)). Not yet tried on the phone. |
 | Herdr phone app | **Adopted 2026-11-18**, with the desktop app. Earlier: **ruled out.** It talks only to herdr-core (`hc`), never to the TUI's server, on purpose ([herdr-app#63](https://github.com/herdrdev/herdr-app/issues/63)). TUI panes never show. Using it means running sessions under `hc` instead, in a second place. Revisit if the TUI moves onto herdr-core. |
 | zellij web client | **Out for now.** Android typing is buggy (fix [#5890](https://github.com/zellij-org/zellij/pull/5890) merged after 0.46.0). A browser reconnect can resurrect a session as a second server and orphan the original ([#5762](https://github.com/zellij-org/zellij/issues/5762), open). Revisit once a release has both fixed. Needs TLS (`tailscale serve`). |
-| Claude Remote Control | One process at a time, weak status view, loses track across rolls. |
+| Claude Remote Control | One process at a time, weak status view. A session started by `hc run … --remote-control <name>` keeps its Claude app entry across a `/clear` roll (tested 2026-11-21). |
 | `herdr --remote` from Termux | No Android build of herdr. |
 | Happy and similar wrappers | They start their own session instead of attaching to ours. |
 
