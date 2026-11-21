@@ -88,6 +88,12 @@ def claude_ancestor(procs: dict[int, Proc], proc: Proc) -> int | None:
     return None
 
 
+def orphan(procs: dict[int, Proc], proc: Proc) -> bool:
+    # systemd --user is a subreaper: Linux orphans land there, not on pid 1.
+    parent = procs.get(proc.ppid)
+    return proc.ppid == 1 or (parent is not None and os.path.basename(parent.command.split()[0]) == "systemd")
+
+
 def slug(path: str) -> str:
     """Claude Code's project folder name for a path."""
     return re.sub(r"[^A-Za-z0-9]", "-", path)
@@ -153,7 +159,7 @@ def candidates(procs: dict[int, Proc], repo: str) -> list[Proc]:
         p.owner = claude_ancestor(procs, p)
         if ROOT and not (p.cwd + "/").startswith(ROOT.rstrip("/") + "/"):
             continue
-        if (p.owner or p.ppid == 1) and (SCRATCH.search(p.cwd) or "/worktrees/" in p.cwd + "/") \
+        if (p.owner or orphan(procs, p)) and (SCRATCH.search(p.cwd) or "/worktrees/" in p.cwd + "/") \
                 and belongs(p.cwd, repo, repo_git):
             keep.append(p)
     return keep
