@@ -67,7 +67,9 @@ sleeps, file them in `.scratch/` and list them in the morning report.
   `claude --remote-control <name>`, not a Herdr pane, on any host but citadel (`--on`, always
   with `--cwd`): `docs/spawn-visible-sessions.md`. Use `--outlive-parent`, not `--no-parent
   --no-notify`, and name the spawner's address and the siblings in each child's prompt so it
-  can `hc send` them.
+  can `hc send` them. Add `--label project=<repo> --label role=<cag|intake>` to an
+  orchestrator (`--label project=fleet --label role=commander` for a commander), so the dradis
+  board shows `gridkeep/cag` and not `t17`. `session-label <t> <role>` labels one already running.
 - Put standing orders in the orchestrator's restart prompt too
   (`HC_TERMINAL_ID=<t> shift-arm --prompt …`), or its next roll forgets them.
 - A load rule names a threshold, not a host. "Keep everything on moria" put 19 Godot runs

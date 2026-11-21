@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Label a running hc terminal so the dradis board names it project/role.
+# usage: session-label <terminal> <commander|cag|intake> [repo-dir]
+set -euo pipefail
+[[ $# -ge 2 && $# -le 3 ]] || { echo "usage: session-label <terminal> <commander|cag|intake> [repo-dir]" >&2; exit 2; }
+terminal=$1 role=$2 dir=${3:-$PWD}
+case $role in commander|cag|intake) ;; *) echo "session-label: role must be commander, cag or intake" >&2; exit 2 ;; esac
+if [[ $role == commander ]]; then
+  project=fleet
+else
+  common=$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir) || exit 1
+  project=${common%/.git}
+  project=${project##*/}
+fi
+exec hc label "$terminal" "project=$project" "role=$role"

@@ -64,6 +64,9 @@ hc read reviewer | tail -40
   screen, then answer with `hc keys reviewer enter`.
 - `hc wait reviewer` blocks until it stops working. A wait checks in after
   `--timeout` seconds (default 180); call it again if the peer still works.
+- A commander, CAG or intake session also gets `--label project=<repo> --label role=<commander|cag|intake>`
+  (the commander's project is `fleet`), which names it on the dradis board. Label a running one:
+  `session-label <t> <role>`.
 - To start with a task in one step, put it last:
   `hc run --json --bg --name x claude --model sonnet "the task"`.
 

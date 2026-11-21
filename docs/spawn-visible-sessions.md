@@ -21,6 +21,7 @@ it; a TUI pane never shows. The parent needs only `hc` on `$PATH` and a running 
 
 ```bash
 hc run --json --bg --outlive-parent --name <name> --cwd <dir> \
+  --label project=<repo> --label role=<commander|cag|intake> \
   claude --model <model> --remote-control <name> --dangerously-skip-permissions "<the whole task as one prompt>"
 ```
 
@@ -28,6 +29,9 @@ hc run --json --bg --outlive-parent --name <name> --cwd <dir> \
   Code list. Without it the session prints `/rc connecting…` and one batch never reached the
   Claude app, though it showed in the Herdr app (2026-11-21).
 
+- `--label project=<repo> --label role=<commander|cag|intake>` is what names the session
+  `project/role` on the dradis board; the commander's project is `fleet`. Leave both off a
+  child that is none of the three. Label a running one with `session-label <t> <role>`.
 - `--bg` returns at once, so one Bash call can start several.
 - `--outlive-parent`: the spawning terminal stays its parent, so `hc` types a note into it
   when the child's turn ends, but a spawner's roll or restart no longer ends the child.
