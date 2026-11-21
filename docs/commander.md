@@ -44,7 +44,8 @@ sleeps, file them in `.scratch/` and list them in the morning report.
   fail, and the Claude sandbox blocks ssh.
 - Talk to an orchestrator with `hc send`, then `hc wait` and `hc read`. Read the screen back
   to prove the message landed. A send to a working terminal can vanish (2026-11-19 20:55):
-  grep the screen for it and resend.
+  grep the screen for it and resend. Once lp #426 and #428 land, read the Chief's events before
+  any screen and message over the socket instead (`docs/fleet.md`, "Why it is built this way").
 - The XO is `bin/control-loop.sh` (env `XO_HOST`, `XO_TERM`, `XO_REPO`; loser-picks on moria
   by default). It runs as its own detached process, not a Claude background task, and types
   `XO: ...` into the commander's pane: see "Commander shifts". It alerts once an hour per event
