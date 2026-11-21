@@ -20,7 +20,7 @@ it; a TUI pane never shows. The parent needs only `hc` on `$PATH` and a running 
 ## The command
 
 ```bash
-hc run --json --bg --no-parent --no-notify --name <name> --cwd <dir> \
+hc run --json --bg --outlive-parent --name <name> --cwd <dir> \
   claude --model <model> --remote-control <name> --dangerously-skip-permissions "<the whole task as one prompt>"
 ```
 
@@ -29,9 +29,10 @@ hc run --json --bg --no-parent --no-notify --name <name> --cwd <dir> \
   Claude app, though it showed in the Herdr app (2026-11-21).
 
 - `--bg` returns at once, so one Bash call can start several.
-- `--no-parent --no-notify`: the child outlives its parent and types nothing into it. A
-  commander needs this: its pane already takes `XO:` alerts, and a parent's restart would
-  otherwise end the child. The cost is no wake-up on exit, so watch it (below).
+- `--outlive-parent`: the spawning terminal stays its parent, so `hc` types a note into it
+  when the child's turn ends, but a spawner's roll or restart no longer ends the child.
+  `--no-parent --no-notify` is one-way: nothing wakes the spawner, so use it only for a child
+  nobody needs to hear from.
 - `--name`: 1-32 of `a-z 0-9 - _`, unique among live terminals; the phone apps show it.
 - `--cwd` picks which project's `CLAUDE.md` it loads.
 - `--on` starts it on another machine: see "Other machines".
@@ -64,6 +65,26 @@ there from any machine, and it shows in both phone apps like a local one; both h
   stops Remote Control. Check each host's banner after spawning.
 - Citadel has no `hc` and takes no inbound SSH: never spawn there.
 
+## Two-way messaging
+
+Every spawned session knows how to reach its spawner and its siblings. A child can't guess
+either, so the prompt names them:
+
+```
+You can message other Herdr sessions: `hc ls` lists them (address, name, status);
+`hc send --if idle <name-or-address> "text"` messages one; `hc read <name>` shows its screen.
+Your spawner is <NAME/ADDRESS>; your siblings are <LIST>. Tell your spawner in one line with
+`hc send` when you finish or need a decision, and write the detail to a file.
+```
+
+- **The spawner needs an `hc` address.** A session run from a plain terminal outside Herdr has
+  none, so its children can't reach it (the 2026-11-21 burn spawner was one). Start a spawner
+  under `hc` or the Herdr desktop app.
+- Remote siblings go by address: `hc send foundationts/t7 "..."`.
+- Send only to sessions named in your prompt; never `keys`, `kill` or `rm` another session's
+  terminal, and never answer its permission prompt: auto mode refuses, and Greg answers from
+  the phone.
+
 ## The task prompt
 
 - The task goes last, as one quoted string. Build a shared preamble in a shell variable and
@@ -71,6 +92,7 @@ there from any machine, and it shows in both phone apps like a local one; both h
 - Say it runs unattended: never ask Greg, take the safe default, note it in the report.
 - Tell it to keep shell simple: no long heredocs over `ssh`; write files with the Write tool and
   copy them across. That avoids the prompt the bypass flag can't skip.
+- Name its spawner and siblings, with the messaging block above.
 - Ask for a result file (`llm/<run>-report-<item>.md`) rather than scraping the screen.
 - An orchestrator gets its CAG line and standing orders here, then arms its own shift with
   `shift-arm --prompt` so a roll keeps them (`docs/commander.md`, "Put standing orders in the
@@ -90,8 +112,8 @@ hc kill <name>                     # only one you started
 - A slash command sent with `hc send` arrives as plain text; type it with `hc keys`
   (`docs/commander.md`, working rules).
 - Run each `hc kill` and `hc rm` in its own Bash call.
-- A child with no parent wakes nobody. Give a spawned orchestrator an XO
-  (`control-loop.sh --name <repo> --wake hc:<commander>`), and set an `xo-due` timer to read a
-  one-off child's report.
+- A child's one-line `hc send` can vanish into a working spawner (`docs/commander.md`), so
+  still give a spawned orchestrator an XO (`control-loop.sh --name <repo> --wake
+  hc:<commander>`), and set an `xo-due` timer to read a one-off child's report.
 - Never send to, kill or type keys into a session you did not start unless Greg says so, and
   don't say a message reached it until its screen shows it.
