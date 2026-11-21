@@ -220,9 +220,20 @@ class Worker(Base):
     def test_live_work_holds_the_clear(self) -> None:
         self.queue(busy=1)
         calls = self.run_worker()
-        self.assertFalse(any("/clear" in c for c in calls))
+        self.assertNotIn(f"agent prompt {PANE} /clear", calls)
         self.assertIsNone(self.state()["announced"])
         self.assertIn("failed while waiting", self.pushes.read_text())
+
+    def test_idle_with_live_work_nudges_once_at_timeout(self) -> None:
+        self.queue(busy=2)
+        nudges = [c for c in self.run_worker() if "TaskStop" in c]
+        self.assertEqual(len(nudges), 1)
+        self.assertTrue(nudges[0].startswith(f"agent prompt {PANE} Shift roll waited 0.0 min: 2 background"))
+
+    def test_working_agent_is_not_nudged(self) -> None:
+        self.status.write_text("working")
+        self.queue(busy=2)
+        self.assertFalse(any("prompt" in c for c in self.run_worker()))
 
     def test_no_stop_since_the_roll_holds_the_clear(self) -> None:
         self.queue(stops=1)
