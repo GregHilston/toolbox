@@ -21,8 +21,12 @@ it; a TUI pane never shows. The parent needs only `hc` on `$PATH` and a running 
 
 ```bash
 hc run --json --bg --no-parent --no-notify --name <name> --cwd <dir> \
-  claude --model <model> --dangerously-skip-permissions "<the whole task as one prompt>"
+  claude --model <model> --remote-control <name> --dangerously-skip-permissions "<the whole task as one prompt>"
 ```
+
+- `--remote-control <name>`, the same name as `--name`, is what puts it in the Claude app's
+  Code list. Without it the session prints `/rc connecting…` and one batch never reached the
+  Claude app, though it showed in the Herdr app (2026-11-21).
 
 - `--bg` returns at once, so one Bash call can start several.
 - `--no-parent --no-notify`: the child outlives its parent and types nothing into it. A
@@ -39,8 +43,8 @@ hc run --json --bg --no-parent --no-notify --name <name> --cwd <dir> \
   attribution, builds on another host.
 - Interactive, not `claude -p`: headless runs drain the 5-hour window 1.8-2.9x faster.
 
-Check it started right: `hc read <name> | grep -o 'Opus[^|]*\|Sonnet[^|]*\|bypass permissions\|/rc'`.
-`/rc` in the banner means Remote Control is on, which is what puts it in the Claude app.
+Check it started right: `hc read <name> | grep -o 'Opus[^|]*\|Sonnet[^|]*\|bypass permissions\|/remote-control is active'`.
+All three must show; a banner stuck on `/rc connecting…` won't reach the Claude app.
 
 ## The task prompt
 
