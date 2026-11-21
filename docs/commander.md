@@ -54,6 +54,12 @@ sleeps, file them in `.scratch/` and list them in the morning report.
   watch go in `~/.cache/control-loop/<name>/closes`, one number a line.
 - To answer a blocked pick: read the screen, move with `hc keys <t> down…`, then
   `hc send --force` for a typed answer.
+- `hc send` wraps its text in an `<hc from=…>` tag, so a slash command (`/clear`, `/model`) arrives
+  as a plain message and never runs (2026-11-21). Type it as raw keys instead:
+  `hc keys <t> / m o d e l space o p u s enter`, then read the screen and confirm any "Switch
+  model?" dialog with `hc keys <t> enter`. `/clear` before `/model` skips that dialog. Typing into
+  a pane only works while it is idle, so wait for `idle` or `done` first. Greg's `!` commands from
+  his phone fail the same way: they arrive as text.
 - Put standing orders in the orchestrator's restart prompt too
   (`HC_TERMINAL_ID=<t> shift-arm --prompt …`), or its next roll forgets them.
 - A load rule names a threshold, not a host. "Keep everything on moria" put 19 Godot runs
