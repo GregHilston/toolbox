@@ -60,6 +60,8 @@ sleeps, file them in `.scratch/` and list them in the morning report.
   model?" dialog with `hc keys <t> enter`. `/clear` before `/model` skips that dialog. Typing into
   a pane only works while it is idle, so wait for `idle` or `done` first. Greg's `!` commands from
   his phone fail the same way: they arrive as text.
+- To start an orchestrator or a long job Greg can see from his phone, use `hc run`, not a
+  Herdr pane: `docs/spawn-visible-sessions.md`.
 - Put standing orders in the orchestrator's restart prompt too
   (`HC_TERMINAL_ID=<t> shift-arm --prompt …`), or its next roll forgets them.
 - A load rule names a threshold, not a host. "Keep everything on moria" put 19 Godot runs
