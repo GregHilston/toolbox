@@ -130,7 +130,11 @@ the answers into the agent prompt template.
 
 ### 2a. Where can worktrees live?
 
-The documented `../repo-<name>` convention **often fails**, because the Bash
+Worktrees go in a folder whose name ends in `.noindex`, which Spotlight skips
+(`../lanes.noindex/repo-<name>`, or `worktrees.noindex/<name>` inside the repo); a plain
+folder of worktrees once drove moria's Spotlight to load 48.
+
+The documented `../lanes.noindex/repo-<name>` convention **often fails**, because the Bash
 sandbox typically allows writes only within the repo. Probe it:
 
 ```bash
@@ -138,7 +142,7 @@ mkdir -p ../probe-xyz && echo ok > ../probe-xyz/x && rm -rf ../probe-xyz
 ```
 
 If that is `Operation not permitted`, put worktrees **inside** the repo at
-`worktrees/<name>` and add `worktrees/` to `.gitignore` as your first commit.
+`worktrees.noindex/<name>` and add `worktrees.noindex/` to `.gitignore` as your first commit.
 
 ### 2a-bis. Create every worktree with an ABSOLUTE path
 
@@ -149,7 +153,7 @@ be — not the repo root. In one real run this silently produced
 project directory. It was gitignored, so nothing complained, and the agent
 working in it only mentioned the odd path in its final report.
 
-Write `git worktree add /abs/path/to/repo/worktrees/<name> -b <branch>` every
+Write `git worktree add /abs/path/to/repo/worktrees.noindex/<name> -b <branch>` every
 time, and re-read `git worktree list` after creating one — the printed paths are
 the check.
 
