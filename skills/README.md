@@ -51,8 +51,8 @@ text out, and errors that say what broke.
 
 | Harness | Gets | Where it is set |
 |---|---|---|
-| Claude Code | every skill here | `~/.claude/skills` → `skills/` (`nixos/modules/programs/tui/claude.nix`) |
-| pi | every skill here except claude.ai's `synced/` | `skills` setting in `nixos/modules/programs/tui/pi.nix`: the exclusion must be an absolute path, because pi's globs skip `.claude` |
+| Claude Code | every skill here except `home-lab/` (see below) | `~/.claude/skills` → `skills/` (`nixos/modules/programs/tui/claude.nix`) |
+| pi | every skill here, `home-lab/` included, except claude.ai's `synced/` | `skills` setting in `nixos/modules/programs/tui/pi.nix`: the exclusion must be an absolute path, because pi's globs skip `.claude` |
 | Hermes (dungeon only) | per profile, by mount | the `hermes` service in home-lab's `docker-compose.yaml` |
 
 **Hermes is opt-in, per profile.** A grant is a read-only mount of
@@ -60,6 +60,14 @@ text out, and errors that say what broke.
 Hermes lists an uncategorised skill as `reddit:` then `- reddit`, and Gemma
 called that `reddit:reddit`. A grant is advice, not a fence: every bot can
 still run anything on `PATH`.
+
+**`skills/home-lab/` is the home-lab and personal set.** Claude Code loads only
+one level deep, so `~/.claude/skills/home-lab/<name>` never reaches the prompt of
+a gridkeep session. A home-lab session links the ones it wants into
+`home-lab/.claude/skills/`. pi scans recursively and still sees all of them, and
+a Hermes grant mounts `skills/home-lab/<name>`. Write a new skill that only the
+lab uses here, not in `skills/`: every skill at the top level costs its
+description in every Claude Code session.
 
 `hermes/skills/` holds the skills that only make sense in Hermes. Claude Code
 has no exclude list, so a Hermes-only skill would otherwise reach it.

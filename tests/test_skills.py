@@ -16,6 +16,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 SHARED = REPO / "skills"
+HOME_LAB = SHARED / "home-lab"
 HERMES_ONLY = REPO / "hermes" / "skills"
 BIN = REPO / "bin"
 
@@ -58,7 +59,7 @@ def commands(skill_md: str) -> set[str]:
 
 class TestSkills(unittest.TestCase):
     def test_the_skill_list_is_not_empty(self):
-        self.assertIn(SHARED / "reddit" / "SKILL.md", tracked_skills())
+        self.assertIn(HOME_LAB / "reddit" / "SKILL.md", tracked_skills())
 
     def test_frontmatter_follows_the_spec(self):
         for skill in tracked_skills():
@@ -80,10 +81,11 @@ class TestSkills(unittest.TestCase):
                         self.assertFalse(": " in value or value.endswith(":"), "quote this value, or reword it without a colon")
 
     def test_skills_are_one_level_deep(self):
-        # Claude Code loads only ~/.claude/skills/<name>/SKILL.md.
+        # Claude Code loads only ~/.claude/skills/<name>/SKILL.md; home-lab/ is the deliberate exception.
         for skill in tracked_skills():
             with self.subTest(skill=str(skill.relative_to(REPO))):
-                self.assertEqual(skill.parent.parent, SHARED if skill.is_relative_to(SHARED) else HERMES_ONLY)
+                want = HOME_LAB if skill.is_relative_to(HOME_LAB) else SHARED if skill.is_relative_to(SHARED) else HERMES_ONLY
+                self.assertEqual(skill.parent.parent, want)
 
     def test_every_command_is_a_bin_script(self):
         for skill in tracked_skills():
@@ -94,7 +96,7 @@ class TestSkills(unittest.TestCase):
                     self.assertTrue(os.access(script, os.X_OK), f"bin/{name} is not executable")
 
     def test_the_reddit_skill_is_checked(self):
-        self.assertEqual(commands((SHARED / "reddit" / "SKILL.md").read_text()), {"reddit-search.py", "fetch-thread.py"})
+        self.assertEqual(commands((HOME_LAB / "reddit" / "SKILL.md").read_text()), {"reddit-search.py", "fetch-thread.py"})
 
 
 if __name__ == "__main__":

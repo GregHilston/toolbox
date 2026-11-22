@@ -7,7 +7,7 @@
 
 ComfyUI runs on moria and is reached through Caddy, so this works from any
 tailnet host and from inside Hermes. The prompt is used as given: writing a
-good one is the calling agent's job (skills/image-generate). Output ends with
+good one is the calling agent's job (skills/home-lab/image-generate). Output ends with
 a MEDIA: line, the form Hermes attaches; inside Hermes the file goes to its
 image cache, the only place its media check accepts.
 

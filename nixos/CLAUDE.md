@@ -504,7 +504,7 @@ Caddy serves it as `comfy.grehg2.xyz`. Why this model and this layout, with the
 measurements: `docs/image-models.md`.
 
 Takes about 15 s per 1024² image. Claude Code and pi draw with it through
-`skills/image-generate` (`bin/comfy-image.py`): the agent writes the prompt, and a follow-up
+`skills/home-lab/image-generate` (`bin/comfy-image.py`): the agent writes the prompt, and a follow-up
 edits it and keeps the seed. Hermes does not use the skill, because its local model kept faking
 the shell route; it calls its native `image_generate` tool on a ComfyUI backend instead
 (home-lab `hermes/README.md` → Images).

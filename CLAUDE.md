@@ -134,7 +134,7 @@ PI WEB has **no authentication**. The tailnet is the only thing keeping it priva
 
 FLUX.2 klein on moria's GPU at `https://comfy.grehg2.xyz`, no authentication, tailnet only.
 `nixos/CLAUDE.md` → "ComfyUI on moria" runs it; `docs/image-models.md` says why. Agents draw
-through `skills/image-generate`; Hermes uses its native `image_generate` tool instead.
+through `skills/home-lab/image-generate`; Hermes uses its native `image_generate` tool instead.
 
 ## Claude Code in Docker
 
