@@ -122,6 +122,30 @@ def resume_cmd(d: dict) -> list[str]:
     return cmd
 
 
+def space_for(machine: str, cwd: str) -> str:
+    """Id of the app space to show a session in: one whose folder holds cwd, else 'adopted'."""
+    host = None if machine == "local" else machine
+    def spaces() -> list[dict]:
+        return [x for x in json.loads(run(["herdr-app", "ls"]).stdout)["spaces"] if x["machine"] == host]
+    for sp in spaces():
+        f = sp.get("folder") or ""
+        if f and (cwd == f or cwd.startswith(f.rstrip("/") + "/")):
+            return sp["id"].split("/")[-1]
+    for sp in spaces():
+        if sp["name"] == "adopted":
+            return sp["id"].split("/")[-1]
+    new = ["herdr-app", "do", "space.new", "--name", "adopted", "--folder", cwd, "--focus", "false"]
+    r = run(new + (["--machine", host] if host else []))
+    if r.returncode:
+        raise RuntimeError(r.stderr.strip() or r.stdout.strip())
+    return next(sp["id"] for sp in spaces() if sp["name"] == "adopted").split("/")[-1]
+
+
+def show(machine: str, address: str, cwd: str) -> None:
+    """hc terminals stay hidden from the sidebar until labelled with a space."""
+    run(["hc", "label", address, f"herdr.space={space_for(machine, cwd)}"]).check_returncode()
+
+
 def adopt(machine: str, d: dict) -> str:
     kill = on(machine, ["kill", "-TERM", str(d["pid"])])
     if kill.returncode:
@@ -136,6 +160,10 @@ def adopt(machine: str, d: dict) -> str:
     if r.returncode:
         return f"STOPPED but FAILED to start: {r.stderr.strip()[:200]}; resume by hand: {shlex.join(resume_cmd(d))}"
     addr = json.loads(r.stdout).get("address", "?")
+    try:
+        show(machine, addr, d["cwd"])
+    except Exception as e:  # session is fine, only hidden
+        return f"now {addr} but NOT in sidebar: {e}"
     return f"now {addr}"
 
 
