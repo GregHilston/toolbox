@@ -75,6 +75,10 @@
           },
           {
             "type": "command",
+            "command": "~/.claude/hooks/no-notes-llm-append.py"
+          },
+          {
+            "type": "command",
             "command": "rtk hook claude"
           }
         ]
