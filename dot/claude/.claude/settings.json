@@ -214,7 +214,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "$HOME/.npm-global/bin/ccstatusline",
+    "command": "$HOME/Git/toolbox/bin/statusline-post.py",
     "padding": 0,
     "refreshInterval": 10
   },
