@@ -77,8 +77,9 @@ sleeps, file them in `.scratch/` and list them in the morning report.
 - Check a subagent's surprising claim before relaying it. "Luna gets no cache" was wrong.
 - Read a ticket's body before naming it as the vehicle for a plan. On 2026-11-19 "#327 is
   the two-host pool" was wrong, and the real ticket (#355) started an hour late.
-- Re-running `shift-arm` keeps the roll count (and `--drain`, `--log`), so `max_rolls` binds
-  across restarts; only `shift-arm --off` resets it.
+- Re-running `shift-arm` keeps the roll count, threshold, max rolls, `--drain` and `--log`, so
+  `max_rolls` binds across restarts; only `shift-arm --off` resets them. It replaces the prompt,
+  so a standing order lives in the repo's `docs/shift-start.md`, not only in the prompt.
 - A slot cap counts sessions, not cores: watch load, not the builder count.
 - Greg asleep: no `AskUserQuestion`. Take the recommended option if it can be undone, follow
   the standing orders for money, and Pushover only what he must act on.
@@ -175,3 +176,4 @@ second leak failed the next train; a delegated script spent the shared GitHub qu
 | 11-21 11:01 | loser-picks roll FAILED after the 20-min drain (gridkeep the same at 11:50, two background shells), CAG drained an hour with only #468 building | The drained CAG kept its own 50-min `orch_wait` on a detached canary (survives /clear) and re-drains each stop answered "the roll waits on it" | Commander told it to stop the wait and roll (11:59). Guard to build: a re-drain after a FAILED roll names the live tasks and says a wait on a detached job is not live work |
 | 11-21 12:35 | lp landing #314 waited 57 min in its gate at load under 3 | The canary bisect ran `gate_test.sh` and held `/tmp/lp-godot-gate.lock` ahead of the landing | Canary stopped; lp P0 ticket: a bisect never holds the gate lock ahead of a landing. Check load and the child tree before calling a landing busy |
 | 11-21 14:06 | lp first two stacks red, nothing landed 13:19-15:00 | Stacked branches each add a docs entry and nobody regenerated the views; an untracked Godot `.uid` held #468 and #478 as dirty | lp #478 (regenerate on the stack, drop branches named by errors) lands before the next stack; track the `.uid`. Land a fix for a failure class before the next stack |
+| 11-21 22:45 | lp CAG ran 4 builders under a cap-10 order; dradis armed 250k/8 under a 200k/20 order | A CAG re-arms itself from its shift-start doc: the new prompt replaced the one carrying the order, and a re-arm without flags reset threshold and max rolls to defaults | `shift-arm` keeps threshold and max rolls unless given, with a test; orders go in each repo's `docs/shift-start.md` |

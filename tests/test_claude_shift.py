@@ -326,6 +326,20 @@ class ArmCli(Base):
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertIsNotNone(claude_shift.load(PANE))
 
+    def test_rearm_keeps_limits_it_was_not_given(self) -> None:
+        self.install()
+        cli = [sys.executable, ROOT / "bin/shift-arm", "--prompt", "go"]
+        subprocess.run([*cli, "--threshold", "200000", "--max-rolls", "20"], check=True, env=self.env)
+        subprocess.run(cli, check=True, env=self.env)
+        state = claude_shift.load(PANE)
+        self.assertEqual((state["threshold"], state["max_rolls"]), (200000, 20))
+
+    def test_first_arm_takes_the_defaults(self) -> None:
+        self.install()
+        self.assertEqual(self.arm_cli().returncode, 0)
+        state = claude_shift.load(PANE)
+        self.assertEqual((state["threshold"], state["max_rolls"]), (250000, 8))
+
 
 if __name__ == "__main__":
     unittest.main()
