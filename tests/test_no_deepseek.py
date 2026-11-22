@@ -40,6 +40,30 @@ class Refusal(Switch):
         self.assertIn("claude only until 04:00", text)
         self.assertIsNone(pf.no_deepseek_refusal("litellm/local-small"))
 
+    def test_provider_switch_follows_its_own_file(self):
+        pf = load("deepseek-preflight.py")
+        home = Path(self.dir.name)
+        with mock.patch.object(pf.Path, "home", return_value=home):
+            self.assertFalse(pf.switched_off("go"))
+            (home / ".config" / "fleet").mkdir(parents=True)
+            (home / ".config" / "fleet" / "no-go").write_text("quota\n")
+            self.assertTrue(pf.switched_off("go"))
+            self.assertIn("quota", pf.provider_refusal("go"))
+            self.assertFalse(pf.switched_off("luna"))
+            self.assertIsNone(pf.provider_refusal("luna"))
+
+    def test_provider_name_cannot_escape_the_directory(self):
+        pf = load("deepseek-preflight.py")
+        for bad in ("../x", "a/b", "", "Go", "no go", ".."):
+            with self.assertRaises(ValueError, msg=bad):
+                pf.switched_off(bad)
+
+    def test_deepseek_still_honours_the_env_override(self):
+        pf = load("deepseek-preflight.py")
+        self.assertFalse(pf.switched_off("deepseek"))
+        self.on()
+        self.assertTrue(pf.switched_off("deepseek"))
+
     def test_pi_ask_exits_76_before_starting_pi(self):
         self.on()
         pi_ask = load("pi-ask.py")

@@ -25,6 +25,7 @@ the gateway's `cloud` overflows by itself, from Go to Luna to DeepSeek.
 
 Fleet switch: the file ~/.config/fleet/no-deepseek (override: $NO_DEEPSEEK_FILE) means
 "no DeepSeek": `no_deepseek_refusal` gives the launchers a reason and they exit 76.
+Other providers: `switched_off(name)` reads ~/.config/fleet/no-<name>.
 Only `local-*` models are exempt.
 
 Exit codes: 0 clear, 1 something wants a human's attention, 2 could not tell
@@ -38,6 +39,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sys
 from pathlib import Path
 import urllib.error
@@ -134,8 +136,32 @@ def countdown(seconds: float) -> str:
     return f"{d}d {h}h {m}m {s}s"
 
 
+def provider_switch_file(provider: str) -> Path:
+    if not re.fullmatch(r"[a-z0-9-]+", provider):
+        raise ValueError(f"bad provider name: {provider!r}")
+    if provider == "deepseek" and os.environ.get("NO_DEEPSEEK_FILE"):
+        return Path(os.environ["NO_DEEPSEEK_FILE"])
+    return Path.home() / ".config" / "fleet" / f"no-{provider}"
+
+
+def provider_refusal(provider: str, subject: str | None = None) -> str | None:
+    """The refusal text while the provider's switch file exists, else None."""
+    f = provider_switch_file(provider)
+    try:
+        reason = f.read_text().strip()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        reason = ""
+    return f"NO {provider.upper()}: refused ({subject or provider}) by {f}: {reason or 'no reason given'}"
+
+
+def switched_off(provider: str) -> bool:
+    return provider_refusal(provider) is not None
+
+
 def no_deepseek_file() -> Path:
-    return Path(os.environ.get("NO_DEEPSEEK_FILE") or Path.home() / ".config" / "fleet" / "no-deepseek")
+    return provider_switch_file("deepseek")
 
 
 def no_deepseek_refusal(model: str | None = None) -> str | None:
@@ -143,14 +169,7 @@ def no_deepseek_refusal(model: str | None = None) -> str | None:
     alias = (model or "cloud").rsplit("/", 1)[-1]
     if alias.startswith("local-"):
         return None
-    f = no_deepseek_file()
-    try:
-        reason = f.read_text().strip()
-    except FileNotFoundError:
-        return None
-    except OSError:
-        reason = ""
-    return f"NO DEEPSEEK: refused ({model or 'cloud'}) by {f}: {reason or 'no reason given'}"
+    return provider_refusal("deepseek", model or "cloud")
 
 
 def peak_refusal(model: str | None, when: dt.datetime, allow: bool) -> str | None:
