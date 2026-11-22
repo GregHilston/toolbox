@@ -33,6 +33,10 @@ class TestNoNotesLlmAppend(unittest.TestCase):
         self.assertEqual(run(f"cat >> ~/Git/notes/llm/{MISSING}", cwd="/"), 2)
         self.assertEqual(run(f"cat >> {MISSING}", cwd=f"{NOTES}/llm"), 2)
 
+    def test_a_leading_cd_moves_the_base(self):
+        self.assertEqual(run(f"cd {NOTES} && cat >> llm/{MISSING}", cwd="/tmp"), 2)
+        self.assertEqual(run(f"cd /tmp && cat >> llm/{MISSING}", cwd=NOTES), 0)
+
     def test_append_to_an_existing_file_passes(self):
         existing = next(Path(NOTES, "llm").glob("*.md"), None)
         if existing is None:

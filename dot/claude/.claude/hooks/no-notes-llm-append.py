@@ -5,7 +5,7 @@ A no-op `cat >> llm/commander-log-<date>-tmp` leaves an empty stray file, and th
 no-delete hook stops agents removing it (dradis #91, five times). Appending to
 an existing file stays allowed. Exit 2 blocks the call. Any error lets it through.
 
-Not covered: a `cd` earlier in the command, which moves what a relative target means.
+A plain `cd DIR` earlier in the command moves the base of a relative target.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ import sys
 
 LLM_DIR = os.path.expanduser("~/Git/notes/llm")
 # `>>` then one quoted or bare word; `>>&` and `&>>` are not matched.
+CD = re.compile(r"(?:^|[;&|(]\s*)cd\s+(?:\"([^\"]*)\"|'([^']*)'|([^\s;&|<>()\"']+))")
 APPEND = re.compile(r"(?<![>&])>>\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s;&|<>()\"']+))")
 
 
@@ -26,7 +27,11 @@ def new_file_under_llm(command: str, cwd: str) -> bool:
         target = target.replace("$HOME", "~", 1) if target.startswith("$HOME") else target
         if "$" in target or "`" in target:
             continue
-        path = os.path.normpath(os.path.join(cwd, os.path.expanduser(target)))
+        base = cwd
+        for c in CD.finditer(command, 0, m.start()):
+            d = next(g for g in c.groups() if g is not None)
+            base = os.path.join(base, os.path.expanduser(d.replace("$HOME", "~", 1)))
+        path = os.path.normpath(os.path.join(base, os.path.expanduser(target)))
         if path.startswith(LLM_DIR + os.sep) and not os.path.exists(path):
             return True
     return False
