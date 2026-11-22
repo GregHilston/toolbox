@@ -30,11 +30,11 @@ class Classify(unittest.TestCase):
 class Resume(unittest.TestCase):
     def test_phone_session_keeps_model_mode_and_gets_remote_control(self) -> None:
         d = session(entrypoint="sdk-cli", argv="claude --print --model claude-sonnet-5-5 --permission-mode auto")
-        self.assertEqual(adopt.resume_cmd(d), ["claude", "--resume", "abc", "--model", "claude-sonnet-5-5",
+        self.assertEqual(adopt.resume_cmd(d), ["claude", "--resume", "abc", "--name", "Notes 9F!", "--model", "claude-sonnet-5-5",
                                                "--permission-mode", "auto", "--remote-control"])
 
     def test_plain_terminal_session_has_no_remote_control(self) -> None:
-        self.assertEqual(adopt.resume_cmd(session()), ["claude", "--resume", "abc"])
+        self.assertEqual(adopt.resume_cmd(session()), ["claude", "--resume", "abc", "--name", "Notes 9F!"])
 
     def test_name_fits_herdr_rules(self) -> None:
         n = adopt.herdr_name(session(name="A very long Session name, with symbols!!"))

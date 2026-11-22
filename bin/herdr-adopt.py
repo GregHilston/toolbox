@@ -30,6 +30,7 @@ import re
 import shlex
 import subprocess
 import sys
+import time
 
 # Runs on the target machine; prints one JSON list.
 COLLECTOR = r'''
@@ -107,12 +108,13 @@ def classify(d: dict, min_idle: int) -> tuple[str, str]:
 
 
 def herdr_name(d: dict) -> str:
-    base = re.sub(r"[^a-z0-9_-]+", "-", (d.get("name") or "claude").lower()).strip("-")
-    return f"{base[:24]}-{d['pid'] % 10000}"[:32]
+    return re.sub(r"[^a-z0-9_-]+", "-", (d.get("name") or "claude").lower()).strip("-")[:32] or "claude"
 
 
 def resume_cmd(d: dict) -> list[str]:
     cmd = ["claude", "--resume", d["sessionId"]]
+    if d.get("name"):
+        cmd += ["--name", d["name"]]
     for f in ("--model", "--permission-mode"):
         v = flag(d["argv"], f)
         if v:
@@ -141,9 +143,16 @@ def space_for(machine: str, cwd: str) -> str:
     return next(sp["id"] for sp in spaces() if sp["name"] == "adopted").split("/")[-1]
 
 
-def show(machine: str, address: str, cwd: str) -> None:
+def show(machine: str, address: str, cwd: str, title: str) -> None:
     """hc terminals stay hidden from the sidebar until labelled with a space."""
     run(["hc", "label", address, f"herdr.space={space_for(machine, cwd)}"]).check_returncode()
+    for _ in range(10):  # the app makes the tab a moment later
+        for sp in json.loads(run(["herdr-app", "ls"]).stdout)["spaces"]:
+            for tab in sp["tabs"]:
+                if any(t["terminal"] == address for t in tab["terminals"]):
+                    run(["herdr-app", "do", "tab.rename", "--id", tab["id"], "--name", title])
+                    return
+        time.sleep(0.5)
 
 
 def adopt(machine: str, d: dict) -> str:
@@ -157,11 +166,14 @@ def adopt(machine: str, d: dict) -> str:
     if machine != "local":
         hc += ["--on", machine]
     r = run(hc + resume_cmd(d))
+    if r.returncode and "name" in r.stderr.lower():  # name taken: add pid
+        hc[hc.index("--name") + 1] = f"{herdr_name(d)[:27]}-{d['pid'] % 10000}"
+        r = run(hc + resume_cmd(d))
     if r.returncode:
         return f"STOPPED but FAILED to start: {r.stderr.strip()[:200]}; resume by hand: {shlex.join(resume_cmd(d))}"
     addr = json.loads(r.stdout).get("address", "?")
     try:
-        show(machine, addr, d["cwd"])
+        show(machine, addr, d["cwd"], d.get("name") or herdr_name(d))
     except Exception as e:  # session is fine, only hidden
         return f"now {addr} but NOT in sidebar: {e}"
     return f"now {addr}"
