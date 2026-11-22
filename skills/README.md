@@ -69,6 +69,8 @@ a Hermes grant mounts `skills/home-lab/<name>`. Write a new skill that only the
 lab uses here, not in `skills/`: every skill at the top level costs its
 description in every Claude Code session.
 
+`retired-skills/` (repo root, outside `skills/`) holds retired skills: no harness loads them, because pi scans `skills/` recursively. Move one back to `skills/` to revive it.
+
 `hermes/skills/` holds the skills that only make sense in Hermes. Claude Code
 has no exclude list, so a Hermes-only skill would otherwise reach it.
 
