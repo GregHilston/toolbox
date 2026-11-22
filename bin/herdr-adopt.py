@@ -30,7 +30,6 @@ import re
 import shlex
 import subprocess
 import sys
-import time
 
 # Runs on the target machine; prints one JSON list.
 COLLECTOR = r'''
@@ -124,37 +123,6 @@ def resume_cmd(d: dict) -> list[str]:
     return cmd
 
 
-def space_for(machine: str, cwd: str) -> str:
-    """Id of the app space to show a session in: one whose folder holds cwd, else 'adopted'."""
-    host = None if machine == "local" else machine
-    def spaces() -> list[dict]:
-        return [x for x in json.loads(run(["herdr-app", "ls"]).stdout)["spaces"] if x["machine"] == host]
-    for sp in spaces():
-        f = sp.get("folder") or ""
-        if f and (cwd == f or cwd.startswith(f.rstrip("/") + "/")):
-            return sp["id"].split("/")[-1]
-    for sp in spaces():
-        if sp["name"] == "adopted":
-            return sp["id"].split("/")[-1]
-    new = ["herdr-app", "do", "space.new", "--name", "adopted", "--folder", cwd, "--focus", "false"]
-    r = run(new + (["--machine", host] if host else []))
-    if r.returncode:
-        raise RuntimeError(r.stderr.strip() or r.stdout.strip())
-    return next(sp["id"] for sp in spaces() if sp["name"] == "adopted").split("/")[-1]
-
-
-def show(machine: str, address: str, cwd: str, title: str) -> None:
-    """hc terminals stay hidden from the sidebar until labelled with a space."""
-    run(["hc", "label", address, f"herdr.space={space_for(machine, cwd)}"]).check_returncode()
-    for _ in range(10):  # the app makes the tab a moment later
-        for sp in json.loads(run(["herdr-app", "ls"]).stdout)["spaces"]:
-            for tab in sp["tabs"]:
-                if any(t["terminal"] == address for t in tab["terminals"]):
-                    run(["herdr-app", "do", "tab.rename", "--id", tab["id"], "--name", title])
-                    return
-        time.sleep(0.5)
-
-
 def adopt(machine: str, d: dict) -> str:
     kill = on(machine, ["kill", "-TERM", str(d["pid"])])
     if kill.returncode:
@@ -162,21 +130,14 @@ def adopt(machine: str, d: dict) -> str:
     wait = on(machine, ["sh", "-c", f"for i in $(seq 20); do kill -0 {d['pid']} 2>/dev/null || exit 0; sleep 0.5; done; exit 1"])
     if wait.returncode:
         return "FAILED: process still alive after 10s, left it running"
-    hc = ["hc", "run", "--json", "--bg", "--no-parent", "--no-notify", "--name", herdr_name(d), "--cwd", d["cwd"]]
+    cmd = ["herdr-app", "do", "space.new", "--name", d.get("name") or herdr_name(d), "--folder", d["cwd"],
+           "--argv", json.dumps(resume_cmd(d)), "--focus", "false"]
     if machine != "local":
-        hc += ["--on", machine]
-    r = run(hc + resume_cmd(d))
-    if r.returncode and "name" in r.stderr.lower():  # name taken: add pid
-        hc[hc.index("--name") + 1] = f"{herdr_name(d)[:27]}-{d['pid'] % 10000}"
-        r = run(hc + resume_cmd(d))
+        cmd += ["--machine", machine]
+    r = run(cmd)
     if r.returncode:
-        return f"STOPPED but FAILED to start: {r.stderr.strip()[:200]}; resume by hand: {shlex.join(resume_cmd(d))}"
-    addr = json.loads(r.stdout).get("address", "?")
-    try:
-        show(machine, addr, d["cwd"], d.get("name") or herdr_name(d))
-    except Exception as e:  # session is fine, only hidden
-        return f"now {addr} but NOT in sidebar: {e}"
-    return f"now {addr}"
+        return f"STOPPED but FAILED to start: {(r.stderr or r.stdout).strip()[:200]}; resume by hand: {shlex.join(resume_cmd(d))}"
+    return "now " + " ".join(str(v) for v in json.loads(r.stdout).values())
 
 
 def main() -> None:
