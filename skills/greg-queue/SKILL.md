@@ -55,10 +55,12 @@ Then ask with `AskUserQuestion`:
 - Put up to four independent items in one call, so one screen settles them.
 - If Greg says skip or later, leave the ticket alone and move on.
 
-After each answer, record it at once with `factory answer`. Add `--ready` when
+After each answer, record it at once with `factory answer`, passing `repo`
+exactly as the JSON gives it (`GregHilston/gridkeep`). Add `--ready` when
 the body says a build waits on this answer. Pass Greg's reasoning, if he gave
-any, as `--note`, in his words. On "ticket changed", run `factory needs --json`
-again and re-ask only that item.
+any, as `--note`, in his words. Exit 3 ("ticket changed") means run
+`factory needs --json` again and re-ask only that item; exit 75 means the dradis
+core is down, so stop and tell Greg.
 
 ## Closing list
 
