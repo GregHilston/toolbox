@@ -143,7 +143,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-m", "--machine", action="append", help="hc machine name (default: this one)")
     ap.add_argument("--apply", action="store_true", help="stop and resume; default is a dry run")
-    ap.add_argument("--only", action="append", help="session name or pid; repeatable")
+    ap.add_argument("--only", action="append", help="session name, pid or session ID; repeatable")
     ap.add_argument("--min-idle", type=int, default=60, help="seconds a session must have been idle")
     args = ap.parse_args()
 
@@ -154,7 +154,7 @@ def main() -> None:
             action, why = classify(d, args.min_idle)
             if action == "skip" and why == "already in Herdr":
                 continue
-            picked = not args.only or str(d["pid"]) in args.only or d.get("name") in args.only
+            picked = not args.only or {str(d["pid"]), d["sessionId"], d.get("name")} & set(args.only)
             result = ""
             if args.apply and action == "resume" and picked:
                 result = " -> " + adopt(machine, d)
