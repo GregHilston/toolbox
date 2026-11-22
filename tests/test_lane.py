@@ -90,7 +90,7 @@ class LaneCase(unittest.TestCase):
         os.environ["VERIFY_OUT"] = str(self.verify_out)
 
     def make_clone(self, name: str = "b") -> Path:
-        clone = self.root / f"proj-{name}"
+        clone = self.root / "lanes.noindex" / f"proj-{name}"
         git(self.root, "clone", "-q", str(self.origin), str(clone))
         (clone / ".overnight").mkdir()
         return clone
@@ -146,7 +146,7 @@ class StartTest(LaneCase):
     def test_starts_detached_with_label_and_args(self) -> None:
         git(self.repo, "config", "wayfinder.tracker", "github")
         msg = lane.start(self.repo, "b", None, ["--harness", "claude"])
-        clone = self.root / "proj-b"
+        clone = self.root / "lanes.noindex" / "proj-b"
         pid = int((clone / ".overnight" / "lane.pid").read_text())
         self.addCleanup(lambda: os.kill(pid, 9))
         self.assertIn(f"pid {pid}", msg)
@@ -175,7 +175,7 @@ class StartTest(LaneCase):
 
     def test_the_loop_is_told_its_turn(self) -> None:
         lane.start(self.repo, "b", None, ["--harness", "claude"])
-        clone = self.root / "proj-b"
+        clone = self.root / "lanes.noindex" / "proj-b"
         pid = int((clone / ".overnight" / "lane.pid").read_text())
         self.addCleanup(lambda: os.kill(pid, 9))
         for _ in range(50):
@@ -187,7 +187,7 @@ class StartTest(LaneCase):
     def test_lane_does_not_inherit_the_herdr_pane(self) -> None:
         with mock.patch.dict(os.environ, {"HERDR_ENV": "1", "HERDR_PANE_ID": "w1:p1", "KEEP_ME": "yes"}):
             lane.start(self.repo, "b", None, [])
-        clone = self.root / "proj-b"
+        clone = self.root / "lanes.noindex" / "proj-b"
         pid = int((clone / ".overnight" / "lane.pid").read_text())
         self.addCleanup(lambda: os.kill(pid, 9))
         for _ in range(50):
@@ -201,7 +201,7 @@ class StartTest(LaneCase):
 
 class LimitTest(LaneCase):
     def stop_later(self) -> None:
-        pid_file = self.root / "proj-b" / ".overnight" / "lane.pid"
+        pid_file = self.root / "lanes.noindex" / "proj-b" / ".overnight" / "lane.pid"
         self.addCleanup(lambda: os.kill(int(pid_file.read_text()), 9))
 
     def test_high_load_refuses_unless_forced(self) -> None:
@@ -209,7 +209,7 @@ class LimitTest(LaneCase):
         with self.assertRaises(lane.LaneError) as cm:
             lane.start(self.repo, "b", None, [], max_load=32)
         self.assertIn("load 99.0", str(cm.exception))
-        self.assertFalse((self.root / "proj-b").exists())
+        self.assertFalse((self.root / "lanes.noindex" / "proj-b").exists())
         lane.start(self.repo, "b", None, [], force=True, max_load=32)
         self.stop_later()
 
@@ -327,7 +327,7 @@ class StatusTest(LaneCase):
 
     def test_hand_started_lane_is_unknown(self) -> None:
         self.make_clone()
-        self.assertEqual(lane.lane_row(self.root / "proj-b", "b"), ["b", "unknown", "-", "-", "-", ""])
+        self.assertEqual(lane.lane_row(self.root / "lanes.noindex" / "proj-b", "b"), ["b", "unknown", "-", "-", "-", ""])
 
     def test_running_lane_counts(self) -> None:
         clone = self.make_clone()
@@ -347,7 +347,7 @@ class FetchTest(LaneCase):
         self.lane_commit(self.clone, self.br, "progress.md", "- lane note\n", "feat(x): a (#7)")
         self.main_commit("progress.md", "- main note\n")
         out = lane.fetch(self.repo, "b", None)
-        wt = self.root / "proj-wt-b"
+        wt = self.root / "lanes.noindex" / "proj-wt-b"
         self.assertIn(f"worktree {wt}", out)
         self.assertIn("commits 1", out)
         self.assertTrue(out.endswith("clean"), out)
@@ -390,7 +390,7 @@ class FetchTest(LaneCase):
         out = lane.fetch(self.repo, "b", None)
         self.assertIn("conflicts", out)
         self.assertIn("  file.txt", out)
-        self.assertTrue((self.root / "proj-wt-b").is_dir())
+        self.assertTrue((self.root / "lanes.noindex" / "proj-wt-b").is_dir())
 
 
 class SecondOpinionTest(unittest.TestCase):
@@ -417,7 +417,7 @@ class LandTest(LaneCase):
         self.lane_commit(clone, "overnight/2026-10-16-0628", "file.txt", "lane\n", subject)
         self.lane_commit(clone, "overnight/2026-10-16-0628", "file.txt", "more\n", "feat(x): b (#8)")
         lane.fetch(self.repo, "b", None)
-        return self.root / "proj-wt-b"
+        return self.root / "lanes.noindex" / "proj-wt-b"
 
     def test_lands_raises_baseline_and_closes_issues(self) -> None:
         wt = self.fetched()
@@ -460,13 +460,13 @@ class LandTest(LaneCase):
         (self.root / "view" / "3").write_text('{"state":"CLOSED","labels":[{"name":"b"}]}')
         (self.root / "view" / "4").write_text('{"state":"OPEN","labels":[{"name":"lane-c"}]}')
         lane.fetch(self.repo, "b", None)
-        lane.land(self.repo, self.root / "proj-wt-b", False)
+        lane.land(self.repo, self.root / "lanes.noindex" / "proj-wt-b", False)
         self.assertEqual(self.gh_log.read_text().splitlines(),
                          ["issue close 5 --comment Merged to main; gate PASS 12."])
 
     def test_refuses_while_running(self) -> None:
         wt = self.fetched()
-        (self.root / "proj-b" / ".overnight" / "lane.pid").write_text(f"{os.getpid()}\n")
+        (self.root / "lanes.noindex" / "proj-b" / ".overnight" / "lane.pid").write_text(f"{os.getpid()}\n")
         with self.assertRaises(lane.LaneError) as cm:
             lane.land(self.repo, wt, False)
         self.assertIn("still running", str(cm.exception))

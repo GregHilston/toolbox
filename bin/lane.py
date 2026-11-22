@@ -7,8 +7,8 @@
 
 A lane is one overnight-loop.py run in its own clone of the repo, working one
 GitHub label, so several loops never pick the same issue. Run every command from
-the repo's main checkout: clones live beside it as <repo-dir>-<lane>, and `land`
-fast-forwards the main checkout's default branch.
+the repo's main checkout: clones live in the sibling lanes.noindex/ as
+<repo-dir>-<lane>, and `land` fast-forwards the main checkout's default branch.
 
 Two lanes started in the same minute share a branch name (overnight/<time>), so
 `fetch` stores each under its own local name, <lane>-<HHMM>. Every loop commit
@@ -83,9 +83,14 @@ def default_branch(repo: Path) -> str:
     return run("git", "branch", "--show-current", cwd=repo)
 
 
+def lanes_dir(repo: Path) -> Path:
+    # Spotlight skips a .noindex ancestor; a clone beside the repo gets indexed.
+    return repo.parent / "lanes.noindex"
+
+
 def clone_path(repo: Path, lane: str) -> Path:
     """Where the lane's clone lives."""
-    return repo.parent / f"{repo.name}-{lane}"
+    return lanes_dir(repo) / f"{repo.name}-{lane}"
 
 
 def pid_alive(pid_file: Path) -> int | None:
@@ -99,8 +104,8 @@ def pid_alive(pid_file: Path) -> int | None:
 
 
 def lane_clones(repo: Path) -> list[Path]:
-    """Every lane clone beside the repo."""
-    return [c for c in sorted(repo.parent.glob(f"{repo.name}-*")) if (c / ".git").is_dir() and (c / ".overnight").is_dir()]
+    """Every lane clone in the repo's lanes dir."""
+    return [c for c in sorted(lanes_dir(repo).glob(f"{repo.name}-*")) if (c / ".git").is_dir() and (c / ".overnight").is_dir()]
 
 
 def running_count(repo: Path) -> int:
@@ -411,7 +416,7 @@ def fetch(repo: Path, lane: str, branch: str | None, force: bool = False) -> str
         local = f"{base}-{n}"
     base_branch = default_branch(repo)
     run("git", "fetch", "-q", str(clone), f"refs/heads/{branch}:refs/heads/{local}", cwd=repo)
-    wt = repo.parent / f"{repo.name}-wt-{lane}"
+    wt = lanes_dir(repo) / f"{repo.name}-wt-{lane}"
     run("git", "worktree", "add", "-q", str(wt), local, cwd=repo)
     attrs = Path(run("git", "rev-parse", "--path-format=absolute", "--git-common-dir", cwd=repo)) / "info" / "attributes"
     attrs.parent.mkdir(parents=True, exist_ok=True)
