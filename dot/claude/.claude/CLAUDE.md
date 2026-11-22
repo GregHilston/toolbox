@@ -35,7 +35,7 @@ If I ever ask you to generate a PR description, do so by writing markdown to a f
 
 ## Ending a chat
 
-Every `/orchestrate` closing report, and every final report of a long chat, ends with a short **Throughput** section: wall time per ticket split into build, review, fix and merge, the biggest wait, and one change that would cut wall time, CPU or tokens next time. Apply the change in the next run, not just name it (2026-11-13: a six-ticket gate run took hours longer than I expected).
+In a dradis repo (gridkeep, loser-picks, toolbox, notes, dradis), every `/orchestrate` closing report and every final report of a long chat ends with a short **Throughput** section: wall time per ticket split into build, review, fix and merge, the biggest wait, and one change that would cut wall time, CPU or tokens next time. Apply the change in the next run, not just name it (2026-11-13: a six-ticket gate run took hours longer than I expected). Any other repo gets neither the section nor the table (2026-11-21).
 
 When I say I'm ending the chat, or ask for a handoff, read `~/Git/toolbox/docs/claude-ending-a-chat.md` first. To end fast, the plan goes into tickets, not a handoff doc.
 
@@ -48,7 +48,7 @@ When I say I'm ending the chat, or ask for a handoff, read `~/Git/toolbox/docs/c
 - I may leave a question unanswered for hours. A pick blocks your whole session, so first start all the work that doesn't depend on it, and put a decision that can wait on its ticket instead; on 2026-11-02 an open pick idled a swarm for 1h 23m. Once I've said I'm going to bed, never use `AskUserQuestion`: take the recommended option if it can be undone, otherwise put the pick on its ticket (ask block plus Pushover), and keep going. On 2026-11-15 a late pick held a shift's roll while I slept.
 - When I ask "are we good?" or for status, say plainly what's done, what's still running, and what needs me.
 - In a status report, lead with counts ("31 of 38 landed, 4 being built, 3 waiting"), then group under **Landed**, **Being built**, **Waiting** and **Needs you**. Name each item by what it does in plain words, with a linked ticket such as `[#691](url)`. Never name a lane or worker: on 2026-10-31 `lane-i` told me nothing. For Waiting, say why. Collapsible `<details>` doesn't render in this chat, so skip it.
-- Every status update and final report ends with the usage table from `usage-mark.py report <run-name>`. Started at the run's start with `usage-mark.py start <run-name>`.
+- In a dradis repo (same list), every status update and final report ends with the usage table from `usage-mark.py report <run-name>`. Started at the run's start with `usage-mark.py start <run-name>`.
 - During a run over an hour, send a one-line status about hourly, even when nothing needs me; on 2026-10-27 I had to ask after two silent hours.
 - Put steps I must act on in the last message of a turn. A table written mid-turn, between tool calls, is easy to miss on my phone; I missed one on 2026-10-22.
 - When I ask for findings "to review before I approve", act on none of them: no ticket, fix or flag flip. Send one short report with a recommendation per finding, then an `AskUserQuestion` of the actions (2026-11-07). A ticket I ask for outright is filed straight away.
