@@ -93,6 +93,32 @@ class TestRemoval(Repo):
         self.assertEqual(out.stdout, "")
         self.assertTrue(wt.exists())
 
+    def advance_origin_main(self):
+        (self.main / "later.txt").open("a").write("later\n")
+        git(self.main, "add", "-A")
+        git(self.main, "commit", "-qm", "later")
+        git(self.main, "push", "-q", "origin", "main")
+
+    def test_fresh_branch_then_worktree_add_survives(self):
+        path = self.root / "wt" / "split"
+        git(self.main, "branch", "worktree/split")
+        git(self.main, "worktree", "add", "-q", str(path), "worktree/split")
+        self.advance_origin_main()
+        out = self.run_tool()
+        self.assertEqual(out.stdout, "", f"fresh worktree touched: {out.stdout!r}")
+        self.assertTrue(path.exists())
+
+    def test_fresh_worktree_moved_to_newer_main_survives(self):
+        for how in (("reset", "--hard", "main"), ("merge", "--ff-only", "main")):
+            with self.subTest(how=how):
+                name = how[0]
+                wt = self.worktree(name, commit=False)
+                self.advance_origin_main()
+                git(wt, *how)
+                out = self.run_tool()
+                self.assertEqual(out.stdout, "", f"{name}: removed a fresh worktree: {out.stdout!r}")
+                self.assertTrue(wt.exists())
+
     def test_keeps_worktree_with_untracked_file(self):
         wt = self.worktree("a")
         (wt / "scratch.txt").write_text("keep me")
@@ -312,6 +338,12 @@ class TestHook(Repo):
         out = hook("post-push", self.push_event("git push"))
         self.assertIn("REMOVED", out.stdout)
         self.assertFalse(wt.exists())
+
+    def test_real_push_keeps_fresh_worktree(self):
+        wt = self.worktree("fresh", commit=False)
+        out = hook("post-push", self.push_event("git push"))
+        self.assertEqual(out.stdout, "", f"hook said {out.stdout!r}, want silence")
+        self.assertTrue(wt.exists())
 
     def test_stop_emits_system_message_only_for_kept(self):
         env = self.stub("echo 'KEPT /w: git would refuse'")

@@ -9,7 +9,7 @@ matched by .gitignore do not block removal: git deletes them with the worktree.
 A worktree is a candidate when it is not the main checkout or the one holding
 the current directory, has a branch, that branch's tip is an ancestor of
 origin/main after `git fetch origin`, and the branch has a commit of its own
-(more than one reflog entry), so a worker's fresh worktree is left alone.
+(a commit, cherry-pick or revert reflog entry), so a worker's fresh worktree is left alone.
 
 Output, one line each: REMOVED <path> (<branch>), KEPT <path>: <reason>.
 Exit 0 when it ran, 1 on a real error (not a repo, fetch failed: nothing is
@@ -51,8 +51,9 @@ def inside(child, parent):
 
 
 def own_commits(repo, branch):
-    out = git(repo, "reflog", "show", "--format=%h", f"refs/heads/{branch}")
-    return len(out.stdout.split()) > 1
+    # Counting entries is wrong: a reset or ff to newer main adds one too.
+    out = git(repo, "reflog", "show", "--format=%gs", f"refs/heads/{branch}")
+    return any(m.startswith(("commit", "cherry-pick", "revert")) for m in out.stdout.splitlines())
 
 
 def landed(repo, branch):
