@@ -45,6 +45,10 @@ class XoGoal(unittest.TestCase):
         self.assertIn("XO goal:", out)
         self.assertIn("Speed up lp's train landing", out)
 
+    def test_quotes_gregs_words_over_a_note(self) -> None:
+        self.log.write_text(LOG.replace("Speed up lp's", "A note.\n\n> Speed up lp's"))
+        self.assertIn("Goal: Speed up lp's", self.run_goal())
+
     def test_a_recent_tick_is_quiet(self) -> None:
         self.log.write_text(LOG + f"\n### {stamp(time.time() - 600)} goal tick\n\nlandings 5\n")
         self.assertEqual(self.run_goal(), "")

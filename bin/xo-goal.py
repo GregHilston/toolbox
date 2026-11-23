@@ -28,7 +28,9 @@ def main() -> int:
     if stamp.exists() and now - stamp.stat().st_mtime < HOUR:
         return 0
     stamp.touch()
-    first = goal.group(1).strip().splitlines()[0][:200]
+    lines = goal.group(1).strip().splitlines()
+    quote = [ln[1:].strip() for ln in lines if ln.startswith(">")]
+    first = (" ".join(quote) or lines[0])[:200]
     print(f"XO goal: no goal tick in the last hour. Goal: {first} Do the tick in ## Goal, then journal "
           f"'### <date> goal tick' with its numbers.")
     return 0
