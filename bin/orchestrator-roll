@@ -44,6 +44,7 @@ NUDGE = (
     "(note any pid on its ticket), then run orchestrator-roll and end your turn."
 )
 POLL = 2
+NUDGE_AFTER = 120
 SETTLE = 3  # idle must hold this long
 REAP_EVERY = 60
 
@@ -122,12 +123,18 @@ def reap_orphans(pane: str, repo: str) -> None:
 
 def wait_stopped(pane: str, token: str, since: int) -> None:
     """Until a stop after `since` left nothing live and the agent has stayed idle."""
-    deadline = time.monotonic() + DRAIN_TIMEOUT
+    start = time.monotonic()
+    deadline = start + DRAIN_TIMEOUT
     seen = None
     next_reap = 0.0
+    nudged = False
     while time.monotonic() < deadline:
         with claude_shift.locked(pane):
             state = current(pane, token)
+        # hc says working while a shell lives
+        if not nudged and state["busy"] and state["stops"] > since and time.monotonic() - start >= NUDGE_AFTER:
+            prompt(pane, NUDGE.format(minutes=NUDGE_AFTER // 60, busy=state["busy"]))
+            nudged = True
         if state["busy"] and time.monotonic() >= next_reap:
             next_reap = time.monotonic() + REAP_EVERY
             reap_orphans(pane, state["repo"])
@@ -139,7 +146,7 @@ def wait_stopped(pane: str, token: str, since: int) -> None:
             continue
         seen = None
         time.sleep(POLL)
-    if state["busy"] and status(pane) in IDLE:
+    if not nudged and state["busy"] and status(pane) in IDLE:
         prompt(pane, NUDGE.format(minutes=DRAIN_TIMEOUT // 60, busy=state["busy"]))
     raise Failed("drain", f"no idle stop with nothing live within {DRAIN_TIMEOUT // 60} min "
                  f"(busy {state['busy']}, status {status(pane)})")  # fmt: skip
