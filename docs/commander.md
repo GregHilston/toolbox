@@ -63,6 +63,8 @@ sleeps, file them in `.scratch/` and list them in the morning report.
   model?" dialog with `hc keys <t> enter`. `/clear` before `/model` skips that dialog. Typing into
   a pane only works while it is idle, so wait for `idle` or `done` first. Greg's `!` commands from
   his phone fail the same way: they arrive as text.
+  A short slash command also runs when sent untagged: `env -u HC_TERMINAL_ID hc send <t> '/goal …'`
+  (2026-11-22). Keep it short: a 900-char one arrived as pasted text, while 360 chars ran.
 - To start an orchestrator or a long job Greg can see from his phone, use `hc run` with
   `claude --remote-control <name>`, not a Herdr pane, on any host but citadel (`--on`, always
   with `--cwd`): `docs/spawn-visible-sessions.md`. Use `--outlive-parent`, not `--no-parent
