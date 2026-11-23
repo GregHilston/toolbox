@@ -57,12 +57,22 @@ once() { # once <key>: true the first time a key is seen
 }
 fresh() { # fresh <alert>: repeats wait 1, 2, 4, then 8 h
   [ "$once" = 1 ] && return 0
-  local k="$seen/a-$(printf %s "$1" | tr -d '0-9.' | cksum | cut -d' ' -f1)" n=0 next=0
-  [ -s "$k" ] && n=$(cat "$k")
+  local k="$seen/a-$(printf %s "$1" | tr -d '0-9.' | cksum | cut -d' ' -f1)" n=0 next=0 s=""
+  raised="$raised ${k##*/}"
+  [ -s "$k" ] && s=$(cat "$k")
+  case $s in [0-3]) n=$s next=$((s < 3 ? s + 1 : 3)) ;; esac
   [ -z "$(find "$k" -mmin -$((60 << n)) 2>/dev/null)" ] || return 1
-  # Within twice the wait means it never stopped.
-  [ -n "$(find "$k" -mmin -$((120 << n)) 2>/dev/null)" ] && next=$((n < 3 ? n + 1 : 3))
   echo "$next" > "$k"
+}
+settle() { # a pass without an alert starts its backoff over
+  local k
+  for k in "$seen"/a-*; do
+    case " $raised " in *" ${k##*/} "*) continue ;; esac
+    case $(cat "$k" 2>/dev/null) in [0-3]) ;; *) continue ;; esac
+    # Keep the mtime: the 1 h floor still holds.
+    touch -r "$k" "$k.t" && echo r > "$k" && touch -r "$k.t" "$k" && rm -f "$k.t"
+  done
+  raised=""
 }
 
 # until_false <timeout> <cmd...>: poll while the command succeeds, up to the timeout.
@@ -109,7 +119,7 @@ deliver() { # a send to a working terminal can vanish, so read the screen back
 
 if [ -n "$send" ]; then deliver "$send"; exit 0; fi
 
-last_main="" quiet_since=$(date +%s)
+last_main="" quiet_since=$(date +%s) raised=""
 if [ -r "$dir/main" ]; then IFS=" " read -r last_main quiet_since < "$dir/main"; fi
 
 while :; do
@@ -185,6 +195,7 @@ if load>32: print(\"XO $repo: load\",load)
   while read -r item; do
     [ -n "$item" ] && alerts="${alerts}XO due: $item"$'\n'
   done < <("$(dirname "$0")/xo-due" pop "$dir/due" || true)
+  settle
   touch "$dir/heartbeat"
   if [ -n "$(echo "$alerts" | tr -d '[:space:]')" ]; then
     if [ "$once" = 1 ]; then

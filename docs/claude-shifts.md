@@ -57,3 +57,14 @@ orchestrator-roll          # what the drain message tells the model to run
 - A pane stuck at a permission prompt or a question for 20 minutes after a roll gives up, with a Pushover.
 - Text typed into the pane during a roll mixes into the `/clear`.
 - Draining is the model's job. The hook announces it once per session.
+
+## No `/goal` on a shift session
+
+Don't set Claude Code's `/goal` on a pane armed with `shift-arm` (Greg, 2026-11-23). An unmet goal starts a new turn
+as soon as one ends ([docs](https://code.claude.com/docs/en/goal.md)), so the session never stops idle, and
+`orchestrator-roll` waits for an idle stop with nothing live. On 2026-11-22 the Commander put a goal on loser-picks'
+CAG to stop it idling. Its 02:00 roll failed after the 20-minute drain, with the CAG past its token limit, and rolled
+only after `/goal clear`. `/clear` also drops a goal, so one survives a roll only if the restart prompt sets it again.
+
+The XO's idle alert already covers what the goal was for, without the extra turns. A goal would need
+`orchestrator-roll` to send `/goal clear` before it drains.
