@@ -77,6 +77,9 @@ settle() { # a pass without an alert starts its backoff over
 }
 
 # until_false <timeout> <cmd...>: poll while the command succeeds, up to the timeout.
+# 2026-11-23: moria at 71 while foundation idled at 6.
+imbalance() { [ -n "$2" ] && awk -v a="$1" -v b="$2" 'BEGIN{exit !((a>24&&b<8)||(b>24&&a<8))}'; }
+
 until_false() {
   local limit=$1 n i
   shift
@@ -139,6 +142,7 @@ if load>32: print(\"XO $repo: load\",load)
     hc read $term 2>/dev/null | tail -40 | grep -q 'Needs you (Commander)' && echo 'XO $repo: asks the commander'
     hc read $term 2>/dev/null | tail -40 | grep -q \"background shell command tasks didn't finish\" && echo 'XO $repo: lost background tasks'
     find ~/.cache/claude-shift -name '*.log' -mmin -15 -exec tail -1 {} \; 2>/dev/null | grep -q FAILED && echo 'XO $repo: roll FAILED (~/.cache/claude-shift)'
+    echo \"LOAD \$load\"
     git -C ~/Git/$repo fetch -q origin 2>/dev/null; echo \"MAIN \$(git -C ~/Git/$repo rev-parse origin/main)\"
   " 9>&- 2>&1 || true)
   fl=$(timeout 30 ssh -o ConnectTimeout=10 "$far" uptime 9>&- 2>&1 | sed -E 's/.*load averages?: *([0-9.]+).*/\1/' || true)
@@ -148,6 +152,9 @@ if load>32: print(\"XO $repo: load\",load)
   done < <(echo "$out" | grep -E '^XO|ssh:|timed out' || true)
   line="XO $far: load $fl"
   if awk "BEGIN{exit !($fl>32)}" 2>/dev/null && fresh "$line"; then alerts="$alerts$line"$'\n'; fi
+  near=$(echo "$out" | sed -n 's/^LOAD //p')
+  line="XO imbalance: $host load $near, $far load $fl; route work to the idle host"
+  if [ -n "$near" ] && imbalance "$near" "$fl" && fresh "$line"; then alerts="$alerts$line"$'\n'; fi
   main=$(echo "$out" | sed -n 's/^MAIN //p')
   now=$(date +%s)
   if [ -n "$main" ] && [ "$main" != "$last_main" ]; then
