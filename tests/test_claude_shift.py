@@ -230,9 +230,17 @@ class Worker(Base):
         self.assertEqual(len(nudges), 1)
         self.assertTrue(nudges[0].startswith(f"agent prompt {PANE} Shift roll waited 0.0 min: 2 background"))
 
+    def test_stop_with_live_shell_nudges_early_even_if_working(self) -> None:
+        # 11-23 16:01: hc said working while one shell held the roll
+        self.patch(roll, "NUDGE_AFTER", 0)
+        self.status.write_text("working")
+        self.queue(busy=1)
+        nudges = [c for c in self.run_worker() if "TaskStop" in c]
+        self.assertEqual(len(nudges), 1)
+
     def test_working_agent_is_not_nudged(self) -> None:
         self.status.write_text("working")
-        self.queue(busy=2)
+        self.queue(busy=2, stops=1)
         self.assertFalse(any("prompt" in c for c in self.run_worker()))
 
     def test_no_stop_since_the_roll_holds_the_clear(self) -> None:
