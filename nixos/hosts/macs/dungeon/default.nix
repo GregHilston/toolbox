@@ -461,6 +461,9 @@ in {
         DRADIS_LOGINS_FILE = "/Users/${vars.user.name}/.config/dradis/logins";
         DRADIS_VAPID_FILE = "/Users/${vars.user.name}/.config/dradis/vapid.json";
         DRADIS_PUSHOVER_FILE = "/Users/${vars.user.name}/.config/dradis/pushover.json";
+        DRADIS_VAULT = "/Users/${vars.user.name}/Git/notes";
+        DRADIS_SERVICES_YAML = "/Users/${vars.user.name}/Git/home-lab/homepage/services.yaml";
+        DRADIS_GRAFANA_URL = "https://grafana.grehg2.xyz";
         PATH = "/Users/${vars.user.name}/.local/bin:/etc/profiles/per-user/${vars.user.name}/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin";
       };
       RunAtLoad = true;
