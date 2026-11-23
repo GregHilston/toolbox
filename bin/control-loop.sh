@@ -55,11 +55,14 @@ once() { # once <key>: true the first time a key is seen
   [ -e "$seen/$1" ] && return 1
   : > "$seen/$1"
 }
-fresh() { # fresh <alert>: true unless the same alert fired in the last hour
+fresh() { # fresh <alert>: repeats wait 1, 2, 4, then 8 h
   [ "$once" = 1 ] && return 0
-  local k="$seen/a-$(printf %s "$1" | tr -d '0-9.' | cksum | cut -d' ' -f1)"
-  [ -z "$(find "$k" -mmin -60 2>/dev/null)" ] || return 1
-  : > "$k"
+  local k="$seen/a-$(printf %s "$1" | tr -d '0-9.' | cksum | cut -d' ' -f1)" n=0 next=0
+  [ -s "$k" ] && n=$(cat "$k")
+  [ -z "$(find "$k" -mmin -$((60 << n)) 2>/dev/null)" ] || return 1
+  # Within twice the wait means it never stopped.
+  [ -n "$(find "$k" -mmin -$((120 << n)) 2>/dev/null)" ] && next=$((n < 3 ? n + 1 : 3))
+  echo "$next" > "$k"
 }
 
 # until_false <timeout> <cmd...>: poll while the command succeeds, up to the timeout.
