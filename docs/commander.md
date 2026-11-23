@@ -77,6 +77,13 @@ sleeps, file them in `.scratch/` and list them in the morning report.
 - A load rule names a threshold, not a host. "Keep everything on moria" put 19 Godot runs
   there, at load 50, while foundation sat at load 4.
 - Check a subagent's surprising claim before relaying it. "Luna gets no cache" was wrong.
+- **Thrashing gets an Opus review** (Greg, 2026-11-23, standing approval): when the same problem, or the same
+  machinery, breaks more than once and fixes keep landing one hole at a time, start one fresh read-only Opus subagent
+  (`model: opus`) to review the whole system and write a plan. Brief it with every incident, the tickets, and the files
+  and hosts to read, and forbid edits, kills, tickets and messages. Check its most surprising claim yourself, then act
+  on the plan without asking: file its tickets, close the ones it replaces, reorder the speed list, tell the CAG. First
+  use: four gate tickets in two hours on 11-23, which became
+  `~/Git/notes/llm/lp-gate-reliability-plan-2026-11-23.md` and lp #595-#599.
 - Read a ticket's body before naming it as the vehicle for a plan. On 2026-11-19 "#327 is
   the two-host pool" was wrong, and the real ticket (#355) started an hour late.
 - Re-running `shift-arm` keeps the roll count, threshold, max rolls, `--drain` and `--log`, so
