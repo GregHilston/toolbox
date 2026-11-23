@@ -66,7 +66,39 @@ To give a CAG its own space, read and write the document on the terminal's machi
 `hc connect` (JSON-RPC on stdin): `doc.get {"name":"herdr-app"}`, append a space whose tab
 holds `{"content":{"terminal":"t21"},"type":"block"}`, then `doc.set` with the `version` you
 read. Copy an existing space's shape, keep a backup of the `doc.get` reply, and use fresh
-`sp`/`tb`/`p` + 32-hex ids. First done 2026-11-22 for `CAG dradis` on moria.
+`sp`/`tb`/`p` + 32-hex ids. First done 2026-11-22 for `CAG dradis` on moria. Run on the
+terminal's machine (`ssh moriats`), with the name, folder and terminal filled in:
+
+```bash
+python3 - <<'EOF'
+import json, secrets, subprocess
+NAME, FOLDER, TERMINAL = "CAG dradis", "/Users/ghilston/Git/dradis", "t21"
+def rpc(method, **params):
+    req = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
+    out = subprocess.run(["hc", "connect"], input=req + "\n", capture_output=True, text=True, timeout=10)
+    return json.loads(out.stdout)["result"]
+doc = rpc("doc.get", name="herdr-app")
+print(json.dumps(doc))  # the backup: doc.set this value and version to undo
+tab = "tb" + secrets.token_hex(16)
+doc["value"]["spaces"].append({"folder": FOLDER, "id": "sp" + secrets.token_hex(16), "name": NAME,
+    "tabs": [{"id": tab, "name": "", "root": {"id": tab, "type": "row", "children": [
+        {"id": "p" + secrets.token_hex(16), "type": "block", "content": {"terminal": TERMINAL}}]}}]})
+print(rpc("doc.set", name="herdr-app", value=doc["value"], version=doc["version"]))
+EOF
+```
+
+A stale `version` makes `doc.set` fail rather than overwrite the app's newer edit: read again
+and retry.
+
+References:
+
+- `hc --skill`, `hc connect --help`, and `hc schema`: herdr-core's own docs. The schema
+  defines `doc.get`, `doc.set` (by-name params `name`, `value`, `version`, optional `on`) and
+  `events.subscribe`, which reports doc changes.
+- `~/.local/state/herdr-core/default/docs.json` on each machine: the stored documents, for
+  reading only.
+- herdr.dev publishes docs for the TUI only (`https://herdr.dev/llms.txt` indexes them);
+  nothing there covers the desktop app or herdr-core.
 
 ## Other machines
 
