@@ -54,6 +54,20 @@ hc run --json --bg --outlive-parent --name <name> --cwd <dir> \
 Check it started right: `hc read <name> | grep -o 'Opus[^|]*\|Sonnet[^|]*\|bypass permissions\|/remote-control is active'`.
 All three must show; a banner stuck on `/rc connecting…` won't reach the Claude app.
 
+## Its own space in the Herdr desktop app
+
+A child lands in its spawner's space (`where: commander / 1`), not a space of its own. The
+desktop app keeps its spaces in the herdr-core document `herdr-app` on each machine: a list of
+`{folder, id, name, tabs}`, each tab a `row` of `block`s naming a `terminal`. Labels such as
+`where` or `herdr.space` don't move a terminal; the app writes those. The `herdr` TUI CLI
+(herdr.dev/tui) is a different program and sees none of this.
+
+To give a CAG its own space, read and write the document on the terminal's machine with
+`hc connect` (JSON-RPC on stdin): `doc.get {"name":"herdr-app"}`, append a space whose tab
+holds `{"content":{"terminal":"t21"},"type":"block"}`, then `doc.set` with the `version` you
+read. Copy an existing space's shape, keep a backup of the `doc.get` reply, and use fresh
+`sp`/`tb`/`p` + 32-hex ids. First done 2026-11-22 for `CAG dradis` on moria.
+
 ## Other machines
 
 `--on moriats` or `--on foundationts` (Tailscale names, from `hc machine ls`) starts the child
