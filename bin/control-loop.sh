@@ -1,5 +1,5 @@
 #!/bin/bash
-# control-loop.sh [--wake hc:T|herdr:P] [--name N] [--watch FILE] [--once] [--send TEXT] [seconds]
+# control-loop.sh [--wake hc:T|herdr:P] [--name N] [--watch FILE] [--goal LOG] [--once] [--send TEXT] [seconds]
 # A control loop: no LLM, checks on a timer, wakes its target by typing "XO: ..." into its pane.
 # This one is the commander's XO (docs/commander.md); state is ~/.cache/control-loop/<name>/.
 # Env: XO_HOST (moriats), XO_TERM (t17), XO_REPO (loser-picks), XO_FAR (foundationts).
@@ -9,12 +9,13 @@ IFS=$'\n\t'
 host=${XO_HOST:-moriats} term=${XO_TERM:-t17} repo=${XO_REPO:-loser-picks} far=${XO_FAR:-foundationts}
 slug=GregHilston/$repo
 args=("$@")
-wake="" name=$repo watch="" once=0 send="" interval=600
+wake="" name=$repo watch="" goal="" once=0 send="" interval=600
 while [ $# -gt 0 ]; do
   case $1 in
     --wake) wake=$2; shift 2 ;;
     --name) name=$2; shift 2 ;;
     --watch) watch=$2; shift 2 ;;
+    --goal) goal=$2; shift 2 ;;
     --once) once=1; shift ;;
     --send) send=$2; shift 2 ;;
     -h | --help) sed -n 2,6p "$0"; exit 0 ;;
@@ -191,6 +192,12 @@ if load>32: print(\"XO $repo: load\",load)
         alerts="${alerts}XO $repo: #$n closed"$'\n'
       fi
     done < "$watch"
+  fi
+  # Hourly; unlike fresh(), never backs off.
+  if [ -n "$goal" ]; then
+    while read -r line; do
+      [ -n "$line" ] && alerts="$alerts$line"$'\n'
+    done < <("$(dirname "$0")/xo-goal.py" "$goal" "$dir/goal-stamp" 2>/dev/null || true)
   fi
   while read -r item; do
     [ -n "$item" ] && alerts="${alerts}XO due: $item"$'\n'

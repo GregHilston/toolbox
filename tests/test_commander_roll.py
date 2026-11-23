@@ -27,7 +27,7 @@ send)
 read) cat "$SCREEN" ;;
 esac
 """
-LOG_TEXT = "# Run\n\n## Current\n\norders: none\n\n## Journal\n\n### 2026-11-20 08:00 Greg\n\nstart\n"
+LOG_TEXT = "# Run\n\n## Current\n\norders: none\n\n## Journal\n\n### 2026-11-20 08:00 Greg\n\nstart\n\n### 2026-11-20 08:01 started\n\nok\n"
 
 
 class Commander(Base):
@@ -67,10 +67,17 @@ class OrderHook(Commander):
         self.submit("XO: loser-picks: blocked")
         text = self.logfile.read_text()
         self.assertTrue(text.startswith(LOG_TEXT))
-        headings = [ln.split()[-1] for ln in text.splitlines() if ln.startswith("### ")][1:]
+        headings = [ln.split()[-1] for ln in text.splitlines() if ln.startswith("### ")][2:]
         self.assertEqual(headings, ["Greg", "XO"])
         self.assertIn("\nkeep going\n", text)
         self.assertIn("\nXO: loser-picks: blocked\n", text)
+
+    def test_relays_and_notifications_are_notices(self) -> None:
+        self.arm(log=str(self.logfile))
+        for p in ("<task-notification>\n<summary>done</summary>", '<hc from="moriats/t21">CAG: parked</hc>', "<agent-message from=\"a\">x"):
+            self.submit(p)
+        headings = [ln.split()[-1] for ln in self.logfile.read_text().splitlines() if ln.startswith("### ")][2:]
+        self.assertEqual(headings, ["notice"] * 3)
 
     def test_the_restart_prompt_is_not_an_order(self) -> None:
         self.arm(log=str(self.logfile), prompt="Fresh shift.")
@@ -168,6 +175,17 @@ class CommanderRoll(Commander):
         self.assertEqual(out.returncode, 0)
         self.assertIn("push failed", out.stderr + out.stdout)
         self.assertIn("queued", out.stdout)
+
+    def test_refuses_while_gregs_last_message_is_unanswered(self) -> None:
+        self.arm(repo=str(self.repo), log=str(self.logfile))
+        asked = LOG_TEXT.replace("orders: none", "orders: q") + "\n### 2026-11-20 09:00 Greg\n\nwhat about X?\n\n### 2026-11-20 09:01 XO\n\nXO: idle\n"
+        self.logfile.write_text(asked)
+        out = self.cr()
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("09:00", out.stderr)
+        self.assertEqual(self.calls.read_text(), "")
+        self.logfile.write_text(asked + "\n### 2026-11-20 09:02 X answered\n\nanswered\n")
+        self.assertEqual(self.cr().returncode, 0)
 
     def test_missing_current_section_refuses(self) -> None:
         self.arm(repo=str(self.repo), log=str(self.logfile))

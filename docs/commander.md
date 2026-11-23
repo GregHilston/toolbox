@@ -101,10 +101,16 @@ shift-arm --threshold 250000 --max-rolls 50 --log <run log> \
   force (each with an expiry), watch list, open incidents, open questions, running subagents.
   `## Journal` is append-only and dated, across dates. A restart reads Current and the last
   few Journal entries.
+- **Goal.** A `## Goal` block above `## Current` holds Greg's standing goal in his words, then the
+  tick: the commands to run and the lever to act on. A roll never rewrites it; only Greg changes it.
+  Start the XO with `--goal <run log>`: each hour without a `### <date> goal tick` journal entry it
+  types an `XO goal:` nudge (`bin/xo-goal.py`). Every other wake is a problem, so without this a
+  proactive goal gets no turns, and a session-only cron dies at each roll.
 - **Orders are recorded in code.** The `log-order.py` UserPromptSubmit hook appends every
   prompt the commander receives to the log as `### <date time> Greg` (or `XO` when it starts
   with `XO:`).
 - **`commander-roll`** is what the drain message tells a logged pane to run, in place of `orchestrator-roll`. It refuses
+  while Greg's last message has no journal entry after it (relays and notifications log as `notice`), or
   unless `## Current` changed since the last roll, commits and pushes only the log (a push
   failure is printed, the roll goes on), then runs `orchestrator-roll`. It does not stop
   working subagents; the roll waits for them.
@@ -112,7 +118,7 @@ shift-arm --threshold 250000 --max-rolls 50 --log <run log> \
   refuses and prints the holder's pid):
 
   ```
-  nohup control-loop.sh --wake hc:<terminal> > ~/.cache/control-loop/xo.out 2>&1 &
+  nohup control-loop.sh --wake hc:<terminal> --goal <run log> > ~/.cache/control-loop/xo.out 2>&1 &
   ```
 
   `--wake herdr:<pane>` for a Herdr pane. It waits for the target to go idle and for a queued
@@ -181,3 +187,4 @@ second leak failed the next train; a delegated script spent the shared GitHub qu
 | 11-21 22:45 | lp CAG ran 4 builders under a cap-10 order; dradis armed 250k/8 under a 200k/20 order | A CAG re-arms itself from its shift-start doc: the new prompt replaced the one carrying the order, and a re-arm without flags reset threshold and max rolls to defaults | `shift-arm` keeps threshold and max rolls unless given, with a test; orders go in each repo's `docs/shift-start.md` |
 | 11-23 02:00 | lp roll FAILED: no idle stop in 20 min, CAG past its limit | The Commander set a `/goal` on the CAG; an unmet goal starts a new turn at once, so the drain never saw an idle stop. The CAG's own wait shell (the 11-21 11:01 class) added to it | `/goal clear`, plain restart prompt; `docs/claude-shifts.md` "No `/goal` on a shift session". Check a new Claude Code feature against the roll before using it on a CAG |
 | 11-23 03:08 | No XO wake while lp landed nothing 01:38-04:30; Greg found it | The XO's new backoff (1c46944) kept the "nothing landed" count from the 23:06 episode, so the next stall waited 4 h. It reset only after twice the wait, never when the condition cleared | `control-loop.sh`: a pass without an alert resets its count (1 h floor kept), with a test that fails on the old code |
+| 11-23 06:10 | Greg gave one focus order six times in 8 h; each shift went back to watching | The order survived every roll as text, but the Commander runs only when woken and every wake is a problem, so the goal got no turns; "oversee" read as a watch posture with no scoreboard; the hourly cron died at each roll; roll 11 fired mid-conversation | `## Goal` block with a tick, XO `--goal` hourly nudge (`bin/xo-goal.py`), `commander-roll` refuses on an unanswered Greg message, lp train scoreboard |
