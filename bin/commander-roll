@@ -25,6 +25,23 @@ def refuse(message: str) -> int:
     return 1
 
 
+HOOK_HEADING = re.compile(r"^### (\d{4}-\d\d-\d\d \d\d:\d\d) (Greg|XO|restart|notice)$")
+
+
+def unanswered(text: str) -> str | None:
+    """The time of Greg's last message when no commander entry follows it."""
+    greg = None
+    for line in text.splitlines():
+        if not line.startswith("### "):
+            continue
+        m = HOOK_HEADING.match(line)
+        if not m:
+            greg = None
+        elif m.group(2) == "Greg":
+            greg = m.group(1)
+    return greg
+
+
 def main() -> int:
     pane = claude_shift.pane()
     if not pane:
@@ -46,6 +63,9 @@ def main() -> int:
         section = re.search(r"^## Current[ \t]*\n(.*?)(?=^## |\Z)", text, re.S | re.M)
         if not section:
             return refuse(f"{log} has no `## Current` section.")
+        waiting = unanswered(text)
+        if waiting:
+            return refuse(f"Greg's message of {waiting} has no journal entry after it; answer it there first.")
         digest = hashlib.sha256(section.group(1).strip().encode()).hexdigest()
         if digest == state.get("log_hash"):
             return refuse("the log's `## Current` section is unchanged since the last roll; rewrite it first.")

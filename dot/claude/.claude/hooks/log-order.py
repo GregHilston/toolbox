@@ -16,6 +16,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(os.environ.get("TOOLBOX_HOME") or Path.home() / "Git/toolbox") / "bin"))
 import claude_shift  # noqa: E402
 
+# Relayed text, not Greg typing.
+NOTICES = ("<task-notification>", "<hc ", "<hc>", "<agent-message", "<system-reminder>")
+
 
 def main() -> None:
     pane = claude_shift.pane()
@@ -27,7 +30,14 @@ def main() -> None:
     if not log:
         return
     prompt = json.load(sys.stdin).get("prompt") or ""
-    who = "restart" if prompt == state.get("prompt") else "XO" if prompt.startswith("XO:") else "Greg"
+    if prompt == state.get("prompt"):
+        who = "restart"
+    elif prompt.startswith("XO:"):
+        who = "XO"
+    elif prompt.lstrip().startswith(NOTICES):
+        who = "notice"
+    else:
+        who = "Greg"
     with open(log, "a") as f:
         f.write(f"\n### {datetime.now():%Y-%m-%d %H:%M} {who}\n\n{prompt}\n")
 
