@@ -84,6 +84,14 @@ sleeps, file them in `.scratch/` and list them in the morning report.
   on the plan without asking: file its tickets, close the ones it replaces, reorder the speed list, tell the CAG. First
   use: four gate tickets in two hours on 11-23, which became
   `~/Git/notes/llm/lp-gate-reliability-plan-2026-11-23.md` and lp #595-#599.
+- **A recurring or big problem gets a few Opus reviews, then a plan for Greg** (Greg, 2026-11-23): start two or three
+  fresh read-only Opus subagents, each from a different angle (compare with gridkeep; measure where the time actually
+  goes; design from scratch), check each one's key claim, and bring Greg a short numbered plan with a pick. A redesign
+  is Greg's call; the thrashing rule above (enact without asking) covers fixes inside the current design.
+- **gridkeep is the reference** (Greg, 2026-11-23): it lands far faster and more smoothly than loser-picks. Before
+  designing a fix or answering a process question for another repo, read how gridkeep does it and why
+  (`~/Git/gridkeep/tools/land/pilot.sh`, `tools/land_check.sh` on foundation). Deviate only with a named reason. When
+  a repo needs a guard gridkeep doesn't, ask what gridkeep does that makes the guard unnecessary.
 - Read a ticket's body before naming it as the vehicle for a plan. On 2026-11-19 "#327 is
   the two-host pool" was wrong, and the real ticket (#355) started an hour late.
 - Re-running `shift-arm` keeps the roll count, threshold, max rolls, `--drain` and `--log`, so
@@ -155,6 +163,27 @@ second leak failed the next train; a delegated script spent the shared GitHub qu
 - **A delegated task that touches a shared resource is told the budget**: the GitHub quota
   (`docs/github-api.md`), cores and load, Claude and DeepSeek spend. The brief says how much
   it may use and what to check before a bulk call.
+
+## Why loser-picks' slow trains took 48 hours to see
+
+From 11-21 to 11-23 every shift worked on slow, red trains, and landing got worse (30 branches landed on 11-19, 10 on
+11-23). Three Opus reviews on 11-23 found the cause in an hour: the `gate` check was 94% of verify, all 63 of its
+scripts tested the tooling rather than the game, and gridkeep never runs its full gate on a landing at all
+(`~/Git/notes/llm/handoff-lp-setup-review-2026-11-23.md`). Why it took so long:
+
+1. **Each incident got its own guard.** The root-cause rule above rewarded fixing the instance in front of us; nobody
+   asked whether the design was wrong. Thirty-odd guards later, the guards were the problem.
+2. **The speed work made it slower.** Each speed ticket added gate tooling and its tests (30 gate scripts on 11-19, 63
+   on 11-23), so verify grew from 14 to 22 min and red trains came mostly from the new tooling's tests.
+3. **We measured outcomes, not where the time went.** The scoreboard counted red and lost trains; nobody timed each
+   check until the review did.
+4. **We copied gridkeep piecemeal.** lp took its canary and landing model but kept running the full verify on every
+   train, the difference that mattered most.
+5. **Reviews were scoped to the symptom.** The 11-23 Opus study was asked to make gates reliable, not whether lp needs
+   those gates.
+6. **The Commander only runs when woken by a problem**, so it fixed problems; stepping back needed Greg to ask.
+
+Guards: the two working rules above (a few Opus reviews for a recurring problem; gridkeep is the reference).
 
 ## Root causes found so far
 
