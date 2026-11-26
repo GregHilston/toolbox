@@ -76,3 +76,14 @@ has no exclude list, so a Hermes-only skill would otherwise reach it.
 
 `tests/test_skills.py` checks each skill against these rules and checks that
 every command it names is in `bin/`.
+
+## Vendored skills
+
+A skill whose `metadata.upstream` points at
+[mattpocock/skills](https://github.com/mattpocock/skills) (MIT) is copied verbatim
+from the commit in `metadata.vendored`, minus the Codex-only `agents/openai.yaml`.
+The only local edit is a trailing **Tool mapping** table where a skill names a
+tool, so pi (no Skill tool, no `AskUserQuestion`, subagents only under
+`pi-subagents`) runs the same file. To update, copy the new upstream over, keep
+each table, and bump the commit in both metadata fields. They read a repo's
+glossary from `GLOSSARY.md` (formerly `CONTEXT.md`).

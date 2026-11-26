@@ -119,6 +119,13 @@ discord, bitwarden-desktop) are **x86_64-linux only** in nixpkgs — hence the
 `nix eval .#nixosConfigurations.<host>.pkgs.<pkg>.meta.platforms` before adding a GUI app
 for an ARM host.
 
+## Menu bar: no manager
+
+macOS 27 folds overflow icons behind a » button on its own, and it broke Ice, which
+had been unmaintained since 2025: its menu went dead, so quitting took a `kill`. Before
+adding a replacement, check it names macOS 27 support. Hidden Bar (`hiddenbar`) does;
+Thaw, Ice's successor, only has it in an alpha.
+
 ## Launching GUI apps at login: a launchd `open -a` agent
 
 Menu-bar apps have to already be running to do anything, and they fail *silently* when
