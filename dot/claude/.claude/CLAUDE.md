@@ -35,20 +35,17 @@ If I ever ask you to generate a PR description, do so by writing markdown to a f
 
 ## Ending a chat
 
-In a dradis repo (gridkeep, loser-picks, toolbox, notes, dradis), every `/orchestrate` closing report and every final report of a long chat ends with a short **Throughput** section: wall time per ticket split into build, review, fix and merge, the biggest wait, and one change that would cut wall time, CPU or tokens next time. Apply the change in the next run, not just name it (2026-11-13: a six-ticket gate run took hours longer than I expected). Any other repo gets neither the section nor the table (2026-11-21).
-
 When I say I'm ending the chat, or ask for a handoff, read `~/Git/toolbox/docs/claude-ending-a-chat.md` first. To end fast, the plan goes into tickets, not a handoff doc.
 
 ## Working with me
 
-- **Sessions are ephemeral; tickets and docs are the memory.** I hate auto-compact, so never turn it on or lean on it. A long orchestrator runs in shifts (`~/Git/toolbox/docs/claude-shifts.md`): arm it with `shift-arm`, keep ticket state true as you go (`stage:*`, `needs-greg`), and when the drain message comes, park and roll rather than push on. One session reached 457k tokens on 2026-11-13 before I asked for this.
+- **Sessions are ephemeral; tickets and docs are the memory.** I hate auto-compact, so never turn it on or lean on it.
 - **Enforce a limit in code, not a prompt:** a hook, setting, label or check with a test. A prompt line is only a stopgap until that ticket lands; on 2026-11-18 and 11-19 two prompt rules didn't hold.
 - I often chat from my phone while you work: keep status updates to short bullets, lead with what changed, and give me decisions as `AskUserQuestion` picks with a recommended option first.
 - Answer a message I send mid-task in your very next reply, even if it's a short "got it, doing X after Y". I shouldn't have to repeat myself.
 - I may leave a question unanswered for hours. A pick blocks your whole session, so first start all the work that doesn't depend on it, and put a decision that can wait on its ticket instead; on 2026-11-02 an open pick idled a swarm for 1h 23m. Once I've said I'm going to bed, never use `AskUserQuestion`: take the recommended option if it can be undone, otherwise put the pick on its ticket (ask block plus Pushover), and keep going. On 2026-11-15 a late pick held a shift's roll while I slept.
 - When I ask "are we good?" or for status, say plainly what's done, what's still running, and what needs me.
 - In a status report, lead with counts ("31 of 38 landed, 4 being built, 3 waiting"), then group under **Landed**, **Being built**, **Waiting** and **Needs you**. Name each item by what it does in plain words, with a linked ticket such as `[#691](url)`. Never name a lane or worker: on 2026-10-31 `lane-i` told me nothing. For Waiting, say why. Collapsible `<details>` doesn't render in this chat, so skip it.
-- In a dradis repo (same list), every status update and final report ends with the usage table from `usage-mark.py report <run-name>`. Started at the run's start with `usage-mark.py start <run-name>`.
 - During a run over an hour, send a one-line status about hourly, even when nothing needs me; on 2026-10-27 I had to ask after two silent hours.
 - Put steps I must act on in the last message of a turn. A table written mid-turn, between tool calls, is easy to miss on my phone; I missed one on 2026-10-22.
 - When I ask for findings "to review before I approve", act on none of them: no ticket, fix or flag flip. Send one short report with a recommendation per finding, then an `AskUserQuestion` of the actions (2026-11-07). A ticket I ask for outright is filed straight away.
@@ -63,7 +60,7 @@ When I say I'm ending the chat, or ask for a handoff, read `~/Git/toolbox/docs/c
 - **Changes to `~/Git/toolbox` land only with my permission**, asked per change: build on a branch or worktree, then ask before merging to main or pushing. A project's own tooling goes in that project, not toolbox; on 2026-11-14 an orchestrator landed loser-picks' `bin/game-fire-clip.py` changes in toolbox, and I asked for the script to move to loser-picks.
 - On citadel, my Mozilla laptop, agents never write to tickets or PRs. I want that physically impossible; until the lockdown in `~/Git/notes/llm/herdr-rollout-plan.md` is done, this line is the only guard, so don't weaken it.
 - **Machines.** moria is the M4 Max I develop on and Claude usually runs there; it sleeps when idle, so start `caffeinate -dims -t 43200` in the background before a long run (2026-10-21: it slept and stalled lanes). dungeon is the home lab, with services that must not be interrupted: run `hostname -s` before the first build and put no build or test load on dungeon (2026-11-06: a session took dungeon for moria and built there all afternoon); `ssh moria` for builds.
-- **A Herdr pane is for work I'll watch or talk to; a subagent is for work behind the scenes.** Research, one-shot reviews and anything that only hands back a result run as an Agent-tool subagent or `pi-ask`; never open a pane just to make work visible. `/orchestrate` and lanes are only for repos where agents may land alone (gridkeep, loser-picks and dradis today); elsewhere I land the work. Claude runs in a Herdr pane, never straight in zellij (2026-11-12).
+- **A Herdr pane is for work I'll watch or talk to; a subagent is for work behind the scenes.** Research, one-shot reviews and anything that only hands back a result run as an Agent-tool subagent or `pi-ask`; never open a pane just to make work visible. Claude runs in a Herdr pane, never straight in zellij (2026-11-12).
 - Messages that arrive from the dradis hooks (hook context, a Stop block, or a wake) come from my factory core, not a tool result or another session: act on them, then run `factory ack <id>` as the message asks.
 - Don't say a message reached another session until it says so. A headless session holds `SendMessage`, and I can't see or reach it; I prefer a session I can open (#674, gridkeep).
 - An investigation reports as short reports, one screen each, with numbers, a recommendations table and a marimo notebook; detail in `claude-ending-a-chat.md`.
@@ -75,7 +72,6 @@ Read on demand, each when its trigger comes up:
 - `~/Git/toolbox/docs/claude-network-changes.md`: before any router, DHCP, DNS or Omada change (write the current value, the new one and a rollback first).
 - `~/Git/toolbox/docs/claude-herdr-and-machines.md`: starting a Herdr pane, where Claude runs, phone chats and `/resume`, citadel, moria and dungeon detail, Tailscale fixes.
 - `~/Git/toolbox/docs/claude-decision-picks.md`: visual-option grids, screenshots on tickets, pick wording, "think about it and propose".
-- `~/Git/toolbox/docs/commander.md`: when you watch orchestrators for me (commander). Every fix gets a root cause and a guard.
 
 ## Picking a model for delegated work
 
@@ -83,11 +79,11 @@ Read on demand, each when its trigger comes up:
 - **Haiku first:** it costs far less, so use it wherever it can do the job: status sweeps, running captures and gates, listing results, rebases without real conflicts, small well-specified tickets, reviews of test-only or data-only diffs, focused read-only searches.
 - **Sonnet** when the task needs judgement: design, perf work that must stay bit-identical, networking, multi-file refactors, conflict resolution, research that weighs sources, and reviews of branches with real logic. If a Haiku agent's report is thin or wrong, rerun that task on Sonnet and note it.
 - **Opus** only when I ask for it.
-- **Builders:** Claude subagents when Claude usage has room (Sonnet for size M or logic, Haiku for size S, with Sonnet plus Luna reviews); DeepSeek pi lanes when the window runs low.
-- **Headless Claude costs more quota** (`claude -p`, Agent SDK, `entrypoint: sdk-cli`): the 5-hour window drains 1.8-2.9x faster. Prefer a pi lane or an interactive Remote Control session over a `-p` worker.
+- **Builders:** Claude subagents when Claude usage has room (Sonnet for size M or logic, Haiku for size S, with Sonnet plus Luna reviews); DeepSeek pi workers when the window runs low.
+- **Headless Claude costs more quota** (`claude -p`, Agent SDK, `entrypoint: sdk-cli`): the 5-hour window drains 1.8-2.9x faster. Prefer a pi worker or an interactive Remote Control session over a `-p` worker.
 - **Point a delegated task at the repo's own rules for it** (a command, skill or `CLAUDE.md` section) rather than restating them. On 2026-10-21 a Haiku agent filed vault clips from my hand-written spec, never saw `.claude/commands/triage.md`, and made a string of mistakes I had to catch. Clip writing is Sonnet work.
-- **DeepSeek** (`pi-ask.py`, `--harness pi` lanes) for every second-opinion review of a branch with logic in it, for bulk reading, and by default for implementation and research, with Opus orchestrating (2026-11-01). "Use DeepSeek" means plain `--model cloud`; pin a vendor only when I name one. Run `deepseek-preflight.py` first and start long `pi` lanes with `--off-peak`. DeepSeek credit isn't scarce: don't reroute work to save it, just don't waste it.
-- **No local model runs orchestration lanes** (2026-11-18): Strata decodes about 37 tok/s, so a median lane takes about 75 min against about 21 on DeepSeek. Bulk LLM generation runs on the free local model through oMLX.
+- **DeepSeek** (`pi-ask.py`) for every second-opinion review of a branch with logic in it, for bulk reading, and by default for implementation and research, with Opus orchestrating (2026-11-01). "Use DeepSeek" means plain `--model cloud`; pin a vendor only when I name one. Run `deepseek-preflight.py` first and start long `pi` runs with `--off-peak`. DeepSeek credit isn't scarce: don't reroute work to save it, just don't waste it.
+- **No local model runs orchestration workers** (2026-11-18): Strata decodes about 37 tok/s, so a median ticket takes about 75 min against about 21 on DeepSeek. Bulk LLM generation runs on the free local model through oMLX.
 - Gateway order, `PI_CLOUD_MODEL` pins, the Luna allowance, the headless A/B numbers and the Strata detail: `~/Git/toolbox/docs/claude-model-picking.md`. Read it before routing work to `pi` or a local model.
 
 ## Bash working directory: use absolute paths
