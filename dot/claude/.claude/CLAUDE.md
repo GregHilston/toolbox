@@ -34,8 +34,7 @@ Bash runs through rtk's hook; `rtk proxy <cmd>` runs one command unfiltered.
 - I often chat from my phone: short bullets, lead with what changed, decisions as `AskUserQuestion` picks with the recommended option first. Put steps I must act on in the turn's last message.
 - Answer a message I send mid-task in your very next reply, even if it's a short "got it, doing X after Y".
 - A pick can sit unanswered for hours: start all the work that doesn't depend on it first, and put a pick that can wait on its ticket. Once I've said I'm going to bed, never use `AskUserQuestion`: take the recommended option if it can be undone, otherwise put the pick on its ticket, and keep going.
-- For status, lead with counts, then say plainly what's done, what's still running, what's waiting and why, and what needs me. Name items by what they do, with a linked ticket. `<details>` doesn't render here.
-- During a run over an hour, send a one-line status about hourly.
+- For status, lead with counts, then done, running, waiting and why, and what needs me.
 - Findings "to review before I approve": act on none. One short report with a recommendation per finding, then an `AskUserQuestion` of the actions. A ticket I ask for outright is filed straight away.
 - Winding down: start and queue nothing new, let running work finish, write lessons and ticket updates, then the handoff, and say what that leaves unstarted.
 - Ask me only what needs my taste, hands, ears or money, or can't be undone; decide the rest and say so. Say back any phone message that reverses a standing rule, then carry on. Enact a small process change yourself; file a large one as a ticket.
@@ -56,7 +55,6 @@ Read on demand, each when its trigger comes up:
 - `~/Git/toolbox/docs/claude-herdr-and-machines.md`: before opening a Herdr pane instead of a subagent, messaging another session, picking a build machine, phone chats.
 - `~/Git/toolbox/docs/claude-walkthroughs.md`: I'm stuck on a website, or want a site's download scripted.
 - `~/Git/toolbox/docs/claude-network-changes.md`: before any router, DHCP, DNS or Omada change.
-- `~/Git/toolbox/docs/claude-playtests.md`: I report a playtest bug.
 
 ## Picking a model for delegated work
 
