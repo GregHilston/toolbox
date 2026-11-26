@@ -26,7 +26,7 @@ NIX_BUILDS = {"build", "develop"}
 JUST_RECIPES = {"validate", "diff", "test", "ft", "dt", "fr", "dr", "fu"}
 WRAPPERS = {
     "sudo", "env", "command", "builtin", "exec", "nohup", "time", "timeout", "nice",
-    "caffeinate", "xargs", "gateslot.py", "watch",
+    "caffeinate", "xargs", "watch",
 }  # fmt: skip
 SHELLS = {"bash", "sh", "zsh", "dash", "eval"}
 COMMANDS = BUILDERS | WRAPPERS | SHELLS | {"nix", "just", "ssh"}

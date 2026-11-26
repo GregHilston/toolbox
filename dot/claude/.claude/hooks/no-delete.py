@@ -19,7 +19,7 @@ DELETERS = {"rm", "rmdir", "unlink", "shred", "srm", "trash", "dd", "worktree_gc
 # Run the command named in their arguments.
 WRAPPERS = {
     "sudo", "doas", "env", "command", "builtin", "exec", "nohup", "time", "timeout",
-    "nice", "caffeinate", "xargs", "parallel", "gateslot.py", "ssh",
+    "nice", "caffeinate", "xargs", "parallel", "ssh",
 }  # fmt: skip
 SHELLS = {"bash", "sh", "zsh", "dash", "fish", "eval"}
 SEPARATORS = {";", "&", "&&", "|", "||", "|&", "(", ")", ";;", "\n"}
