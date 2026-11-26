@@ -12,12 +12,12 @@ When Claude usage has room, builders are Claude subagents: Sonnet for size M or 
 
 ## DeepSeek and the gateway
 
-- **DeepSeek** (`pi-ask.py`, `--harness pi` lanes) for every second-opinion review of a branch with logic in it, for bulk reading, and by default for implementation and research too, with Opus orchestrating (2026-11-01). Sonnet is for reading shots and tickets that parked twice. Use it from the start of a session, not as an afterthought.
+- **DeepSeek** (`pi-ask.py`) for every second-opinion review of a branch with logic in it, for bulk reading, and by default for implementation and research too, with Opus orchestrating (2026-11-01). Sonnet is for reading shots and tickets that parked twice. Use it from the start of a session, not as an afterthought.
 - The gateway's `cloud` runs Zro's free plan, Command Code GOAT, OpenCode Go, GPT-5.6 Luna on ChatGPT Plus, then DeepSeek's API, with Luna before GOAT at DeepSeek's peak.
-- `PI_CLOUD_MODEL=cloud-zro|cloud-goat|cloud-go|cloud-luna|cloud-deepseek` pins one (2026-11-16), but only `pi-ask.py`, `overnight-loop.py` and gridkeep's `tools/land/` read it. A bare `pi` ignores it and falls back to `local-small` (`~/.pi/agent/settings.json`), so pass `--model`.
+- `PI_CLOUD_MODEL=cloud-zro|cloud-goat|cloud-go|cloud-luna|cloud-deepseek` pins one (2026-11-16), but only `pi-ask.py` and gridkeep's `tools/land/` read it. A bare `pi` ignores it and falls back to `local-small` (`~/.pi/agent/settings.json`), so pass `--model`.
 - "Use DeepSeek" means plain `--model cloud`, whose order is Greg's preference; pin a vendor only when he names one (2026-11-13).
 - DeepSeek credit isn't scarce: a few dollars of real balance is more than a day of work. Don't reroute work to save it; just don't waste it.
-- Run `deepseek-preflight.py` before starting DeepSeek work: it prints the rate now, minutes to the next peak, and the balance. Start long `pi` lanes with `--off-peak`, so they wait out peak hours. A review costs cents, so run it even at peak price.
+- Run `deepseek-preflight.py` before starting DeepSeek work: it prints the rate now, minutes to the next peak, and the balance. Start long `pi` runs with `--off-peak`, so they wait out peak hours. A review costs cents, so run it even at peak price.
 
 ## Local models
 

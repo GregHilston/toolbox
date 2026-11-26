@@ -94,7 +94,7 @@ LEDGER = Path(os.environ.get("OPENAI_IMAGE_LEDGER", Path.home() / ".cache" / "op
 
 
 def log_spend(usage: dict, quality: str, size: str, n: int) -> None:
-    """Append one line per call, which usage-mark.py sums."""
+    """Append one line per call."""
     d = usage.get("input_tokens_details") or {}
     text_in = d.get("text_tokens", usage.get("input_tokens", 0) or 0)
     image_in = d.get("image_tokens", 0) or 0

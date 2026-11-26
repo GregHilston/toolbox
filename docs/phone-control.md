@@ -9,9 +9,8 @@ session.
 ## What we want
 
 Watch and reply to each Claude session from the Pixel, keeping zellij + the Herdr TUI
-(chosen over the Herdr desktop app for the zellij hotkeys). It must survive shift
-rolls. A roll sends `/clear` into the same Herdr pane (`docs/claude-shifts.md`), so
-anything that attaches to the pane survives one.
+(chosen over the Herdr desktop app for the zellij hotkeys). It must survive a `/clear` sent
+into the same Herdr pane, so attach to the pane.
 
 ## Options and why they lost
 

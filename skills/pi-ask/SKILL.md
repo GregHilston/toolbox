@@ -1,6 +1,6 @@
 ---
 name: pi-ask
-description: Hand a task to a cheap DeepSeek pi worker and talk it over across several turns, for research, a PR review or a second opinion. Use when Greg asks to delegate to pi or DeepSeek, or for bulk reading not worth Claude tokens. Not for code changes, which go through /orchestrate-pi or overnight-loop.py.
+description: Hand a task to a cheap DeepSeek pi worker and talk it over across several turns, for research, a PR review or a second opinion. Use when Greg asks to delegate to pi or DeepSeek, or for bulk reading not worth Claude tokens.
 license: MIT
 ---
 

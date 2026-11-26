@@ -18,7 +18,6 @@ search past findings: `grep -ril <service> ~/Git/notes/llm`.
 ## 1. Inventory
 
 ```bash
-usage-mark.py start lab-audit
 deepseek-preflight.py
 lab-alerts.py --days 7
 cd ~/Git/home-lab && scripts/service-audit.py --updates
@@ -105,4 +104,4 @@ trap table's or runbook's fix, or a follow-up PR, and a report before anything e
 
 Put findings in `~/Git/notes/llm/`, and commit that repo. Add each new trap to the table in
 `updating-services.md`, and a runbook line for each service fix. If this pass taught something about
-running this skill, edit this file. End the report with `usage-mark.py report lab-audit`.
+running this skill, edit this file.

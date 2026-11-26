@@ -20,7 +20,7 @@ Version pin and the `~/.npm-global` install live in `nixos/modules/programs/tui/
   session you're typing into. With many concurrent sessions the git widgets alone show
   `master` almost everywhere, and a worktree is indistinguishable from the main checkout.
 - A `custom-command` widget on **a line of its own**, running
-  `pi-workers.py --from-statusline --oneline`, so an `/orchestrate-pi` run is
+  `pi-workers.py --from-statusline --oneline`, so a pi run is
   visible without asking Claude: `pi 5w 2▸ 1~ 1✓ $0.0912 ⚠1 stalled`.
   The dedicated line is not cosmetic — ccstatusline does **not** drop a
   separator adjacent to a widget that renders nothing, so putting it inline left

@@ -47,7 +47,7 @@ RTK hook: `nixos/CLAUDE.md` → "Claude Code on each host".
 - **Clobber guard:** `link_repo` refuses to overwrite a *real* file and only warns. Move the
   file into `dot/claude/.claude/`, delete the original, re-run home-manager.
 - The global gitignore ignores `.claude/`, so a new file under `dot/claude/.claude/` needs
-  `git add -f`. Check `git show --stat`; `tests/test_settings_hooks_tracked.py` fails CI on a hook `settings.json` runs but git lacks (2026-11-16: shift-drain.py, a week of red CI).
+  `git add -f`. Check `git show --stat`; `tests/test_settings_hooks_tracked.py` fails CI on a hook `settings.json` runs but git lacks (2026-11-16: a week of red CI).
 - `settings.json` sets `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE=1`: Claude Code's
   `CLAUDE_CODE_CHILD_SESSION=1` marker leaks into relaunched terminals and silently drops
   transcripts. Cost: `claude -p` runs spawned by an agent save one too.
@@ -143,7 +143,7 @@ through `skills/home-lab/image-generate`; Hermes uses its native `image_generate
 
 ## Herdr: agent state per pane
 
-Herdr runs on every host: Homebrew on Macs, nix on NixOS, config in `dot/herdr/`. The desktop app is the `herdr-app` cask on Macs and `herdr-desktop` on NixOS GUI hosts. Use it for interactive Claude work. `/orchestrate` and lanes stay for repos where agents may land alone, and lanes run without `HERDR_*` so they cannot report to the pane that started them. The desktop app's terminals set `HC_TERMINAL_ID` (and no `HERDR_*`); its CLI is `hc`. `hc` takes status from the program's own OSC 7501 output, not from env, so lanes leave `HC_*` alone.
+Herdr runs on every host: Homebrew on Macs, nix on NixOS, config in `dot/herdr/`. The desktop app is the `herdr-app` cask on Macs and `herdr-desktop` on NixOS GUI hosts. Use it for interactive Claude work. The desktop app's terminals set `HC_TERMINAL_ID` (and no `HERDR_*`); its CLI is `hc`. `hc` takes status from the program's own OSC 7501 output, not from env.
 
 - `dot/claude/.claude/hooks/herdr-subagent.sh` gives each Agent-tool subagent a tab and sidebar row. It exits at once outside Herdr. Its task and model come from Claude's undocumented `subagents/agent-<id>.meta.json`.
 - Subagent tabs only show a transcript. For a session agents can message, `skills/herdr` wraps `herdr --skill` (`agent start`, `agent prompt`, `agent read`) in the TUI and `hc run/send/wait/read` in the desktop app. `bin/needs-greg` starts its sessions with `hc` by default (`sessions` in its config).
@@ -194,8 +194,6 @@ Run `bin/deepseek-preflight.py` before starting DeepSeek work: key funded, peak 
 OpenCode Go and ChatGPT Plus quotas. Exit 0 clear, 1 needs a human, 2 could not tell. The docstring and
 `dot/pi/CLAUDE.md` → "Pricing" carry the reasons and numbers.
 
-`bin/usage-mark.py start|report <name>` shows Claude, DeepSeek API and Go token and cost use since a mark, as a small table; the docstring has the sources.
-
 ## pi's heavy tools are off until you ask — `/enable`, `pi-subagents`
 
 A fresh pi session omits `reddit_*` and `subagent_*` to halve the cold start. `/enable reddit`
@@ -205,7 +203,7 @@ at session start: enabling later re-prefills the conversation. `dot/pi/CLAUDE.md
 
 ## Watching pi Workers — pi-narrate, pi-workers, pi-rpc
 
-`bin/pi-narrate.py`, `bin/pi-workers.py` and `bin/pi-rpc.py` make an `/orchestrate-pi` run
+`bin/pi-narrate.py`, `bin/pi-workers.py` and `bin/pi-rpc.py` make a pi run
 visible and steerable; `-h` documents each. Design: `dot/pi/CLAUDE.md` → "Seeing what an
 unattended worker is doing".
 

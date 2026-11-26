@@ -38,7 +38,7 @@ To add one, `npm install --save-exact <pkg>` in `npm/`, then list it in pi.nix.
 
 ## Watching an unattended run
 
-`/orchestrate-pi` drives workers through `bin/pi-narrate.py` (readable narration
+Orchestrated pi workers run through `bin/pi-narrate.py` (readable narration
 instead of a discarded stream), `bin/pi-workers.py` (a table of every worker's
 state) and `bin/pi-rpc.py` (steer one mid-run). See
 [CLAUDE.md](CLAUDE.md) → "Seeing what an unattended worker is doing".

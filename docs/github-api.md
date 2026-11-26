@@ -14,7 +14,7 @@ analysis never spends more than a few percent of either bucket (Greg, 2026-11-20
 
 ## Bulk reads go through paged GraphQL, never REST per issue
 
-On 2026-11-20 a test of `bin/ticket-lanes.py` read each issue's timeline over REST
+On 2026-11-20 a ticket-timeline test read each issue's timeline over REST
 (`repos/O/R/issues/N/timeline --paginate`): about 3 calls an issue, 1,326 calls for one
 gridkeep run. A few test runs emptied the REST bucket for 40 minutes, and the orchestrator's
 `gh` calls failed until it reset.
@@ -31,8 +31,7 @@ issues(first: 25, after: $after, filterBy: {since: $since}) {
 Rules for any script that reads many issues, PRs or timelines:
 
 - Page through GraphQL with nested connections; never loop a REST call over issues.
-- Check `rate_limit` first and refuse a run that would leave the orchestrators under 1,500
-  (`check_quota` in `bin/ticket-lanes.py`).
+- Check `rate_limit` first and refuse a run that would leave the orchestrators under 1,500.
 - Run it on a schedule no tighter than hourly, or on demand; never in a watcher loop.
 
 ## The GraphQL trap: 100 issues a page returns stale timelines

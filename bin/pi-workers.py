@@ -5,7 +5,7 @@
 # ///
 """Answer "what are the pi workers doing right now" from their status files.
 
-Every worker spawned by `/orchestrate-pi` runs with `PI_STATUS_FILE` set, and
+Every orchestrated pi worker runs with `PI_STATUS_FILE` set, and
 the `orchestration-status` extension rewrites that file on every turn and every
 tool call. This reads all of them at once and renders the answer three ways: a
 table for a human, one line for a status bar, and JSON for an orchestrator.

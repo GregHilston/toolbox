@@ -1,7 +1,7 @@
 /**
  * Enforce an unattended worker's prohibitions, instead of asking it nicely.
  *
- * `/orchestrate-pi` spawns pi workers that must never push (a pre-push hook
+ * Orchestrated pi workers must never push (a pre-push hook
  * deploys the API, so a push is a deploy), never merge, never write to GitHub,
  * never `--no-verify` past the suites, and never edit pi's own configuration.
  * Until this existed those were English sentences in a 141-line prompt — which

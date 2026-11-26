@@ -2,18 +2,17 @@
 
 Read this when Greg says he is ending the chat or asks for a handoff. The global `CLAUDE.md` keeps the Throughput rule for closing reports.
 
-First reflect: what did we learn this session that a future session should know? Cover technical lessons, domain lessons (game dev, the project's rules), how you and Greg work together, and how subagents and lanes behaved.
+First reflect: what did we learn this session that a future session should know? Cover technical lessons, domain lessons (game dev, the project's rules), how you and Greg work together, and how subagents behaved.
 
 Then answer two questions with this session's numbers, not guesses:
 
-- **How could the next chat go faster?** Where did work wait: gates, lanes stuck or parked, his answers, setup steps redone by hand, a tool that failed silently.
-- **How could it use fewer tokens?** Cover both meters: DeepSeek dollars (`gridkeep/.claude/pi-usage.py`, lane `Real:` lines, `pi-ask` costs) and Claude subscription use (orchestrator turns, especially wake-ups for routine events; subagent runs and their models; duplicated reviews). Name the biggest spender on each meter and one change that would cut it.
+- **How could the next chat go faster?** Where did work wait: gates, his answers, setup steps redone by hand, a tool that failed silently.
+- **How could it use fewer tokens?** Cover both meters: DeepSeek dollars (`gridkeep/.claude/pi-usage.py`, `pi-ask` costs) and Claude subscription use (orchestrator turns, especially wake-ups for routine events; subagent runs and their models; duplicated reviews). Name the biggest spender on each meter and one change that would cut it.
 
 Write each lesson where it will be read next time, then write the handoff and list what you changed:
 
 - Project rules every worker needs: the repo's `CLAUDE.md`.
 - Project process for orchestrators: the repo's docs (such as `docs/orchestrating.md`).
-- Orchestration that applies to any repo: the skill that runs it (such as `~/Git/toolbox/skills/swarm/SKILL.md`).
 - How we work together, in every repo: the global `CLAUDE.md`, under "Working with me".
 
 Skip lessons already written down; edit the existing line instead of adding a near-duplicate.

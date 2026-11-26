@@ -8,7 +8,7 @@ Read this when you start or attach a session, pick a machine for a build, or Gre
 
 ## Where Claude runs
 
-- `/orchestrate` and lanes are only for repos where agents may land alone, gridkeep today. Everywhere else Greg drives Claude from Herdr, the desktop app or the TUI, and he lands the work.
+- Greg drives Claude from Herdr, the desktop app or the TUI.
 - Claude runs in a Herdr pane, never straight in zellij: there Herdr can't see it and shows no working or idle state (2026-11-12). zellij sessions (`zj <name>`) no longer start Herdr on their own (2026-11-18). moria lists dungeon's workspaces too (`herdr machine add`).
 
 ## Phone chats
@@ -24,10 +24,6 @@ On citadel, his Mozilla laptop, agents never write to tickets or PRs. He wants t
 ## moria and dungeon
 
 - **moria** is the M4 Max (16 cores, 128 GB) Greg develops on, and Claude usually runs on it. It is dev-only, so use all its hardware.
-- It sleeps when idle, which stalls lanes and gates (on 2026-10-21 it slept when he undocked it, despite his keep-awake app). Start `caffeinate -dims -t 43200` in the background before a long run.
+- It sleeps when idle, which stalls long runs (on 2026-10-21 it slept when he undocked it, despite his keep-awake app). Start `caffeinate -dims -t 43200` in the background before a long run.
 - **dungeon** is the home lab (M3 Pro, 36 GB, RAM nearly full) running services that must not be interrupted. Put no build or test load on it. Run `hostname -s` before the first build: on 2026-11-06 a session on dungeon took itself for moria and built there all afternoon. `hooks/no-build-on-dungeon.py` now blocks builds and tests there; send them to moria with `ssh moria`.
 - When another machine can't ssh to moria over Tailscale but `tailscale ping` answers, run `tailscale down; tailscale up` on moria (no sudo, no exit node); its extension stopped passing inbound TCP on 2026-11-17. moria's LAN address `192.168.1.31` is the fallback.
-
-## Shifts
-
-A long orchestrator runs in shifts: `claude-shifts.md` in this folder.

@@ -262,7 +262,7 @@ complaint is speed: GLM 5.2 on Z.ai's coding endpoint ran at 12–55 tok/s
   ZDR:** on 2026-11-16, $0.56 of ZDR Flash read 3% of the $20 5-hour limit, where
   the $4 default would have read 14%. Even at $20 it would have been worth keeping,
   at half DeepSeek's list price and with no training. Review at renewal on Dec 16,
-  using `usage-mark.py`'s GOAT and DS API rows. The $1 Go plan is no cheaper test: it is "the only
+  using the GOAT and DS API usage. The $1 Go plan is no cheaper test: it is "the only
   plan without API access" and answers 403 `upgrade_required`
   ([provider docs](https://commandcode.ai/docs/provider)).
 - **No DeepInfra.** Greg dropped it on 2026-11-16; DeepSeek's API stays the paid tail.

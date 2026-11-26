@@ -81,7 +81,7 @@ in {
     # leaves us owning contextWindow/maxTokens/cost forever. Don't.
     #
     # It stays direct beside the gateway's `cloud` alias, which serves
-    # Flash only: /orchestrate-pi workers run deepseek-flash, and
+    # Flash only: pi workers run deepseek-flash, and
     # deepseek-preflight.py checks the balance of this very key.
     #
     # The key comes from nixos/secrets/.env (op inject -> .zshrc), so this
