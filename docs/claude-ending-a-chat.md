@@ -1,6 +1,6 @@
 # Ending a chat: the handoff
 
-Read this when Greg says he is ending the chat or asks for a handoff. The global `CLAUDE.md` keeps the Throughput rule for closing reports.
+Read this when Greg says he is ending the chat, asks for a handoff, or you report an investigation. The global `CLAUDE.md` points here.
 
 First reflect: what did we learn this session that a future session should know? Cover technical lessons, domain lessons (game dev, the project's rules), how you and Greg work together, and how subagents behaved.
 
