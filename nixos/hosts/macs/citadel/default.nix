@@ -83,7 +83,6 @@
 
       # File transfer CLI (formula, not a cask)
       "magic-wormhole"
-
     ];
 
     casks = [
