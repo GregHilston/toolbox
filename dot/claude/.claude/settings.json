@@ -159,10 +159,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/log-order.py"
-          },
-          {
-            "type": "command",
             "command": "~/.claude/hooks/dradis-hook.sh UserPromptSubmit",
             "timeout": 2,
             "async": true
@@ -189,10 +185,6 @@
             "type": "command",
             "command": "~/Git/toolbox/bin/worktree-done-hook stop",
             "timeout": 120
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/shift-drain.py"
           },
           {
             "type": "command",
