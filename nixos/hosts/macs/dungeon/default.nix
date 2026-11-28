@@ -1,5 +1,6 @@
 {
   config,
+  pkgs,
   vars,
   lib,
   ...
@@ -114,6 +115,11 @@ in {
 
   # Enable SSH (Remote Login) for remote access
   services.openssh.enable = true;
+
+  # moria's factory key: rsync into ~/factory-media only, no shell.
+  users.users.${vars.user.name}.openssh.authorizedKeys.keys = [
+    "restrict,command=\"${pkgs.rrsync}/bin/rrsync /Users/${vars.user.name}/factory-media\" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIeaDzOqVyzEA57ta81HLneZdUoOEWTAGI997x6Uiigl factory-media"
+  ];
 
   # Server mode — prevent sleep when lid is closed (clamshell mode)
   #
