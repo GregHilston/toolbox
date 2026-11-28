@@ -443,6 +443,26 @@ in {
     };
   };
 
+  # Runbook: home-lab/docs/runbooks/arr-wrong-language.md.
+  launchd.user.agents.arr-language-check = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/bash"
+        "/Users/${vars.user.name}/Git/home-lab/scripts/arr-language-check.sh"
+      ];
+      RunAtLoad = false;
+      StartCalendarInterval = [
+        {
+          Weekday = 0;
+          Hour = 14;
+          Minute = 17;
+        }
+      ];
+      StandardOutPath = "/Users/${vars.user.name}/Library/Logs/arr-language-check.log";
+      StandardErrorPath = "/Users/${vars.user.name}/Library/Logs/arr-language-check.log";
+    };
+  };
+
   # 8767: 8765 is OrbStack's. Never bind 0.0.0.0: the login header
   # is only trustworthy behind `tailscale serve`, which is a manual command (runbook).
   # PATH: the ingester shells out to `hc`, which lives in ~/.local/bin.
