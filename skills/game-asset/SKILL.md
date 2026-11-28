@@ -43,7 +43,8 @@ copy that image to `art/assets/<id>/concept.png` and write its prompt, model,
 size, cost and approval date into `asset.json` under `concept`. Unpicked
 variants stay in the review folder for later. Model only the picked concept.
 If the image API refuses a prompt at moderation, it is not billed: reword it
-as a video-game object, or swap in a different idea.
+as a chunky toy prop, or swap in a different idea. The word list and a
+passing crossbow prompt are in the `openai-image` skill.
 
 ## Build (no gate; run straight through)
 
