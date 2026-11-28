@@ -18,6 +18,11 @@ openai-image.py --ref /abs/approved.png 'PROMPT'               # match a referen
 openai-image.py --quality high 'PROMPT'                         # about 4x the cost; only when asked
 ```
 
+In a sandbox (a factory worker, Claude Code with sandboxing on), add
+`--format jpeg`: the PNG response is over 1 MB and the sandbox proxy has cut
+it short, which is billed with no image. A cut response is retried once.
+Every call, failed ones included, goes in `~/.cache/openai-image/ledger.jsonl`.
+
 The model has no transparent background; ask for a plain flat mid-grey one and
 key it out later. A reference image costs about 15 times the input tokens and,
 in the first test, matched what the prompt alone gave, so use it only when a
