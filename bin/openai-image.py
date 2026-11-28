@@ -21,8 +21,7 @@ import re
 import subprocess
 import sys
 import time
-import urllib.error
-import urllib.request
+import urllib.parse
 import uuid
 from pathlib import Path
 from typing import NoReturn
@@ -61,6 +60,29 @@ def multipart(fields: dict, files: list[Path]) -> tuple[bytes, str]:
     return out + f"--{boundary}--\r\n".encode(), f"multipart/form-data; boundary={boundary}"
 
 
+class HTTPStatus(Exception):
+    def __init__(self, code: int, body: bytes):
+        self.code, self.body = code, body
+
+
+def connect(url: str) -> http.client.HTTPConnection:
+    """A connection to url, tunnelled through HTTPS_PROXY when one is set."""
+    u = urllib.parse.urlsplit(url)
+    if u.scheme != "https":
+        return http.client.HTTPConnection(u.netloc, timeout=300)
+    proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
+    if not proxy:
+        return http.client.HTTPSConnection(u.netloc, timeout=300)
+    p = urllib.parse.urlsplit(proxy)
+    conn = http.client.HTTPSConnection(p.hostname or "", p.port or 80, timeout=300)
+    auth = {}
+    if p.username:
+        cred = f"{urllib.parse.unquote(p.username)}:{urllib.parse.unquote(p.password or '')}"
+        auth = {"Proxy-Authorization": "Basic " + base64.b64encode(cred.encode()).decode()}
+    conn.set_tunnel(u.hostname or "", u.port or 443, headers=auth)
+    return conn
+
+
 def generate(prompt: str, quality: str, size: str, n: int, refs: list[Path], fmt: str) -> list[bytes]:
     fields: dict = {"model": "gpt-image-2", "prompt": prompt, "quality": quality, "size": size, "n": n,
                     "output_format": fmt}
@@ -71,18 +93,21 @@ def generate(prompt: str, quality: str, size: str, n: int, refs: list[Path], fmt
         url = URL.replace("generations", "edits")
     else:
         body, ctype, url = json.dumps(fields).encode(), "application/json", URL
-    req = urllib.request.Request(url, data=body, headers={
-        "Authorization": "Bearer " + api_key(),
-        "Content-Type": ctype,
-    })
+    headers = {"Authorization": "Bearer " + api_key(), "Content-Type": ctype}
+    path = urllib.parse.urlsplit(url).path
     call = {"model": "gpt-image-2", "quality": quality, "size": size, "n": n, "format": fmt}
     for attempt in (1, 2):
         cid = uuid.uuid4().hex[:12]
         estimate = estimate_usd(prompt, quality, size, n)
         log(cid, "sent", estimate, call)
+        conn = connect(url)
         try:
-            with urllib.request.urlopen(req, timeout=300) as r:
-                raw = r.read()
+            # Not urllib: its Connection: close lets the sandbox proxy drop the tail.
+            conn.request("POST", path, body=body, headers=headers)
+            r = conn.getresponse()
+            raw = r.read()
+            if r.status != 200:
+                raise HTTPStatus(r.status, raw)
             data = json.loads(raw)
         except (http.client.IncompleteRead, json.JSONDecodeError) as e:
             got = len(e.partial) if isinstance(e, http.client.IncompleteRead) else len(raw)
@@ -92,8 +117,8 @@ def generate(prompt: str, quality: str, size: str, n: int, refs: list[Path], fmt
                 continue
             fail(f"response cut off twice (last after {got} bytes); both calls are likely billed. "
                  "A sandbox proxy can do this: try --format jpeg, or run outside the sandbox")
-        except urllib.error.HTTPError as e:
-            detail = e.read()[:400].decode(errors="replace")
+        except HTTPStatus as e:
+            detail = e.body[:400].decode(errors="replace")
             refused = e.code == 400 and "safety" in detail
             # A refusal may be billed: keep it.
             log(cid, "refused" if refused else "error", 0.0 if refused else -estimate, {**call, "http": e.code})
@@ -102,9 +127,11 @@ def generate(prompt: str, quality: str, size: str, n: int, refs: list[Path], fmt
             if e.code == 429:
                 fail(f"rate limit or spend cap reached (429): {detail}")
             fail(f"HTTP {e.code}: {detail}")
-        except (urllib.error.URLError, OSError) as e:
-            log(cid, "error", 0.0, {**call, "reason": str(getattr(e, "reason", e))[:200]})
-            fail(f"could not reach api.openai.com: {getattr(e, 'reason', e)}")
+        except OSError as e:
+            log(cid, "error", 0.0, {**call, "reason": str(e)[:200]})
+            fail(f"could not reach api.openai.com: {e}")
+        finally:
+            conn.close()
         usage = data.get("usage") or {}
         print(f"quality {quality}, size {size}, tokens in {usage.get('input_tokens', '?')} out {usage.get('output_tokens', '?')}", file=sys.stderr)
         actual, tokens = spend(usage)
