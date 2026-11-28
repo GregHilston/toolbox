@@ -44,7 +44,7 @@ class GatewayProvider(unittest.TestCase):
             self.assertEqual(paid, m["id"].startswith("cloud"), m["id"])
 
     def test_direct_omlx_provider_is_kept(self) -> None:
-        self.assertEqual(self.providers["omlx"]["baseUrl"], "http://localhost:8000/v1")
+        self.assertEqual(self.providers["omlx"]["baseUrl"], "http://127.0.0.1:8000/v1")
 
 
 if __name__ == "__main__":

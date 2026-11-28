@@ -27,7 +27,8 @@ house, and names the job rather than the vendor behind it.
 dungeon's oMLX refuses prompts past ~16k tokens under memory pressure. Which host
 answered is the gateway's business; home-lab's gateway config owns the routing.
 
-The direct `omlx` provider (`localhost:8000`) is still in `models.json` and in
+The direct `omlx` provider (`127.0.0.1:8000`; `localhost` stalls when DNS is down, because
+hung lookups fill Node's four lookup threads) is still in `models.json` and in
 `/model`, out of the Ctrl+P cycle. On moria it is the way round a dungeon that is
 down, since the gateway itself runs on dungeon.
 

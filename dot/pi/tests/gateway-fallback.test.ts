@@ -11,7 +11,7 @@ import { test } from "node:test";
 import { decide, looksLikeOutage, pickLocal, probeTwice, reachable } from "../.pi/agent/extensions/gateway-fallback.ts";
 
 const G = "https://gateway.test/v1";
-const L = "http://localhost:8000/v1";
+const L = "http://127.0.0.1:8000/v1";
 const only = (...up: string[]) => async (url: string) => up.includes(url);
 
 test("non-litellm provider is never probed", async () => {

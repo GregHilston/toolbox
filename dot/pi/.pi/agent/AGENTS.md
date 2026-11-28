@@ -82,7 +82,7 @@ down. Work read-only by default: diagnose, then propose a fix and ask before act
   not prove one caused the other.
 - The default model, `litellm/local-small`, goes through the gateway on dungeon. If
   dungeon or DNS is down, it fails. pi switches to this host's local oMLX model,
-  `omlx/Qwen3.6-35B-A3B-4bit` at localhost:8000 (262k window on moria; on dungeon the
+  `omlx/Qwen3.6-35B-A3B-4bit` at 127.0.0.1:8000 (262k window on moria; on dungeon the
   64k `Qwen3.6-35B-A3B-4bit:lab` profile), at start when the gateway is down. To
   switch by hand, Greg types `/model`; it is not a shell command.
 - Every `litellm/*` model, `litellm/cloud` included, goes through dungeon.
